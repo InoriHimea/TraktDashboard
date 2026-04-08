@@ -8,10 +8,9 @@ COPY packages/types/package.json ./packages/types/
 COPY packages/db/package.json ./packages/db/
 COPY apps/api/package.json ./apps/api/
 
-# Use bun workspaces install
 RUN bun install --frozen-lockfile
 
-# ─── Build ───────────────────────────────────────────────────────────────────
+# ─── Build ────────────────────────────────────────────────────────────────────
 FROM deps AS builder
 COPY packages/ ./packages/
 COPY apps/api/ ./apps/api/
@@ -23,7 +22,9 @@ RUN bun build src/index.ts --target bun --outdir dist --external postgres --exte
 FROM oven/bun:1.1-alpine AS runner
 WORKDIR /app
 
-RUN apk add --no-cache curl
+# Switch to USTC mirror to avoid apk timeout in restricted networks
+RUN sed -i 's|https://dl-cdn.alpinelinux.org|https://mirrors.ustc.edu.cn|g' /etc/apk/repositories \
+    && apk add --no-cache curl
 
 # Copy only what's needed
 COPY --from=builder /app/node_modules ./node_modules
@@ -32,7 +33,6 @@ COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/api/package.json ./apps/api/
 COPY --from=builder /app/packages/db/drizzle ./packages/db/drizzle
 
-# Entrypoint script handles migrations then starts server
 COPY apps/api/docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
 

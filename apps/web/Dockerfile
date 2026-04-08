@@ -1,7 +1,10 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Switch to USTC mirror to avoid apk timeout in restricted networks
+RUN sed -i 's|https://dl-cdn.alpinelinux.org|https://mirrors.ustc.edu.cn|g' /etc/apk/repositories \
+    && corepack enable \
+    && corepack prepare pnpm@latest --activate
 
 COPY package.json pnpm-workspace.yaml ./
 COPY packages/types/package.json ./packages/types/
@@ -19,7 +22,7 @@ ENV VITE_API_URL=$VITE_API_URL
 WORKDIR /app/apps/web
 RUN pnpm build
 
-# ─── Nginx ───────────────────────────────────────────────────────────────────
+# ─── Nginx ────────────────────────────────────────────────────────────────────
 FROM nginx:1.27-alpine AS runner
 
 COPY --from=builder /app/apps/web/dist /usr/share/nginx/html
