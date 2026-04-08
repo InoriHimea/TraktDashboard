@@ -3,14 +3,12 @@ WORKDIR /app
 
 # ─── Install dependencies ─────────────────────────────────────────────────────
 FROM base AS deps
-COPY package.json pnpm-workspace.yaml bun.lockb* ./
+COPY package.json pnpm-workspace.yaml bun.lockb* bunfig.toml ./
 COPY packages/types/package.json ./packages/types/
 COPY packages/db/package.json ./packages/db/
 COPY apps/api/package.json ./apps/api/
 
-# Configure Nexus as npm registry for bun
-RUN echo '[install]\nregistry = "https://nexus.mellivora.com.cn:18082/repository/npm-group/"' > bunfig.toml \
-    && bun install --frozen-lockfile
+RUN bun install --frozen-lockfile
 
 # ─── Production image ─────────────────────────────────────────────────────────
 # Bun runs TypeScript natively — no build step needed

@@ -1,0 +1,2 @@
+[install]
+registry = "https://nexus.mellivora.com.cn:18082/repository/npm-group/"
