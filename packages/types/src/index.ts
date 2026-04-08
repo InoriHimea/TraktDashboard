@@ -126,14 +126,21 @@ export interface PaginatedResponse<T> {
 // ─── Stats ────────────────────────────────────────────────────────────────────
 
 export interface StatsOverview {
-  totalShows: number
-  completedShows: number
-  watchingShows: number
-  totalEpisodes: number
-  totalRuntime: number
+  totalEpisodesWatched: number
+  totalShowsWatched: number
+  totalShowsCompleted: number
+  totalRuntimeMinutes: number
   monthlyActivity: Array<{ month: string; count: number }>
-  topGenres: Array<{ genre: string; count: number }>
-  recentlyWatched: ShowProgress[]
+  topGenres: Array<{ name: string; count: number }>
+  recentlyWatched: Array<{
+    showId: number
+    showTitle: string
+    posterPath: string | null
+    episodeTitle: string | null
+    seasonNumber: number
+    episodeNumber: number
+    watchedAt: string
+  }>
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
