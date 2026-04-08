@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Semantic Version Bump",
+  "description": "在提交代码前，根据 commit message 的语义自动更新 package.json 版本号：feat → minor，fix/perf/refactor → patch，BREAKING CHANGE → major",
+  "version": "1",
+  "when": {
+    "type": "promptSubmit"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "用户即将提交代码到 git。请分析用户的提交信息（commit message），按照语义化版本规范（Conventional Commits）判断需要升级哪个版本号：\n\n规则：\n- 包含 \"BREAKING CHANGE\" 或 \"!\" 后缀（如 feat!:）→ major 版本 (x+1.0.0)\n- 以 \"feat\" 开头 → minor 版本 (x.y+1.0)\n- 以 \"fix\"、\"perf\"、\"refactor\"、\"chore\"、\"docs\"、\"style\"、\"test\"、\"build\"、\"ci\" 开头 → patch 版本 (x.y.z+1)\n- 如果用户没有提供 commit message，询问他们的提交内容是什么类型，然后再决定\n\n步骤：\n1. 读取 package.json 获取当前版本\n2. 根据规则计算新版本号\n3. 更新 package.json 中的 version 字段\n4. 告知用户版本从 x.x.x 升级到 y.y.y\n\n注意：只更新根目录的 package.json，不要更新 apps/ 或 packages/ 下的子包版本。"
+  }
+}
