@@ -10,15 +10,8 @@ COPY apps/api/package.json ./apps/api/
 
 RUN bun install --frozen-lockfile
 
-# ─── Build ────────────────────────────────────────────────────────────────────
-FROM deps AS builder
-COPY packages/ ./packages/
-COPY apps/api/ ./apps/api/
-
-WORKDIR /app/apps/api
-RUN bun build src/index.ts --target bun --outdir dist --external postgres --external ioredis
-
 # ─── Production image ─────────────────────────────────────────────────────────
+# Bun runs TypeScript natively — no build step needed
 FROM oven/bun:1.1-alpine AS runner
 WORKDIR /app
 
@@ -26,12 +19,10 @@ WORKDIR /app
 RUN sed -i 's|https://dl-cdn.alpinelinux.org|https://mirrors.ustc.edu.cn|g' /etc/apk/repositories \
     && apk add --no-cache curl
 
-# Copy only what's needed
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/packages ./packages
-COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/apps/api/package.json ./apps/api/
-COPY --from=builder /app/packages/db/drizzle ./packages/db/drizzle
+COPY --from=deps /app/node_modules ./node_modules
+COPY packages/ ./packages/
+COPY apps/api/ ./apps/api/
+COPY packages/db/drizzle ./packages/db/drizzle
 
 COPY apps/api/docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh

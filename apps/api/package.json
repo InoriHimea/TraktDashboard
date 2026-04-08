@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun --watch src/index.ts",
-    "build": "bun build src/index.ts --target bun --outdir dist",
-    "start": "bun dist/index.js",
+    "start": "bun src/index.ts",
     "db:generate": "cd ../../packages/db && pnpm db:generate",
     "db:migrate": "bun src/migrate.ts"
   },
