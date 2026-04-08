@@ -1,11 +1,7 @@
-FROM oven/bun:1.1-alpine AS base
+FROM node:22-alpine AS deps
 WORKDIR /app
 
-# ─── Install dependencies ─────────────────────────────────────────────────────
-FROM base AS deps
-
-# Install pnpm
-RUN npm install -g pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml bunfig.toml ./
 COPY packages/types/package.json ./packages/types/
