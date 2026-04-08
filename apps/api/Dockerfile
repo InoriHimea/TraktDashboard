@@ -8,7 +8,8 @@ COPY packages/types/package.json ./packages/types/
 COPY packages/db/package.json ./packages/db/
 COPY apps/api/package.json ./apps/api/
 
-RUN bun install --frozen-lockfile
+RUN bun config set registry https://nexus.mellivora.com.cn:18082/repository/npm-group/ \
+    && bun install --frozen-lockfile
 
 # ─── Production image ─────────────────────────────────────────────────────────
 # Bun runs TypeScript natively — no build step needed

@@ -11,7 +11,8 @@ COPY packages/types/package.json ./packages/types/
 COPY packages/db/package.json ./packages/db/
 COPY apps/web/package.json ./apps/web/
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm config set registry https://nexus.mellivora.com.cn:18082/repository/npm-group/ \
+    && pnpm install --frozen-lockfile
 
 COPY packages/ ./packages/
 COPY apps/web/ ./apps/web/
