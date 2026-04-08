@@ -1,10 +1,9 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 
-# Switch to USTC mirror to avoid apk timeout in restricted networks
-RUN sed -i 's|https://dl-cdn.alpinelinux.org|https://mirrors.ustc.edu.cn|g' /etc/apk/repositories \
-    && corepack enable \
-    && corepack prepare pnpm@latest --activate
+# Use Nexus as corepack download source, then install fixed pnpm version
+ENV COREPACK_NPM_REGISTRY=https://nexus.mellivora.com.cn:18082/repository/npm-group/
+RUN corepack enable && corepack prepare pnpm@10.19.0 --activate
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/types/package.json ./packages/types/

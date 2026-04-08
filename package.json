@@ -1,6 +1,6 @@
 {
   "name": "trakt-dashboard",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "private": true,
   "scripts": {
     "dev": "turbo run dev",
@@ -17,5 +17,6 @@
   "engines": {
     "node": ">=20",
     "pnpm": ">=9"
-  }
+  },
+  "packageManager": "pnpm@10.19.0"
 }
