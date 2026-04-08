@@ -1,0 +1,145 @@
+import {
+  pgTable,
+  serial,
+  text,
+  integer,
+  boolean,
+  timestamp,
+  jsonb,
+  uniqueIndex,
+  index,
+} from 'drizzle-orm/pg-core'
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  traktUsername: text('trakt_username'),
+  traktAccessToken: text('trakt_access_token').notNull(),
+  traktRefreshToken: text('trakt_refresh_token').notNull(),
+  tokenExpiresAt: timestamp('token_expires_at').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+// ─── Shows ────────────────────────────────────────────────────────────────────
+
+export const shows = pgTable('shows', {
+  id: serial('id').primaryKey(),
+  tmdbId: integer('tmdb_id').notNull().unique(),
+  tvdbId: integer('tvdb_id'),
+  imdbId: text('imdb_id'),
+  traktId: integer('trakt_id'),
+  traktSlug: text('trakt_slug'),
+  title: text('title').notNull(),
+  overview: text('overview'),
+  status: text('status').notNull().default('unknown'),
+  firstAired: text('first_aired'),
+  network: text('network'),
+  genres: jsonb('genres').$type<string[]>().notNull().default([]),
+  posterPath: text('poster_path'),
+  backdropPath: text('backdrop_path'),
+  totalEpisodes: integer('total_episodes').notNull().default(0),
+  totalSeasons: integer('total_seasons').notNull().default(0),
+  lastSyncedAt: timestamp('last_synced_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('shows_trakt_id_idx').on(t.traktId),
+  index('shows_imdb_id_idx').on(t.imdbId),
+])
+
+// ─── Seasons ─────────────────────────────────────────────────────────────────
+
+export const seasons = pgTable('seasons', {
+  id: serial('id').primaryKey(),
+  showId: integer('show_id').notNull().references(() => shows.id, { onDelete: 'cascade' }),
+  seasonNumber: integer('season_number').notNull(),
+  episodeCount: integer('episode_count').notNull().default(0),
+  airDate: text('air_date'),
+  overview: text('overview'),
+  posterPath: text('poster_path'),
+}, (t) => [
+  uniqueIndex('seasons_show_season_idx').on(t.showId, t.seasonNumber),
+])
+
+// ─── Episodes ─────────────────────────────────────────────────────────────────
+
+export const episodes = pgTable('episodes', {
+  id: serial('id').primaryKey(),
+  showId: integer('show_id').notNull().references(() => shows.id, { onDelete: 'cascade' }),
+  seasonId: integer('season_id').references(() => seasons.id, { onDelete: 'set null' }),
+  seasonNumber: integer('season_number').notNull(),
+  episodeNumber: integer('episode_number').notNull(),
+  title: text('title'),
+  overview: text('overview'),
+  runtime: integer('runtime'),
+  airDate: text('air_date'),
+  stillPath: text('still_path'),
+  traktId: integer('trakt_id'),
+  tmdbId: integer('tmdb_id'),
+}, (t) => [
+  uniqueIndex('episodes_show_s_e_idx').on(t.showId, t.seasonNumber, t.episodeNumber),
+  index('episodes_show_id_idx').on(t.showId),
+  index('episodes_trakt_id_idx').on(t.traktId),
+])
+
+// ─── Watch History ─────────────────────────────────────────────────────────────
+
+export const watchHistory = pgTable('watch_history', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  episodeId: integer('episode_id').notNull().references(() => episodes.id, { onDelete: 'cascade' }),
+  watchedAt: timestamp('watched_at').notNull(),
+  traktPlayId: text('trakt_play_id').unique(),
+}, (t) => [
+  index('watch_history_user_idx').on(t.userId),
+  index('watch_history_episode_idx').on(t.episodeId),
+  index('watch_history_watched_at_idx').on(t.watchedAt),
+  // Task 6.1: Composite unique index for deduplication (traktPlayId can be null)
+  uniqueIndex('watch_history_dedup_idx').on(t.userId, t.episodeId, t.watchedAt),
+])
+
+// ─── User Show Progress (materialized cache) ───────────────────────────────────
+
+export const userShowProgress = pgTable('user_show_progress', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  showId: integer('show_id').notNull().references(() => shows.id, { onDelete: 'cascade' }),
+  airedEpisodes: integer('aired_episodes').notNull().default(0),
+  watchedEpisodes: integer('watched_episodes').notNull().default(0),
+  nextEpisodeId: integer('next_episode_id').references(() => episodes.id, { onDelete: 'set null' }),
+  lastWatchedAt: timestamp('last_watched_at'),
+  completed: boolean('completed').notNull().default(false),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('usp_user_show_idx').on(t.userId, t.showId),
+  index('usp_user_idx').on(t.userId),
+])
+
+// ─── Metadata Cache ────────────────────────────────────────────────────────────
+
+export const metadataCache = pgTable('metadata_cache', {
+  id: serial('id').primaryKey(),
+  source: text('source').notNull(),
+  externalId: text('external_id').notNull(),
+  data: jsonb('data').notNull(),
+  cachedAt: timestamp('cached_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('metadata_cache_source_id_idx').on(t.source, t.externalId),
+])
+
+// ─── Sync State ───────────────────────────────────────────────────────────────
+
+export const syncState = pgTable('sync_state', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
+  status: text('status').notNull().default('idle'),
+  lastSyncAt: timestamp('last_sync_at'),
+  currentShow: text('current_show'),
+  progress: integer('progress').notNull().default(0),
+  total: integer('total').notNull().default(0),
+  error: text('error'),
+  // Task 7.1: Track per-show sync failures
+  failedShows: jsonb('failed_shows').$type<Array<{ tmdbId: number; title: string; error: string }>>().notNull().default([]),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})

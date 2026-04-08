@@ -1,0 +1,29 @@
+{
+  "name": "@trakt-dashboard/api",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "build": "bun build src/index.ts --target bun --outdir dist",
+    "start": "bun dist/index.js",
+    "db:generate": "cd ../../packages/db && pnpm db:generate",
+    "db:migrate": "bun src/migrate.ts"
+  },
+  "dependencies": {
+    "@trakt-dashboard/db": "workspace:*",
+    "@trakt-dashboard/types": "workspace:*",
+    "hono": "^4.6.14",
+    "drizzle-orm": "^0.38.3",
+    "postgres": "^3.4.5",
+    "bullmq": "^5.34.6",
+    "ioredis": "^5.4.1",
+    "jose": "^5.9.6",
+    "dayjs": "^1.11.13",
+    "p-limit": "^6.1.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^22.10.2"
+  }
+}
