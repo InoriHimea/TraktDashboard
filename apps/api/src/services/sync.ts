@@ -2,198 +2,142 @@ import { getDb, shows, seasons, episodes, watchHistory, userShowProgress, syncSt
 import { eq, and, sql } from 'drizzle-orm'
 import { getTraktClient } from './trakt.js'
 import { getTmdbShow, getTmdbSeason } from './tmdb.js'
+import pLimit from 'p-limit'
 import dayjs from 'dayjs'
 
-const FAILED_RETRY_MAX = 3
+// Concurrency: 5 shows in parallel, each show's seasons also fetched in parallel
+const SHOW_CONCURRENCY = 5
+const SEASON_CONCURRENCY = 4
+const FAILED_RETRY_MAX = 2
+// Per-show hard timeout (ms) — prevents one stuck show from blocking a slot forever
+const SHOW_TIMEOUT_MS = 90_000
 
 type FailedShow = {
   tmdbId: number
   title: string
   error: string
   retryCount?: number
-  alert?: boolean
-  lastTriedAt?: string
-}
-
-function failureKey(tmdbId: number, title: string): string {
-  return `${tmdbId}:${title}`
 }
 
 function toErrorMessage(e: unknown): string {
   return String((e as { message?: string })?.message || e || 'Unknown error')
 }
 
-function upsertFailure(map: Map<string, FailedShow>, failure: FailedShow) {
-  const key = failureKey(failure.tmdbId, failure.title)
-  map.set(key, {
-    ...failure,
-    retryCount: failure.retryCount ?? 0,
-    alert: failure.alert ?? false,
-    lastTriedAt: new Date().toISOString(),
-  })
-}
-
-async function syncSingleShow(
-  userId: number,
-  input: { tmdbId: number; traktId: number | null; title: string; traktShow: any },
-  onStage?: (stage: string) => Promise<void>,
-) {
-  const trakt = getTraktClient()
-  if (!input.tmdbId) throw new Error('Missing TMDB id')
-  if (!input.traktId) throw new Error('Missing Trakt id')
-
-  await onStage?.('写入基础剧集信息')
-  const showId = await upsertShowFromTmdb(input.tmdbId, input.traktShow)
-  await getDb().insert(userShowProgress).values({
-    userId,
-    showId,
-  }).onConflictDoNothing()
-
-  await onStage?.('同步 Trakt 观看进度')
-  const progress = await trakt.getShowProgress(userId, input.traktId)
-
-  await onStage?.('写入观看记录')
-  await syncEpisodeProgress(userId, showId, input.tmdbId, progress)
-
-  await onStage?.('计算汇总进度')
-  await recalcShowProgress(userId, showId)
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Timeout after ${ms}ms: ${label}`)), ms)
+    ),
+  ])
 }
 
 async function ensureSyncState(userId: number) {
-  const db = getDb()
-  await db.insert(syncState).values({ userId }).onConflictDoNothing()
+  await getDb().insert(syncState).values({ userId }).onConflictDoNothing()
 }
+
+// ─── Full sync ────────────────────────────────────────────────────────────────
 
 export async function triggerFullSync(userId: number): Promise<void> {
   const db = getDb()
   await ensureSyncState(userId)
   await db.update(syncState).set({
-    status: 'running',
-    progress: 0,
-    total: 0,
-    error: null,
-    currentShow: 'Preparing sync...',
-    failedShows: [],
-    updatedAt: new Date(),
+    status: 'running', progress: 0, total: 0,
+    error: null, currentShow: 'Fetching watched shows from Trakt…',
+    failedShows: [], updatedAt: new Date(),
   }).where(eq(syncState.userId, userId))
 
   try {
-    console.log(`[sync] Starting full sync for user ${userId}`)
-
     const trakt = getTraktClient()
     const watchedShows = await trakt.getWatchedShows(userId)
     console.log(`[sync] Found ${watchedShows.length} watched shows`)
 
-    await db.update(syncState).set({ total: watchedShows.length, updatedAt: new Date() }).where(eq(syncState.userId, userId))
+    await db.update(syncState).set({ total: watchedShows.length, updatedAt: new Date() })
+      .where(eq(syncState.userId, userId))
 
     let processed = 0
-    const failureMap = new Map<string, FailedShow>()
+    const failureMap = new Map<number, FailedShow>()
+    const limit = pLimit(SHOW_CONCURRENCY)
 
-    for (const [idx, ws] of watchedShows.entries()) {
-      const progressLabel = `[${idx + 1}/${watchedShows.length}] ${ws.show.title}`
+    await Promise.all(watchedShows.map(ws => limit(async () => {
+      const tmdbId = ws.show.ids.tmdb
+      const title = ws.show.title
+
+      if (!tmdbId) {
+        failureMap.set(0, { tmdbId: 0, title, error: 'Missing TMDB id' })
+        processed++
+        return
+      }
+
       try {
-        const tmdbId = ws.show.ids.tmdb
-        if (!tmdbId) {
-          upsertFailure(failureMap, { tmdbId: 0, title: ws.show.title, error: 'Missing TMDB id' })
-          continue
-        }
-
-        await syncSingleShow(userId, {
-          tmdbId,
-          traktId: ws.show.ids.trakt || null,
-          title: ws.show.title,
-          traktShow: ws.show,
-        }, async (stage) => {
-          await db.update(syncState).set({
-            currentShow: `${progressLabel} · ${stage}`,
-            updatedAt: new Date(),
-          }).where(eq(syncState.userId, userId))
-        })
-      } catch (e: any) {
-        console.error(`[sync] Error syncing ${ws.show.title}:`, e)
-        upsertFailure(failureMap, {
-          tmdbId: ws.show.ids.tmdb || 0,
-          title: ws.show.title,
-          error: toErrorMessage(e),
-        })
+        await withTimeout(
+          syncSingleShow(userId, {
+            tmdbId,
+            traktId: ws.show.ids.trakt || null,
+            title,
+            traktShow: ws.show,
+          }),
+          SHOW_TIMEOUT_MS,
+          title
+        )
+      } catch (e) {
+        console.error(`[sync] Error syncing "${title}":`, toErrorMessage(e))
+        failureMap.set(tmdbId, { tmdbId, title, error: toErrorMessage(e) })
       } finally {
         processed++
         await db.update(syncState).set({
           progress: processed,
+          currentShow: `${processed}/${watchedShows.length} · ${title}`,
           failedShows: Array.from(failureMap.values()),
           updatedAt: new Date(),
         }).where(eq(syncState.userId, userId))
-        console.log(`[sync] ${processed}/${watchedShows.length} ${ws.show.title}`)
+        console.log(`[sync] ${processed}/${watchedShows.length} ${title}`)
       }
-    }
+    })))
 
+    // Retry failed shows once
     if (failureMap.size > 0) {
-      for (let round = 1; round <= FAILED_RETRY_MAX && failureMap.size > 0; round++) {
-        await db.update(syncState).set({
-          currentShow: `Retrying failed shows (${round}/${FAILED_RETRY_MAX})`,
-          failedShows: Array.from(failureMap.values()),
-          updatedAt: new Date(),
-        }).where(eq(syncState.userId, userId))
+      console.log(`[sync] Retrying ${failureMap.size} failed shows…`)
+      await db.update(syncState).set({
+        currentShow: `Retrying ${failureMap.size} failed shows…`,
+        updatedAt: new Date(),
+      }).where(eq(syncState.userId, userId))
 
-        for (const failure of Array.from(failureMap.values())) {
-          if ((failure.retryCount || 0) >= FAILED_RETRY_MAX) continue
-
-          try {
-            await db.update(syncState).set({
-              currentShow: `Retry ${round}/${FAILED_RETRY_MAX}: ${failure.title}`,
-              updatedAt: new Date(),
-            }).where(eq(syncState.userId, userId))
-
-            await syncSingleShow(userId, {
-              tmdbId: failure.tmdbId,
-              traktId: watchedShows.find((s) => s.show.ids.tmdb === failure.tmdbId)?.show.ids.trakt || null,
-              title: failure.title,
-              traktShow: watchedShows.find((s) => s.show.ids.tmdb === failure.tmdbId)?.show || { ids: {} },
-            }, async (stage) => {
-              await db.update(syncState).set({
-                currentShow: `Retry ${round}/${FAILED_RETRY_MAX}: ${failure.title} · ${stage}`,
-                updatedAt: new Date(),
-              }).where(eq(syncState.userId, userId))
-            })
-            failureMap.delete(failureKey(failure.tmdbId, failure.title))
-          } catch (e) {
-            const retryCount = (failure.retryCount || 0) + 1
-            const stillFailed: FailedShow = {
-              ...failure,
-              error: toErrorMessage(e),
-              retryCount,
-              alert: retryCount >= FAILED_RETRY_MAX,
-              lastTriedAt: new Date().toISOString(),
-            }
-            upsertFailure(failureMap, stillFailed)
-            if (stillFailed.alert) {
-              console.error(`[sync][ALERT] ${failure.title} failed after ${FAILED_RETRY_MAX} retries`)
-            }
-          } finally {
-            await db.update(syncState).set({
-              failedShows: Array.from(failureMap.values()),
-              updatedAt: new Date(),
-            }).where(eq(syncState.userId, userId))
-          }
+      const retryLimit = pLimit(2)
+      await Promise.all(Array.from(failureMap.values()).map(f => retryLimit(async () => {
+        try {
+          await withTimeout(
+            syncSingleShow(userId, {
+              tmdbId: f.tmdbId,
+              traktId: watchedShows.find(s => s.show.ids.tmdb === f.tmdbId)?.show.ids.trakt || null,
+              title: f.title,
+              traktShow: watchedShows.find(s => s.show.ids.tmdb === f.tmdbId)?.show || { ids: {} },
+            }),
+            SHOW_TIMEOUT_MS,
+            f.title
+          )
+          failureMap.delete(f.tmdbId)
+        } catch (e) {
+          failureMap.set(f.tmdbId, { ...f, error: toErrorMessage(e), retryCount: (f.retryCount ?? 0) + 1 })
+          console.error(`[sync] Retry failed for "${f.title}":`, toErrorMessage(e))
         }
-      }
+      })))
     }
 
-    const lastSync = new Date()
-    const remainingFailures = Array.from(failureMap.values())
     await db.update(syncState).set({
-      status: 'completed', lastSyncAt: lastSync, currentShow: null,
-      progress: processed, failedShows: remainingFailures, updatedAt: new Date(),
+      status: 'completed', lastSyncAt: new Date(), currentShow: null,
+      progress: processed, failedShows: Array.from(failureMap.values()), updatedAt: new Date(),
     }).where(eq(syncState.userId, userId))
 
-    console.log(`[sync] Full sync complete for user ${userId}`)
+    console.log(`[sync] Full sync complete. ${failureMap.size} failures.`)
   } catch (e: any) {
-    await db.update(syncState).set({
-      status: 'error', error: e.message, updatedAt: new Date(),
-    }).where(eq(syncState.userId, userId))
+    await db.update(syncState).set({ status: 'error', error: e.message, updatedAt: new Date() })
+      .where(eq(syncState.userId, userId))
     throw e
   }
 }
+
+// ─── Incremental sync ─────────────────────────────────────────────────────────
 
 export async function triggerIncrementalSync(userId: number): Promise<void> {
   const db = getDb()
@@ -202,22 +146,16 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
   if (state?.status === 'running') return
 
   await db.update(syncState).set({
-    status: 'running',
-    progress: 0,
-    total: 0,
-    currentShow: 'Preparing incremental sync...',
-    error: null,
-    updatedAt: new Date(),
+    status: 'running', progress: 0, total: 0,
+    currentShow: 'Fetching recent history…', error: null, updatedAt: new Date(),
   }).where(eq(syncState.userId, userId))
 
   try {
     const trakt = getTraktClient()
     const startAt = state?.lastSyncAt ? dayjs(state.lastSyncAt).toISOString() : undefined
-
     const history = await trakt.getHistory(userId, startAt)
     console.log(`[sync:incr] ${history.length} new entries since ${startAt || 'beginning'}`)
 
-    // Group by show
     const showMap = new Map<number, typeof history>()
     for (const entry of history) {
       if (entry.type !== 'episode') continue
@@ -229,45 +167,62 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
 
     const totalShows = showMap.size
     let processed = 0
-    await db.update(syncState).set({ total: totalShows, updatedAt: new Date() }).where(eq(syncState.userId, userId))
+    await db.update(syncState).set({ total: totalShows, updatedAt: new Date() })
+      .where(eq(syncState.userId, userId))
 
-    for (const [tmdbId, entries] of showMap) {
+    const limit = pLimit(SHOW_CONCURRENCY)
+    await Promise.all(Array.from(showMap.entries()).map(([tmdbId, entries]) => limit(async () => {
       try {
-        await db.update(syncState).set({
-          currentShow: `[${processed + 1}/${totalShows}] ${entries[0]?.show?.title || `tmdb:${tmdbId}`}`,
-          updatedAt: new Date(),
-        }).where(eq(syncState.userId, userId))
-
         const showId = await upsertShowFromTmdb(tmdbId, entries[0].show)
-
         for (const entry of entries) {
           const ep = await findOrCreateEpisode(showId, tmdbId, entry.episode.season, entry.episode.number)
           if (!ep) continue
-
           await db.insert(watchHistory).values({
-            userId,
-            episodeId: ep.id,
+            userId, episodeId: ep.id,
             watchedAt: new Date(entry.watched_at),
             traktPlayId: String(entry.id),
           }).onConflictDoNothing()
         }
-
         await recalcShowProgress(userId, showId)
       } catch (e) {
-        console.error(`[sync:incr] Error on tmdb ${tmdbId}:`, e)
+        console.error(`[sync:incr] Error on tmdb ${tmdbId}:`, toErrorMessage(e))
       } finally {
         processed++
-        await db.update(syncState).set({ progress: processed, updatedAt: new Date() }).where(eq(syncState.userId, userId))
+        await db.update(syncState).set({
+          progress: processed,
+          currentShow: `${processed}/${totalShows} · ${entries[0]?.show?.title || `tmdb:${tmdbId}`}`,
+          updatedAt: new Date(),
+        }).where(eq(syncState.userId, userId))
       }
-    }
+    })))
 
     await db.update(syncState).set({
       status: 'completed', lastSyncAt: new Date(), currentShow: null, updatedAt: new Date(),
     }).where(eq(syncState.userId, userId))
   } catch (e: any) {
-    await db.update(syncState).set({ status: 'error', error: e.message, updatedAt: new Date() }).where(eq(syncState.userId, userId))
+    await db.update(syncState).set({ status: 'error', error: e.message, updatedAt: new Date() })
+      .where(eq(syncState.userId, userId))
   }
 }
+
+// ─── Single show sync ─────────────────────────────────────────────────────────
+
+async function syncSingleShow(
+  userId: number,
+  input: { tmdbId: number; traktId: number | null; title: string; traktShow: any },
+) {
+  if (!input.traktId) throw new Error('Missing Trakt id')
+  const trakt = getTraktClient()
+
+  const showId = await upsertShowFromTmdb(input.tmdbId, input.traktShow)
+  await getDb().insert(userShowProgress).values({ userId, showId }).onConflictDoNothing()
+
+  const progress = await trakt.getShowProgress(userId, input.traktId)
+  await syncEpisodeProgress(userId, showId, input.tmdbId, progress)
+  await recalcShowProgress(userId, showId)
+}
+
+// ─── TMDB upsert ──────────────────────────────────────────────────────────────
 
 async function upsertShowFromTmdb(tmdbId: number, traktShow: any): Promise<number> {
   const db = getDb()
@@ -307,9 +262,11 @@ async function upsertShowFromTmdb(tmdbId: number, traktShow: any): Promise<numbe
     },
   }).returning({ id: shows.id })
 
-  // Upsert seasons
-  for (const s of tmdb.seasons || []) {
-    if (s.season_number === 0) continue
+  // Fetch all seasons concurrently
+  const validSeasons = (tmdb.seasons || []).filter(s => s.season_number > 0)
+  const seasonLimit = pLimit(SEASON_CONCURRENCY)
+
+  await Promise.all(validSeasons.map(s => seasonLimit(async () => {
     const [season] = await db.insert(seasons).values({
       showId: show.id,
       seasonNumber: s.season_number,
@@ -322,7 +279,6 @@ async function upsertShowFromTmdb(tmdbId: number, traktShow: any): Promise<numbe
       set: { episodeCount: s.episode_count, airDate: s.air_date || null },
     }).returning({ id: seasons.id })
 
-    // Fetch and upsert episodes for each season
     try {
       const seasonData = await getTmdbSeason(tmdbId, s.season_number)
       for (const ep of seasonData.episodes || []) {
@@ -348,29 +304,25 @@ async function upsertShowFromTmdb(tmdbId: number, traktShow: any): Promise<numbe
         })
       }
     } catch (e) {
-      console.warn(`[sync] Failed to fetch season ${s.season_number} for tmdb ${tmdbId}`)
+      console.warn(`[sync] Failed to fetch season ${s.season_number} for tmdb ${tmdbId}: ${toErrorMessage(e)}`)
     }
-  }
+  })))
 
   return show.id
 }
 
+// ─── Episode progress ─────────────────────────────────────────────────────────
+
 async function syncEpisodeProgress(userId: number, showId: number, tmdbId: number, progress: any): Promise<void> {
   const db = getDb()
-
   for (const season of progress.seasons || []) {
     for (const ep of season.episodes || []) {
       if (!ep.completed || !ep.last_watched_at) continue
-
       const episode = await findOrCreateEpisode(showId, tmdbId, season.number, ep.number)
       if (!episode) continue
-
-      // Task 6.3: Use composite unique index (userId, episodeId, watchedAt) for dedup
-      const watchedAt = new Date(ep.last_watched_at)
       await db.insert(watchHistory).values({
-        userId,
-        episodeId: episode.id,
-        watchedAt,
+        userId, episodeId: episode.id,
+        watchedAt: new Date(ep.last_watched_at),
         traktPlayId: null,
       }).onConflictDoNothing({ target: [watchHistory.userId, watchHistory.episodeId, watchHistory.watchedAt] })
     }
@@ -379,16 +331,13 @@ async function syncEpisodeProgress(userId: number, showId: number, tmdbId: numbe
 
 async function findOrCreateEpisode(showId: number, tmdbId: number, seasonNum: number, episodeNum: number) {
   const db = getDb()
-  const [ep] = await db.select().from(episodes)
-    .where(and(
-      eq(episodes.showId, showId),
-      eq(episodes.seasonNumber, seasonNum),
-      eq(episodes.episodeNumber, episodeNum),
-    ))
-
+  const [ep] = await db.select().from(episodes).where(and(
+    eq(episodes.showId, showId),
+    eq(episodes.seasonNumber, seasonNum),
+    eq(episodes.episodeNumber, episodeNum),
+  ))
   if (ep) return ep
 
-  // Episode not in DB yet — try fetching from TMDB
   try {
     const seasonData = await getTmdbSeason(tmdbId, seasonNum)
     const tmdbEp = seasonData.episodes?.find(e => e.episode_number === episodeNum)
@@ -398,45 +347,35 @@ async function findOrCreateEpisode(showId: number, tmdbId: number, seasonNum: nu
       .where(and(eq(seasons.showId, showId), eq(seasons.seasonNumber, seasonNum)))
 
     const [newEp] = await db.insert(episodes).values({
-      showId,
-      seasonId: season?.id || null,
-      seasonNumber: seasonNum,
-      episodeNumber: episodeNum,
-      title: tmdbEp.name || null,
-      overview: tmdbEp.overview || null,
-      runtime: tmdbEp.runtime || null,
-      airDate: tmdbEp.air_date || null,
-      stillPath: tmdbEp.still_path || null,
-      tmdbId: tmdbEp.id || null,
+      showId, seasonId: season?.id || null,
+      seasonNumber: seasonNum, episodeNumber: episodeNum,
+      title: tmdbEp.name || null, overview: tmdbEp.overview || null,
+      runtime: tmdbEp.runtime || null, airDate: tmdbEp.air_date || null,
+      stillPath: tmdbEp.still_path || null, tmdbId: tmdbEp.id || null,
     }).onConflictDoNothing().returning()
-
     return newEp || null
   } catch {
     return null
   }
 }
 
+// ─── Progress recalc ──────────────────────────────────────────────────────────
+
 export async function recalcShowProgress(userId: number, showId: number): Promise<void> {
   const db = getDb()
-  const now = new Date()
+  const today = new Date().toISOString().split('T')[0]
 
-  // Count aired episodes (air_date <= today)
   const [airedResult] = await db.select({ count: sql<number>`count(*)` })
     .from(episodes)
-    .where(and(
-      eq(episodes.showId, showId),
-      sql`air_date IS NOT NULL AND air_date <= ${now.toISOString().split('T')[0]}`,
-    ))
+    .where(and(eq(episodes.showId, showId), sql`air_date IS NOT NULL AND air_date <= ${today}`))
   const airedEpisodes = Number(airedResult?.count || 0)
 
-  // Count watched episodes (distinct episodes user has watched)
   const [watchedResult] = await db.select({ count: sql<number>`count(distinct episode_id)` })
     .from(watchHistory)
     .innerJoin(episodes, eq(watchHistory.episodeId, episodes.id))
     .where(and(eq(watchHistory.userId, userId), eq(episodes.showId, showId)))
   const watchedEpisodes = Number(watchedResult?.count || 0)
 
-  // Last watched
   const [lastWatched] = await db.select({ watchedAt: watchHistory.watchedAt })
     .from(watchHistory)
     .innerJoin(episodes, eq(watchHistory.episodeId, episodes.id))
@@ -444,13 +383,11 @@ export async function recalcShowProgress(userId: number, showId: number): Promis
     .orderBy(sql`watched_at DESC`)
     .limit(1)
 
-  // Find next episode (lowest season+episode not yet watched)
-  const watchedEpisodeIds = await db.select({ id: watchHistory.episodeId })
+  const watchedIds = (await db.select({ id: watchHistory.episodeId })
     .from(watchHistory)
     .innerJoin(episodes, eq(watchHistory.episodeId, episodes.id))
-    .where(and(eq(watchHistory.userId, userId), eq(episodes.showId, showId)))
-
-  const watchedIds = watchedEpisodeIds.map(r => r.id)
+    .where(and(eq(watchHistory.userId, userId), eq(episodes.showId, showId))))
+    .map(r => r.id)
 
   let nextEpisodeId: number | null = null
   if (watchedIds.length > 0) {
@@ -459,7 +396,7 @@ export async function recalcShowProgress(userId: number, showId: number): Promis
       .where(and(
         eq(episodes.showId, showId),
         sql`id NOT IN (${sql.join(watchedIds.map(id => sql`${id}`), sql`, `)})`,
-        sql`air_date IS NOT NULL AND air_date <= ${now.toISOString().split('T')[0]}`,
+        sql`air_date IS NOT NULL AND air_date <= ${today}`,
       ))
       .orderBy(episodes.seasonNumber, episodes.episodeNumber)
       .limit(1)
@@ -467,17 +404,13 @@ export async function recalcShowProgress(userId: number, showId: number): Promis
   }
 
   const [show] = await db.select({ status: shows.status }).from(shows).where(eq(shows.id, showId))
-  const completed = (show?.status === 'ended' || show?.status === 'canceled') && watchedEpisodes >= airedEpisodes && airedEpisodes > 0
+  const completed = (show?.status === 'ended' || show?.status === 'canceled')
+    && watchedEpisodes >= airedEpisodes && airedEpisodes > 0
 
   await db.insert(userShowProgress).values({
-    userId,
-    showId,
-    airedEpisodes,
-    watchedEpisodes,
-    nextEpisodeId,
-    lastWatchedAt: lastWatched?.watchedAt || null,
-    completed,
-    updatedAt: new Date(),
+    userId, showId, airedEpisodes, watchedEpisodes,
+    nextEpisodeId, lastWatchedAt: lastWatched?.watchedAt || null,
+    completed, updatedAt: new Date(),
   }).onConflictDoUpdate({
     target: [userShowProgress.userId, userShowProgress.showId],
     set: { airedEpisodes, watchedEpisodes, nextEpisodeId, lastWatchedAt: lastWatched?.watchedAt || null, completed, updatedAt: new Date() },

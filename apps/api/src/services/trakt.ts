@@ -2,7 +2,7 @@ import { getDb, users } from '@trakt-dashboard/db'
 import { eq } from 'drizzle-orm'
 import { getRedis } from '../jobs/scheduler.js'
 
-const FETCH_TIMEOUT_MS = 15000
+const FETCH_TIMEOUT_MS = 12000
 
 // Proxy support — reads HTTP_PROXY / HTTPS_PROXY from environment
 function buildFetchOptions(): RequestInit {
@@ -12,19 +12,22 @@ function buildFetchOptions(): RequestInit {
 }
 const BASE_FETCH_OPTIONS = buildFetchOptions()
 
+// Reliable timeout via Promise.race (AbortController unreliable in Bun for established connections)
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`[trakt] Timeout after ${ms}ms: ${label}`)), ms)
+    ),
+  ])
+}
+
 async function fetchWithTimeout(url: string, options?: RequestInit): Promise<Response> {
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
-  try {
-    return await fetch(url, { ...BASE_FETCH_OPTIONS, ...options, signal: controller.signal })
-  } catch (e) {
-    if ((e as Error).name === 'AbortError') {
-      throw new Error(`Trakt request timeout after ${FETCH_TIMEOUT_MS}ms`)
-    }
-    throw e
-  } finally {
-    clearTimeout(timeout)
-  }
+  return withTimeout(
+    fetch(url, { ...BASE_FETCH_OPTIONS, ...options }),
+    FETCH_TIMEOUT_MS,
+    url
+  )
 }
 
 export interface TraktShow {

@@ -3,46 +3,35 @@ import { eq, and } from 'drizzle-orm'
 
 const TMDB_BASE = 'https://api.themoviedb.org/3'
 const CACHE_TTL_HOURS = 24 * 7
-const FETCH_TIMEOUT_MS = 15000
+// Hard timeout via Promise.race — more reliable than AbortController in Bun
+const FETCH_TIMEOUT_MS = 12000
 
 // ─── Proxy support ────────────────────────────────────────────────────────────
-// Set HTTP_PROXY or HTTPS_PROXY in environment to route TMDB requests through a proxy
 function buildFetchOptions(): RequestInit {
   const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || process.env.https_proxy || process.env.http_proxy
   if (!proxyUrl) return {}
-
-  try {
-    // Bun supports the `proxy` option natively on fetch
-    return { proxy: proxyUrl } as RequestInit & { proxy: string }
-  } catch {
-    return {}
-  }
+  console.log(`[tmdb] Using proxy: ${proxyUrl}`)
+  return { proxy: proxyUrl } as RequestInit & { proxy: string }
 }
-
 const BASE_FETCH_OPTIONS = buildFetchOptions()
 
-if (BASE_FETCH_OPTIONS && (BASE_FETCH_OPTIONS as any).proxy) {
-  console.log(`[tmdb] Using proxy: ${(BASE_FETCH_OPTIONS as any).proxy}`)
-}
-
-async function fetchWithTimeout(url: string): Promise<Response> {
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
-  try {
-    return await fetch(url, { ...BASE_FETCH_OPTIONS, signal: controller.signal })
-  } catch (e) {
-    if ((e as Error).name === 'AbortError') {
-      throw new Error(`TMDB request timeout after ${FETCH_TIMEOUT_MS}ms: ${url}`)
-    }
-    throw e
-  } finally {
-    clearTimeout(timeout)
-  }
+// ─── Reliable timeout via Promise.race ───────────────────────────────────────
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`[tmdb] Timeout after ${ms}ms: ${label}`)), ms)
+    ),
+  ])
 }
 
 async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const res = await fetchWithTimeout(url)
+    const res = await withTimeout(
+      fetch(url, BASE_FETCH_OPTIONS),
+      FETCH_TIMEOUT_MS,
+      url
+    )
     if (res.status !== 429) return res
     if (attempt === maxRetries) return res
     const retryAfter = parseInt(res.headers.get('Retry-After') || '5')
