@@ -1,63 +1,189 @@
 import { getDb, shows, seasons, episodes, watchHistory, userShowProgress, syncState } from '@trakt-dashboard/db'
-import { eq, and, inArray, sql } from 'drizzle-orm'
+import { eq, and, sql } from 'drizzle-orm'
 import { getTraktClient } from './trakt.js'
 import { getTmdbShow, getTmdbSeason } from './tmdb.js'
-import pLimit from 'p-limit'
 import dayjs from 'dayjs'
 
-const limit = pLimit(3) // max 3 concurrent TMDB requests
+const FAILED_RETRY_MAX = 3
+
+type FailedShow = {
+  tmdbId: number
+  title: string
+  error: string
+  retryCount?: number
+  alert?: boolean
+  lastTriedAt?: string
+}
+
+function failureKey(tmdbId: number, title: string): string {
+  return `${tmdbId}:${title}`
+}
+
+function toErrorMessage(e: unknown): string {
+  return String((e as { message?: string })?.message || e || 'Unknown error')
+}
+
+function upsertFailure(map: Map<string, FailedShow>, failure: FailedShow) {
+  const key = failureKey(failure.tmdbId, failure.title)
+  map.set(key, {
+    ...failure,
+    retryCount: failure.retryCount ?? 0,
+    alert: failure.alert ?? false,
+    lastTriedAt: new Date().toISOString(),
+  })
+}
+
+async function syncSingleShow(
+  userId: number,
+  input: { tmdbId: number; traktId: number | null; title: string; traktShow: any },
+  onStage?: (stage: string) => Promise<void>,
+) {
+  const trakt = getTraktClient()
+  if (!input.tmdbId) throw new Error('Missing TMDB id')
+  if (!input.traktId) throw new Error('Missing Trakt id')
+
+  await onStage?.('写入基础剧集信息')
+  const showId = await upsertShowFromTmdb(input.tmdbId, input.traktShow)
+  await getDb().insert(userShowProgress).values({
+    userId,
+    showId,
+  }).onConflictDoNothing()
+
+  await onStage?.('同步 Trakt 观看进度')
+  const progress = await trakt.getShowProgress(userId, input.traktId)
+
+  await onStage?.('写入观看记录')
+  await syncEpisodeProgress(userId, showId, input.tmdbId, progress)
+
+  await onStage?.('计算汇总进度')
+  await recalcShowProgress(userId, showId)
+}
+
+async function ensureSyncState(userId: number) {
+  const db = getDb()
+  await db.insert(syncState).values({ userId }).onConflictDoNothing()
+}
 
 export async function triggerFullSync(userId: number): Promise<void> {
   const db = getDb()
+  await ensureSyncState(userId)
   await db.update(syncState).set({
-    status: 'running', progress: 0, total: 0, error: null, currentShow: null, updatedAt: new Date(),
+    status: 'running',
+    progress: 0,
+    total: 0,
+    error: null,
+    currentShow: 'Preparing sync...',
+    failedShows: [],
+    updatedAt: new Date(),
   }).where(eq(syncState.userId, userId))
 
   try {
-    const trakt = getTraktClient()
     console.log(`[sync] Starting full sync for user ${userId}`)
 
+    const trakt = getTraktClient()
     const watchedShows = await trakt.getWatchedShows(userId)
     console.log(`[sync] Found ${watchedShows.length} watched shows`)
 
     await db.update(syncState).set({ total: watchedShows.length, updatedAt: new Date() }).where(eq(syncState.userId, userId))
 
-    let done = 0
-    // Task 7.3: Collect per-show failures
-    const failures: Array<{ tmdbId: number; title: string; error: string }> = []
+    let processed = 0
+    const failureMap = new Map<string, FailedShow>()
 
-    await Promise.all(watchedShows.map(ws => limit(async () => {
+    for (const [idx, ws] of watchedShows.entries()) {
+      const progressLabel = `[${idx + 1}/${watchedShows.length}] ${ws.show.title}`
       try {
         const tmdbId = ws.show.ids.tmdb
-        if (!tmdbId) return
+        if (!tmdbId) {
+          upsertFailure(failureMap, { tmdbId: 0, title: ws.show.title, error: 'Missing TMDB id' })
+          continue
+        }
 
-        await db.update(syncState).set({ currentShow: ws.show.title, updatedAt: new Date() }).where(eq(syncState.userId, userId))
-
-        // Upsert show from TMDB
-        const showId = await upsertShowFromTmdb(tmdbId, ws.show)
-
-        // Get detailed progress from Trakt
-        const progress = await trakt.getShowProgress(userId, ws.show.ids.trakt)
-
-        // Upsert episodes and watch history
-        await syncEpisodeProgress(userId, showId, tmdbId, progress)
-
-        // Update show progress summary
-        await recalcShowProgress(userId, showId)
-
-        done++
-        await db.update(syncState).set({ progress: done, updatedAt: new Date() }).where(eq(syncState.userId, userId))
-        console.log(`[sync] ${done}/${watchedShows.length} ${ws.show.title}`)
+        await syncSingleShow(userId, {
+          tmdbId,
+          traktId: ws.show.ids.trakt || null,
+          title: ws.show.title,
+          traktShow: ws.show,
+        }, async (stage) => {
+          await db.update(syncState).set({
+            currentShow: `${progressLabel} · ${stage}`,
+            updatedAt: new Date(),
+          }).where(eq(syncState.userId, userId))
+        })
       } catch (e: any) {
         console.error(`[sync] Error syncing ${ws.show.title}:`, e)
-        failures.push({ tmdbId: ws.show.ids.tmdb, title: ws.show.title, error: String(e?.message || e) })
+        upsertFailure(failureMap, {
+          tmdbId: ws.show.ids.tmdb || 0,
+          title: ws.show.title,
+          error: toErrorMessage(e),
+        })
+      } finally {
+        processed++
+        await db.update(syncState).set({
+          progress: processed,
+          failedShows: Array.from(failureMap.values()),
+          updatedAt: new Date(),
+        }).where(eq(syncState.userId, userId))
+        console.log(`[sync] ${processed}/${watchedShows.length} ${ws.show.title}`)
       }
-    })))
+    }
+
+    if (failureMap.size > 0) {
+      for (let round = 1; round <= FAILED_RETRY_MAX && failureMap.size > 0; round++) {
+        await db.update(syncState).set({
+          currentShow: `Retrying failed shows (${round}/${FAILED_RETRY_MAX})`,
+          failedShows: Array.from(failureMap.values()),
+          updatedAt: new Date(),
+        }).where(eq(syncState.userId, userId))
+
+        for (const failure of Array.from(failureMap.values())) {
+          if ((failure.retryCount || 0) >= FAILED_RETRY_MAX) continue
+
+          try {
+            await db.update(syncState).set({
+              currentShow: `Retry ${round}/${FAILED_RETRY_MAX}: ${failure.title}`,
+              updatedAt: new Date(),
+            }).where(eq(syncState.userId, userId))
+
+            await syncSingleShow(userId, {
+              tmdbId: failure.tmdbId,
+              traktId: watchedShows.find((s) => s.show.ids.tmdb === failure.tmdbId)?.show.ids.trakt || null,
+              title: failure.title,
+              traktShow: watchedShows.find((s) => s.show.ids.tmdb === failure.tmdbId)?.show || { ids: {} },
+            }, async (stage) => {
+              await db.update(syncState).set({
+                currentShow: `Retry ${round}/${FAILED_RETRY_MAX}: ${failure.title} · ${stage}`,
+                updatedAt: new Date(),
+              }).where(eq(syncState.userId, userId))
+            })
+            failureMap.delete(failureKey(failure.tmdbId, failure.title))
+          } catch (e) {
+            const retryCount = (failure.retryCount || 0) + 1
+            const stillFailed: FailedShow = {
+              ...failure,
+              error: toErrorMessage(e),
+              retryCount,
+              alert: retryCount >= FAILED_RETRY_MAX,
+              lastTriedAt: new Date().toISOString(),
+            }
+            upsertFailure(failureMap, stillFailed)
+            if (stillFailed.alert) {
+              console.error(`[sync][ALERT] ${failure.title} failed after ${FAILED_RETRY_MAX} retries`)
+            }
+          } finally {
+            await db.update(syncState).set({
+              failedShows: Array.from(failureMap.values()),
+              updatedAt: new Date(),
+            }).where(eq(syncState.userId, userId))
+          }
+        }
+      }
+    }
 
     const lastSync = new Date()
+    const remainingFailures = Array.from(failureMap.values())
     await db.update(syncState).set({
       status: 'completed', lastSyncAt: lastSync, currentShow: null,
-      progress: done, failedShows: failures, updatedAt: new Date(),
+      progress: processed, failedShows: remainingFailures, updatedAt: new Date(),
     }).where(eq(syncState.userId, userId))
 
     console.log(`[sync] Full sync complete for user ${userId}`)
@@ -71,10 +197,18 @@ export async function triggerFullSync(userId: number): Promise<void> {
 
 export async function triggerIncrementalSync(userId: number): Promise<void> {
   const db = getDb()
+  await ensureSyncState(userId)
   const [state] = await db.select().from(syncState).where(eq(syncState.userId, userId))
   if (state?.status === 'running') return
 
-  await db.update(syncState).set({ status: 'running', error: null, updatedAt: new Date() }).where(eq(syncState.userId, userId))
+  await db.update(syncState).set({
+    status: 'running',
+    progress: 0,
+    total: 0,
+    currentShow: 'Preparing incremental sync...',
+    error: null,
+    updatedAt: new Date(),
+  }).where(eq(syncState.userId, userId))
 
   try {
     const trakt = getTraktClient()
@@ -93,8 +227,17 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
       showMap.get(tmdbId)!.push(entry)
     }
 
+    const totalShows = showMap.size
+    let processed = 0
+    await db.update(syncState).set({ total: totalShows, updatedAt: new Date() }).where(eq(syncState.userId, userId))
+
     for (const [tmdbId, entries] of showMap) {
       try {
+        await db.update(syncState).set({
+          currentShow: `[${processed + 1}/${totalShows}] ${entries[0]?.show?.title || `tmdb:${tmdbId}`}`,
+          updatedAt: new Date(),
+        }).where(eq(syncState.userId, userId))
+
         const showId = await upsertShowFromTmdb(tmdbId, entries[0].show)
 
         for (const entry of entries) {
@@ -112,6 +255,9 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
         await recalcShowProgress(userId, showId)
       } catch (e) {
         console.error(`[sync:incr] Error on tmdb ${tmdbId}:`, e)
+      } finally {
+        processed++
+        await db.update(syncState).set({ progress: processed, updatedAt: new Date() }).where(eq(syncState.userId, userId))
       }
     }
 

@@ -77,6 +77,11 @@ authRoutes.get('/callback', async (c) => {
       })
       .where(eq(users.id, existing[0].id))
     userId = existing[0].id
+
+    // Ensure syncState exists for existing users (may be missing on first run)
+    await db.insert(syncState).values({ userId }).onConflictDoNothing()
+    // Re-register repeat job in case it was lost after restart
+    await registerUserSyncJob(userId)
   } else {
     const [newUser] = await db.insert(users).values({
       traktAccessToken: tokens.access_token,

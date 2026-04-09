@@ -1,27 +1,76 @@
 import { Hono } from 'hono'
-import { getDb, syncState, watchHistory, episodes, shows, userShowProgress } from '@trakt-dashboard/db'
-import { eq, desc, sql, and } from 'drizzle-orm'
+import { getDb, syncState, shows, watchHistory, userShowProgress } from '@trakt-dashboard/db'
+import { eq, sql } from 'drizzle-orm'
 import { triggerFullSync } from '../services/sync.js'
 import { enqueueSyncNow } from '../jobs/scheduler.js'
 
 export const syncRoutes = new Hono<{ Variables: { userId: number } }>()
+
+type FailedShow = {
+  tmdbId: number
+  title: string
+  error: string
+  retryCount?: number
+  alert?: boolean
+  lastTriedAt?: string
+}
 
 // GET /api/sync/status
 syncRoutes.get('/status', async (c) => {
   const userId = c.get('userId')
   const db = getDb()
   const [state] = await db.select().from(syncState).where(eq(syncState.userId, userId))
+  const failedShows = (state?.failedShows as FailedShow[] | undefined) || []
+  const alerts = failedShows.filter((f) => f.alert)
+  const currentShowText = state?.currentShow || null
+  const currentIndexMatch = currentShowText?.match(/^\[(\d+)\/(\d+)\]/)
+  const currentIndex = currentIndexMatch ? Number(currentIndexMatch[1]) : null
 
   return c.json({
     data: {
       status: state?.status || 'idle',
       lastSyncAt: state?.lastSyncAt?.toISOString() || null,
-      currentShow: state?.currentShow || null,
+      currentShow: currentShowText,
+      currentIndex,
       progress: state?.progress || 0,
       total: state?.total || 0,
       error: state?.error || null,
-      // Task 7.4: Include failedShows in status response
-      failedShows: (state?.failedShows as Array<{ tmdbId: number; title: string; error: string }>) || [],
+      failedShows,
+      successCount: Math.max((state?.progress || 0) - failedShows.length, 0),
+      failedCount: failedShows.length,
+      alerts,
+      alertCount: alerts.length,
+    },
+  })
+})
+
+// GET /api/sync/debug - live counters for troubleshooting slow syncs
+syncRoutes.get('/debug', async (c) => {
+  const userId = c.get('userId')
+  const db = getDb()
+
+  const [state] = await db.select().from(syncState).where(eq(syncState.userId, userId))
+  const [showCount] = await db.select({ count: sql<number>`count(*)` }).from(shows)
+  const [historyCount] = await db.select({ count: sql<number>`count(*)` })
+    .from(watchHistory)
+    .where(eq(watchHistory.userId, userId))
+  const [progressCount] = await db.select({ count: sql<number>`count(*)` })
+    .from(userShowProgress)
+    .where(eq(userShowProgress.userId, userId))
+
+  return c.json({
+    data: {
+      syncStatus: state?.status || 'idle',
+      currentShow: state?.currentShow || null,
+      progress: state?.progress || 0,
+      total: state?.total || 0,
+      failedCount: ((state?.failedShows as Array<unknown> | undefined)?.length) || 0,
+      dbCounts: {
+        shows: Number(showCount?.count || 0),
+        watchHistory: Number(historyCount?.count || 0),
+        userShowProgress: Number(progressCount?.count || 0),
+      },
+      updatedAt: state?.updatedAt?.toISOString() || null,
     },
   })
 })

@@ -1,3 +1,4 @@
+import './load-env.js'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import postgres from 'postgres'
@@ -14,7 +15,7 @@ const db = drizzle(client)
 
 console.log('Running migrations...')
 await migrate(db, {
-  migrationsFolder: path.join(__dirname, '../../packages/db/drizzle'),
+  migrationsFolder: path.join(__dirname, '../../../packages/db/drizzle'),
 })
 console.log('Migrations complete')
 await client.end()

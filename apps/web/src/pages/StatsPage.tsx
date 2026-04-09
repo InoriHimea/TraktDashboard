@@ -1,15 +1,17 @@
 import { motion } from 'framer-motion'
+import type { ComponentType, CSSProperties } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell
 } from 'recharts'
-import { Tv2, CheckCircle2, Clock, TrendingUp, Star } from 'lucide-react'
+import { Tv2, CheckCircle2, Clock, TrendingUp, Star, Loader2 } from 'lucide-react'
 import { useStats } from '../hooks'
-import { tmdbImage, formatRuntime, daysAgo } from '../lib/utils'
+import { tmdbImage, daysAgo } from '../lib/utils'
+import type { StatsOverview } from '@trakt-dashboard/types'
 
 function StatCard({
   label, value, icon: Icon, sub, delay = 0
 }: {
-  label: string; value: string | number; icon: any; sub?: string; delay?: number
+  label: string; value: string | number; icon: ComponentType<{ size?: number; style?: CSSProperties }>; sub?: string; delay?: number
 }) {
   return (
     <motion.div
@@ -33,7 +35,15 @@ function StatCard({
   )
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean
+  payload?: Array<{ value: number }>
+  label?: string
+}) => {
   if (!active || !payload?.length) return null
   return (
     <div className="rounded-lg px-3 py-2" style={{
@@ -48,13 +58,23 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 }
 
 export default function StatsPage() {
-  const { data: stats, isLoading } = useStats()
+  const { data: stats, isLoading, error } = useStats()
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin"
-          style={{ borderColor: 'var(--color-accent)', borderTopColor: 'transparent' }} />
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 size={24} className="animate-spin" style={{ color: 'var(--color-accent)' }} />
+          <p style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>正在加载统计数据...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="px-8 py-12 text-center">
+        <p style={{ color: '#ef4444', fontSize: '14px' }}>统计数据加载失败，请稍后重试。</p>
       </div>
     )
   }
@@ -71,7 +91,7 @@ export default function StatsPage() {
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-      const found = stats.monthlyActivity?.find((m: any) => m.month === key)
+      const found = stats.monthlyActivity?.find((m) => m.month === key)
       months.push({
         month: d.toLocaleString('en', { month: 'short' }),
         count: found ? Number(found.count) : 0,
@@ -97,6 +117,17 @@ export default function StatsPage() {
         </h2>
         <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>Your watch history at a glance</p>
       </div>
+
+      {stats.totalEpisodesWatched === 0 && (
+        <div
+          className="rounded-xl p-6 mb-6"
+          style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border-subtle)' }}
+        >
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>
+            还没有可展示的统计数据。先在侧边栏触发一次同步，完成后这里会显示你的观看趋势与活跃月份。
+          </p>
+        </div>
+      )}
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 gap-3 mb-8" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
@@ -222,7 +253,7 @@ export default function StatsPage() {
               Recent Activity
             </h3>
             <div className="flex flex-col gap-3">
-              {stats.recentlyWatched.slice(0, 7).map((r: any, i: number) => (
+              {stats.recentlyWatched.slice(0, 7).map((r: StatsOverview['recentlyWatched'][number], i: number) => (
                 <div key={i} className="flex items-center gap-3">
                   <div
                     className="shrink-0 rounded overflow-hidden"

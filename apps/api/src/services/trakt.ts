@@ -2,6 +2,23 @@ import { getDb, users } from '@trakt-dashboard/db'
 import { eq } from 'drizzle-orm'
 import { getRedis } from '../jobs/scheduler.js'
 
+const FETCH_TIMEOUT_MS = 15000
+
+async function fetchWithTimeout(url: string, options?: RequestInit): Promise<Response> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+  try {
+    return await fetch(url, { ...options, signal: controller.signal })
+  } catch (e) {
+    if ((e as Error).name === 'AbortError') {
+      throw new Error(`Trakt request timeout after ${FETCH_TIMEOUT_MS}ms`)
+    }
+    throw e
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
 export interface TraktShow {
   title: string
   year: number
@@ -61,7 +78,7 @@ export interface TraktShowProgress {
 // Task 8.1: Generic fetch with 429 retry
 async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3): Promise<Response> {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const res = await fetch(url, options)
+    const res = await fetchWithTimeout(url, options)
     if (res.status !== 429) return res
     if (attempt === maxRetries) return res
     const retryAfter = parseInt(res.headers.get('Retry-After') || '5')
@@ -79,7 +96,7 @@ async function refreshToken(userId: number): Promise<string> {
 
   // Try to acquire lock
   for (let attempt = 0; attempt < 10; attempt++) {
-    const acquired = await redis.set(lockKey, '1', 'NX', 'EX', 30)
+    const acquired = await redis.set(lockKey, '1', 'EX', 30, 'NX')
     if (acquired) {
       try {
         const db = getDb()

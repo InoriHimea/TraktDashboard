@@ -1,12 +1,12 @@
 // Task 9.3: Update hooks with concrete return types
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { ShowProgress, SyncState, StatsOverview } from '@trakt-dashboard/types'
+import type { AuthStatus, ShowProgress, SyncState, SyncDebugState, StatsOverview } from '@trakt-dashboard/types'
 import { api } from '../lib/api'
 
 export function useAuth() {
-  return useQuery({
+  return useQuery<AuthStatus>({
     queryKey: ['auth'],
-    queryFn: () => fetch('/auth/me', { credentials: 'include' }).then(r => r.json()),
+    queryFn: api.auth.me,
     staleTime: 1000 * 60 * 5,
   })
 }
@@ -14,8 +14,11 @@ export function useAuth() {
 export function useLogout() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: () => fetch('/auth/logout', { method: 'POST', credentials: 'include' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['auth'] }),
+    mutationFn: api.auth.logout,
+    onSuccess: () => {
+      qc.setQueryData<AuthStatus>(['auth'], { authenticated: false, user: null })
+      qc.invalidateQueries({ queryKey: ['auth'] })
+    },
   })
 }
 
@@ -37,6 +40,15 @@ export function useTriggerSync() {
     onSuccess: () => {
       setTimeout(() => qc.invalidateQueries({ queryKey: ['sync-status'] }), 500)
     },
+  })
+}
+
+export function useSyncDebug(enabled: boolean) {
+  return useQuery<SyncDebugState>({
+    queryKey: ['sync-debug'],
+    queryFn: () => api.sync.debug().then(r => r.data),
+    enabled,
+    refetchInterval: enabled ? 2000 : false,
   })
 }
 

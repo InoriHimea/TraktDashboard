@@ -1,10 +1,10 @@
 // Task 9.2: Replace all `any` with concrete types from @trakt-dashboard/types
-import type { AuthStatus, ShowProgress, SyncState, StatsOverview, PaginatedResponse, ApiResponse } from '@trakt-dashboard/types'
+import type { AuthStatus, ShowProgress, SyncState, SyncDebugState, StatsOverview, PaginatedResponse, ApiResponse } from '@trakt-dashboard/types'
 
-const BASE = '/api'
+const API_BASE = '/api'
 
-async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+async function request<T>(path: string, options?: RequestInit, base = API_BASE): Promise<T> {
+  const res = await fetch(`${base}${path}`, {
     credentials: 'include',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     ...options,
@@ -18,24 +18,25 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 
 export const api = {
   auth: {
-    me: () => apiFetch<AuthStatus>('/auth/me' as string),
-    logout: () => apiFetch<{ ok: boolean }>('/auth/logout' as string, { method: 'POST' }),
+    me: () => request<AuthStatus>('/auth/me', undefined, ''),
+    logout: () => request<{ ok: boolean }>('/auth/logout', { method: 'POST' }, ''),
   },
   shows: {
     // Task 4.2: Accept optional limit/offset pagination params
     progress: (filter = 'watching', q = '', limit = 50, offset = 0) =>
-      apiFetch<PaginatedResponse<ShowProgress>>(
+      request<PaginatedResponse<ShowProgress>>(
         `/shows/progress?filter=${filter}&q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}`
       ),
     detail: (id: number) =>
-      apiFetch<ApiResponse<ShowProgress>>(`/shows/${id}`),
+      request<ApiResponse<ShowProgress>>(`/shows/${id}`),
   },
   sync: {
-    status: () => apiFetch<ApiResponse<SyncState>>('/sync/status'),
-    trigger: () => apiFetch<{ ok: boolean }>('/sync/trigger', { method: 'POST' }),
-    full: () => apiFetch<{ ok: boolean }>('/sync/full', { method: 'POST' }),
+    status: () => request<ApiResponse<SyncState>>('/sync/status'),
+    debug: () => request<ApiResponse<SyncDebugState>>('/sync/debug'),
+    trigger: () => request<{ ok: boolean }>('/sync/trigger', { method: 'POST' }),
+    full: () => request<{ ok: boolean }>('/sync/full', { method: 'POST' }),
   },
   stats: {
-    overview: () => apiFetch<ApiResponse<StatsOverview>>('/stats/overview'),
+    overview: () => request<ApiResponse<StatsOverview>>('/stats/overview'),
   },
 }

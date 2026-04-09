@@ -1,23 +1,30 @@
 import { Hono } from 'hono'
 import { getDb, shows, seasons, episodes, watchHistory, userShowProgress } from '@trakt-dashboard/db'
-import { eq, and, desc, asc, sql, like, or } from 'drizzle-orm'
-import type { ShowProgress, SeasonProgress, EpisodeProgress } from '@trakt-dashboard/types'
+import { eq, and, desc, asc, sql, like } from 'drizzle-orm'
+import type { ShowProgress, SeasonProgress, EpisodeProgress, ShowStatus } from '@trakt-dashboard/types'
 
 export const showRoutes = new Hono<{ Variables: { userId: number } }>()
+
+function parseBoundedInt(value: string | undefined, fallback: number, min: number, max: number): number {
+  if (!value) return fallback
+  const parsed = Number.parseInt(value, 10)
+  if (!Number.isFinite(parsed)) return fallback
+  return Math.min(Math.max(parsed, min), max)
+}
 
 // GET /api/shows/progress — all shows with progress for the user
 showRoutes.get('/progress', async (c) => {
   const userId = c.get('userId')
   const db = getDb()
-  const filter = c.req.query('filter') || 'watching' // watching | completed | all
-  const search = c.req.query('q') || ''
-  // Task 4.1: Pagination support
-  const limit = Math.min(parseInt(c.req.query('limit') || '50'), 200)
-  const offset = parseInt(c.req.query('offset') || '0')
+  const rawFilter = c.req.query('filter') || 'watching' // watching | completed | all
+  const filter = ['watching', 'completed', 'all'].includes(rawFilter) ? rawFilter : 'watching'
+  const search = (c.req.query('q') || '').trim()
+  const limit = parseBoundedInt(c.req.query('limit'), 50, 1, 200)
+  const offset = parseBoundedInt(c.req.query('offset'), 0, 0, 1_000_000)
 
   const whereClause = and(
     eq(userShowProgress.userId, userId),
-    search ? or(like(shows.title, `%${search}%`)) : undefined,
+    search ? like(shows.title, `%${search}%`) : undefined,
     filter === 'watching' ? eq(userShowProgress.completed, false) : undefined,
     filter === 'completed' ? eq(userShowProgress.completed, true) : undefined,
   )
@@ -50,7 +57,7 @@ showRoutes.get('/progress', async (c) => {
       traktSlug: row.show.traktSlug,
       title: row.show.title,
       overview: row.show.overview,
-      status: row.show.status,
+      status: row.show.status as ShowStatus,
       firstAired: row.show.firstAired,
       network: row.show.network,
       genres: row.show.genres as string[],
@@ -91,7 +98,8 @@ showRoutes.get('/progress', async (c) => {
 // GET /api/shows/:id — single show with full season/episode progress
 showRoutes.get('/:id', async (c) => {
   const userId = c.get('userId')
-  const showId = parseInt(c.req.param('id'))
+  const showId = parseBoundedInt(c.req.param('id'), -1, 1, Number.MAX_SAFE_INTEGER)
+  if (showId < 1) return c.json({ error: 'Invalid show id' }, 400)
   const db = getDb()
 
   const [show] = await db.select().from(shows).where(eq(shows.id, showId))
@@ -123,9 +131,18 @@ showRoutes.get('/:id', async (c) => {
   }
 
   const today = new Date().toISOString().split('T')[0]
+  const episodesBySeason = new Map<number, typeof allEpisodes>()
+  for (const ep of allEpisodes) {
+    const grouped = episodesBySeason.get(ep.seasonNumber)
+    if (grouped) {
+      grouped.push(ep)
+    } else {
+      episodesBySeason.set(ep.seasonNumber, [ep])
+    }
+  }
 
   const seasonData: SeasonProgress[] = allSeasons.map(s => {
-    const sEps = allEpisodes.filter(e => e.seasonNumber === s.seasonNumber)
+    const sEps = episodesBySeason.get(s.seasonNumber) || []
     const epProgress: EpisodeProgress[] = sEps.map(ep => {
       const watchedAt = watchedMap.get(ep.id) || null
       const aired = !!ep.airDate && ep.airDate <= today
@@ -160,6 +177,7 @@ showRoutes.get('/:id', async (c) => {
     data: {
       show: {
         ...show,
+        status: show.status as ShowStatus,
         genres: show.genres as string[],
         lastSyncedAt: show.lastSyncedAt.toISOString(),
         createdAt: show.createdAt.toISOString(),
@@ -177,8 +195,8 @@ showRoutes.get('/:id', async (c) => {
 
 // GET /api/shows/:id/seasons — season breakdown only
 showRoutes.get('/:id/seasons', async (c) => {
-  const userId = c.get('userId')
-  const showId = parseInt(c.req.param('id'))
+  const showId = parseBoundedInt(c.req.param('id'), -1, 1, Number.MAX_SAFE_INTEGER)
+  if (showId < 1) return c.json({ error: 'Invalid show id' }, 400)
   const db = getDb()
 
   const allSeasons = await db.select().from(seasons)

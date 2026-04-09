@@ -98,15 +98,42 @@ export interface ShowProgress {
 
 export type SyncStatus = 'idle' | 'running' | 'completed' | 'error'
 
+export interface FailedShowSyncItem {
+  tmdbId: number
+  title: string
+  error: string
+  retryCount?: number
+  alert?: boolean
+  lastTriedAt?: string
+}
+
 export interface SyncState {
   status: SyncStatus
   lastSyncAt: string | null
   currentShow: string | null
+  currentIndex?: number | null
   progress: number
   total: number
   error: string | null
-  // Task 9.1: Include failedShows in shared type
-  failedShows: Array<{ tmdbId: number; title: string; error: string }>
+  failedShows: FailedShowSyncItem[]
+  successCount?: number
+  failedCount?: number
+  alerts?: FailedShowSyncItem[]
+  alertCount?: number
+}
+
+export interface SyncDebugState {
+  syncStatus: SyncStatus
+  currentShow: string | null
+  progress: number
+  total: number
+  failedCount: number
+  dbCounts: {
+    shows: number
+    watchHistory: number
+    userShowProgress: number
+  }
+  updatedAt: string | null
 }
 
 // ─── API Responses ────────────────────────────────────────────────────────────

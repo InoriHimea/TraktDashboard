@@ -3,6 +3,22 @@ import { eq, and } from 'drizzle-orm'
 
 const TMDB_BASE = 'https://api.themoviedb.org/3'
 const CACHE_TTL_HOURS = 24 * 7 // 7 days
+const FETCH_TIMEOUT_MS = 15000
+
+async function fetchWithTimeout(url: string): Promise<Response> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+  try {
+    return await fetch(url, { signal: controller.signal })
+  } catch (e) {
+    if ((e as Error).name === 'AbortError') {
+      throw new Error(`TMDB request timeout after ${FETCH_TIMEOUT_MS}ms`)
+    }
+    throw e
+  } finally {
+    clearTimeout(timeout)
+  }
+}
 
 export interface TmdbShow {
   id: number
@@ -45,7 +61,7 @@ export interface TmdbSeason {
 // Task 8.3: 429 retry for TMDB
 async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const res = await fetch(url)
+    const res = await fetchWithTimeout(url)
     if (res.status !== 429) return res
     if (attempt === maxRetries) return res
     const retryAfter = parseInt(res.headers.get('Retry-After') || '5')

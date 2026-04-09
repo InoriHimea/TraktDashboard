@@ -140,6 +140,13 @@ export const syncState = pgTable('sync_state', {
   total: integer('total').notNull().default(0),
   error: text('error'),
   // Task 7.1: Track per-show sync failures
-  failedShows: jsonb('failed_shows').$type<Array<{ tmdbId: number; title: string; error: string }>>().notNull().default([]),
+  failedShows: jsonb('failed_shows').$type<Array<{
+    tmdbId: number
+    title: string
+    error: string
+    retryCount?: number
+    alert?: boolean
+    lastTriedAt?: string
+  }>>().notNull().default([]),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })

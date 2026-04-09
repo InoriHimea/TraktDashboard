@@ -1,9 +1,8 @@
-import { useState, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Tv2, CheckCircle2, LayoutGrid, Loader2 } from 'lucide-react'
+import { Search, Tv2, CheckCircle2, LayoutGrid, Loader2, X, RefreshCw } from 'lucide-react'
 import { useShowsProgress } from '../hooks'
 import { ShowCard } from '../components/ShowCard'
-import { cn } from '../lib/utils'
 
 const FILTERS = [
   { key: 'watching', label: 'Watching', icon: Tv2 },
@@ -16,36 +15,58 @@ export default function ProgressPage() {
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
-  const debounce = useCallback((val: string) => {
-    clearTimeout((debounce as any)._t)
-    ;(debounce as any)._t = setTimeout(() => setDebouncedSearch(val), 280)
-  }, [])
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(search.trim())
+    }, 280)
+    return () => window.clearTimeout(timer)
+  }, [search])
 
-  const { data: shows, isLoading, error } = useShowsProgress(filter, debouncedSearch)
+  const { data: shows, isLoading, error, refetch, isFetching } = useShowsProgress(filter, debouncedSearch)
+  const activeFilterLabel = FILTERS.find(f => f.key === filter)?.label || 'Watching'
+  const totalWatched = (shows || []).reduce((acc, item) => acc + item.watchedEpisodes, 0)
+  const totalAired = (shows || []).reduce((acc, item) => acc + item.airedEpisodes, 0)
+  const completedCount = (shows || []).filter((item) => item.completed).length
 
   return (
-    <div className="px-8 py-8 max-w-4xl">
+    <div className="px-8 py-8 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
-        <h2
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: '32px',
-            color: 'var(--color-text)',
-            letterSpacing: '-0.02em',
-            lineHeight: 1.1,
-            marginBottom: '6px',
-          }}
-        >
-          Watch Progress
-        </h2>
-        <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>
-          {shows ? `${shows.length} show${shows.length !== 1 ? 's' : ''}` : '…'}
-        </p>
+      <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <h2
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '34px',
+              color: 'var(--color-text)',
+              letterSpacing: '-0.02em',
+              lineHeight: 1.1,
+              marginBottom: '6px',
+            }}
+          >
+            Progress
+          </h2>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>
+            {shows ? `${shows.length} 个剧集 · 已看 ${totalWatched}/${totalAired} 集` : '正在统计...'}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span
+            className="px-3 py-1.5 rounded-lg"
+            style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', fontSize: '12px', color: 'var(--color-text-secondary)' }}
+          >
+            已完结 {completedCount}
+          </span>
+          <span
+            className="px-3 py-1.5 rounded-lg"
+            style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', fontSize: '12px', color: 'var(--color-text-secondary)' }}
+          >
+            分类 {activeFilterLabel}
+          </span>
+        </div>
       </div>
 
       {/* Controls */}
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-3 mb-2 flex-wrap">
         {/* Filter tabs */}
         <div
           className="flex items-center rounded-lg p-1 gap-1"
@@ -81,7 +102,7 @@ export default function ProgressPage() {
             type="text"
             placeholder="Search shows…"
             value={search}
-            onChange={e => { setSearch(e.target.value); debounce(e.target.value) }}
+            onChange={e => setSearch(e.target.value)}
             style={{
               background: 'transparent',
               border: 'none',
@@ -91,8 +112,21 @@ export default function ProgressPage() {
               width: '100%',
             }}
           />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              aria-label="Clear search"
+              className="p-0.5 rounded"
+              style={{ border: 'none', background: 'transparent', color: 'var(--color-text-muted)', cursor: 'pointer' }}
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
       </div>
+      <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', marginBottom: '16px' }}>
+        当前筛选: {activeFilterLabel}{debouncedSearch ? ` · 搜索: "${debouncedSearch}"` : ''}{isFetching ? ' · 更新中...' : ''}
+      </p>
 
       {/* Show list */}
       {isLoading ? (
@@ -101,8 +135,22 @@ export default function ProgressPage() {
           <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>Loading shows…</p>
         </div>
       ) : error ? (
-        <div className="text-center py-20">
-          <p style={{ color: '#ef4444', fontSize: '14px' }}>Failed to load shows. Try syncing again.</p>
+        <div className="text-center py-20 flex flex-col items-center gap-3">
+          <p style={{ color: '#ef4444', fontSize: '14px' }}>加载剧集失败，请检查 API 是否正常。</p>
+          <button
+            onClick={() => refetch()}
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg"
+            style={{
+              background: 'var(--color-surface)',
+              border: '1px solid var(--color-border)',
+              color: 'var(--color-text-secondary)',
+              fontSize: '13px',
+              cursor: 'pointer',
+            }}
+          >
+            <RefreshCw size={13} />
+            重试
+          </button>
         </div>
       ) : shows?.length === 0 ? (
         <motion.div
@@ -120,7 +168,7 @@ export default function ProgressPage() {
           )}
         </motion.div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))' }}>
           <AnimatePresence mode="popLayout">
             {shows?.map((progress, i) => (
               <ShowCard key={progress.show.id} progress={progress} index={i} />
