@@ -10,7 +10,7 @@ interface ShowCardProps {
   index: number
 }
 
-const STATUS_COLOR: Record<string, string> = {
+const STATUS_DOT: Record<string, string> = {
   'returning series': 'var(--color-airing)',
   'ended':            'var(--color-ended)',
   'canceled':         'var(--color-error)',
@@ -20,79 +20,66 @@ const STATUS_COLOR: Record<string, string> = {
 export function ShowCard({ progress, index }: ShowCardProps) {
   const { show, watchedEpisodes, airedEpisodes, nextEpisode, lastWatchedAt, completed, percentage } = progress
   const poster = tmdbImage(show.posterPath, 'w185')
-  const statusColor = STATUS_COLOR[show.status] || 'var(--color-text-muted)'
+  const dotColor = STATUS_DOT[show.status] || 'var(--color-text-muted)'
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.03, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.25, delay: Math.min(index * 0.025, 0.3), ease: [0.16, 1, 0.3, 1] }}
     >
       <Link to={`/shows/${show.id}`} style={{ textDecoration: 'none', display: 'block' }}>
         <motion.div
-          whileHover={{ y: -1, boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}
-          transition={{ duration: 0.15 }}
-          className="flex gap-4 p-4 rounded-xl"
+          whileHover={{ backgroundColor: 'var(--color-surface-2)' }}
+          transition={{ duration: 0.12 }}
+          className="flex items-center gap-4 px-4 py-3 rounded-xl"
           style={{
             background: 'var(--color-surface)',
             border: '1px solid var(--color-border-subtle)',
             cursor: 'pointer',
           }}
         >
-          {/* Poster */}
+          {/* Poster — compact */}
           <div
             className="shrink-0 rounded-lg overflow-hidden"
-            style={{
-              width: '54px',
-              height: '80px',
-              background: 'var(--color-surface-3)',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-            }}
+            style={{ width: '44px', height: '64px', background: 'var(--color-surface-3)' }}
           >
             {poster ? (
               <img src={poster} alt={show.title} className="w-full h-full object-cover" loading="lazy" />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <Tv2 size={18} style={{ color: 'var(--color-text-muted)', opacity: 0.4 }} />
+                <Tv2 size={16} style={{ color: 'var(--color-text-muted)', opacity: 0.3 }} />
               </div>
             )}
           </div>
 
-          {/* Content */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2 mb-1.5">
-              <h3
-                className="truncate"
-                style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text)', lineHeight: 1.3, letterSpacing: '-0.01em' }}
-              >
-                {show.title}
-              </h3>
-              {completed && (
-                <span className="shrink-0 flex items-center gap-1" style={{ fontSize: '11px', color: 'var(--color-watched)' }}>
-                  <CheckCircle2 size={11} />
-                  Done
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2.5 mb-2.5">
-              <span style={{ fontSize: '11px', color: statusColor, fontWeight: 500 }}>
-                {show.status.charAt(0).toUpperCase() + show.status.slice(1)}
-              </span>
-              {show.network && (
-                <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
-                  · {show.network}
-                </span>
-              )}
+          {/* Title + meta — fixed width */}
+          <div style={{ width: '220px', flexShrink: 0 }}>
+            <h3
+              className="truncate"
+              style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text)', letterSpacing: '-0.01em', marginBottom: '4px' }}
+            >
+              {show.title}
+            </h3>
+            <div className="flex items-center gap-1.5">
               <span
-                className="flex items-center gap-1 ml-auto"
-                style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}
-              >
-                <Clock size={10} />
-                {daysAgo(lastWatchedAt)}
+                style={{
+                  display: 'inline-block',
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  background: dotColor,
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', truncate: true }}>
+                {show.network || show.status}
               </span>
             </div>
+          </div>
 
+          {/* Progress bar — flex grow */}
+          <div className="flex-1 min-w-0">
             <ProgressBar
               watched={watchedEpisodes}
               aired={airedEpisodes}
@@ -100,22 +87,36 @@ export function ShowCard({ progress, index }: ShowCardProps) {
               compact
               showLabel={false}
             />
-
-            <div className="flex items-center justify-between mt-1.5">
+            <div className="flex items-center justify-between mt-1">
               <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
                 <span style={{ color: 'var(--color-watched)', fontWeight: 500 }}>{watchedEpisodes}</span>
-                {' / '}{airedEpisodes} aired
+                {' / '}{airedEpisodes}
                 {show.totalEpisodes > airedEpisodes && (
-                  <span> · {show.totalEpisodes - airedEpisodes} upcoming</span>
+                  <span style={{ opacity: 0.6 }}> · {show.totalEpisodes - airedEpisodes} left</span>
                 )}
               </span>
-              {nextEpisode && !completed && (
-                <span className="flex items-center gap-1" style={{ fontSize: '11px', color: 'var(--color-accent)' }}>
-                  <PlayCircle size={10} />
-                  {formatEpisode(nextEpisode.seasonNumber, nextEpisode.episodeNumber)}
-                </span>
-              )}
+              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 500 }}>
+                {percentage}%
+              </span>
             </div>
+          </div>
+
+          {/* Right meta — fixed width */}
+          <div className="shrink-0 flex flex-col items-end gap-1.5" style={{ width: '110px' }}>
+            {completed ? (
+              <span className="flex items-center gap-1" style={{ fontSize: '11px', color: 'var(--color-watched)' }}>
+                <CheckCircle2 size={11} /> Done
+              </span>
+            ) : nextEpisode ? (
+              <span className="flex items-center gap-1" style={{ fontSize: '11px', color: 'var(--color-accent)' }}>
+                <PlayCircle size={11} />
+                {formatEpisode(nextEpisode.seasonNumber, nextEpisode.episodeNumber)}
+              </span>
+            ) : null}
+            <span className="flex items-center gap-1" style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+              <Clock size={10} />
+              {daysAgo(lastWatchedAt)}
+            </span>
           </div>
         </motion.div>
       </Link>

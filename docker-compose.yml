@@ -60,6 +60,9 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
       SYNC_INTERVAL_MINUTES: ${SYNC_INTERVAL_MINUTES:-15}
       NODE_ENV: production
+      # Optional HTTP proxy for TMDB/Trakt access
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
     ports:
       - "3001:3001"
     healthcheck:

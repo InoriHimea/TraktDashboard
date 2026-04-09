@@ -2,23 +2,67 @@ import { getDb, metadataCache } from '@trakt-dashboard/db'
 import { eq, and } from 'drizzle-orm'
 
 const TMDB_BASE = 'https://api.themoviedb.org/3'
-const CACHE_TTL_HOURS = 24 * 7 // 7 days
+const CACHE_TTL_HOURS = 24 * 7
 const FETCH_TIMEOUT_MS = 15000
+
+// ─── Proxy support ────────────────────────────────────────────────────────────
+// Set HTTP_PROXY or HTTPS_PROXY in environment to route TMDB requests through a proxy
+function buildFetchOptions(): RequestInit {
+  const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || process.env.https_proxy || process.env.http_proxy
+  if (!proxyUrl) return {}
+
+  try {
+    // Bun supports the `proxy` option natively on fetch
+    return { proxy: proxyUrl } as RequestInit & { proxy: string }
+  } catch {
+    return {}
+  }
+}
+
+const BASE_FETCH_OPTIONS = buildFetchOptions()
+
+if (BASE_FETCH_OPTIONS && (BASE_FETCH_OPTIONS as any).proxy) {
+  console.log(`[tmdb] Using proxy: ${(BASE_FETCH_OPTIONS as any).proxy}`)
+}
 
 async function fetchWithTimeout(url: string): Promise<Response> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
   try {
-    return await fetch(url, { signal: controller.signal })
+    return await fetch(url, { ...BASE_FETCH_OPTIONS, signal: controller.signal })
   } catch (e) {
     if ((e as Error).name === 'AbortError') {
-      throw new Error(`TMDB request timeout after ${FETCH_TIMEOUT_MS}ms`)
+      throw new Error(`TMDB request timeout after ${FETCH_TIMEOUT_MS}ms: ${url}`)
     }
     throw e
   } finally {
     clearTimeout(timeout)
   }
 }
+
+async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const res = await fetchWithTimeout(url)
+    if (res.status !== 429) return res
+    if (attempt === maxRetries) return res
+    const retryAfter = parseInt(res.headers.get('Retry-After') || '5')
+    console.warn(`[tmdb] Rate limited, retrying in ${retryAfter}s (attempt ${attempt + 1}/${maxRetries})`)
+    await new Promise(r => setTimeout(r, retryAfter * 1000))
+  }
+  throw new Error('fetchWithRetry: unreachable')
+}
+
+async function tmdbFetch<T>(path: string, params?: Record<string, string>): Promise<T> {
+  const url = new URL(`${TMDB_BASE}${path}`)
+  url.searchParams.set('api_key', process.env.TMDB_API_KEY!)
+  if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
+
+  const res = await fetchWithRetry(url.toString())
+  if (!res.ok) throw new Error(`TMDB ${res.status}: ${path}`)
+  return res.json() as Promise<T>
+}
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface TmdbShow {
   id: number
@@ -58,48 +102,22 @@ export interface TmdbSeason {
   }>
 }
 
-// Task 8.3: 429 retry for TMDB
-async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const res = await fetchWithTimeout(url)
-    if (res.status !== 429) return res
-    if (attempt === maxRetries) return res
-    const retryAfter = parseInt(res.headers.get('Retry-After') || '5')
-    console.warn(`[tmdb] Rate limited, retrying in ${retryAfter}s (attempt ${attempt + 1}/${maxRetries})`)
-    await new Promise(r => setTimeout(r, retryAfter * 1000))
-  }
-  throw new Error('fetchWithRetry: unreachable')
-}
-
-async function tmdbFetch<T>(path: string, params?: Record<string, string>): Promise<T> {
-  const url = new URL(`${TMDB_BASE}${path}`)
-  url.searchParams.set('api_key', process.env.TMDB_API_KEY!)
-  if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
-
-  const res = await fetchWithRetry(url.toString())
-  if (!res.ok) throw new Error(`TMDB ${res.status}: ${path}`)
-  return res.json() as Promise<T>
-}
+// ─── Public API ───────────────────────────────────────────────────────────────
 
 export async function getTmdbShow(tmdbId: number): Promise<TmdbShow> {
   const db = getDb()
   const cacheKey = String(tmdbId)
 
-  // Check cache
   const [cached] = await db.select()
     .from(metadataCache)
     .where(and(eq(metadataCache.source, 'tmdb_show'), eq(metadataCache.externalId, cacheKey)))
 
   if (cached) {
     const age = Date.now() - new Date(cached.cachedAt).getTime()
-    if (age < CACHE_TTL_HOURS * 60 * 60 * 1000) {
-      return cached.data as TmdbShow
-    }
+    if (age < CACHE_TTL_HOURS * 60 * 60 * 1000) return cached.data as TmdbShow
   }
 
-  const data = await tmdbFetch<TmdbShow>(`/tv/${tmdbId}`, {
-    append_to_response: 'external_ids',
-  })
+  const data = await tmdbFetch<TmdbShow>(`/tv/${tmdbId}`, { append_to_response: 'external_ids' })
 
   await db.insert(metadataCache)
     .values({ source: 'tmdb_show', externalId: cacheKey, data, cachedAt: new Date() })
@@ -121,9 +139,7 @@ export async function getTmdbSeason(tmdbId: number, seasonNumber: number): Promi
 
   if (cached) {
     const age = Date.now() - new Date(cached.cachedAt).getTime()
-    if (age < CACHE_TTL_HOURS * 60 * 60 * 1000) {
-      return cached.data as TmdbSeason
-    }
+    if (age < CACHE_TTL_HOURS * 60 * 60 * 1000) return cached.data as TmdbSeason
   }
 
   const data = await tmdbFetch<TmdbSeason>(`/tv/${tmdbId}/season/${seasonNumber}`)

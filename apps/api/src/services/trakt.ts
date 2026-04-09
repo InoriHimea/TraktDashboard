@@ -4,11 +4,19 @@ import { getRedis } from '../jobs/scheduler.js'
 
 const FETCH_TIMEOUT_MS = 15000
 
+// Proxy support — reads HTTP_PROXY / HTTPS_PROXY from environment
+function buildFetchOptions(): RequestInit {
+  const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || process.env.https_proxy || process.env.http_proxy
+  if (!proxyUrl) return {}
+  return { proxy: proxyUrl } as RequestInit & { proxy: string }
+}
+const BASE_FETCH_OPTIONS = buildFetchOptions()
+
 async function fetchWithTimeout(url: string, options?: RequestInit): Promise<Response> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
   try {
-    return await fetch(url, { ...options, signal: controller.signal })
+    return await fetch(url, { ...BASE_FETCH_OPTIONS, ...options, signal: controller.signal })
   } catch (e) {
     if ((e as Error).name === 'AbortError') {
       throw new Error(`Trakt request timeout after ${FETCH_TIMEOUT_MS}ms`)
