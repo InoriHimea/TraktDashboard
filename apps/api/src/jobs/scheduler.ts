@@ -1,12 +1,12 @@
 import { Queue, Worker } from 'bullmq'
 import IORedis from 'ioredis'
-import { getDb, users } from '@trakt-dashboard/db'
+import { getDb, users, userSettings } from '@trakt-dashboard/db'
+import { eq } from 'drizzle-orm'
 import { triggerIncrementalSync } from '../services/sync.js'
 
 let connection: IORedis | null = null
 let syncQueue: Queue | null = null
 
-// Task 2.1: Export getRedis for use in trakt.ts (distributed lock)
 export function getRedis() {
   if (!connection) {
     connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', {
@@ -23,11 +23,22 @@ export function getSyncQueue() {
   return syncQueue
 }
 
-const intervalMinutes = parseInt(process.env.SYNC_INTERVAL_MINUTES || '15')
+// Task 8.1: Read syncIntervalMinutes from user_settings, fallback to env/default
+async function getUserSyncInterval(userId: number): Promise<number> {
+  try {
+    const db = getDb()
+    const [row] = await db.select({ syncIntervalMinutes: userSettings.syncIntervalMinutes })
+      .from(userSettings).where(eq(userSettings.userId, userId))
+    if (row?.syncIntervalMinutes) return row.syncIntervalMinutes
+  } catch {
+    console.warn(`[scheduler] Failed to read syncIntervalMinutes for user ${userId}, using default`)
+  }
+  return parseInt(process.env.SYNC_INTERVAL_MINUTES || '60')
+}
 
-// Task 5.2: Export registerUserSyncJob for use after new user creation
 export async function registerUserSyncJob(userId: number) {
   const queue = getSyncQueue()
+  const intervalMinutes = await getUserSyncInterval(userId)
   await queue.add(
     'incremental-sync',
     { userId },
@@ -38,6 +49,7 @@ export async function registerUserSyncJob(userId: number) {
       removeOnFail: 5,
     }
   )
+  console.log(`[scheduler] Registered sync job for user ${userId} every ${intervalMinutes} minutes`)
 }
 
 export async function startScheduler() {
@@ -57,14 +69,14 @@ export async function startScheduler() {
     console.error(`[scheduler] Job ${job?.id} failed:`, err)
   })
 
-  // Task 5.1: Register repeat jobs for all existing users instead of setInterval
+  // Register repeat jobs for all existing users
   const db = getDb()
   const allUsers = await db.select({ id: users.id }).from(users)
   for (const user of allUsers) {
     await registerUserSyncJob(user.id)
   }
 
-  console.log(`[scheduler] Incremental sync scheduled every ${intervalMinutes} minutes`)
+  console.log(`[scheduler] Scheduler started`)
 }
 
 export async function enqueueSyncNow(userId: number) {

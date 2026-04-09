@@ -4,6 +4,8 @@ import Layout from './components/Layout'
 import ProgressPage from './pages/ProgressPage'
 import ShowDetailPage from './pages/ShowDetailPage'
 import StatsPage from './pages/StatsPage'
+import SyncPage from './pages/SyncPage'
+import SettingsPage from './pages/SettingsPage'
 import LoginPage from './pages/LoginPage'
 
 export default function App() {
@@ -35,6 +37,8 @@ export default function App() {
         <Route path="/progress" element={<ProgressPage />} />
         <Route path="/shows/:id" element={<ShowDetailPage />} />
         <Route path="/stats" element={<StatsPage />} />
+        <Route path="/sync" element={<SyncPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="*" element={<Navigate to="/progress" replace />} />
       </Routes>
     </Layout>

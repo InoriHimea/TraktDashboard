@@ -1,6 +1,6 @@
 // Task 9.3: Update hooks with concrete return types
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { AuthStatus, ShowProgress, SyncState, SyncDebugState, StatsOverview } from '@trakt-dashboard/types'
+import type { AuthStatus, ShowProgress, SyncState, SyncDebugState, StatsOverview, UserSettings } from '@trakt-dashboard/types'
 import { api } from '../lib/api'
 
 export function useAuth() {
@@ -74,5 +74,21 @@ export function useStats() {
     queryKey: ['stats'],
     queryFn: () => api.stats.overview().then(r => r.data),
     staleTime: 1000 * 60 * 5,
+  })
+}
+
+export function useSettings() {
+  return useQuery<UserSettings>({
+    queryKey: ['settings'],
+    queryFn: () => api.settings.get().then(r => r.data),
+    staleTime: 1000 * 60 * 5,
+  })
+}
+
+export function useUpdateSettings() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: Partial<Omit<UserSettings, 'userId'>>) => api.settings.update(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['settings'] }),
   })
 }

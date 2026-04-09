@@ -1,4 +1,4 @@
-import { getDb, shows, seasons, episodes, watchHistory, userShowProgress, syncState } from '@trakt-dashboard/db'
+import { getDb, shows, seasons, episodes, watchHistory, userShowProgress, syncState, userSettings } from '@trakt-dashboard/db'
 import { eq, and, sql } from 'drizzle-orm'
 import { getTraktClient } from './trakt.js'
 import { getTmdbShow, getTmdbSeason } from './tmdb.js'
@@ -173,7 +173,7 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
     const limit = pLimit(SHOW_CONCURRENCY)
     await Promise.all(Array.from(showMap.entries()).map(([tmdbId, entries]) => limit(async () => {
       try {
-        const showId = await upsertShowFromTmdb(tmdbId, entries[0].show)
+        const showId = await upsertShowFromTmdb(tmdbId, entries[0].show, userId)
         for (const entry of entries) {
           const ep = await findOrCreateEpisode(showId, tmdbId, entry.episode.season, entry.episode.number)
           if (!ep) continue
@@ -214,7 +214,7 @@ async function syncSingleShow(
   if (!input.traktId) throw new Error('Missing Trakt id')
   const trakt = getTraktClient()
 
-  const showId = await upsertShowFromTmdb(input.tmdbId, input.traktShow)
+  const showId = await upsertShowFromTmdb(input.tmdbId, input.traktShow, userId)
   await getDb().insert(userShowProgress).values({ userId, showId }).onConflictDoNothing()
 
   const progress = await trakt.getShowProgress(userId, input.traktId)
@@ -224,9 +224,35 @@ async function syncSingleShow(
 
 // ─── TMDB upsert ──────────────────────────────────────────────────────────────
 
-async function upsertShowFromTmdb(tmdbId: number, traktShow: any): Promise<number> {
+async function upsertShowFromTmdb(tmdbId: number, traktShow: any, userId?: number): Promise<number> {
   const db = getDb()
-  const tmdb = await getTmdbShow(tmdbId)
+
+  // Task 7.1: Read user's displayLanguage for translated title
+  let displayLanguage: string | null = null
+  if (userId) {
+    try {
+      const [settings] = await db.select({ displayLanguage: userSettings.displayLanguage })
+        .from(userSettings).where(eq(userSettings.userId, userId))
+      displayLanguage = settings?.displayLanguage ?? null
+    } catch { /* ignore */ }
+  }
+
+  // Fetch base show data (no language = original)
+  const tmdb = await getTmdbShow(tmdbId, undefined, userId)
+
+  // Fetch translated title if language is set
+  let translatedName: string | null = null
+  if (displayLanguage) {
+    try {
+      const translated = await getTmdbShow(tmdbId, displayLanguage, userId)
+      // Only store as translated if it differs from original
+      if (translated.name !== tmdb.original_name) {
+        translatedName = translated.name
+      }
+    } catch {
+      // Translation fetch failed — skip, don't break sync
+    }
+  }
 
   const [show] = await db.insert(shows).values({
     tmdbId,
@@ -244,6 +270,9 @@ async function upsertShowFromTmdb(tmdbId: number, traktShow: any): Promise<numbe
     backdropPath: tmdb.backdrop_path || null,
     totalEpisodes: tmdb.number_of_episodes || 0,
     totalSeasons: tmdb.number_of_seasons || 0,
+    originalName: tmdb.original_name || null,
+    translatedName,
+    displayLanguage,
     lastSyncedAt: new Date(),
   }).onConflictDoUpdate({
     target: [shows.tmdbId],
@@ -258,6 +287,9 @@ async function upsertShowFromTmdb(tmdbId: number, traktShow: any): Promise<numbe
       backdropPath: tmdb.backdrop_path || null,
       totalEpisodes: tmdb.number_of_episodes || 0,
       totalSeasons: tmdb.number_of_seasons || 0,
+      originalName: tmdb.original_name || null,
+      translatedName,
+      displayLanguage,
       lastSyncedAt: new Date(),
     },
   }).returning({ id: shows.id })

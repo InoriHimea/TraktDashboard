@@ -41,6 +41,10 @@ export const shows = pgTable('shows', {
   backdropPath: text('backdrop_path'),
   totalEpisodes: integer('total_episodes').notNull().default(0),
   totalSeasons: integer('total_seasons').notNull().default(0),
+  // Task 1.2: Multilingual fields
+  originalName: text('original_name'),
+  translatedName: text('translated_name'),
+  displayLanguage: text('display_language'),
   lastSyncedAt: timestamp('last_synced_at').defaultNow().notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => [
@@ -148,5 +152,16 @@ export const syncState = pgTable('sync_state', {
     alert?: boolean
     lastTriedAt?: string
   }>>().notNull().default([]),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+// ─── User Settings ────────────────────────────────────────────────────────────
+
+export const userSettings = pgTable('user_settings', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
+  displayLanguage: text('display_language').notNull().default('zh-CN'),
+  syncIntervalMinutes: integer('sync_interval_minutes').notNull().default(60),
+  httpProxy: text('http_proxy'),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })

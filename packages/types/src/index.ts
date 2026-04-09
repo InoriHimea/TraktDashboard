@@ -21,6 +21,10 @@ export interface Show {
   totalSeasons: number
   lastSyncedAt: string
   createdAt: string
+  // Multilingual fields
+  originalName: string | null
+  translatedName: string | null
+  displayLanguage: string | null
 }
 
 // ─── Season ──────────────────────────────────────────────────────────────────
@@ -184,4 +188,13 @@ export interface User {
 export interface AuthStatus {
   authenticated: boolean
   user: Pick<User, 'id' | 'traktUsername'> | null
+}
+
+// ─── User Settings ────────────────────────────────────────────────────────────
+
+export interface UserSettings {
+  userId: number
+  displayLanguage: string
+  syncIntervalMinutes: number
+  httpProxy: string | null
 }

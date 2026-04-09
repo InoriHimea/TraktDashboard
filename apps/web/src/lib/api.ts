@@ -1,5 +1,5 @@
 // Task 9.2: Replace all `any` with concrete types from @trakt-dashboard/types
-import type { AuthStatus, ShowProgress, SyncState, SyncDebugState, StatsOverview, PaginatedResponse, ApiResponse } from '@trakt-dashboard/types'
+import type { AuthStatus, ShowProgress, SyncState, SyncDebugState, StatsOverview, PaginatedResponse, ApiResponse, UserSettings } from '@trakt-dashboard/types'
 
 const API_BASE = '/api'
 
@@ -38,5 +38,13 @@ export const api = {
   },
   stats: {
     overview: () => request<ApiResponse<StatsOverview>>('/stats/overview'),
+  },
+  settings: {
+    get: () => request<ApiResponse<UserSettings>>('/settings'),
+    update: (body: Partial<Omit<UserSettings, 'userId'>>) =>
+      request<ApiResponse<UserSettings>>('/settings', {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      }),
   },
 }
