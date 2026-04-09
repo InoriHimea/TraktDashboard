@@ -15,8 +15,8 @@ RUN pnpm install --frozen-lockfile
 FROM oven/bun:1.1-alpine AS runner
 WORKDIR /app
 
-# Switch to USTC mirror to avoid apk timeout in restricted networks
-RUN sed -i 's|https://dl-cdn.alpinelinux.org|https://mirrors.ustc.edu.cn|g' /etc/apk/repositories \
+# Switch to internal Nexus apk mirror
+RUN sed -i 's|https://dl-cdn.alpinelinux.org|https://artifact.mellivora.com.cn/alpine/apk-group|g' /etc/apk/repositories \
     && apk add --no-cache curl
 
 COPY --from=deps /app/node_modules ./node_modules
