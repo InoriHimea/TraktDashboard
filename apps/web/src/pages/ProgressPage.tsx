@@ -24,25 +24,26 @@ export default function ProgressPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
-      {/* Top controls bar */}
-      <div
-        style={{
-          position: 'sticky',
-          top: '56px',
-          zIndex: 30,
-          background: 'var(--color-bg)',
-          borderBottom: '1px solid var(--color-border-subtle)',
+      {/* Sticky controls bar */}
+      <div style={{
+        position: 'sticky',
+        top: '56px',
+        zIndex: 30,
+        background: 'var(--color-bg)',
+        borderBottom: '1px solid var(--color-border-subtle)',
+        backdropFilter: 'blur(12px)',
+      }}>
+        <div style={{
+          maxWidth: '1400px',
+          margin: '0 auto',
           padding: '12px 24px',
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
           flexWrap: 'wrap',
-          backdropFilter: 'blur(12px)',
-        }}
-      >
-        {/* Filter tabs */}
-        <div
-          style={{
+        }}>
+          {/* Filter tabs */}
+          <div style={{
             display: 'flex',
             alignItems: 'center',
             gap: '2px',
@@ -50,35 +51,33 @@ export default function ProgressPage() {
             border: '1px solid var(--color-border)',
             borderRadius: 'var(--radius-md)',
             padding: '3px',
-          }}
-        >
-          {FILTERS.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => setFilter(key)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '5px 12px',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: '13px',
-                fontWeight: filter === key ? 500 : 400,
-                color: filter === key ? 'var(--color-text)' : 'var(--color-text-secondary)',
-                background: filter === key ? 'var(--color-surface-3)' : 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              <Icon size={13} />
-              {label}
-            </button>
-          ))}
-        </div>
+          }}>
+            {FILTERS.map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => setFilter(key)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '5px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '13px',
+                  fontWeight: filter === key ? 500 : 400,
+                  color: filter === key ? 'var(--color-text)' : 'var(--color-text-secondary)',
+                  background: filter === key ? 'var(--color-surface-3)' : 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                <Icon size={13} />
+                {label}
+              </button>
+            ))}
+          </div>
 
-        {/* Search */}
-        <div
-          style={{
+          {/* Search */}
+          <div style={{
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
@@ -88,44 +87,44 @@ export default function ProgressPage() {
             border: '1px solid var(--color-border)',
             borderRadius: 'var(--radius-md)',
             padding: '6px 12px',
-          }}
-        >
-          <Search size={13} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
-          <input
-            type="text"
-            placeholder="Search shows…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              outline: 'none',
-              color: 'var(--color-text)',
-              fontSize: '13px',
-              width: '100%',
-            }}
-          />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              style={{ border: 'none', background: 'transparent', color: 'var(--color-text-muted)', cursor: 'pointer', padding: 0 }}
-            >
-              <X size={13} />
-            </button>
+          }}>
+            <Search size={13} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
+            <input
+              type="text"
+              placeholder="Search shows…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                outline: 'none',
+                color: 'var(--color-text)',
+                fontSize: '13px',
+                width: '100%',
+              }}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                style={{ border: 'none', background: 'transparent', color: 'var(--color-text-muted)', cursor: 'pointer', padding: 0 }}
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+
+          {isFetching && !isLoading && (
+            <Loader2 size={14} className="animate-spin" style={{ color: 'var(--color-text-muted)' }} />
           )}
+
+          <span style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginLeft: 'auto' }}>
+            {shows ? `${shows.length} shows` : ''}
+          </span>
         </div>
-
-        {isFetching && !isLoading && (
-          <Loader2 size={14} className="animate-spin" style={{ color: 'var(--color-text-muted)' }} />
-        )}
-
-        <span style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginLeft: 'auto' }}>
-          {shows ? `${shows.length} shows` : ''}
-        </span>
       </div>
 
-      {/* Content */}
-      <div style={{ padding: '24px' }}>
+      {/* Content — centered with max-width */}
+      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px' }}>
         {isLoading ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', paddingTop: '80px' }}>
             <Loader2 size={24} className="animate-spin" style={{ color: 'var(--color-accent)' }} />
@@ -158,7 +157,6 @@ export default function ProgressPage() {
             )}
           </motion.div>
         ) : (
-          /* Poster grid — responsive columns */
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',

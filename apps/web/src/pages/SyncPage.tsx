@@ -13,8 +13,9 @@ export default function SyncPage() {
   const failedShows = sync?.failedShows ?? []
 
   return (
-    <div className="px-8 py-8 max-w-2xl mx-auto">
-      <div className="mb-8">
+    <div style={{ maxWidth: '680px', margin: '0 auto', padding: '40px 24px' }}>
+      {/* Header */}
+      <div style={{ marginBottom: '32px' }}>
         <h2 style={{
           fontFamily: 'var(--font-display)',
           fontSize: '32px',
@@ -34,19 +35,23 @@ export default function SyncPage() {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-xl p-6 mb-4"
-        style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border-subtle)' }}
+        style={{
+          borderRadius: 'var(--radius-lg)',
+          padding: '24px',
+          marginBottom: '16px',
+          background: 'var(--color-surface)',
+          border: '1px solid var(--color-border-subtle)',
+        }}
       >
         {isLoading ? (
-          <div className="flex items-center gap-3">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Loader2 size={16} className="animate-spin" style={{ color: 'var(--color-accent)' }} />
             <span style={{ fontSize: '14px', color: 'var(--color-text-secondary)' }}>Loading sync status…</span>
           </div>
         ) : isRunning ? (
-          /* Running state */
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-3">
-              <Loader2 size={16} className="animate-spin shrink-0" style={{ color: 'var(--color-accent)' }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Loader2 size={16} className="animate-spin" style={{ color: 'var(--color-accent)', flexShrink: 0 }} />
               <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--color-text)' }}>
                 Syncing… {sync.progress}/{sync.total}
               </span>
@@ -54,17 +59,13 @@ export default function SyncPage() {
                 {syncPct}%
               </span>
             </div>
-
-            {/* Progress bar */}
-            <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--color-surface-3)' }}>
+            <div style={{ height: '6px', borderRadius: '999px', overflow: 'hidden', background: 'var(--color-surface-3)' }}>
               <motion.div
-                className="h-full rounded-full"
-                style={{ background: 'var(--color-accent)' }}
+                style={{ height: '100%', borderRadius: '999px', background: 'var(--color-accent)' }}
                 animate={{ width: `${syncPct}%` }}
                 transition={{ duration: 0.4 }}
               />
             </div>
-
             {sync.currentShow && (
               <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
                 {sync.currentShow}
@@ -72,17 +73,17 @@ export default function SyncPage() {
             )}
           </div>
         ) : (
-          /* Idle / completed / error state */
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-3">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Status row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               {sync?.status === 'error' ? (
-                <AlertCircle size={16} style={{ color: 'var(--color-error)', flexShrink: 0 }} />
+                <AlertCircle size={18} style={{ color: 'var(--color-error)', flexShrink: 0 }} />
               ) : sync?.status === 'completed' ? (
-                <CheckCircle2 size={16} style={{ color: 'var(--color-watched)', flexShrink: 0 }} />
+                <CheckCircle2 size={18} style={{ color: 'var(--color-watched)', flexShrink: 0 }} />
               ) : (
-                <RefreshCw size={16} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
+                <RefreshCw size={18} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
               )}
-              <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--color-text)' }}>
+              <span style={{ fontSize: '15px', fontWeight: 500, color: 'var(--color-text)' }}>
                 {sync?.status === 'error' ? 'Sync failed'
                   : sync?.status === 'completed' ? 'Sync completed'
                   : 'Ready to sync'}
@@ -90,41 +91,53 @@ export default function SyncPage() {
             </div>
 
             {sync?.status === 'error' && sync.error && (
-              <div className="rounded-lg px-4 py-3" style={{
-                background: '#ef444415',
-                border: '1px solid #ef444430',
+              <div style={{
+                borderRadius: 'var(--radius-md)',
+                padding: '12px 16px',
+                background: '#ef444412',
+                border: '1px solid #ef444428',
                 fontSize: '13px',
                 color: 'var(--color-error)',
-                lineHeight: 1.5,
+                lineHeight: 1.6,
               }}>
                 {sync.error}
               </div>
             )}
 
             {sync?.lastSyncAt && (
-              <div className="flex items-center gap-2" style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
-                <Clock size={12} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--color-text-muted)' }}>
+                <Clock size={13} />
                 Last synced: {new Date(sync.lastSyncAt).toLocaleString()}
               </div>
             )}
 
-            <button
-              onClick={() => triggerSync()}
-              disabled={syncing}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg self-start"
-              style={{
-                background: 'var(--color-accent)',
-                color: '#fff',
-                fontSize: '13px',
-                fontWeight: 500,
-                border: 'none',
-                cursor: syncing ? 'not-allowed' : 'pointer',
-                opacity: syncing ? 0.7 : 1,
-              }}
-            >
-              <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
-              {sync?.lastSyncAt ? 'Sync now' : 'Start initial sync'}
-            </button>
+            {/* CTA button */}
+            <div>
+              <motion.button
+                onClick={() => triggerSync()}
+                disabled={syncing}
+                whileHover={syncing ? {} : { scale: 1.02, boxShadow: '0 4px 20px var(--color-accent-glow)' }}
+                whileTap={syncing ? {} : { scale: 0.98 }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 20px',
+                  borderRadius: 'var(--radius-md)',
+                  background: syncing ? 'var(--color-surface-3)' : 'var(--color-accent)',
+                  color: syncing ? 'var(--color-text-muted)' : '#fff',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  border: 'none',
+                  cursor: syncing ? 'not-allowed' : 'pointer',
+                  letterSpacing: '-0.01em',
+                  transition: 'background 0.15s',
+                }}
+              >
+                <RefreshCw size={15} className={syncing ? 'animate-spin' : ''} />
+                {syncing ? 'Queuing…' : sync?.lastSyncAt ? 'Sync now' : 'Start initial sync'}
+              </motion.button>
+            </div>
           </div>
         )}
       </motion.div>
@@ -134,26 +147,31 @@ export default function SyncPage() {
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl p-6"
-          style={{ background: 'var(--color-surface)', border: '1px solid #f59e0b25' }}
+          style={{
+            borderRadius: 'var(--radius-lg)',
+            padding: '24px',
+            background: 'var(--color-surface)',
+            border: '1px solid #f59e0b22',
+          }}
         >
-          <div className="flex items-center gap-2 mb-4">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
             <AlertTriangle size={15} style={{ color: 'var(--color-airing)' }} />
             <h3 style={{ fontSize: '14px', fontWeight: 500, color: 'var(--color-text)' }}>
               {failedShows.length} show{failedShows.length > 1 ? 's' : ''} failed to sync
             </h3>
           </div>
-          <div className="flex flex-col gap-3">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {failedShows.map((f, i) => (
-              <div key={i} className="flex flex-col gap-1 pb-3" style={{
+              <div key={i} style={{
+                paddingBottom: i < failedShows.length - 1 ? '12px' : 0,
                 borderBottom: i < failedShows.length - 1 ? '1px solid var(--color-border-subtle)' : 'none',
               }}>
-                <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>
+                <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontWeight: 500, marginBottom: '2px' }}>
                   {f.title}
-                </span>
-                <span style={{ fontSize: '12px', color: 'var(--color-error)', opacity: 0.85 }}>
+                </p>
+                <p style={{ fontSize: '12px', color: 'var(--color-error)', opacity: 0.8 }}>
                   {f.error}
-                </span>
+                </p>
               </div>
             ))}
           </div>

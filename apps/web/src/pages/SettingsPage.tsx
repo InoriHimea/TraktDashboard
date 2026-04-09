@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Save, CheckCircle2, AlertCircle } from 'lucide-react'
 import { useSettings, useUpdateSettings } from '../hooks'
 
@@ -38,13 +38,14 @@ export default function SettingsPage() {
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
-    padding: '8px 12px',
+    padding: '10px 14px',
     borderRadius: 'var(--radius-md)',
     background: 'var(--color-surface-3)',
     border: '1px solid var(--color-border)',
     color: 'var(--color-text)',
     fontSize: '14px',
     outline: 'none',
+    transition: 'border-color 0.15s',
   }
 
   const labelStyle: React.CSSProperties = {
@@ -56,8 +57,9 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="px-8 py-8 max-w-xl mx-auto">
-      <div className="mb-8">
+    <div style={{ maxWidth: '560px', margin: '0 auto', padding: '40px 24px' }}>
+      {/* Header */}
+      <div style={{ marginBottom: '32px' }}>
         <h2 style={{
           fontFamily: 'var(--font-display)',
           fontSize: '32px',
@@ -74,18 +76,24 @@ export default function SettingsPage() {
       </div>
 
       {isLoading ? (
-        <div style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>Loading settings…</div>
+        <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>Loading settings…</p>
       ) : (
         <motion.form
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           onSubmit={handleSave}
-          className="flex flex-col gap-6"
+          style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}
         >
-          <div
-            className="rounded-xl p-6 flex flex-col gap-5"
-            style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border-subtle)' }}
-          >
+          {/* Fields card */}
+          <div style={{
+            borderRadius: 'var(--radius-lg)',
+            padding: '24px',
+            background: 'var(--color-surface)',
+            border: '1px solid var(--color-border-subtle)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '24px',
+          }}>
             {/* Display Language */}
             <div>
               <label style={labelStyle}>Display Language</label>
@@ -96,10 +104,12 @@ export default function SettingsPage() {
                 placeholder="e.g. zh-CN, en-US, ja-JP"
                 style={inputStyle}
               />
-              <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-                BCP 47 language code used to fetch translated titles from TMDB. Re-sync after changing.
+              <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '6px', lineHeight: 1.5 }}>
+                BCP 47 language code for TMDB translated titles. Re-sync after changing.
               </p>
             </div>
+
+            <div style={{ height: '1px', background: 'var(--color-border-subtle)' }} />
 
             {/* Sync Interval */}
             <div>
@@ -112,10 +122,12 @@ export default function SettingsPage() {
                 onChange={e => setSyncIntervalMinutes(Number(e.target.value))}
                 style={inputStyle}
               />
-              <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-                How often to automatically sync with Trakt. Range: 1–10080 minutes (1 week).
+              <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '6px', lineHeight: 1.5 }}>
+                Auto-sync frequency. Range: 1–10080 minutes (up to 1 week).
               </p>
             </div>
+
+            <div style={{ height: '1px', background: 'var(--color-border-subtle)' }} />
 
             {/* HTTP Proxy */}
             <div>
@@ -127,49 +139,64 @@ export default function SettingsPage() {
                 placeholder="http://proxy.example.com:7890"
                 style={inputStyle}
               />
-              <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-                Optional. Used for TMDB and Trakt API requests. Leave empty to use environment default.
+              <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '6px', lineHeight: 1.5 }}>
+                Optional. Routes TMDB and Trakt requests through a proxy. Leave empty to use env default.
               </p>
             </div>
           </div>
 
           {/* Toast */}
-          {toast && (
-            <motion.div
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-2 px-4 py-3 rounded-lg"
+          <AnimatePresence>
+            {toast && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '12px 16px',
+                  borderRadius: 'var(--radius-md)',
+                  background: toast.type === 'success' ? '#34d39912' : '#ef444412',
+                  border: `1px solid ${toast.type === 'success' ? '#34d39928' : '#ef444428'}`,
+                  color: toast.type === 'success' ? 'var(--color-watched)' : 'var(--color-error)',
+                  fontSize: '13px',
+                }}
+              >
+                {toast.type === 'success' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+                {toast.message}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Save button */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <motion.button
+              type="submit"
+              disabled={saving}
+              whileHover={saving ? {} : { scale: 1.02, boxShadow: '0 4px 20px var(--color-accent-glow)' }}
+              whileTap={saving ? {} : { scale: 0.98 }}
               style={{
-                background: toast.type === 'success' ? '#34d39915' : '#ef444415',
-                border: `1px solid ${toast.type === 'success' ? '#34d39930' : '#ef444430'}`,
-                color: toast.type === 'success' ? 'var(--color-watched)' : 'var(--color-error)',
-                fontSize: '13px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 24px',
+                borderRadius: 'var(--radius-md)',
+                background: saving ? 'var(--color-surface-3)' : 'var(--color-accent)',
+                color: saving ? 'var(--color-text-muted)' : '#fff',
+                fontSize: '14px',
+                fontWeight: 600,
+                border: 'none',
+                cursor: saving ? 'not-allowed' : 'pointer',
+                letterSpacing: '-0.01em',
+                transition: 'background 0.15s',
               }}
             >
-              {toast.type === 'success'
-                ? <CheckCircle2 size={14} />
-                : <AlertCircle size={14} />}
-              {toast.message}
-            </motion.div>
-          )}
-
-          <button
-            type="submit"
-            disabled={saving}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-lg self-start"
-            style={{
-              background: 'var(--color-accent)',
-              color: '#fff',
-              fontSize: '14px',
-              fontWeight: 500,
-              border: 'none',
-              cursor: saving ? 'not-allowed' : 'pointer',
-              opacity: saving ? 0.7 : 1,
-            }}
-          >
-            <Save size={14} />
-            {saving ? 'Saving…' : 'Save Settings'}
-          </button>
+              <Save size={15} />
+              {saving ? 'Saving…' : 'Save Settings'}
+            </motion.button>
+          </div>
         </motion.form>
       )}
     </div>

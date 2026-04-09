@@ -103,7 +103,7 @@ export default function StatsPage() {
   const maxBar = Math.max(...chartData.map(d => d.count), 1)
 
   return (
-    <div className="px-8 py-8 max-w-4xl">
+    <div className="px-8 py-8 max-w-4xl mx-auto">
       <div className="mb-8">
         <h2 style={{
           fontFamily: 'var(--font-display)',
