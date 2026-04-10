@@ -7,6 +7,7 @@ import { showRoutes } from './routes/shows.js'
 import { syncRoutes } from './routes/sync.js'
 import { statsRoutes } from './routes/stats.js'
 import { settingsRoutes } from './routes/settings.js'
+import { imgRoutes } from './routes/img.js'
 import { authMiddleware } from './middleware/auth.js'
 import { startScheduler } from './jobs/scheduler.js'
 
@@ -31,6 +32,7 @@ api.route('/shows', showRoutes)
 api.route('/sync', syncRoutes)
 api.route('/stats', statsRoutes)
 api.route('/settings', settingsRoutes)
+api.route('/img', imgRoutes)
 
 app.route('/api', api)
 

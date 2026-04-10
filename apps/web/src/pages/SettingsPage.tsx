@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Save, CheckCircle2, AlertCircle } from 'lucide-react'
 import { useSettings, useUpdateSettings } from '../hooks'
+import { loadTheme, applyTheme, persistTheme, Theme } from '../lib/theme'
 
 export default function SettingsPage() {
   const { data: settings, isLoading } = useSettings()
@@ -11,6 +12,7 @@ export default function SettingsPage() {
   const [syncIntervalMinutes, setSyncIntervalMinutes] = useState(60)
   const [httpProxy, setHttpProxy] = useState('')
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [theme, setTheme] = useState<Theme>(loadTheme)
 
   useEffect(() => {
     if (settings) {
@@ -94,6 +96,28 @@ export default function SettingsPage() {
             flexDirection: 'column',
             gap: '24px',
           }}>
+            {/* Theme */}
+            <div>
+              <label style={labelStyle}>Theme</label>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                {(['dark', 'light'] as Theme[]).map(t => (
+                  <label key={t} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px', color: 'var(--color-text)' }}>
+                    <input
+                      type="radio"
+                      name="theme"
+                      value={t}
+                      checked={theme === t}
+                      onChange={() => { setTheme(t); applyTheme(t); persistTheme(t) }}
+                      style={{ accentColor: 'var(--color-accent)' }}
+                    />
+                    {t.charAt(0).toUpperCase() + t.slice(1)}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ height: '1px', background: 'var(--color-border-subtle)' }} />
+
             {/* Display Language */}
             <div>
               <label style={labelStyle}>Display Language</label>
@@ -183,7 +207,7 @@ export default function SettingsPage() {
                 gap: '8px',
                 padding: '10px 24px',
                 borderRadius: 'var(--radius-md)',
-                background: saving ? 'var(--color-surface-3)' : 'var(--color-accent)',
+                background: saving ? 'var(--color-surface-3)' : '#10b981',
                 color: saving ? 'var(--color-text-muted)' : '#fff',
                 fontSize: '14px',
                 fontWeight: 600,
@@ -191,6 +215,7 @@ export default function SettingsPage() {
                 cursor: saving ? 'not-allowed' : 'pointer',
                 letterSpacing: '-0.01em',
                 transition: 'background 0.15s',
+                boxShadow: saving ? 'none' : '0 2px 12px rgba(16,185,129,0.35)',
               }}
             >
               <Save size={15} />

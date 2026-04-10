@@ -43,6 +43,16 @@ export function useTriggerSync() {
   })
 }
 
+export function useTriggerFullSync() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: api.sync.full,
+    onSuccess: () => {
+      setTimeout(() => qc.invalidateQueries({ queryKey: ['sync-status'] }), 500)
+    },
+  })
+}
+
 export function useSyncDebug(enabled: boolean) {
   return useQuery<SyncDebugState>({
     queryKey: ['sync-debug'],

@@ -92,3 +92,19 @@ input::placeholder { color: var(--color-text-muted); }
 
 /* Smooth transitions for interactive elements */
 button, a { transition: opacity 0.15s, background 0.15s, color 0.15s; }
+
+/* Light theme */
+[data-theme="light"] {
+  --color-bg:        #f8f8fc;
+  --color-surface:   #ffffff;
+  --color-surface-2: #f0f0f8;
+  --color-surface-3: #e8e8f4;
+  --color-surface-4: #e0e0ec;
+
+  --color-border:        #d0d0e0;
+  --color-border-subtle: #e4e4f0;
+
+  --color-text:           #0e0d1a;
+  --color-text-secondary: #4a4668;
+  --color-text-muted:     #8884a8;
+}

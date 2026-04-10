@@ -70,6 +70,7 @@ showRoutes.get('/progress', async (c) => {
       // Task 7.2: multilingual fields
       originalName: row.show.originalName ?? null,
       translatedName: row.show.translatedName ?? null,
+      translatedOverview: (row.show as any).translatedOverview ?? null,
       displayLanguage: row.show.displayLanguage ?? null,
     },
     airedEpisodes: row.progress.airedEpisodes,
@@ -155,10 +156,15 @@ showRoutes.get('/:id', async (c) => {
         seasonNumber: ep.seasonNumber,
         episodeNumber: ep.episodeNumber,
         title: ep.title,
+        translatedTitle: (ep as any).translatedTitle ?? null,
+        overview: ep.overview,
+        translatedOverview: (ep as any).translatedOverview ?? null,
         airDate: ep.airDate,
         watched: watchedMap.has(ep.id),
         watchedAt,
         aired,
+        stillPath: ep.stillPath,
+        runtime: ep.runtime,
       }
     })
 
@@ -187,6 +193,7 @@ showRoutes.get('/:id', async (c) => {
         createdAt: show.createdAt.toISOString(),
         originalName: show.originalName ?? null,
         translatedName: show.translatedName ?? null,
+        translatedOverview: (show as any).translatedOverview ?? null,
         displayLanguage: show.displayLanguage ?? null,
       },
       airedEpisodes,

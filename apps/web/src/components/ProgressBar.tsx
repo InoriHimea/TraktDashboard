@@ -14,60 +14,64 @@ export function ProgressBar({ watched, aired, total, compact = false, showLabel 
   const airedPct = total > 0 ? (aired / total) * 100 : 100
   const unairedPct = 100 - airedPct
 
-  const h = compact ? 'h-1' : 'h-2'
+  // Track height: compact = 2px pill, normal = 4px
+  const trackH = compact ? '2px' : '4px'
 
   return (
     <div className="w-full">
       {showLabel && (
-        <div className="flex items-center justify-between mb-1.5">
-          <div className="flex items-center gap-2">
-            <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
-              <span style={{ color: 'var(--color-watched)', fontWeight: 500 }}>{watched}</span>
-              <span style={{ color: 'var(--color-text-muted)' }}> / {aired} aired</span>
-            </span>
-            {unairedPct > 0 && (
-              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
-                · {total - aired} upcoming
-              </span>
+        <div className="flex items-center justify-between mb-2">
+          <span style={{ fontSize: '12px', color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{ color: 'var(--color-accent)', fontWeight: 600 }}>{watched}</span>
+            <span> / {aired} 已播出</span>
+            {unairedPct > 0 && total > aired && (
+              <span style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}> · {total - aired} 未播</span>
             )}
-          </div>
-          <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
+          </span>
+          <span style={{
+            fontSize: '12px',
+            fontWeight: 600,
+            color: watchedPct >= 100 ? 'var(--color-watched)' : 'var(--color-accent)',
+            fontVariantNumeric: 'tabular-nums',
+          }}>
             {Math.round(watchedPct)}%
           </span>
         </div>
       )}
 
+      {/* Track */}
       <div
-        className={cn('relative w-full rounded-full overflow-hidden flex', h)}
-        style={{ background: 'var(--color-surface-3)' }}
+        className={cn('relative w-full overflow-hidden flex')}
+        style={{
+          height: trackH,
+          borderRadius: '999px',
+          background: 'var(--color-surface-3)',
+        }}
       >
-        {/* Watched segment */}
+        {/* Watched — accent purple */}
         <motion.div
-          className={cn('rounded-l-full', h)}
-          style={{ background: 'var(--color-watched)', minWidth: watched > 0 ? '4px' : 0 }}
+          style={{
+            height: '100%',
+            background: 'var(--color-accent)',
+            borderRadius: '999px 0 0 999px',
+            minWidth: watched > 0 ? '3px' : 0,
+          }}
           initial={{ width: 0 }}
           animate={{ width: `${(watched / Math.max(total, 1)) * 100}%` }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
         />
-        {/* Aired but not watched */}
+        {/* Aired but unwatched — dim surface */}
         <motion.div
-          className={h}
           style={{
-            background: 'var(--color-unwatched)',
-            border: '1px solid var(--color-border)',
+            height: '100%',
+            background: 'var(--color-surface-4)',
           }}
           initial={{ width: 0 }}
           animate={{ width: `${((aired - watched) / Math.max(total, 1)) * 100}%` }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.05 }}
+          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.05 }}
         />
-        {/* Not yet aired */}
-        <motion.div
-          className={cn('rounded-r-full', h)}
-          style={{ background: 'transparent', borderTop: '1px dashed var(--color-border)', borderBottom: '1px dashed var(--color-border)' }}
-          initial={{ width: 0 }}
-          animate={{ width: `${unairedPct}%` }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-        />
+        {/* Not yet aired — transparent (track bg shows through) */}
+        <div style={{ flex: 1, height: '100%' }} />
       </div>
     </div>
   )

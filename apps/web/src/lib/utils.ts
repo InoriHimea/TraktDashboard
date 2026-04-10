@@ -5,10 +5,9 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function tmdbImage(path: string | null | undefined, size = 'w500'): string | null {
-  if (!path) return null
-  return `https://image.tmdb.org/t/p/${size}${path}`
-}
+// Re-export from dedicated modules for backward compatibility
+export { resolveTitle, fmtDateZh } from './i18n'
+export { tmdbImage } from './image'
 
 export function formatRuntime(minutes: number): string {
   const h = Math.floor(minutes / 60)

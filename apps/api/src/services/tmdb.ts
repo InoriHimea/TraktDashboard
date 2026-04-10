@@ -128,9 +128,10 @@ export async function getTmdbShow(tmdbId: number, language?: string, userId?: nu
   return data
 }
 
-export async function getTmdbSeason(tmdbId: number, seasonNumber: number, userId?: number): Promise<TmdbSeason> {
+export async function getTmdbSeason(tmdbId: number, seasonNumber: number, language?: string, userId?: number): Promise<TmdbSeason> {
   const db = getDb()
-  const cacheKey = `${tmdbId}_s${seasonNumber}`
+  // Language-aware cache key — prevents stale English cache being reused for localized requests
+  const cacheKey = language ? `${tmdbId}_s${seasonNumber}_${language}` : `${tmdbId}_s${seasonNumber}`
 
   const [cached] = await db.select()
     .from(metadataCache)
@@ -141,7 +142,10 @@ export async function getTmdbSeason(tmdbId: number, seasonNumber: number, userId
     if (age < CACHE_TTL_HOURS * 60 * 60 * 1000) return cached.data as TmdbSeason
   }
 
-  const data = await tmdbFetch<TmdbSeason>(`/tv/${tmdbId}/season/${seasonNumber}`, undefined, userId)
+  const params: Record<string, string> = {}
+  if (language) params.language = language
+
+  const data = await tmdbFetch<TmdbSeason>(`/tv/${tmdbId}/season/${seasonNumber}`, params, userId)
 
   await db.insert(metadataCache)
     .values({ source: 'tmdb_season', externalId: cacheKey, data, cachedAt: new Date() })

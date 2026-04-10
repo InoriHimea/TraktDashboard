@@ -242,12 +242,17 @@ async function upsertShowFromTmdb(tmdbId: number, traktShow: any, userId?: numbe
 
   // Fetch translated title if language is set
   let translatedName: string | null = null
+  let translatedOverview: string | null = null
   if (displayLanguage) {
     try {
       const translated = await getTmdbShow(tmdbId, displayLanguage, userId)
-      // Only store as translated if it differs from original
-      if (translated.name !== tmdb.original_name) {
+      // Store translated name if it differs from the original-language name
+      if (translated.name && translated.name !== tmdb.original_name) {
         translatedName = translated.name
+      }
+      // Store translated overview if non-empty and different from original
+      if (translated.overview && translated.overview !== tmdb.overview) {
+        translatedOverview = translated.overview
       }
     } catch {
       // Translation fetch failed — skip, don't break sync
@@ -272,6 +277,7 @@ async function upsertShowFromTmdb(tmdbId: number, traktShow: any, userId?: numbe
     totalSeasons: tmdb.number_of_seasons || 0,
     originalName: tmdb.original_name || null,
     translatedName,
+    translatedOverview,
     displayLanguage,
     lastSyncedAt: new Date(),
   }).onConflictDoUpdate({
@@ -289,6 +295,7 @@ async function upsertShowFromTmdb(tmdbId: number, traktShow: any, userId?: numbe
       totalSeasons: tmdb.number_of_seasons || 0,
       originalName: tmdb.original_name || null,
       translatedName,
+      translatedOverview,
       displayLanguage,
       lastSyncedAt: new Date(),
     },
@@ -312,15 +319,37 @@ async function upsertShowFromTmdb(tmdbId: number, traktShow: any, userId?: numbe
     }).returning({ id: seasons.id })
 
     try {
-      const seasonData = await getTmdbSeason(tmdbId, s.season_number)
+      // Fetch episode data in user's language (language-aware cache key prevents stale English cache)
+      const seasonData = await getTmdbSeason(tmdbId, s.season_number, displayLanguage ?? undefined, userId)
+
+      // If language is set and differs from default, also fetch original for fallback
+      let fallbackSeason: typeof seasonData | null = null
+      if (displayLanguage) {
+        try {
+          fallbackSeason = await getTmdbSeason(tmdbId, s.season_number, undefined, userId)
+        } catch { /* ignore */ }
+      }
+
       for (const ep of seasonData.episodes || []) {
+        const fallbackEp = fallbackSeason?.episodes?.find(e => e.episode_number === ep.episode_number)
+
+        // Determine translated vs original title/overview
+        const originalTitle = fallbackEp?.name || ep.name || null
+        const translatedEpTitle = (displayLanguage && ep.name && ep.name !== fallbackEp?.name)
+          ? ep.name : null
+        const originalOverview = fallbackEp?.overview || ep.overview || null
+        const translatedEpOverview = (displayLanguage && ep.overview && ep.overview !== fallbackEp?.overview)
+          ? ep.overview : null
+
         await db.insert(episodes).values({
           showId: show.id,
           seasonId: season.id,
           seasonNumber: ep.season_number,
           episodeNumber: ep.episode_number,
-          title: ep.name || null,
-          overview: ep.overview || null,
+          title: originalTitle,
+          overview: originalOverview,
+          translatedTitle: translatedEpTitle,
+          translatedOverview: translatedEpOverview,
           runtime: ep.runtime || null,
           airDate: ep.air_date || null,
           stillPath: ep.still_path || null,
@@ -328,7 +357,10 @@ async function upsertShowFromTmdb(tmdbId: number, traktShow: any, userId?: numbe
         }).onConflictDoUpdate({
           target: [episodes.showId, episodes.seasonNumber, episodes.episodeNumber],
           set: {
-            title: ep.name || null,
+            title: originalTitle,
+            overview: originalOverview,
+            translatedTitle: translatedEpTitle,
+            translatedOverview: translatedEpOverview,
             runtime: ep.runtime || null,
             airDate: ep.air_date || null,
             stillPath: ep.still_path || null,
@@ -361,7 +393,7 @@ async function syncEpisodeProgress(userId: number, showId: number, tmdbId: numbe
   }
 }
 
-async function findOrCreateEpisode(showId: number, tmdbId: number, seasonNum: number, episodeNum: number) {
+async function findOrCreateEpisode(showId: number, tmdbId: number, seasonNum: number, episodeNum: number, language?: string, userId?: number) {
   const db = getDb()
   const [ep] = await db.select().from(episodes).where(and(
     eq(episodes.showId, showId),
@@ -371,7 +403,7 @@ async function findOrCreateEpisode(showId: number, tmdbId: number, seasonNum: nu
   if (ep) return ep
 
   try {
-    const seasonData = await getTmdbSeason(tmdbId, seasonNum)
+    const seasonData = await getTmdbSeason(tmdbId, seasonNum, language, userId)
     const tmdbEp = seasonData.episodes?.find(e => e.episode_number === episodeNum)
     if (!tmdbEp) return null
 
@@ -382,6 +414,7 @@ async function findOrCreateEpisode(showId: number, tmdbId: number, seasonNum: nu
       showId, seasonId: season?.id || null,
       seasonNumber: seasonNum, episodeNumber: episodeNum,
       title: tmdbEp.name || null, overview: tmdbEp.overview || null,
+      translatedTitle: null, translatedOverview: null,
       runtime: tmdbEp.runtime || null, airDate: tmdbEp.air_date || null,
       stillPath: tmdbEp.still_path || null, tmdbId: tmdbEp.id || null,
     }).onConflictDoNothing().returning()

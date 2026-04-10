@@ -24,6 +24,7 @@ export interface Show {
   // Multilingual fields
   originalName: string | null
   translatedName: string | null
+  translatedOverview: string | null
   displayLanguage: string | null
 }
 
@@ -73,10 +74,15 @@ export interface EpisodeProgress {
   seasonNumber: number
   episodeNumber: number
   title: string | null
+  translatedTitle: string | null
+  overview: string | null
+  translatedOverview: string | null
   airDate: string | null
   watched: boolean
   watchedAt: string | null
   aired: boolean
+  stillPath: string | null
+  runtime: number | null
 }
 
 export interface SeasonProgress {

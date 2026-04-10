@@ -1,90 +1,147 @@
 import { motion } from 'framer-motion'
-import type { ComponentType, CSSProperties } from 'react'
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell
-} from 'recharts'
+import type { ComponentType } from 'react'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts'
 import { Tv2, CheckCircle2, Clock, TrendingUp, Star, Loader2 } from 'lucide-react'
 import { useStats } from '../hooks'
-import { tmdbImage, daysAgo } from '../lib/utils'
+import { tmdbImage } from '../lib/utils'
 import type { StatsOverview } from '@trakt-dashboard/types'
 
-function StatCard({
-  label, value, icon: Icon, sub, delay = 0
-}: {
-  label: string; value: string | number; icon: ComponentType<{ size?: number; style?: CSSProperties }>; sub?: string; delay?: number
+// ─── Design tokens ────────────────────────────────────────────────────────────
+
+const CARD_BG  = 'var(--color-surface)'
+const CARD_BDR = '1px solid var(--color-border)'
+const CARD_BLR = 'blur(24px)'
+const CARD_SHD = '0 4px 24px rgba(0,0,0,0.15)'
+const T1       = 'var(--color-text)'
+const T2       = 'var(--color-text-secondary)'
+const T3       = 'var(--color-text-muted)'
+
+// ─── Color palette for variety ────────────────────────────────────────────────
+const COLORS = {
+  violet:  { base: '#7c6af7', light: '#9d8fff', bg: 'rgba(124,106,247,0.15)' },
+  emerald: { base: '#10b981', light: '#34d399', bg: 'rgba(16,185,129,0.15)' },
+  amber:   { base: '#f59e0b', light: '#fbbf24', bg: 'rgba(245,158,11,0.15)'  },
+  sky:     { base: '#0ea5e9', light: '#38bdf8', bg: 'rgba(14,165,233,0.15)'  },
+  rose:    { base: '#f43f5e', light: '#fb7185', bg: 'rgba(244,63,94,0.15)'   },
+  teal:    { base: '#14b8a6', light: '#2dd4bf', bg: 'rgba(20,184,166,0.15)'  },
+}
+
+// Genre bar colors cycling through palette
+const GENRE_COLORS = [COLORS.violet, COLORS.emerald, COLORS.amber, COLORS.sky, COLORS.rose, COLORS.teal]
+
+// Bar chart: color each bar by its relative height bucket
+function barColor(value: number, max: number): string {
+  const ratio = value / max
+  if (ratio >= 0.85) return COLORS.violet.base
+  if (ratio >= 0.6)  return COLORS.sky.base
+  if (ratio >= 0.35) return COLORS.emerald.base
+  return COLORS.amber.base
+}
+
+// ─── i18n ─────────────────────────────────────────────────────────────────────
+
+function fmtDate(date: string): string {
+  const d = new Date(date), now = new Date()
+  const diff = Math.floor((now.getTime() - d.getTime()) / 86400000)
+  if (diff === 0) return '今天'
+  if (diff === 1) return '昨天'
+  if (diff < 7) return `${diff} 天前`
+  if (diff < 30) return `${Math.floor(diff / 7)} 周前`
+  if (diff < 365) return `${Math.floor(diff / 30)} 个月前`
+  return `${Math.floor(diff / 365)} 年前`
+}
+
+// ─── StatCard ─────────────────────────────────────────────────────────────────
+
+function StatCard({ label, value, icon: Icon, sub, delay = 0, color = COLORS.violet }: {
+  label: string; value: string | number
+  icon: ComponentType<{ size?: number; color?: string }>
+  sub?: string; delay?: number
+  color?: typeof COLORS.violet
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay, ease: [0.16, 1, 0.3, 1] }}
-      className="rounded-xl p-5"
-      style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border-subtle)' }}
+      initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, delay, ease: [0.16, 1, 0.3, 1] }}
+      whileHover={{ y: -3, transition: { duration: 0.18 } }}
+      style={{
+        background: CARD_BG,
+        backdropFilter: CARD_BLR,
+        WebkitBackdropFilter: CARD_BLR,
+        border: CARD_BDR,
+        borderRadius: '16px',
+        boxShadow: CARD_SHD,
+        padding: '24px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+        borderLeft: `3px solid ${color.base}`,
+      }}
     >
-      <div className="flex items-center justify-between mb-3">
-        <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>{label}</span>
-        <Icon size={16} style={{ color: 'var(--color-text-muted)' }} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: '11px', fontWeight: 600, color: T3, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          {label}
+        </span>
+        <div style={{ background: color.bg, borderRadius: '8px', padding: '6px' }}>
+          <Icon size={14} color={color.light} />
+        </div>
       </div>
-      <div style={{ fontSize: '32px', fontWeight: 600, color: 'var(--color-text)', letterSpacing: '-0.03em', lineHeight: 1 }}>
-        {value}
+      <div>
+        <div style={{ fontSize: '38px', fontWeight: 800, color: color.light, letterSpacing: '-0.05em', lineHeight: 1 }}>
+          {value}
+        </div>
+        {sub && <p style={{ fontSize: '12px', color: T3, marginTop: '6px' }}>{sub}</p>}
       </div>
-      {sub && (
-        <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '4px' }}>{sub}</p>
-      )}
     </motion.div>
   )
 }
 
-const CustomTooltip = ({
-  active,
-  payload,
-  label,
-}: {
-  active?: boolean
-  payload?: Array<{ value: number }>
-  label?: string
+// ─── Tooltip ──────────────────────────────────────────────────────────────────
+
+const CustomTooltip = ({ active, payload, label }: {
+  active?: boolean; payload?: Array<{ value: number }>; label?: string
 }) => {
   if (!active || !payload?.length) return null
   return (
-    <div className="rounded-lg px-3 py-2" style={{
-      background: 'var(--color-surface-3)',
-      border: '1px solid var(--color-border)',
-      fontSize: '13px',
+    <div style={{
+      background: 'var(--color-surface-2)',
+      backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+      border: `1px solid ${COLORS.violet.base}44`, borderRadius: '12px',
+      padding: '10px 14px', fontSize: '13px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
     }}>
-      <p style={{ color: 'var(--color-text-secondary)', marginBottom: '2px' }}>{label}</p>
-      <p style={{ color: 'var(--color-accent)', fontWeight: 500 }}>{payload[0].value} episodes</p>
+      <p style={{ color: T3, marginBottom: '3px', fontSize: '11px' }}>{label}</p>
+      <p style={{ color: COLORS.violet.light, fontWeight: 700, fontSize: '16px' }}>
+        {payload[0].value} <span style={{ fontSize: '11px', fontWeight: 400, color: T2 }}>集</span>
+      </p>
     </div>
   )
 }
 
+// ─── StatsPage ────────────────────────────────────────────────────────────────
+
 export default function StatsPage() {
   const { data: stats, isLoading, error } = useStats()
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-32">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 size={24} className="animate-spin" style={{ color: 'var(--color-accent)' }} />
-          <p style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>正在加载统计数据...</p>
-        </div>
+  if (isLoading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+        <Loader2 size={24} color={COLORS.violet.base} className="animate-spin" />
+        <p style={{ fontSize: '13px', color: T3 }}>正在加载统计数据…</p>
       </div>
-    )
-  }
+    </div>
+  )
 
-  if (error) {
-    return (
-      <div className="px-8 py-12 text-center">
-        <p style={{ color: '#ef4444', fontSize: '14px' }}>统计数据加载失败，请稍后重试。</p>
-      </div>
-    )
-  }
+  if (error) return (
+    <div style={{ padding: '48px 32px', textAlign: 'center', minHeight: '60vh' }}>
+      <p style={{ color: '#f87171', fontSize: '14px' }}>统计数据加载失败，请稍后重试。</p>
+    </div>
+  )
 
   if (!stats) return null
 
   const totalHours = Math.floor(stats.totalRuntimeMinutes / 60)
   const totalDays = (stats.totalRuntimeMinutes / (60 * 24)).toFixed(1)
 
-  // Fill in missing months for chart
   const chartData = (() => {
     const months: { month: string; count: number }[] = []
     const now = new Date()
@@ -92,10 +149,7 @@ export default function StatsPage() {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
       const found = stats.monthlyActivity?.find((m) => m.month === key)
-      months.push({
-        month: d.toLocaleString('en', { month: 'short' }),
-        count: found ? Number(found.count) : 0,
-      })
+      months.push({ month: `${d.getMonth() + 1}月`, count: found ? Number(found.count) : 0 })
     }
     return months
   })()
@@ -103,188 +157,159 @@ export default function StatsPage() {
   const maxBar = Math.max(...chartData.map(d => d.count), 1)
 
   return (
-    <div className="px-8 py-8 max-w-4xl mx-auto">
-      <div className="mb-8">
-        <h2 style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: '32px',
-          color: 'var(--color-text)',
-          letterSpacing: '-0.02em',
-          lineHeight: 1.1,
-          marginBottom: '6px',
-        }}>
-          Statistics
-        </h2>
-        <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>Your watch history at a glance</p>
+    <div style={{ minHeight: '100vh', position: 'relative', overflow: 'hidden' }}>
+
+      {/* Ambient glows */}
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
+        <div style={{ position: 'absolute', width: '600px', height: '600px', top: '-150px', left: '5%', background: 'radial-gradient(circle, rgba(124,106,247,0.08) 0%, transparent 60%)', filter: 'blur(80px)', borderRadius: '50%' }} />
+        <div style={{ position: 'absolute', width: '400px', height: '400px', bottom: '100px', right: '5%', background: 'radial-gradient(circle, rgba(124,106,247,0.06) 0%, transparent 60%)', filter: 'blur(60px)', borderRadius: '50%' }} />
       </div>
 
-      {stats.totalEpisodesWatched === 0 && (
-        <div
-          className="rounded-xl p-6 mb-6"
-          style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border-subtle)' }}
-        >
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>
-            还没有可展示的统计数据。先在侧边栏触发一次同步，完成后这里会显示你的观看趋势与活跃月份。
-          </p>
-        </div>
-      )}
+      {/* Content */}
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: '1400px', margin: '0 auto', padding: '40px 24px 80px' }}>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-3 mb-8" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-        <StatCard
-          label="Episodes watched"
-          value={stats.totalEpisodesWatched.toLocaleString()}
-          icon={Tv2}
-          delay={0}
-        />
-        <StatCard
-          label="Shows watched"
-          value={stats.totalShowsWatched}
-          icon={Star}
-          sub={`${stats.totalShowsCompleted} completed`}
-          delay={0.06}
-        />
-        <StatCard
-          label="Time spent"
-          value={`${totalHours.toLocaleString()}h`}
-          icon={Clock}
-          sub={`That's ${totalDays} full days`}
-          delay={0.12}
-        />
-        <StatCard
-          label="Shows completed"
-          value={stats.totalShowsCompleted}
-          icon={CheckCircle2}
-          delay={0.18}
-        />
-      </div>
+        {/* Header */}
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
+          style={{ marginBottom: '36px' }}>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '36px', fontWeight: 400, color: T1, letterSpacing: '-0.02em', lineHeight: 1.1, marginBottom: '6px' }}>
+            数据统计
+          </h2>
+          <p style={{ color: T3, fontSize: '14px' }}>您的观看历史概览</p>
+        </motion.div>
 
-      {/* Monthly activity chart */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.24 }}
-        className="rounded-xl p-6 mb-6"
-        style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border-subtle)' }}
-      >
-        <div className="flex items-center justify-between mb-6">
-          <h3 style={{ fontSize: '15px', fontWeight: 500, color: 'var(--color-text)' }}>
-            Monthly Activity
-          </h3>
-          <span className="flex items-center gap-1.5" style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
-            <TrendingUp size={14} />
-            Last 12 months
-          </span>
-        </div>
-        <ResponsiveContainer width="100%" height={180}>
-          <BarChart data={chartData} barSize={20} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
-            <XAxis
-              dataKey="month"
-              tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis
-              tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--color-surface-3)' }} />
-            <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-              {chartData.map((entry, index) => (
-                <Cell
-                  key={index}
-                  fill={entry.count === maxBar ? 'var(--color-accent)' : 'var(--color-surface-3)'}
-                />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </motion.div>
-
-      <div className="grid gap-6" style={{ gridTemplateColumns: '1fr 1fr' }}>
-        {/* Top genres */}
-        {stats.topGenres?.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.3 }}
-            className="rounded-xl p-6"
-            style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border-subtle)' }}
-          >
-            <h3 style={{ fontSize: '15px', fontWeight: 500, color: 'var(--color-text)', marginBottom: '16px' }}>
-              Top Genres
-            </h3>
-            <div className="flex flex-col gap-3">
-              {stats.topGenres.map((g: { name: string; count: number }, i: number) => {
-                const pct = Math.round((g.count / stats.topGenres[0].count) * 100)
-                return (
-                  <div key={g.name}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>{g.name}</span>
-                      <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{g.count}</span>
-                    </div>
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--color-surface-3)' }}>
-                      <motion.div
-                        className="h-full rounded-full"
-                        style={{ background: i === 0 ? 'var(--color-accent)' : 'var(--color-surface-2)' }}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${pct}%` }}
-                        transition={{ duration: 0.8, delay: 0.4 + i * 0.05, ease: [0.16, 1, 0.3, 1] }}
-                      />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </motion.div>
+        {/* Empty state */}
+        {stats.totalEpisodesWatched === 0 && (
+          <div style={{ background: CARD_BG, border: CARD_BDR, borderRadius: '16px', padding: '24px', marginBottom: '24px' }}>
+            <p style={{ color: T2, fontSize: '14px' }}>
+              暂无统计数据。请先在同步页面触发一次同步，完成后这里将显示您的观看趋势。
+            </p>
+          </div>
         )}
 
-        {/* Recently watched */}
-        {stats.recentlyWatched?.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.36 }}
-            className="rounded-xl p-6"
-            style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border-subtle)' }}
-          >
-            <h3 style={{ fontSize: '15px', fontWeight: 500, color: 'var(--color-text)', marginBottom: '16px' }}>
-              Recent Activity
-            </h3>
-            <div className="flex flex-col gap-3">
-              {stats.recentlyWatched.slice(0, 7).map((r: StatsOverview['recentlyWatched'][number], i: number) => (
-                <div key={i} className="flex items-center gap-3">
-                  <div
-                    className="shrink-0 rounded overflow-hidden"
-                    style={{ width: '32px', height: '48px', background: 'var(--color-surface-3)' }}
-                  >
-                    {r.posterPath && (
-                      <img
-                        src={tmdbImage(r.posterPath, 'w92')!}
-                        alt=""
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="truncate" style={{ fontSize: '13px', color: 'var(--color-text)', fontWeight: 500 }}>
-                      {r.showTitle}
-                    </p>
-                    <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
-                      S{String(r.seasonNumber).padStart(2,'0')}E{String(r.episodeNumber).padStart(2,'0')}
-                      {r.episodeTitle ? ` · ${r.episodeTitle}` : ''}
-                    </p>
-                  </div>
-                  <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', flexShrink: 0 }}>
-                    {daysAgo(r.watchedAt)}
-                  </span>
+        {/* ── Left / Right layout ─────────────────────────────────────────── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '24px', alignItems: 'start' }}>
+
+          {/* ── LEFT COLUMN: KPI cards + genres ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+            {/* KPI cards */}
+            <StatCard label="观看集数" value={stats.totalEpisodesWatched.toLocaleString('zh-CN')} icon={Tv2} delay={0} color={COLORS.violet} />
+            <StatCard label="已看剧集" value={stats.totalShowsWatched.toLocaleString('zh-CN')} icon={Star} sub={`其中 ${stats.totalShowsCompleted} 部已完结`} delay={0.07} color={COLORS.sky} />
+            <StatCard label="观看时长" value={`${totalHours.toLocaleString('zh-CN')}h`} icon={Clock} sub={`相当于 ${totalDays} 天`} delay={0.14} color={COLORS.amber} />
+            <StatCard label="完成剧集" value={stats.totalShowsCompleted.toLocaleString('zh-CN')} icon={CheckCircle2} delay={0.21} color={COLORS.emerald} />
+
+            {/* Top genres */}
+            {stats.topGenres?.length > 0 && (
+              <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.28 }}
+                style={{ background: CARD_BG, border: CARD_BDR, borderRadius: '16px', boxShadow: CARD_SHD, padding: '24px' }}>
+                <h3 style={{ fontSize: '15px', fontWeight: 600, color: T1, marginBottom: '20px' }}>常看流派</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {stats.topGenres.map((g: { name: string; count: number }, i: number) => {
+                    const pct = Math.round((g.count / stats.topGenres[0].count) * 100)
+                    const c = GENRE_COLORS[i % GENRE_COLORS.length]
+                    return (
+                      <div key={g.name}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '13px', color: i === 0 ? T1 : T2, fontWeight: i === 0 ? 600 : 400 }}>{g.name}</span>
+                          <span style={{ fontSize: '12px', color: T3, fontVariantNumeric: 'tabular-nums' }}>{g.count}</span>
+                        </div>
+                        <div style={{ height: '4px', borderRadius: '999px', background: 'var(--color-surface-3)', overflow: 'hidden' }}>
+                          <motion.div
+                            style={{ height: '100%', borderRadius: '999px', background: `linear-gradient(90deg, ${c.base}, ${c.light})` }}
+                            initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                            transition={{ duration: 1, delay: 0.38 + i * 0.06, ease: [0.16, 1, 0.3, 1] }}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
+              </motion.div>
+            )}
+          </div>
+
+          {/* ── RIGHT COLUMN: chart + recent activity ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+
+            {/* Monthly activity chart */}
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.28 }}
+              style={{ background: CARD_BG, border: CARD_BDR, borderRadius: '16px', boxShadow: CARD_SHD, padding: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <h3 style={{ fontSize: '15px', fontWeight: 600, color: T1 }}>月度活跃度</h3>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: T3 }}>
+                  <TrendingUp size={13} color={COLORS.sky.base} /> 过去 12 个月
+                </span>
+              </div>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={chartData} barSize={14} margin={{ top: 4, right: 0, bottom: 0, left: -28 }}>
+                  <CartesianGrid vertical={false} stroke="var(--color-border-subtle)" />
+                  <XAxis dataKey="month" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(124,106,247,0.07)', radius: 6 }} />
+                  <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                    {chartData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={entry.count === 0 ? 'var(--color-surface-3)' : barColor(entry.count, maxBar)}
+                        fillOpacity={entry.count === 0 ? 1 : 0.85}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </motion.div>
+
+            {/* Recent activity */}
+            {stats.recentlyWatched?.length > 0 && (
+              <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.35 }}
+                style={{ background: CARD_BG, border: CARD_BDR, borderRadius: '16px', boxShadow: CARD_SHD, padding: '24px' }}>
+                <h3 style={{ fontSize: '15px', fontWeight: 600, color: T1, marginBottom: '20px' }}>最近动态</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {stats.recentlyWatched.slice(0, 8).map((r: StatsOverview['recentlyWatched'][number], i: number) => (
+                    <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.2, delay: 0.4 + i * 0.04 }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+
+                      {/* Thumbnail */}
+                      <div style={{ position: 'relative', width: '64px', height: '46px', borderRadius: '8px', overflow: 'hidden', background: 'var(--color-surface-3)', flexShrink: 0, outline: '1px solid var(--color-border)' }}>
+                        {r.posterPath
+                          ? <img src={tmdbImage(r.posterPath, 'w92')!} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
+                          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Tv2 size={16} color="var(--color-text-muted)" />
+                            </div>
+                        }
+                        {/* Episode pill */}
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'center', paddingBottom: '2px' }}>
+                          <div style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', borderRadius: '3px', padding: '0 4px', fontSize: '8px', color: 'rgba(255,255,255,0.8)', lineHeight: 1.7 }}>
+                            S{String(r.seasonNumber).padStart(2,'0')}E{String(r.episodeNumber).padStart(2,'0')}
+                          </div>
+                        </div>
+                        {/* Watched badge */}
+                        <div style={{ position: 'absolute', top: '3px', right: '3px', width: '14px', height: '14px', borderRadius: '50%', background: COLORS.emerald.base, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 1px 6px ${COLORS.emerald.base}99` }}>
+                          <CheckCircle2 size={9} color="#fff" strokeWidth={2.5} />
+                        </div>
+                      </div>
+
+                      {/* Info */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: '13px', color: T1, fontWeight: 600, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {r.showTitle}
+                        </p>
+                        <p style={{ fontSize: '11px', color: T3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          S{String(r.seasonNumber).padStart(2,'0')}E{String(r.episodeNumber).padStart(2,'0')}
+                          {r.episodeTitle ? ` · ${r.episodeTitle}` : ''}
+                        </p>
+                      </div>
+
+                      <span style={{ fontSize: '11px', color: T3, flexShrink: 0 }}>{fmtDate(r.watchedAt)}</span>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </div>
+
+        </div>
       </div>
     </div>
   )

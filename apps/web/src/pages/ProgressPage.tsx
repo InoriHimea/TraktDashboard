@@ -5,9 +5,9 @@ import { useShowsProgress } from '../hooks'
 import { ShowCard } from '../components/ShowCard'
 
 const FILTERS = [
-  { key: 'watching',  label: 'Watching',  icon: Tv2 },
-  { key: 'completed', label: 'Completed', icon: CheckCircle2 },
-  { key: 'all',       label: 'All',       icon: LayoutGrid },
+  { key: 'watching',  label: 'Watching',  icon: Tv2,         color: '#7c6af7' },
+  { key: 'completed', label: 'Completed', icon: CheckCircle2, color: '#10b981' },
+  { key: 'all',       label: 'All',       icon: LayoutGrid,   color: '#0ea5e9' },
 ]
 
 export default function ProgressPage() {
@@ -52,7 +52,7 @@ export default function ProgressPage() {
             borderRadius: 'var(--radius-md)',
             padding: '3px',
           }}>
-            {FILTERS.map(({ key, label, icon: Icon }) => (
+            {FILTERS.map(({ key, label, icon: Icon, color }) => (
               <button
                 key={key}
                 onClick={() => setFilter(key)}
@@ -63,14 +63,15 @@ export default function ProgressPage() {
                   padding: '5px 12px',
                   borderRadius: 'var(--radius-sm)',
                   fontSize: '13px',
-                  fontWeight: filter === key ? 500 : 400,
-                  color: filter === key ? 'var(--color-text)' : 'var(--color-text-secondary)',
-                  background: filter === key ? 'var(--color-surface-3)' : 'transparent',
-                  border: 'none',
+                  fontWeight: filter === key ? 600 : 400,
+                  color: filter === key ? color : 'var(--color-text-secondary)',
+                  background: filter === key ? `${color}18` : 'transparent',
+                  border: filter === key ? `1px solid ${color}40` : '1px solid transparent',
                   cursor: 'pointer',
+                  transition: 'all 0.15s',
                 }}
               >
-                <Icon size={13} />
+                <Icon size={13} color={filter === key ? color : 'var(--color-text-muted)'} />
                 {label}
               </button>
             ))}

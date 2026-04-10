@@ -44,6 +44,7 @@ export const shows = pgTable('shows', {
   // Task 1.2: Multilingual fields
   originalName: text('original_name'),
   translatedName: text('translated_name'),
+  translatedOverview: text('translated_overview'),
   displayLanguage: text('display_language'),
   lastSyncedAt: timestamp('last_synced_at').defaultNow().notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -76,6 +77,8 @@ export const episodes = pgTable('episodes', {
   episodeNumber: integer('episode_number').notNull(),
   title: text('title'),
   overview: text('overview'),
+  translatedTitle: text('translated_title'),
+  translatedOverview: text('translated_overview'),
   runtime: integer('runtime'),
   airDate: text('air_date'),
   stillPath: text('still_path'),
