@@ -131,17 +131,33 @@ export function HeroSection({ progress, onWatchClick }: HeroSectionProps) {
           <div className="flex flex-wrap items-center gap-3">
             {show.imdbId && (
               <a href={`https://www.imdb.com/title/${show.imdbId}`} target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-opacity" aria-label="IMDb">
-                <img src="https://www.imdb.com/favicon.ico" alt="IMDb" className="w-5 h-5 rounded-[4px]" />
+                <img src="https://www.imdb.com/favicon.ico" alt="IMDb" className="rounded-[5px]" style={{ width: '28px', height: '28px' }} />
               </a>
             )}
             {show.tmdbId && (
               <a href={`https://www.themoviedb.org/tv/${show.tmdbId}`} target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-opacity" aria-label="TMDB">
-                <img src="https://www.themoviedb.org/favicon.ico" alt="TMDB" className="w-5 h-5 rounded-[4px]" />
+                <img src="https://www.themoviedb.org/favicon.ico" alt="TMDB" className="rounded-[5px]" style={{ width: '28px', height: '28px' }} />
+              </a>
+            )}
+            {show.tvdbId && (
+              <a href={`https://thetvdb.com/?tab=series&id=${show.tvdbId}`} target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-opacity" aria-label="TheTVDB">
+                {/* TheTVDB inline SVG icon */}
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', borderRadius: '5px', background: '#6CB4E4', flexShrink: 0 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 6h16M4 12h10M4 18h7" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+                  </svg>
+                </span>
               </a>
             )}
             {show.traktSlug && (
               <a href={`https://trakt.tv/shows/${show.traktSlug}`} target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-opacity" aria-label="Trakt">
-                <img src="https://trakt.tv/favicon.ico" alt="Trakt" className="w-5 h-5 rounded-[4px]" />
+                {/* Trakt inline SVG — favicon.ico is unreliable */}
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', borderRadius: '5px', background: '#ED1C24', flexShrink: 0 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="2"/>
+                    <path d="M8 12l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </span>
               </a>
             )}
           </div>
