@@ -36,10 +36,11 @@ function makeSeason(n: number): SeasonProgress {
     episodeCount: 3,
     watchedCount: 1,
     airedCount: 3,
+    posterPath: null,
     episodes: [
-      { episodeId: n * 10 + 1, seasonNumber: n, episodeNumber: 1, title: `Ep 1`, airDate: '2020-01-01', watched: true, watchedAt: '2020-01-02', aired: true },
-      { episodeId: n * 10 + 2, seasonNumber: n, episodeNumber: 2, title: `Ep 2`, airDate: '2020-01-08', watched: false, watchedAt: null, aired: true },
-      { episodeId: n * 10 + 3, seasonNumber: n, episodeNumber: 3, title: `Ep 3`, airDate: null, watched: false, watchedAt: null, aired: false },
+      { episodeId: n * 10 + 1, seasonNumber: n, episodeNumber: 1, title: `Ep 1`, translatedTitle: null, overview: null, translatedOverview: null, airDate: '2020-01-01', watched: true, watchedAt: '2020-01-02', aired: true, stillPath: null, runtime: 45 },
+      { episodeId: n * 10 + 2, seasonNumber: n, episodeNumber: 2, title: `Ep 2`, translatedTitle: null, overview: null, translatedOverview: null, airDate: '2020-01-08', watched: false, watchedAt: null, aired: true, stillPath: null, runtime: 45 },
+      { episodeId: n * 10 + 3, seasonNumber: n, episodeNumber: 3, title: `Ep 3`, translatedTitle: null, overview: null, translatedOverview: null, airDate: null, watched: false, watchedAt: null, aired: false, stillPath: null, runtime: null },
     ],
   }
 }
@@ -95,7 +96,7 @@ describe('ShowDetailPage', () => {
   it('P2: rendered SeasonTab count equals seasons.length', () => {
     fc.assert(
       fc.property(
-        fc.array(fc.nat({ min: 1, max: 20 }), { minLength: 1, maxLength: 8 }),
+        fc.array(fc.integer({ min: 1, max: 20 }), { minLength: 1, maxLength: 8 }),
         (seasonNums) => {
           // Deduplicate season numbers
           const unique = [...new Set(seasonNums)]
