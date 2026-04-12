@@ -34,9 +34,9 @@ export default function ProgressPage() {
         backdropFilter: 'blur(12px)',
       }}>
         <div style={{
-          maxWidth: '1400px',
+          maxWidth: '1920px',
           margin: '0 auto',
-          padding: '12px 24px',
+          padding: '12px 32px',
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
@@ -124,8 +124,8 @@ export default function ProgressPage() {
         </div>
       </div>
 
-      {/* Content — centered with max-width */}
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px' }}>
+      {/* Content — full width with generous padding */}
+      <div style={{ maxWidth: '1920px', margin: '0 auto', padding: '24px 32px' }}>
         {isLoading ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', paddingTop: '80px' }}>
             <Loader2 size={24} className="animate-spin" style={{ color: 'var(--color-accent)' }} />
@@ -160,7 +160,7 @@ export default function ProgressPage() {
         ) : (
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
             gap: '16px',
           }}>
             <AnimatePresence mode="popLayout">
