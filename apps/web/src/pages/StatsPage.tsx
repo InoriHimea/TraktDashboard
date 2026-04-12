@@ -265,28 +265,33 @@ export default function StatsPage() {
                 style={{ background: CARD_BG, border: CARD_BDR, borderRadius: '16px', boxShadow: CARD_SHD, padding: '24px' }}>
                 <h3 style={{ fontSize: '15px', fontWeight: 600, color: T1, marginBottom: '20px' }}>最近动态</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {stats.recentlyWatched.slice(0, 8).map((r: StatsOverview['recentlyWatched'][number], i: number) => (
+                  {stats.recentlyWatched.slice(0, 15).map((r: StatsOverview['recentlyWatched'][number], i: number) => (
                     <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.2, delay: 0.4 + i * 0.04 }}
                       style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
 
-                      {/* Thumbnail */}
-                      <div style={{ position: 'relative', width: '64px', height: '46px', borderRadius: '8px', overflow: 'hidden', background: 'var(--color-surface-3)', flexShrink: 0, outline: '1px solid var(--color-border)' }}>
-                        {r.posterPath
-                          ? <img src={tmdbImage(r.posterPath, 'w92')!} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
+                      {/* Thumbnail — 16:9 episode still, fallback to poster */}
+                      <div style={{ position: 'relative', width: '96px', height: '54px', borderRadius: '8px', overflow: 'hidden', background: 'var(--color-surface-3)', flexShrink: 0, outline: '1px solid var(--color-border)' }}>
+                        {(r.stillPath || r.posterPath)
+                          ? <img
+                              src={tmdbImage(r.stillPath ?? r.posterPath, r.stillPath ? 'w300' : 'w92')!}
+                              alt=""
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              loading="lazy"
+                            />
                           : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <Tv2 size={16} color="var(--color-text-muted)" />
+                              <Tv2 size={18} color="var(--color-text-muted)" />
                             </div>
                         }
                         {/* Episode pill */}
-                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'center', paddingBottom: '2px' }}>
-                          <div style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', borderRadius: '3px', padding: '0 4px', fontSize: '8px', color: 'rgba(255,255,255,0.8)', lineHeight: 1.7 }}>
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'center', paddingBottom: '3px' }}>
+                          <div style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', borderRadius: '3px', padding: '1px 5px', fontSize: '9px', color: 'rgba(255,255,255,0.85)', lineHeight: 1.6 }}>
                             S{String(r.seasonNumber).padStart(2,'0')}E{String(r.episodeNumber).padStart(2,'0')}
                           </div>
                         </div>
                         {/* Watched badge */}
-                        <div style={{ position: 'absolute', top: '3px', right: '3px', width: '14px', height: '14px', borderRadius: '50%', background: COLORS.emerald.base, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 1px 6px ${COLORS.emerald.base}99` }}>
-                          <CheckCircle2 size={9} color="#fff" strokeWidth={2.5} />
+                        <div style={{ position: 'absolute', top: '4px', right: '4px', width: '16px', height: '16px', borderRadius: '50%', background: COLORS.emerald.base, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 1px 6px ${COLORS.emerald.base}99` }}>
+                          <CheckCircle2 size={10} color="#fff" strokeWidth={2.5} />
                         </div>
                       </div>
 

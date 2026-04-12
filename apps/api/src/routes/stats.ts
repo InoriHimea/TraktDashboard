@@ -62,6 +62,7 @@ statsRoutes.get('/overview', async (c) => {
     showTitle: shows.title,
     showId: shows.id,
     posterPath: shows.posterPath,
+    stillPath: episodes.stillPath,
     episodeTitle: episodes.title,
     seasonNumber: episodes.seasonNumber,
     episodeNumber: episodes.episodeNumber,
@@ -72,7 +73,7 @@ statsRoutes.get('/overview', async (c) => {
     .innerJoin(shows, eq(episodes.showId, shows.id))
     .where(eq(watchHistory.userId, userId))
     .orderBy(desc(watchHistory.watchedAt))
-    .limit(10)
+    .limit(15)
 
   return c.json({
     data: {

@@ -174,6 +174,7 @@ export interface StatsOverview {
     showId: number
     showTitle: string
     posterPath: string | null
+    stillPath: string | null
     episodeTitle: string | null
     seasonNumber: number
     episodeNumber: number
