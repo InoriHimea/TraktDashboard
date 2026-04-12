@@ -2,7 +2,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Switch to internal Nexus apk mirror
-RUN sed -i 's|https://dl-cdn.alpinelinux.org|https://artifact.mellivora.com.cn/alpine/apk-group|g' /etc/apk/repositories
+RUN sed -i 's|https://dl-cdn.alpinelinux.org/alpine|https://artifact.mellivora.com.cn/alpine/apk-group|g' /etc/apk/repositories
 
 # Use Nexus as corepack download source, then install fixed pnpm version
 ENV COREPACK_NPM_REGISTRY=https://nexus.mellivora.com.cn:18082/repository/npm-group/
@@ -29,7 +29,7 @@ RUN pnpm build
 FROM nginx:1.27-alpine AS runner
 
 # Switch to internal Nexus apk mirror
-RUN sed -i 's|https://dl-cdn.alpinelinux.org|https://artifact.mellivora.com.cn/alpine/apk-group|g' /etc/apk/repositories
+RUN sed -i 's|https://dl-cdn.alpinelinux.org/alpine|https://artifact.mellivora.com.cn/alpine/apk-group|g' /etc/apk/repositories
 
 COPY --from=builder /app/apps/web/dist /usr/share/nginx/html
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
