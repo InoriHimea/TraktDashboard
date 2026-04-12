@@ -1,9 +1,9 @@
-@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap');
+@import "tailwindcss";
 
 @theme {
-  --font-display: "Instrument Serif", serif;
-  --font-sans: "Inter", system-ui, sans-serif;
+  --font-family-display: "Instrument Serif", serif;
+  --font-family-sans: "Inter", system-ui, sans-serif;
 
   /* Background layers */
   --color-bg:        #08080e;
@@ -13,7 +13,7 @@
   --color-surface-4: #20202f;
 
   /* Borders */
-  --color-border:        #252535;
+  --color-border-base:   #252535;
   --color-border-subtle: #1a1a28;
   --color-border-focus:  #7c6af760;
 
@@ -24,22 +24,30 @@
   --color-accent-glow:  #7c6af730;
 
   /* Text */
-  --color-text:           #eeedf8;
+  --color-text-base:      #eeedf8;
   --color-text-secondary: #7e7a9e;
   --color-text-muted:     #45425e;
 
   /* Semantic */
-  --color-watched:  #34d399;
+  --color-watched:   #34d399;
   --color-unwatched: #1a1a28;
-  --color-airing:   #fbbf24;
-  --color-ended:    #52525b;
-  --color-error:    #f87171;
+  --color-airing:    #fbbf24;
+  --color-ended:     #52525b;
+  --color-error:     #f87171;
 
   /* Radius */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
   --radius-xl: 20px;
+}
+
+/* CSS 变量别名 — 供 var() 引用，与旧代码兼容 */
+:root {
+  --font-sans: var(--font-family-sans);
+  --font-display: var(--font-family-display);
+  --color-border: var(--color-border-base);
+  --color-text: var(--color-text-base);
 }
 
 *, *::before, *::after {
@@ -93,6 +101,14 @@ input::placeholder { color: var(--color-text-muted); }
 /* Smooth transitions for interactive elements */
 button, a { transition: opacity 0.15s, background 0.15s, color 0.15s; }
 
+/* Shared card style — used by HeroSection stats and sidebar */
+.hero-card {
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.03);
+  backdrop-filter: blur(12px);
+}
+
 /* Light theme */
 [data-theme="light"] {
   --color-bg:        #f8f8fc;
@@ -101,10 +117,55 @@ button, a { transition: opacity 0.15s, background 0.15s, color 0.15s; }
   --color-surface-3: #e8e8f4;
   --color-surface-4: #e0e0ec;
 
+  --color-border-base:   #d0d0e0;
   --color-border:        #d0d0e0;
   --color-border-subtle: #e4e4f0;
 
+  --color-text-base:      #0e0d1a;
   --color-text:           #0e0d1a;
   --color-text-secondary: #4a4668;
   --color-text-muted:     #8884a8;
+}
+
+/* Poster hover shimmer — animated border glow with color cycling */
+@keyframes poster-border-spin {
+  0%   { --shimmer-angle: 0deg; }
+  100% { --shimmer-angle: 360deg; }
+}
+
+@keyframes poster-border-hue {
+  0%   { --shimmer-hue: 260; }
+  16%  { --shimmer-hue: 200; }
+  33%  { --shimmer-hue: 160; }
+  50%  { --shimmer-hue: 320; }
+  66%  { --shimmer-hue: 30;  }
+  83%  { --shimmer-hue: 180; }
+  100% { --shimmer-hue: 260; }
+}
+
+@property --shimmer-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@property --shimmer-hue {
+  syntax: '<number>';
+  initial-value: 260;
+  inherits: false;
+}
+
+.poster-shimmer-border {
+  background: conic-gradient(
+    from var(--shimmer-angle),
+    transparent 0%,
+    transparent 70%,
+    hsl(var(--shimmer-hue), 90%, 65%, 0.45) 80%,
+    hsl(var(--shimmer-hue), 100%, 85%, 1)   90%,
+    hsl(var(--shimmer-hue), 90%, 65%, 0.45) 95%,
+    transparent 100%
+  );
+  animation:
+    poster-border-spin 2.4s linear infinite,
+    poster-border-hue  6s linear infinite;
 }

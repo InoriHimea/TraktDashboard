@@ -173,7 +173,12 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
     const limit = pLimit(SHOW_CONCURRENCY)
     await Promise.all(Array.from(showMap.entries()).map(([tmdbId, entries]) => limit(async () => {
       try {
-        const showId = await upsertShowFromTmdb(tmdbId, entries[0].show, userId)
+        const traktId = entries[0].show.ids.trakt
+        if (!traktId) {
+          console.warn(`[sync:incr] Missing Trakt id for tmdb ${tmdbId}, skipping`)
+          return
+        }
+        const showId = await upsertShowFromTrakt(traktId, entries[0].show, userId)
         for (const entry of entries) {
           const ep = await findOrCreateEpisode(showId, tmdbId, entry.episode.season, entry.episode.number)
           if (!ep) continue
@@ -214,7 +219,7 @@ async function syncSingleShow(
   if (!input.traktId) throw new Error('Missing Trakt id')
   const trakt = getTraktClient()
 
-  const showId = await upsertShowFromTmdb(input.tmdbId, input.traktShow, userId)
+  const showId = await upsertShowFromTrakt(input.traktId, input.traktShow, userId)
   await getDb().insert(userShowProgress).values({ userId, showId }).onConflictDoNothing()
 
   const progress = await trakt.getShowProgress(userId, input.traktId)
@@ -222,7 +227,177 @@ async function syncSingleShow(
   await recalcShowProgress(userId, showId)
 }
 
-// ─── TMDB upsert ──────────────────────────────────────────────────────────────
+// ─── Trakt-primary upsert ─────────────────────────────────────────────────────
+
+async function upsertShowFromTrakt(traktId: number, traktShow: any, userId: number): Promise<number> {
+  const db = getDb()
+  const trakt = getTraktClient()
+
+  // Read displayLanguage
+  let displayLanguage: string | null = null
+  try {
+    const [settings] = await db.select({ displayLanguage: userSettings.displayLanguage })
+      .from(userSettings).where(eq(userSettings.userId, userId))
+    displayLanguage = settings?.displayLanguage ?? null
+  } catch { /* ignore */ }
+
+  // Fetch Trakt show detail
+  const traktDetail = await trakt.getShowDetail(traktId, userId)
+
+  if (!traktDetail.ids.tmdb) {
+    throw new Error('Missing TMDB id (required for poster/image support)')
+  }
+  const tmdbId = traktDetail.ids.tmdb
+
+  // Fetch TMDB data for images + translations (only if displayLanguage set)
+  let posterPath: string | null = null
+  let backdropPath: string | null = null
+  let translatedName: string | null = null
+  let translatedOverview: string | null = null
+
+  if (displayLanguage) {
+    try {
+      const tmdbShow = await getTmdbShow(tmdbId, displayLanguage, userId)
+      posterPath = tmdbShow.poster_path || null
+      backdropPath = tmdbShow.backdrop_path || null
+      if (tmdbShow.name && tmdbShow.name !== traktDetail.title) translatedName = tmdbShow.name
+      if (tmdbShow.overview && tmdbShow.overview !== traktDetail.overview) translatedOverview = tmdbShow.overview
+    } catch (e) {
+      console.warn(`[sync] TMDB show fetch failed for tmdb ${tmdbId}: ${toErrorMessage(e)}`)
+    }
+  }
+
+  // Fetch seasons from Trakt
+  const traktSeasons = await trakt.getSeasons(traktId, userId)
+  const totalSeasons = traktSeasons.length
+  const totalEpisodes = traktSeasons.reduce((sum, s) => sum + (s.episode_count || 0), 0)
+
+  // Upsert show
+  const [show] = await db.insert(shows).values({
+    tmdbId,
+    traktId: traktDetail.ids.trakt,
+    traktSlug: traktDetail.ids.slug,
+    tvdbId: traktDetail.ids.tvdb,
+    imdbId: traktDetail.ids.imdb,
+    title: traktDetail.title,
+    overview: traktDetail.overview,
+    status: traktDetail.status?.toLowerCase() || 'unknown',
+    firstAired: traktDetail.first_aired,
+    network: traktDetail.network,
+    genres: traktDetail.genres || [],
+    posterPath,
+    backdropPath,
+    totalSeasons,
+    totalEpisodes,
+    originalName: traktDetail.title,
+    translatedName,
+    translatedOverview,
+    displayLanguage,
+    lastSyncedAt: new Date(),
+  }).onConflictDoUpdate({
+    target: [shows.tmdbId],
+    set: {
+      traktId: traktDetail.ids.trakt,
+      traktSlug: traktDetail.ids.slug,
+      tvdbId: traktDetail.ids.tvdb,
+      title: traktDetail.title,
+      overview: traktDetail.overview,
+      status: traktDetail.status?.toLowerCase() || 'unknown',
+      firstAired: traktDetail.first_aired,
+      network: traktDetail.network,
+      genres: traktDetail.genres || [],
+      posterPath,
+      backdropPath,
+      totalSeasons,
+      totalEpisodes,
+      originalName: traktDetail.title,
+      translatedName,
+      translatedOverview,
+      displayLanguage,
+      lastSyncedAt: new Date(),
+    },
+  }).returning({ id: shows.id })
+
+  // Upsert seasons + episodes concurrently
+  const seasonLimit = pLimit(SEASON_CONCURRENCY)
+  await Promise.all(traktSeasons.map(s => seasonLimit(async () => {
+    const [season] = await db.insert(seasons).values({
+      showId: show.id,
+      seasonNumber: s.number,
+      episodeCount: s.episode_count,
+      airDate: s.first_aired || null,
+      overview: s.overview || null,
+      posterPath: null,
+    }).onConflictDoUpdate({
+      target: [seasons.showId, seasons.seasonNumber],
+      set: { episodeCount: s.episode_count, airDate: s.first_aired || null, overview: s.overview || null },
+    }).returning({ id: seasons.id })
+
+    let traktEpisodes: import('./trakt.js').TraktEpisodeDetail[] = []
+    try {
+      traktEpisodes = await trakt.getEpisodes(traktId, s.number, userId)
+    } catch (e) {
+      console.warn(`[sync] Failed to fetch Trakt episodes for show ${traktId} season ${s.number}: ${toErrorMessage(e)}`)
+      return
+    }
+
+    // Fetch TMDB episode translations if displayLanguage set
+    let tmdbEpisodeMap = new Map<number, { translatedTitle: string | null; translatedOverview: string | null }>()
+    if (displayLanguage) {
+      try {
+        const tmdbSeason = await getTmdbSeason(tmdbId, s.number, displayLanguage, userId)
+        for (const ep of tmdbSeason.episodes || []) {
+          tmdbEpisodeMap.set(ep.episode_number, {
+            translatedTitle: ep.name?.trim() || null,
+            translatedOverview: ep.overview?.trim() || null,
+          })
+        }
+      } catch (e) {
+        console.warn(`[sync] TMDB season fetch failed for tmdb ${tmdbId} s${s.number}: ${toErrorMessage(e)}`)
+      }
+    }
+
+    for (const ep of traktEpisodes) {
+      const tmdbEp = tmdbEpisodeMap.get(ep.number)
+      const translatedEpTitle = (tmdbEp?.translatedTitle && tmdbEp.translatedTitle !== ep.title)
+        ? tmdbEp.translatedTitle : null
+      const translatedEpOverview = (tmdbEp?.translatedOverview && tmdbEp.translatedOverview !== ep.overview)
+        ? tmdbEp.translatedOverview : null
+
+      await db.insert(episodes).values({
+        showId: show.id,
+        seasonId: season.id,
+        seasonNumber: ep.season,
+        episodeNumber: ep.number,
+        title: ep.title,
+        overview: ep.overview,
+        translatedTitle: translatedEpTitle,
+        translatedOverview: translatedEpOverview,
+        runtime: ep.runtime,
+        airDate: ep.first_aired,
+        stillPath: null,
+        traktId: ep.ids.trakt,
+        tmdbId: ep.ids.tmdb,
+      }).onConflictDoUpdate({
+        target: [episodes.showId, episodes.seasonNumber, episodes.episodeNumber],
+        set: {
+          title: ep.title,
+          overview: ep.overview,
+          translatedTitle: translatedEpTitle,
+          translatedOverview: translatedEpOverview,
+          runtime: ep.runtime,
+          airDate: ep.first_aired,
+          traktId: ep.ids.trakt,
+          tmdbId: ep.ids.tmdb,
+        },
+      })
+    }
+  })))
+
+  return show.id
+}
+
+// ─── TMDB upsert (kept for reference) ────────────────────────────────────────
 
 async function upsertShowFromTmdb(tmdbId: number, traktShow: any, userId?: number): Promise<number> {
   const db = getDb()
@@ -301,8 +476,8 @@ async function upsertShowFromTmdb(tmdbId: number, traktShow: any, userId?: numbe
     },
   }).returning({ id: shows.id })
 
-  // Fetch all seasons concurrently
-  const validSeasons = (tmdb.seasons || []).filter(s => s.season_number > 0)
+  // Fetch all seasons concurrently (include season 0 = Specials)
+  const validSeasons = (tmdb.seasons || []).filter(s => s.season_number >= 0)
   const seasonLimit = pLimit(SEASON_CONCURRENCY)
 
   await Promise.all(validSeasons.map(s => seasonLimit(async () => {
@@ -334,12 +509,13 @@ async function upsertShowFromTmdb(tmdbId: number, traktShow: any, userId?: numbe
         const fallbackEp = fallbackSeason?.episodes?.find(e => e.episode_number === ep.episode_number)
 
         // Determine translated vs original title/overview
-        const originalTitle = fallbackEp?.name || ep.name || null
-        const translatedEpTitle = (displayLanguage && ep.name && ep.name !== fallbackEp?.name)
-          ? ep.name : null
-        const originalOverview = fallbackEp?.overview || ep.overview || null
-        const translatedEpOverview = (displayLanguage && ep.overview && ep.overview !== fallbackEp?.overview)
-          ? ep.overview : null
+        // fallbackEp = original language (English), ep = user's language
+        const originalTitle = fallbackEp?.name?.trim() || ep.name?.trim() || null
+        const translatedEpTitle = (displayLanguage && ep.name?.trim() && ep.name !== fallbackEp?.name)
+          ? ep.name.trim() : null
+        const originalOverview = fallbackEp?.overview?.trim() || ep.overview?.trim() || null
+        const translatedEpOverview = (displayLanguage && ep.overview?.trim() && ep.overview !== fallbackEp?.overview)
+          ? ep.overview.trim() : null
 
         await db.insert(episodes).values({
           showId: show.id,
@@ -402,10 +578,15 @@ async function findOrCreateEpisode(showId: number, tmdbId: number, seasonNum: nu
   ))
   if (ep) return ep
 
+  // Get traktId for this show to fetch from Trakt
   try {
-    const seasonData = await getTmdbSeason(tmdbId, seasonNum, language, userId)
-    const tmdbEp = seasonData.episodes?.find(e => e.episode_number === episodeNum)
-    if (!tmdbEp) return null
+    const [showRow] = await db.select({ traktId: shows.traktId }).from(shows).where(eq(shows.id, showId))
+    if (!showRow?.traktId) return null
+
+    const trakt = getTraktClient()
+    const traktEpisodes = await trakt.getEpisodes(showRow.traktId, seasonNum, userId ?? 0)
+    const traktEp = traktEpisodes.find(e => e.number === episodeNum)
+    if (!traktEp) return null
 
     const [season] = await db.select().from(seasons)
       .where(and(eq(seasons.showId, showId), eq(seasons.seasonNumber, seasonNum)))
@@ -413,10 +594,10 @@ async function findOrCreateEpisode(showId: number, tmdbId: number, seasonNum: nu
     const [newEp] = await db.insert(episodes).values({
       showId, seasonId: season?.id || null,
       seasonNumber: seasonNum, episodeNumber: episodeNum,
-      title: tmdbEp.name || null, overview: tmdbEp.overview || null,
+      title: traktEp.title, overview: traktEp.overview,
       translatedTitle: null, translatedOverview: null,
-      runtime: tmdbEp.runtime || null, airDate: tmdbEp.air_date || null,
-      stillPath: tmdbEp.still_path || null, tmdbId: tmdbEp.id || null,
+      runtime: traktEp.runtime, airDate: traktEp.first_aired,
+      stillPath: null, traktId: traktEp.ids.trakt, tmdbId: traktEp.ids.tmdb,
     }).onConflictDoNothing().returning()
     return newEp || null
   } catch {

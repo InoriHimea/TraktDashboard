@@ -1,5 +1,5 @@
-import { getDb, users } from '@trakt-dashboard/db'
-import { eq } from 'drizzle-orm'
+import { getDb, users, metadataCache } from '@trakt-dashboard/db'
+import { eq, and } from 'drizzle-orm'
 import { getRedis } from '../jobs/scheduler.js'
 
 const FETCH_TIMEOUT_MS = 12000
@@ -60,6 +60,50 @@ export interface TraktHistoryEntry {
     ids: { trakt: number; tvdb: number; imdb: string; tmdb: number; tvrage: number }
   }
   show: TraktShow
+}
+
+export interface TraktShowDetail {
+  title: string
+  year: number | null
+  overview: string | null
+  status: string | null
+  first_aired: string | null
+  network: string | null
+  genres: string[]
+  ids: {
+    trakt: number
+    slug: string
+    tvdb: number | null
+    imdb: string | null
+    tmdb: number | null
+  }
+}
+
+export interface TraktSeasonDetail {
+  number: number
+  episode_count: number
+  first_aired: string | null
+  overview: string | null
+  ids: {
+    trakt: number
+    tvdb: number | null
+    tmdb: number | null
+  }
+}
+
+export interface TraktEpisodeDetail {
+  number: number
+  season: number
+  title: string | null
+  overview: string | null
+  first_aired: string | null
+  runtime: number | null
+  ids: {
+    trakt: number
+    tvdb: number | null
+    imdb: string | null
+    tmdb: number | null
+  }
 }
 
 export interface TraktShowProgress {
@@ -154,6 +198,10 @@ async function refreshToken(userId: number): Promise<string> {
   return user.traktAccessToken
 }
 
+// Cache TTLs in milliseconds
+const CACHE_TTL_7D = 7 * 24 * 60 * 60 * 1000
+const CACHE_TTL_24H = 24 * 60 * 60 * 1000
+
 export function getTraktClient() {
   const clientId = process.env.TRAKT_CLIENT_ID!
 
@@ -220,5 +268,61 @@ export function getTraktClient() {
 
     getShowProgress: (userId: number, traktId: number) =>
       traktFetch<TraktShowProgress>(`/shows/${traktId}/progress/watched`, userId),
+
+    getShowDetail: async (traktId: number, userId: number): Promise<TraktShowDetail> => {
+      const db = getDb()
+      const externalId = `trakt_show_${traktId}`
+      const [cached] = await db.select().from(metadataCache)
+        .where(and(eq(metadataCache.source, 'trakt_show'), eq(metadataCache.externalId, externalId)))
+      if (cached && Date.now() - new Date(cached.cachedAt).getTime() < CACHE_TTL_7D) {
+        return cached.data as TraktShowDetail
+      }
+      const data = await traktFetch<TraktShowDetail>(`/shows/${traktId}?extended=full`, userId)
+      await db.insert(metadataCache)
+        .values({ source: 'trakt_show', externalId, data, cachedAt: new Date() })
+        .onConflictDoUpdate({
+          target: [metadataCache.source, metadataCache.externalId],
+          set: { data, cachedAt: new Date() },
+        })
+      return data
+    },
+
+    getSeasons: async (traktId: number, userId: number): Promise<TraktSeasonDetail[]> => {
+      const db = getDb()
+      const externalId = `trakt_seasons_${traktId}`
+      const [cached] = await db.select().from(metadataCache)
+        .where(and(eq(metadataCache.source, 'trakt_seasons'), eq(metadataCache.externalId, externalId)))
+      if (cached && Date.now() - new Date(cached.cachedAt).getTime() < CACHE_TTL_7D) {
+        return cached.data as TraktSeasonDetail[]
+      }
+      const data = await traktFetch<TraktSeasonDetail[]>(`/shows/${traktId}/seasons?extended=full`, userId)
+      await db.insert(metadataCache)
+        .values({ source: 'trakt_seasons', externalId, data, cachedAt: new Date() })
+        .onConflictDoUpdate({
+          target: [metadataCache.source, metadataCache.externalId],
+          set: { data, cachedAt: new Date() },
+        })
+      return data
+    },
+
+    getEpisodes: async (traktId: number, seasonNumber: number, userId: number): Promise<TraktEpisodeDetail[]> => {
+      const db = getDb()
+      const externalId = `trakt_episodes_${traktId}_s${seasonNumber}`
+      const [cached] = await db.select().from(metadataCache)
+        .where(and(eq(metadataCache.source, 'trakt_episodes'), eq(metadataCache.externalId, externalId)))
+      if (cached && Date.now() - new Date(cached.cachedAt).getTime() < CACHE_TTL_24H) {
+        return cached.data as TraktEpisodeDetail[]
+      }
+      const data = await traktFetch<TraktEpisodeDetail[]>(
+        `/shows/${traktId}/seasons/${seasonNumber}/episodes?extended=full`, userId
+      )
+      await db.insert(metadataCache)
+        .values({ source: 'trakt_episodes', externalId, data, cachedAt: new Date() })
+        .onConflictDoUpdate({
+          target: [metadataCache.source, metadataCache.externalId],
+          set: { data, cachedAt: new Date() },
+        })
+      return data
+    },
   }
 }

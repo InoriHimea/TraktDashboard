@@ -1,10 +1,12 @@
+/**
+ * HeroSection — 三栏布局: 海报 | 信息 | 侧边栏
+ * 终极视觉修复版：原生 style 标签强制渲染渐变色 + 悬浮吸顶 + 修复底部裁切
+ */
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Play, Bookmark, Star, ExternalLink, Tv2, CheckCircle2 } from 'lucide-react'
+import { Info, Tv2, Play } from 'lucide-react'
 import { resolveTitle, resolveOverview, statusZh, statusColor, fmtDateZh } from '../lib/i18n'
-import { resolveShowPoster, resolveBackdrop } from '../lib/image'
-import { Button } from './ui/Button'
-import { TraktProgressBar } from './TraktProgressBar'
+import { resolveShowPoster } from '../lib/image'
 import type { ShowProgress } from '@trakt-dashboard/types'
 
 interface HeroSectionProps {
@@ -13,12 +15,10 @@ interface HeroSectionProps {
 }
 
 export function HeroSection({ progress, onWatchClick }: HeroSectionProps) {
-  const { show, watchedEpisodes, airedEpisodes, lastWatchedAt, completed, percentage } = progress
+  const { show, lastWatchedAt, seasons } = progress
   const [posterError, setPosterError] = useState(false)
-  const [backdropError, setBackdropError] = useState(false)
 
-  const backdropUrl = resolveBackdrop(show.backdropPath)
-  const posterUrl   = resolveShowPoster(show.posterPath, 'w500')
+  const posterUrl = resolveShowPoster(show.posterPath, 'w500')
   const { primary, secondary } = resolveTitle(show)
   const overview = resolveOverview(show)
   const sColor = statusColor(show.status)
@@ -27,226 +27,403 @@ export function HeroSection({ progress, onWatchClick }: HeroSectionProps) {
   const isAiring = show.status === 'returning series' || show.status === 'in production'
 
   return (
-    <section className="relative w-full min-h-[88vh] flex flex-col justify-end overflow-hidden" aria-label="作品详情">
+    <div className="w-full max-w-[1200px] mx-auto px-6 lg:px-10 pt-8 pb-4">
+      {/* 🚀 终极杀招：直接注入原生 CSS，绕过 React 样式引擎的 BUG，百分百保证渐变色渲染 */}
+      <style>{`
+        .text-gradient-ruby {
+          background: linear-gradient(135deg, #FF2E54 0%, #FF738F 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          color: transparent;
+        }
+      `}</style>
 
-      {/* ── Backdrop ── */}
-      <div className="absolute inset-0 z-0">
-        {backdropUrl && !backdropError ? (
-          <img
-            src={backdropUrl}
-            alt=""
-            className="w-full h-full object-cover object-top"
-            onError={() => setBackdropError(true)}
-          />
-        ) : (
-          /* Fallback: abstract gradient when no backdrop */
-          <div className="w-full h-full bg-gradient-to-br from-[#12102a] via-[#0d0d1a] to-[#0a1020]" />
-        )}
-
-        {/* Cinematic gradient layers */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0d0d1a] via-[#0d0d1a]/75 to-[#0d0d1a]/10" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0d0d1a] via-[#0d0d1a]/30 to-transparent" />
-        {/* Vignette */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_50%,transparent_50%,rgba(0,0,0,0.5)_100%)]" />
-      </div>
-
-      {/* ── Main content ── */}
-      <div className="relative z-10 px-8 md:px-16 pb-16 pt-28 flex flex-col md:flex-row gap-10 items-end">
-
-        {/* Poster */}
+      <div 
+        className="flex flex-col lg:flex-row items-start relative"
+        style={{ gap: '40px' }} 
+      >
+        
+        {/* ── 1. 左: 海报 ── */}
         <motion.div
-          initial={{ opacity: 0, y: 24, scale: 0.96 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
-          className="shrink-0 hidden md:block"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+          className="relative group cursor-pointer shrink-0"
+          style={{ width: '260px' }} 
+          onClick={onWatchClick}
+          role="button"
+          tabIndex={0}
+          aria-label="继续观看"
+          onKeyDown={e => e.key === 'Enter' && onWatchClick?.()}
         >
-          <div className="w-[190px] lg:w-[220px] aspect-[2/3] rounded-2xl overflow-hidden shadow-[0_24px_80px_rgba(0,0,0,0.75)] ring-1 ring-white/10">
-            {posterUrl && !posterError ? (
-              <img
-                src={posterUrl}
-                alt={primary}
-                className="w-full h-full object-cover"
-                onError={() => setPosterError(true)}
-              />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-b from-violet-950/60 to-[#0d0d1a] flex items-center justify-center">
-                <Tv2 size={40} className="text-white/15" />
+          <div className="absolute -inset-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-[18px] pointer-events-none poster-shimmer-border" />
+          <div className="relative overflow-hidden shadow-lg border border-[var(--color-border)] bg-[var(--color-surface-2)]" style={{ borderRadius: '16px' }}>
+            <div className="aspect-[2/3] relative">
+              {posterUrl && !posterError ? (
+                <img
+                  src={posterUrl}
+                  alt={primary}
+                  className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
+                  onError={() => setPosterError(true)}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Tv2 size={40} className="text-[var(--color-border)]" />
+                </div>
+              )}
+              
+              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                <div className="w-14 h-14 rounded-full backdrop-blur-md bg-white/20 border border-white/30 flex items-center justify-center shadow-2xl transform scale-90 group-hover:scale-100 transition-transform duration-300">
+                  <Play className="text-white ml-1 w-6 h-6 fill-white" />
+                </div>
+              </div>
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent pointer-events-none" />
+            {secondary && (
+              <div className="absolute bottom-4 left-4 right-4 text-white pointer-events-none">
+                <p className="font-display text-2xl leading-snug opacity-90">{secondary}</p>
               </div>
             )}
           </div>
         </motion.div>
 
-        {/* Info block */}
+        {/* ── 2. 中: 主信息 ── */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.65, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
-          className="flex-1 min-w-0 flex flex-col gap-5"
+          transition={{ duration: 0.45, delay: 0.06, ease: [0.16, 1, 0.3, 1] }}
+          style={{ flex: '1 1 0%', display: 'flex', flexDirection: 'column', gap: '20px', paddingTop: '4px' }}
         >
-          {/* Genre tags */}
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight text-[var(--color-text)] leading-tight mb-3">
+              {primary}
+            </h1>
+            <div className="flex items-center flex-wrap gap-2 text-[14px] text-[var(--color-text-secondary)] font-medium">
+              {year && <span>{year}</span>}
+              {show.totalEpisodes > 0 && <><Dot /><span>{show.totalEpisodes} eps.</span></>}
+              {show.network && <><Dot /><span>{show.network}</span></>}
+              {show.genres?.[0] && <><Dot /><span>{show.genres[0]}</span></>}
+              <Info size={15} className="text-[var(--color-text-muted)] cursor-pointer hover:text-[var(--color-accent)] transition-colors ml-1" />
+            </div>
+          </div>
+
+          <span className="inline-flex items-center backdrop-blur-md" 
+            style={{ 
+              width: 'fit-content',
+              gap: '8px',
+              fontSize: '13px',
+              fontWeight: 'bold',
+              padding: '6px 16px',
+              color: sColor, 
+              background: `linear-gradient(180deg, ${sColor}15 0%, ${sColor}05 100%)`,
+              border: `1px solid ${sColor}30`,
+              borderTopColor: `${sColor}70`,
+              borderRadius: '99px',
+              boxShadow: `inset 0 1px 2px rgba(255,255,255,0.2), inset 0 -1px 2px rgba(0,0,0,0.1), 0 4px 12px ${sColor}25`,
+              textShadow: '0 1px 1px rgba(0,0,0,0.1)'
+            }}
+          >
+            <span className={`w-2 h-2 rounded-full ${isAiring ? 'animate-pulse' : ''}`} style={{ background: sColor, boxShadow: `0 0 10px 1px ${sColor}` }} />
+            {sLabel}
+          </span>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {show.imdbId && (
+              <a href={`https://www.imdb.com/title/${show.imdbId}`} target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-opacity" aria-label="IMDb">
+                <img src="https://www.imdb.com/favicon.ico" alt="IMDb" className="w-5 h-5 rounded-[4px]" />
+              </a>
+            )}
+            {show.tmdbId && (
+              <a href={`https://www.themoviedb.org/tv/${show.tmdbId}`} target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-opacity" aria-label="TMDB">
+                <img src="https://www.themoviedb.org/favicon.ico" alt="TMDB" className="w-5 h-5 rounded-[4px]" />
+              </a>
+            )}
+            {show.traktSlug && (
+              <a href={`https://trakt.tv/shows/${show.traktSlug}`} target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-opacity" aria-label="Trakt">
+                <img src="https://trakt.tv/favicon.ico" alt="Trakt" className="w-5 h-5 rounded-[4px]" />
+              </a>
+            )}
+          </div>
+
+          <OverviewText text={overview} />
+        </motion.div>
+
+        {/* ── 3. 右: 侧边栏 ── */}
+        <motion.div
+          initial={{ opacity: 0, x: 10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.45, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
+          className="hidden lg:flex flex-col bg-[var(--color-surface)] border border-[var(--color-border-subtle)] shadow-sm self-start"
+          style={{ 
+            flex: '0 0 350px', 
+            padding: '32px', 
+            borderRadius: '24px', 
+            gap: '28px',
+            position: 'sticky', 
+            top: '32px', 
+            maxHeight: 'calc(100vh - 64px)', 
+            overflow: 'hidden' 
+          }}
+        >
+          <div className="flex items-center justify-between w-full shrink-0">
+            <span className="inline-flex items-center backdrop-blur-sm"
+              style={{ 
+                gap: '8px', fontSize: '12px', fontWeight: 'bold', padding: '6px 12px',
+                color: sColor, background: `linear-gradient(180deg, ${sColor}15 0%, ${sColor}05 100%)`,
+                border: `1px solid ${sColor}20`, borderTopColor: `${sColor}50`, borderRadius: '99px',
+                boxShadow: `inset 0 1px 2px rgba(255,255,255,0.15), 0 2px 6px ${sColor}15`
+              }}
+            >
+              <span className={`w-1.5 h-1.5 shrink-0 ${isAiring ? 'animate-pulse' : ''}`} style={{ background: sColor, borderRadius: '50%', boxShadow: `0 0 8px 1px ${sColor}` }} />
+              {sLabel}
+            </span>
+            <span className="text-[12px] font-medium text-[var(--color-text-muted)]">上次：{fmtDateZh(lastWatchedAt)}</span>
+          </div>
+
+          <div className="shrink-0" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', width: '100%' }}>
+            {[
+              { value: `${show.totalSeasons}S · ${show.totalEpisodes}集`, label: '总集数' },
+              { value: show.network || show.status || '—', label: '平台' },
+              { value: show.firstAired ? String(new Date(show.firstAired).getFullYear()) : '—', label: '首播年份' },
+            ].map(({ value, label }) => (
+              <div key={label} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', backgroundColor: 'var(--color-surface-2)', border: '1px solid var(--color-border-subtle)', padding: '12px 10px', borderRadius: '12px', gap: '4px' }}>
+                <span className="text-[14px] font-bold text-[var(--color-text)] leading-none truncate">{value}</span>
+                <span className="text-[11px] font-medium text-[var(--color-text-muted)] leading-none truncate">{label}</span>
+              </div>
+            ))}
+          </div>
+
           {show.genres?.length > 0 && (
-            <div className="flex gap-2 flex-wrap">
-              {show.genres.slice(0, 4).map(g => (
-                <span key={g} className="text-xs font-medium px-3 py-1 rounded-full bg-white/6 border border-white/10 text-white/50 backdrop-blur-sm">
-                  {g}
-                </span>
-              ))}
+            <div className="shrink-0" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '-4px' }}>
+              {show.genres.slice(0, 5).map((g, i) => {
+                const style = GENRE_COLORS[i % GENRE_COLORS.length]
+                return (
+                  <span key={g} className="inline-flex items-center shadow-sm"
+                    style={{ 
+                      gap: '6px', padding: '5px 10px', borderRadius: '10px',
+                      backgroundColor: 'var(--color-surface-2)', 
+                      borderLeft: '1px solid var(--color-border-subtle)', borderRight: '1px solid var(--color-border-subtle)',
+                      borderTop: '1px solid rgba(255,255,255,0.08)', borderBottom: '1px solid rgba(0,0,0,0.08)',
+                    }}
+                  >
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: style.color, boxShadow: `0 0 8px ${style.color}` }} />
+                    <span className="text-[11px] font-bold tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>{g}</span>
+                  </span>
+                )
+              })}
             </div>
           )}
 
-          {/* Title */}
-          <div>
-            <h1 className="text-5xl lg:text-6xl xl:text-[4.5rem] font-black text-white leading-[1.04] tracking-tight drop-shadow-2xl">
-              {primary}
-            </h1>
-            {secondary && (
-              <p className="text-base text-white/35 mt-2 font-light tracking-wide">{secondary}</p>
+          <div className="w-full h-px bg-[var(--color-border-subtle)] my-0.5 shrink-0" />
+
+          {/* 内部滚动区 */}
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflowY: 'auto', paddingRight: '4px', gap: '24px' }}>
+            
+            {(() => {
+              const totalEpisodes = show.totalEpisodes ?? seasons.reduce((s, x) => s + x.episodeCount, 0)
+              const totalWatched = seasons.reduce((s, x) => s + x.watchedCount, 0)
+              const overallPct = totalEpisodes > 0 ? Math.round((totalWatched / totalEpisodes) * 100) : 0
+              const remaining = totalEpisodes - totalWatched
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%' }}>
+                  <div className="flex justify-between items-end">
+                    <span className="text-[13px] font-medium text-[var(--color-text-muted)] mb-1">总观看进度</span>
+                    <div className="flex items-baseline" style={{ gap: '10px' }}>
+                      
+                      {/* 🚀 修复渐变字体底部被裁切的终极解法 */}
+                      <span 
+                        className="text-gradient-ruby"
+                        style={{
+                          fontSize: '44px',
+                          fontWeight: 900,
+                          lineHeight: 1.1,         // 放宽行高
+                          paddingBottom: '8px',    // 给底部留出渲染安全区
+                          marginBottom: '-8px',    // 负边距拉回位置
+                          letterSpacing: '-0.02em',
+                          display: 'inline-block'
+                        }}
+                      >
+                        {overallPct}%
+                      </span>
+
+                      <span className="text-[13px] font-medium text-[var(--color-text-muted)]">· {remaining}集未看</span>
+                    </div>
+                  </div>
+                  <ProgressBar
+                    pct={overallPct}
+                    totalTicks={totalEpisodes}
+                    colorFrom="#FF2E54"
+                    colorTo="#FF738F"
+                    trackRgb="255,46,84"
+                    height={28}
+                    labelLeft={`${totalWatched} / ${totalEpisodes} 集`}
+                  />
+                </div>
+              )
+            })()}
+
+            {seasons && seasons.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', paddingBottom: '16px' }}>
+                <span className="text-[13px] font-medium text-[var(--color-text-muted)]">各季进度</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {seasons.map((s, i) => {
+                    const totalSeasonEpisodes = s.episodeCount
+                    const pct = totalSeasonEpisodes > 0 ? Math.round((s.watchedCount / totalSeasonEpisodes) * 100) : 0
+                    const pal = SEASON_PALETTES[i % SEASON_PALETTES.length]
+                    const statusText = pct === 100
+                      ? `${totalSeasonEpisodes}集 · 全部看完`
+                      : s.watchedCount === 0
+                        ? `${totalSeasonEpisodes}集 · 未开始`
+                        : `${totalSeasonEpisodes}集 · 已看 ${s.watchedCount}集`
+                    return (
+                      <div key={s.seasonNumber} style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[14px] font-bold text-[var(--color-text)]">{s.seasonNumber === 0 ? 'Specials' : `Season ${s.seasonNumber}`}</span>
+                          <span className="text-[12px] font-medium text-[var(--color-text-muted)] text-right">{statusText}</span>
+                        </div>
+                        <ProgressBar
+                          pct={pct}
+                          totalTicks={totalSeasonEpisodes}
+                          colorFrom={pal.colorFrom}
+                          colorTo={pal.colorTo}
+                          trackRgb={pal.trackRgb}
+                          height={20}
+                          labelLeft={pct > 0 ? `${pct}%` : undefined}
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
             )}
-          </div>
-
-          {/* Meta row */}
-          <div className="flex items-center flex-wrap gap-x-3 gap-y-2 text-sm">
-            {year && <span className="text-white/55">{year}</span>}
-            {show.totalEpisodes > 0 && (
-              <><span className="text-white/20">·</span><span className="text-white/55">{show.totalEpisodes} 集</span></>
-            )}
-            {show.network && (
-              <><span className="text-white/20">·</span><span className="text-white/55">{show.network}</span></>
-            )}
-            {/* Status badge */}
-            <span
-              className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
-              style={{ color: sColor, background: `${sColor}1a`, border: `1px solid ${sColor}35` }}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${isAiring ? 'animate-pulse' : ''}`}
-                style={{ background: sColor }}
-              />
-              {sLabel}
-            </span>
-          </div>
-
-          {/* Overview */}
-          <p className="text-white/50 text-sm leading-relaxed max-w-[580px] line-clamp-3">
-            {overview}
-          </p>
-
-          {/* Progress */}
-          <div className="max-w-[460px]">
-            <div className="flex items-center justify-between mb-2 text-xs">
-              <span className="text-white/35 flex items-center gap-1.5">
-                {completed
-                  ? <><CheckCircle2 size={11} className="text-emerald-400" /> 已看完全剧</>
-                  : <>已观看 <span className="text-white/60 font-semibold">{watchedEpisodes}</span> / {airedEpisodes} 集</>
-                }
-              </span>
-              <span className="text-violet-400 font-bold">{percentage}%</span>
-            </div>
-            <TraktProgressBar watched={watchedEpisodes} total={airedEpisodes} />
-            <p className="text-[11px] text-white/25 mt-1.5">上次观看：{fmtDateZh(lastWatchedAt)}</p>
-          </div>
-
-          {/* CTA buttons */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <Button
-              variant="primary"
-              size="lg"
-              icon={<Play size={16} fill="currentColor" />}
-              onClick={onWatchClick}
-              aria-label="继续观看"
-            >
-              继续观看
-            </Button>
-
-            <Button
-              variant="secondary"
-              size="lg"
-              icon={<Bookmark size={15} />}
-              aria-label="加入片单"
-            >
-              加入片单
-            </Button>
-
-            {/* External links — ghost buttons */}
-            <div className="flex gap-1.5 ml-1">
-              {show.tmdbId && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  icon={<ExternalLink size={10} />}
-                  onClick={() => window.open(`https://www.themoviedb.org/tv/${show.tmdbId}`, '_blank')}
-                  aria-label="在 TMDB 查看"
-                >
-                  TMDB
-                </Button>
-              )}
-              {show.imdbId && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  icon={<ExternalLink size={10} />}
-                  onClick={() => window.open(`https://www.imdb.com/title/${show.imdbId}`, '_blank')}
-                  aria-label="在 IMDb 查看"
-                >
-                  IMDb
-                </Button>
-              )}
-              {show.traktSlug && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  icon={<ExternalLink size={10} />}
-                  onClick={() => window.open(`https://trakt.tv/shows/${show.traktSlug}`, '_blank')}
-                  aria-label="在 Trakt 查看"
-                >
-                  Trakt
-                </Button>
-              )}
-            </div>
           </div>
         </motion.div>
-
-        {/* Right sidebar — score + stats */}
-        <motion.aside
-          initial={{ opacity: 0, x: 16 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.55, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="hidden xl:flex flex-col gap-3 shrink-0 w-[172px]"
-          aria-label="作品评分与统计"
-        >
-          {/* Score card */}
-          <div className="rounded-2xl bg-white/5 border border-white/8 backdrop-blur-xl p-4 flex flex-col items-center gap-2">
-            <Star size={16} className="text-amber-400" fill="currentColor" />
-            <span className="text-2xl font-black text-white">—</span>
-            <span className="text-[10px] text-white/30 uppercase tracking-wider">Trakt 评分</span>
-          </div>
-
-          {/* Stats card */}
-          <div className="rounded-2xl bg-white/5 border border-white/8 backdrop-blur-xl p-4 flex flex-col gap-3">
-            <StatItem label="季数" value={`${show.totalSeasons} 季`} />
-            <div className="h-px bg-white/6" />
-            <StatItem label="总集数" value={`${show.totalEpisodes} 集`} />
-            {show.firstAired && (
-              <>
-                <div className="h-px bg-white/6" />
-                <StatItem label="首播" value={show.firstAired.slice(0, 4)} />
-              </>
-            )}
-          </div>
-        </motion.aside>
       </div>
-
-      {/* Bottom fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-[#0d0d1a] to-transparent z-10 pointer-events-none" />
-    </section>
+    </div>
   )
 }
 
-function StatItem({ label, value }: { label: string; value: string }) {
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const GENRE_COLORS = [
+  { color: '#10b981' }, 
+  { color: '#8b5cf6' }, 
+  { color: '#f59e0b' }, 
+  { color: '#0ea5e9' }, 
+  { color: '#e11d48' }, 
+]
+
+const SEASON_PALETTES = [
+  { colorFrom: '#10b981', colorTo: '#34d399', trackRgb: '16,185,129' },
+  { colorFrom: '#8b5cf6', colorTo: '#a78bfa', trackRgb: '139,92,246' },
+  { colorFrom: '#f97316', colorTo: '#fb923c', trackRgb: '249,115,22' },
+  { colorFrom: '#eab308', colorTo: '#facc15', trackRgb: '234,179,8' },
+  { colorFrom: '#3b82f6', colorTo: '#60a5fa', trackRgb: '59,130,246' },
+]
+
+interface ProgressBarProps {
+  pct: number
+  totalTicks: number
+  colorFrom: string
+  colorTo: string
+  trackRgb: string
+  height?: number
+  labelLeft?: string
+}
+
+function ProgressBar({ pct, totalTicks, colorFrom, colorTo, trackRgb, height = 28, labelLeft }: ProgressBarProps) {
+  const validPct = Math.min(Math.max(pct, 0), 100)
+  const ticks = Array.from({ length: Math.max(totalTicks - 1, 0) }, (_, i) => i + 1)
+  
   return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-[9px] text-white/25 uppercase tracking-widest">{label}</span>
-      <span className="text-sm font-bold text-white/75">{value}</span>
+    <div
+      className="relative w-full rounded-lg overflow-hidden shadow-inner"
+      style={{ 
+        height, 
+        backgroundColor: `rgba(${trackRgb}, 0.12)`, 
+        transform: 'translateZ(0)' // 确保 Safari 圆角裁切
+      }}
+    >
+      {labelLeft && (
+        <div className="absolute top-0 bottom-0 left-3 flex items-center z-0 pointer-events-none">
+          <span className="text-[12px] font-bold tracking-wide whitespace-nowrap" style={{ color: `rgba(${trackRgb}, 0.65)` }}>
+            {labelLeft}
+          </span>
+        </div>
+      )}
+
+      {validPct > 0 && (
+        <div
+          className="absolute top-0 bottom-0 left-0 z-10 overflow-hidden"
+          style={{
+            width: `${validPct}%`,
+            background: `linear-gradient(90deg, ${colorFrom}, ${colorTo})`,
+            borderTopRightRadius: validPct === 100 ? '8px' : '0',
+            borderBottomRightRadius: validPct === 100 ? '8px' : '0',
+          }}
+        >
+          {ticks.map(i => {
+            const tickPos = (i / totalTicks) * 100
+            if (tickPos >= validPct) return null
+            return (
+              <div
+                key={i}
+                className="absolute top-0 bottom-0 bg-black/10 mix-blend-multiply"
+                style={{ left: `${(tickPos / validPct) * 100}%`, width: '1px' }}
+              />
+            )
+          })}
+
+          {labelLeft && (
+            <div className="absolute top-0 bottom-0 left-3 flex items-center z-20 pointer-events-none">
+              <span className="text-[12px] font-bold tracking-wide text-white whitespace-nowrap drop-shadow-sm">
+                {labelLeft}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Dot() {
+  return <span className="w-1 h-1 rounded-full bg-[var(--color-text-muted)] opacity-50 inline-block" />
+}
+
+function OverviewText({ text }: { text: string | null }) {
+  const [expanded, setExpanded] = useState(false)
+  const [clamped, setClamped] = useState(false)
+
+  function handleRef(el: HTMLParagraphElement | null) {
+    if (el) setClamped(el.scrollHeight > el.clientHeight + 2)
+  }
+
+  if (!text) return null
+
+  return (
+    <div className="max-w-2xl mt-1">
+      <p
+        ref={handleRef}
+        className="text-[14px] text-[var(--color-text-secondary)] leading-relaxed"
+        style={expanded ? undefined : {
+          display: '-webkit-box',
+          WebkitLineClamp: 4,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        }}
+      >
+        {text}
+      </p>
+      {clamped && (
+        <button
+          onClick={() => setExpanded(v => !v)}
+          className="mt-2 text-[12px] text-[var(--color-text-muted)] hover:text-[var(--color-accent)] transition-colors font-medium border border-[var(--color-border-subtle)] hover:border-[var(--color-accent-dim)] bg-[var(--color-surface-2)] px-3 py-1 rounded-md"
+        >
+          {expanded ? '收起' : '展开阅读更多'}
+        </button>
+      )}
     </div>
   )
 }

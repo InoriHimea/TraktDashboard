@@ -90,6 +90,7 @@ export interface SeasonProgress {
   episodeCount: number
   watchedCount: number
   airedCount: number
+  posterPath: string | null
   episodes: EpisodeProgress[]
 }
 

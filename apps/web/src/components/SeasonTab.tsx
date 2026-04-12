@@ -1,3 +1,7 @@
+/**
+ * SeasonTab — 竖版海报卡片，选中时有 layoutId 滑动高亮动画
+ */
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { CheckCircle2 } from 'lucide-react'
 import { resolveShowPoster } from '../lib/image'
@@ -5,72 +9,91 @@ import type { SeasonProgress } from '@trakt-dashboard/types'
 
 interface SeasonTabProps {
   season: SeasonProgress
-  showPosterPath: string | null
   isActive: boolean
   onClick: () => void
 }
 
-export function SeasonTab({ season, showPosterPath, isActive, onClick }: SeasonTabProps) {
-  const posterUrl = resolveShowPoster(showPosterPath, 'w342')
-  const isComplete = season.watchedCount === season.airedCount && season.airedCount > 0
-  const pct = season.airedCount > 0 ? Math.round((season.watchedCount / season.airedCount) * 100) : 0
+export function SeasonTab({ season, isActive, onClick }: SeasonTabProps) {
+  const [imgError, setImgError] = useState(false)
+  const posterUrl = resolveShowPoster(season.posterPath, 'w342')
+  const showImg = posterUrl && !imgError
+  const isComplete = season.watchedCount >= season.airedCount && season.airedCount > 0
 
   return (
     <motion.button
       onClick={onClick}
-      whileHover={{ y: -2 }}
-      whileTap={{ scale: 0.96 }}
+      whileTap={{ scale: 0.95 }}
       aria-pressed={isActive}
-      aria-label={`第 ${season.seasonNumber} 季，已观看 ${pct}%`}
-      className={[
-        'relative flex flex-col items-center gap-2 p-2.5 rounded-2xl border',
-        'transition-all duration-200 min-w-[72px] group',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500',
-        isActive
-          ? 'border-violet-500/50 bg-violet-500/10 shadow-lg shadow-violet-900/20'
-          : 'border-white/8 bg-white/4 hover:bg-white/8 hover:border-white/15',
-      ].join(' ')}
+      aria-label={season.seasonNumber === 0 ? 'Specials' : `Season ${season.seasonNumber}`}
+      className="relative overflow-visible flex flex-col items-center gap-5 shrink-0 group focus-visible:outline-none py-2"
     >
-      {/* Poster thumbnail */}
-      <div className="relative w-11 h-16 rounded-xl overflow-hidden bg-white/6">
-        {posterUrl ? (
-          <img src={posterUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-b from-violet-950/50 to-slate-900/50" />
-        )}
-        {/* Season progress bar at bottom of poster */}
-        {pct > 0 && (
-          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/10">
-            <div
-              className={`h-full transition-all ${pct === 100 ? 'bg-emerald-400' : 'bg-violet-400'}`}
-              style={{ width: `${pct}%` }}
+      {/* 海报 */}
+      <div className="relative overflow-visible">
+        <motion.div
+          className={[
+            'rounded-lg overflow-hidden transition-shadow duration-200',
+            isActive
+              ? 'shadow-lg shadow-[var(--color-accent)]/30'
+              : 'group-hover:shadow-md group-hover:shadow-black/30',
+          ].join(' ')}
+          animate={{ scale: isActive ? 1.03 : 1 }}
+          transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+          style={{ width: '208px', height: '313px', transformOrigin: 'top center' }}
+        >
+          {showImg ? (
+            <img
+              src={posterUrl}
+              alt={`Season ${season.seasonNumber}`}
+              className="w-full h-full object-cover"
+              onError={() => setImgError(true)}
             />
+          ) : (
+            <div className="w-full h-full bg-[var(--color-surface-3)] flex items-center justify-center">
+              <span className="text-[11px] text-white/30 font-bold">{season.seasonNumber === 0 ? 'SP' : `S${season.seasonNumber}`}</span>
+            </div>
+          )}
+
+          {/* 选中时的紫色边框 overlay */}
+          {isActive && (
+            <motion.div
+              layoutId="season-active-ring"
+              className="absolute inset-0 rounded-lg ring-2 ring-[var(--color-accent)]"
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            />
+          )}
+        </motion.div>
+
+        {/* 完成徽章 — 在 overflow:hidden 外面，不被裁剪 */}
+        {isComplete && (
+          <div className="absolute top-2 right-2 z-10">
+            <div style={{
+              width: '28px',
+              height: '28px',
+              borderRadius: '50%',
+              background: 'linear-gradient(145deg, #4ade80, #16a34a)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.5), 0 1px 2px rgba(74,222,128,0.6), inset 0 1px 1px rgba(255,255,255,0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <CheckCircle2 size={18} strokeWidth={2.5} className="text-white drop-shadow" />
+            </div>
           </div>
         )}
       </div>
 
-      {/* Label */}
-      <span className={[
-        'text-[11px] font-medium whitespace-nowrap transition-colors',
-        isActive ? 'text-violet-300' : 'text-white/45 group-hover:text-white/65',
-      ].join(' ')}>
-        第 {season.seasonNumber} 季
-      </span>
-
-      {/* Active underline indicator */}
-      {isActive && (
-        <motion.div
-          layoutId="season-active-bar"
-          className="absolute -bottom-px left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full bg-violet-400"
-        />
-      )}
-
-      {/* Completion badge */}
-      {isComplete && (
-        <div className="absolute -top-1.5 -right-1.5 rounded-full shadow-lg shadow-emerald-900/50">
-          <CheckCircle2 size={16} className="text-emerald-400 fill-emerald-950" />
-        </div>
-      )}
+      {/* 季名 */}
+      <motion.span
+        className="text-[12px] font-medium leading-none"
+        animate={{
+          color: isActive
+            ? 'var(--color-text)'
+            : 'var(--color-text-muted)',
+        }}
+        transition={{ duration: 0.15 }}
+      >
+        {season.seasonNumber === 0 ? 'Specials' : `Season ${season.seasonNumber}`}
+      </motion.span>
     </motion.button>
   )
 }

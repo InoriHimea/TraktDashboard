@@ -12,17 +12,18 @@
   "dependencies": {
     "@trakt-dashboard/db": "workspace:*",
     "@trakt-dashboard/types": "workspace:*",
-    "hono": "^4.12.12",
-    "drizzle-orm": "^0.45.2",
-    "postgres": "^3.4.9",
     "bullmq": "^5.73.1",
+    "dayjs": "^1.11.20",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.12.12",
     "ioredis": "^5.10.1",
     "jose": "^6.2.2",
-    "dayjs": "^1.11.20",
-    "p-limit": "^7.3.0"
+    "p-limit": "^7.3.0",
+    "postgres": "^3.4.9"
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "@types/node": "^22.10.2"
+    "@types/node": "^22.10.2",
+    "fast-check": "^3.23.2"
   }
 }

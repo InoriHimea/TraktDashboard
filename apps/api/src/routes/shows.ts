@@ -176,6 +176,7 @@ showRoutes.get('/:id', async (c) => {
       episodeCount: s.episodeCount,
       airedCount,
       watchedCount,
+      posterPath: s.posterPath ?? null,
       episodes: epProgress,
     }
   })

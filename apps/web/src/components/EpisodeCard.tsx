@@ -1,23 +1,21 @@
 /**
- * EpisodeCard — unified layout, strict info hierarchy, consistent image ratio.
+ * EpisodeCard — redesigned for scannability and visual consistency.
  *
- * Layout:
- *   [16:9 still | 128px wide] [content: code · title · overview · meta]
+ * Layout: [16:9 still | 160px wide] [content: code · title · overview · meta]
+ * Card height: ~116px — enough room for 2-line title + 1-line overview + meta
  *
  * Info hierarchy:
- *   1. Episode code (S01E03) — muted, monospace
- *   2. Title — primary, bold, line-clamp-2
- *   3. Overview — secondary, line-clamp-2, hidden on small screens
- *   4. Meta row — runtime · air date · watch status
- *
- * States: watched / unwatched / unaired — each has distinct visual treatment.
+ *   1. Title — primary, bold, line-clamp-2
+ *   2. Overview — secondary, line-clamp-2, muted
+ *   3. Meta row — episode code · runtime · watch status
  */
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { CheckCircle2, Clock, Eye, EyeOff, CalendarDays } from 'lucide-react'
+import { CheckCircle2, Clock, Eye, EyeOff } from 'lucide-react'
 import { resolveEpisodeTitle, resolveEpisodeOverview, fmtRuntime } from '../lib/i18n'
 import { resolveEpisodeStill } from '../lib/image'
 import { EpisodePlaceholder } from './ui/EpisodePlaceholder'
+import { ProgressBarWidget } from './ProgressBarWidget'
 import type { EpisodeProgress } from '@trakt-dashboard/types'
 
 interface EpisodeCardProps {
@@ -39,40 +37,27 @@ export function EpisodeCard({ episode, index, seasonNumber }: EpisodeCardProps) 
 
   return (
     <motion.article
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.28, delay: Math.min(index * 0.03, 0.45), ease: [0.16, 1, 0.3, 1] }}
-      whileHover={isUnaired ? {} : {
-        y: -2,
-        boxShadow: isWatched
-          ? '0 8px 32px rgba(109,40,217,0.2)'
-          : '0 8px 24px rgba(0,0,0,0.35)',
-        transition: { duration: 0.15 },
-      }}
+      transition={{ duration: 0.25, delay: Math.min(index * 0.025, 0.4), ease: [0.16, 1, 0.3, 1] }}
       className={[
-        // Base card
-        'group relative rounded-2xl border overflow-hidden',
-        'transition-colors duration-200',
-        // State-based styling
+        'group relative rounded-xl border overflow-hidden',
+        'transition-all duration-200',
         isUnaired
-          ? 'opacity-40 border-white/5 bg-white/2 cursor-default'
+          ? 'opacity-35 border-white/[0.05] bg-white/[0.02] cursor-default'
           : isWatched
-            ? 'border-violet-500/20 bg-gradient-to-br from-violet-950/30 to-[#0d0d1a]/95 cursor-pointer'
-            : 'border-white/8 bg-[#111120]/80 hover:bg-[#141428]/80 hover:border-white/14 cursor-pointer',
+            ? 'border-violet-500/20 bg-violet-950/20 hover:bg-violet-950/30 hover:border-violet-500/30 cursor-pointer'
+            : 'border-white/[0.07] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.12] cursor-pointer',
+        !isUnaired && 'hover:-translate-y-px hover:shadow-[0_6px_24px_rgba(0,0,0,0.3)]',
       ].join(' ')}
       tabIndex={isUnaired ? -1 : 0}
       role="article"
       aria-label={`${contextLabel} ${title}`}
     >
-      {/* Watched shimmer overlay */}
-      {isWatched && (
-        <div className="absolute inset-0 bg-gradient-to-br from-violet-600/5 to-transparent pointer-events-none" />
-      )}
+      <div className="flex" style={{ height: '116px' }}>
 
-      <div className="flex h-[88px]">
-
-        {/* ── Still image — fixed 16:9 ratio, 128px wide ── */}
-        <div className="relative shrink-0 w-[128px] h-full overflow-hidden bg-[#0d0d1a]">
+        {/* ── Still image — 16:9, fixed 160px wide ── */}
+        <div className="relative shrink-0 overflow-hidden bg-[#0d0d1a]" style={{ width: '160px' }}>
           {showStill ? (
             <img
               src={stillUrl}
@@ -82,95 +67,91 @@ export function EpisodeCard({ episode, index, seasonNumber }: EpisodeCardProps) 
               onError={() => setImgError(true)}
             />
           ) : (
-            <EpisodePlaceholder
-              seasonNumber={seasonNumber}
-              episodeNumber={episode.episodeNumber}
-            />
+            <EpisodePlaceholder seasonNumber={seasonNumber} episodeNumber={episode.episodeNumber} />
           )}
 
           {/* Watched overlay */}
           {isWatched && (
-            <div className="absolute inset-0 bg-violet-900/30 flex items-center justify-center">
-              <div className="w-7 h-7 rounded-full bg-violet-500/85 flex items-center justify-center shadow-lg shadow-violet-900/60">
-                <CheckCircle2 size={14} className="text-white" strokeWidth={2.5} />
+            <div className="absolute inset-0 bg-violet-900/25 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-violet-500/80 flex items-center justify-center shadow-lg shadow-violet-900/50">
+                <CheckCircle2 size={15} className="text-white" strokeWidth={2.5} />
               </div>
             </div>
           )}
 
-          {/* Unaired overlay */}
+          {/* Unaired label */}
           {isUnaired && (
             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <span className="text-[9px] font-medium px-2 py-0.5 rounded-full bg-black/60 border border-white/12 text-white/45">
+              <span className="text-[9px] font-medium px-2 py-0.5 rounded-full bg-black/60 border border-white/10 text-white/40">
                 未播出
               </span>
             </div>
           )}
 
-          {/* Episode code — bottom-left badge */}
-          <div className="absolute bottom-1 left-1.5 px-1.5 py-0.5 rounded bg-black/75 backdrop-blur-sm text-[9px] font-mono text-white/45 leading-none">
+          {/* Episode code badge */}
+          <div className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[9px] font-mono text-white/40 leading-none">
             {contextLabel}
           </div>
+
+          {/* Progress widget — 仅对已看且有时长的集数显示 */}
+          {isWatched && episode.runtime && (
+            <div className="absolute bottom-1.5 right-1.5">
+              <ProgressBarWidget
+                watchedMinutes={episode.runtime}
+                totalMinutes={episode.runtime}
+                size="xs"
+              />
+            </div>
+          )}
         </div>
 
         {/* ── Content ── */}
-        <div className="flex-1 min-w-0 flex flex-col justify-between px-3.5 py-2.5">
+        <div className="flex-1 min-w-0 flex flex-col justify-between px-4 py-3">
 
-          {/* Top: title + overview */}
-          <div className="flex flex-col gap-0.5 min-w-0">
-            {/* Title — hierarchy level 1 */}
+          {/* Title + overview */}
+          <div className="flex flex-col gap-1 min-w-0">
             <h4 className={[
               'text-[13px] font-semibold leading-snug line-clamp-2 transition-colors',
               isWatched
-                ? 'text-white/55 group-hover:text-white/70'
-                : 'text-white/88 group-hover:text-white',
+                ? 'text-white/50 group-hover:text-white/65'
+                : 'text-white/85 group-hover:text-white',
             ].join(' ')}>
               {title}
             </h4>
 
-            {/* Overview — hierarchy level 2, only if available */}
             {overview && (
-              <p className="text-[11px] text-white/28 line-clamp-1 leading-relaxed hidden sm:block">
+              <p className="text-[11px] text-white/25 line-clamp-2 leading-relaxed">
                 {overview}
               </p>
             )}
           </div>
 
-          {/* Bottom: meta row — hierarchy level 3 */}
-          <div className="flex items-center justify-between gap-2 mt-1">
-            <div className="flex items-center gap-2.5 text-[10px] text-white/28">
+          {/* Meta row */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-[10px] text-white/25">
               {episode.runtime && (
                 <span className="flex items-center gap-1">
                   <Clock size={9} />
                   {fmtRuntime(episode.runtime)}
                 </span>
               )}
-              {episode.airDate && !isUnaired && (
-                <span className="flex items-center gap-1">
-                  <CalendarDays size={9} />
-                  {episode.airDate.slice(0, 10)}
-                </span>
-              )}
             </div>
 
-            {/* Watch status badge */}
             {!isUnaired && (
               <span className={[
                 'flex items-center gap-1 text-[10px] font-medium shrink-0',
-                isWatched ? 'text-violet-400/80' : 'text-white/18',
+                isWatched ? 'text-violet-400/70' : 'text-white/18',
               ].join(' ')}>
-                {isWatched
-                  ? <><Eye size={9} /> 已看</>
-                  : <><EyeOff size={9} /> 未看</>
-                }
+                {isWatched ? <><Eye size={9} /> 已看</> : <><EyeOff size={9} /> 未看</>}
               </span>
             )}
           </div>
         </div>
       </div>
 
-      {/* Bottom accent line — watched episodes only */}
+      {/* Watched accent line */}
       {isWatched && (
-        <div className="absolute bottom-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-violet-500/50 via-cyan-400/40 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-violet-500/40 via-cyan-400/30 to-transparent" />
       )}
     </motion.article>
   )

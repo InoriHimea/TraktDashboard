@@ -74,6 +74,8 @@ export function resolveOverview(show: Show): string {
 export function resolveEpisodeTitle(episode: EpisodeProgress): string {
   const title = episode.translatedTitle || episode.title
   if (title && title.trim() !== '') return title
+  // Season 0 = Specials
+  if (episode.seasonNumber === 0) return `特别篇 ${episode.episodeNumber}`
   return `第 ${episode.episodeNumber} 集`
 }
 
