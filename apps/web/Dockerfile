@@ -4,9 +4,8 @@ WORKDIR /app
 # Switch to internal Nexus apk mirror
 RUN sed -i 's|https://dl-cdn.alpinelinux.org/alpine|https://artifact.mellivora.com.cn/alpine/apk-group|g' /etc/apk/repositories
 
-# Use Nexus as corepack download source, then install fixed pnpm version
-ENV COREPACK_NPM_REGISTRY=https://nexus.mellivora.com.cn:18082/repository/npm-group/
-RUN corepack enable && corepack prepare pnpm@10.19.0 --activate
+# Install pnpm via npm using internal Nexus registry (avoids corepack network issues)
+RUN npm install -g pnpm@10.19.0 --registry=https://nexus.mellivora.com.cn:18082/repository/npm-group/
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/types/package.json ./packages/types/

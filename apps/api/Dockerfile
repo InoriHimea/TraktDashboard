@@ -1,7 +1,8 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Install pnpm via npm using internal Nexus registry (avoids corepack network issues)
+RUN npm install -g pnpm@10.19.0 --registry=https://nexus.mellivora.com.cn:18082/repository/npm-group/
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml bunfig.toml ./
 COPY packages/types/package.json ./packages/types/
