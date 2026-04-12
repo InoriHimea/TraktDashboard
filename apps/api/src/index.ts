@@ -8,6 +8,7 @@ import { syncRoutes } from './routes/sync.js'
 import { statsRoutes } from './routes/stats.js'
 import { settingsRoutes } from './routes/settings.js'
 import { imgRoutes } from './routes/img.js'
+import { traktRoutes } from './routes/trakt.js'
 import { authMiddleware } from './middleware/auth.js'
 import { startScheduler } from './jobs/scheduler.js'
 
@@ -33,6 +34,7 @@ api.route('/sync', syncRoutes)
 api.route('/stats', statsRoutes)
 api.route('/settings', settingsRoutes)
 api.route('/img', imgRoutes)
+api.route('/trakt', traktRoutes)
 
 app.route('/api', api)
 

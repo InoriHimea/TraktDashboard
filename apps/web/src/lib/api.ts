@@ -1,5 +1,5 @@
 // Task 9.2: Replace all `any` with concrete types from @trakt-dashboard/types
-import type { AuthStatus, ShowProgress, SyncState, SyncDebugState, StatsOverview, PaginatedResponse, ApiResponse, UserSettings } from '@trakt-dashboard/types'
+import type { AuthStatus, ShowProgress, SyncState, SyncDebugState, StatsOverview, PaginatedResponse, ApiResponse, UserSettings, NowPlayingEpisode } from '@trakt-dashboard/types'
 
 const API_BASE = '/api'
 
@@ -46,5 +46,8 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify(body),
       }),
+  },
+  trakt: {
+    watching: () => request<ApiResponse<NowPlayingEpisode | null>>('/trakt/watching'),
   },
 }

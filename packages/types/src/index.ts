@@ -181,6 +181,23 @@ export interface StatsOverview {
   }>
 }
 
+// ─── Now Playing ─────────────────────────────────────────────────────────────
+
+export interface NowPlayingEpisode {
+  show: {
+    title: string
+    posterPath: string | null
+    traktSlug: string | null
+  }
+  episode: {
+    seasonNumber: number
+    episodeNumber: number
+    title: string
+  }
+  expiresAt: string       // ISO 8601
+  runtime: number | null  // minutes
+}
+
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
 export interface User {

@@ -202,6 +202,24 @@ async function refreshToken(userId: number): Promise<string> {
 const CACHE_TTL_7D = 7 * 24 * 60 * 60 * 1000
 const CACHE_TTL_24H = 24 * 60 * 60 * 1000
 
+interface TraktWatchingResponse {
+  expires_at: string
+  started_at: string
+  action: 'watch'
+  type: 'episode'
+  episode: {
+    season: number
+    number: number
+    title: string
+    runtime: number | null
+    ids: { trakt: number; tvdb: number; imdb: string; tmdb: number }
+  }
+  show: {
+    title: string
+    ids: { trakt: number; slug: string; tvdb: number; imdb: string; tmdb: number }
+  }
+}
+
 export function getTraktClient() {
   const clientId = process.env.TRAKT_CLIENT_ID!
 
@@ -268,6 +286,30 @@ export function getTraktClient() {
 
     getShowProgress: (userId: number, traktId: number) =>
       traktFetch<TraktShowProgress>(`/shows/${traktId}/progress/watched`, userId),
+
+    getWatching: async (userId: number): Promise<TraktWatchingResponse | null> => {
+      const db = getDb()
+      const [user] = await db.select().from(users).where(eq(users.id, userId))
+      if (!user) throw new Error('User not found')
+
+      let token = user.traktAccessToken
+      if (new Date(user.tokenExpiresAt) < new Date()) {
+        token = await refreshToken(userId)
+      }
+
+      const res = await fetchWithRetry('https://api.trakt.tv/users/me/watching?extended=full', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'trakt-api-version': '2',
+          'trakt-api-key': clientId,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (res.status === 204) return null
+      if (!res.ok) throw new Error(`Trakt watching API error: ${res.status} ${await res.text()}`)
+      return res.json() as Promise<TraktWatchingResponse>
+    },
 
     getShowDetail: async (traktId: number, userId: number): Promise<TraktShowDetail> => {
       const db = getDb()

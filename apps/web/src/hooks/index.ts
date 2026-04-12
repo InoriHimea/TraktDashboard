@@ -1,6 +1,6 @@
 // Task 9.3: Update hooks with concrete return types
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { AuthStatus, ShowProgress, SyncState, SyncDebugState, StatsOverview, UserSettings } from '@trakt-dashboard/types'
+import type { AuthStatus, ShowProgress, SyncState, SyncDebugState, StatsOverview, UserSettings, NowPlayingEpisode } from '@trakt-dashboard/types'
 import { api } from '../lib/api'
 
 export function useAuth() {
@@ -101,4 +101,27 @@ export function useUpdateSettings() {
     mutationFn: (body: Partial<Omit<UserSettings, 'userId'>>) => api.settings.update(body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['settings'] }),
   })
+}
+
+export function useNowPlaying(): {
+  data: NowPlayingEpisode | null
+  isWatching: boolean
+  isLoading: boolean
+  error: Error | null
+} {
+  const query = useQuery<NowPlayingEpisode | null, Error>({
+    queryKey: ['now-playing'],
+    queryFn: () => api.trakt.watching().then(r => r.data),
+    refetchInterval: 30_000,
+    staleTime: 25_000,
+    // Retain last successful data on error (React Query default behaviour with placeholderData)
+    placeholderData: (prev) => prev,
+  })
+
+  return {
+    data: query.data ?? null,
+    isWatching: query.data != null,
+    isLoading: query.isLoading,
+    error: query.error,
+  }
 }
