@@ -25,9 +25,9 @@ function makeShow(overrides: Partial<Show> = {}): Show {
     title: 'Test Show', overview: 'Overview', status: 'ended', firstAired: '2020-01-01',
     network: 'Netflix', genres: [], posterPath: null, backdropPath: null,
     totalEpisodes: 10, totalSeasons: 2, lastSyncedAt: '', createdAt: '',
-    originalName: null, translatedName: null, displayLanguage: null,
+    originalName: null, translatedName: null, translatedOverview: null, displayLanguage: null,
     ...overrides,
-  }
+  } as Show
 }
 
 function makeSeason(n: number): SeasonProgress {

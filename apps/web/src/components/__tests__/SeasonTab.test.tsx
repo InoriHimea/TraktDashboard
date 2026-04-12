@@ -12,6 +12,7 @@ function makeSeason(overrides: Partial<SeasonProgress> = {}): SeasonProgress {
     episodeCount: 10,
     watchedCount: 0,
     airedCount: 10,
+    posterPath: null,
     episodes: [],
     ...overrides,
   }
@@ -20,7 +21,7 @@ function makeSeason(overrides: Partial<SeasonProgress> = {}): SeasonProgress {
 describe('SeasonTab', () => {
   it('renders poster fallback when showPosterPath is null', () => {
     const { container } = render(
-      <SeasonTab season={makeSeason()} showPosterPath={null} isActive={false} onClick={() => {}} />
+      <SeasonTab season={makeSeason({ posterPath: null })} isActive={false} onClick={() => {}} />
     )
     // No img element when posterPath is null
     expect(container.querySelector('img')).toBeNull()
@@ -29,7 +30,7 @@ describe('SeasonTab', () => {
 
   it('applies active classes when isActive=true', () => {
     const { container } = render(
-      <SeasonTab season={makeSeason()} showPosterPath={null} isActive={true} onClick={() => {}} />
+      <SeasonTab season={makeSeason({ posterPath: null })} isActive={true} onClick={() => {}} />
     )
     const btn = container.querySelector('button')!
     expect(btn.className).toContain('border-violet-500')
@@ -37,7 +38,7 @@ describe('SeasonTab', () => {
 
   it('applies inactive classes when isActive=false', () => {
     const { container } = render(
-      <SeasonTab season={makeSeason()} showPosterPath={null} isActive={false} onClick={() => {}} />
+      <SeasonTab season={makeSeason({ posterPath: null })} isActive={false} onClick={() => {}} />
     )
     const btn = container.querySelector('button')!
     expect(btn.className).toContain('border-white/10')
@@ -46,7 +47,7 @@ describe('SeasonTab', () => {
   it('calls onClick when clicked', () => {
     const onClick = vi.fn()
     render(
-      <SeasonTab season={makeSeason()} showPosterPath={null} isActive={false} onClick={onClick} />
+      <SeasonTab season={makeSeason({ posterPath: null })} isActive={false} onClick={onClick} />
     )
     fireEvent.click(screen.getByRole('button'))
     expect(onClick).toHaveBeenCalledOnce()
@@ -59,7 +60,6 @@ describe('SeasonTab', () => {
         const { unmount } = render(
           <SeasonTab
             season={makeSeason({ seasonNumber })}
-            showPosterPath={null}
             isActive={false}
             onClick={() => {}}
           />
@@ -79,7 +79,6 @@ describe('SeasonTab', () => {
           const { container, unmount } = render(
             <SeasonTab
               season={makeSeason({ watchedCount, airedCount })}
-              showPosterPath={null}
               isActive={false}
               onClick={() => {}}
             />

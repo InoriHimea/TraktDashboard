@@ -37,7 +37,7 @@ describe('resolveTitle', () => {
     title: 'Test Show', overview: null, status: 'ended', firstAired: null,
     network: null, genres: [], posterPath: null, backdropPath: null,
     totalEpisodes: 0, totalSeasons: 0, lastSyncedAt: '', createdAt: '',
-    originalName: null, translatedName: null, displayLanguage: null,
+    originalName: null, translatedName: null, translatedOverview: null, displayLanguage: null,
   }
 
   it('returns translatedName as primary when displayLanguage is zh-CN', () => {
