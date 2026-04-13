@@ -29,6 +29,7 @@ export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeI
       background: '#0f0f17',
       border: '1px solid rgba(255,255,255,0.06)',
       boxShadow: '0 20px 60px rgba(0,0,0,0.45), 0 8px 24px rgba(0,0,0,0.3)',
+      minHeight: 280,
     }}>
       {/* Blurred background image */}
       {showImg && (
@@ -37,16 +38,16 @@ export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeI
           backgroundImage: `url(${stillUrl})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          filter: 'blur(48px) saturate(1.6) brightness(0.7)',
-          transform: 'scale(1.15)',
-          opacity: 0.35,
+          filter: 'blur(60px) saturate(1.8) brightness(0.65)',
+          transform: 'scale(1.2)',
+          opacity: 0.75,
           pointerEvents: 'none',
         }} />
       )}
-      {/* Dark overlay for readability */}
+      {/* Dark overlay — lighter so image color shows through */}
       <div style={{
         position: 'absolute', inset: 0,
-        background: 'linear-gradient(135deg, rgba(8,8,14,0.82) 0%, rgba(15,15,23,0.65) 100%)',
+        background: 'linear-gradient(135deg, rgba(8,8,14,0.55) 0%, rgba(15,15,23,0.4) 100%)',
         pointerEvents: 'none',
       }} />
 
@@ -60,11 +61,12 @@ export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeI
         alignItems: 'center',
       }}>
         {/* ── Left: still image — vertically centered, taller ── */}
-        <div style={{ width: 360, flexShrink: 0 }}>
+        <div style={{ width: 360, flexShrink: 0, alignSelf: 'stretch' }}>
           <div style={{
             position: 'relative',
             width: '100%',
-            aspectRatio: '16/9',
+            height: '100%',
+            minHeight: 190,
             borderRadius: 10,
             overflow: 'hidden',
             background: 'var(--color-surface-3)',
