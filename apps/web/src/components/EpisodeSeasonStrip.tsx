@@ -54,6 +54,7 @@ export function EpisodeSeasonStrip({
           display: 'flex',
           gap: 12,
           overflowX: 'auto',
+          paddingTop: 4,
           paddingBottom: 6,
           scrollbarWidth: 'thin',
           scrollbarColor: 'var(--color-border) transparent',
@@ -126,9 +127,7 @@ const EpisodeThumbnail = React.forwardRef<HTMLDivElement, EpisodeThumbnailProps>
           borderRadius: 8,
           overflow: 'hidden',
           marginBottom: 10,
-          boxShadow: isCurrent
-            ? '0 0 0 2px var(--color-accent), 0 6px 20px rgba(0,0,0,0.5)'
-            : hovered
+          boxShadow: hovered
             ? '0 6px 20px rgba(0,0,0,0.5)'
             : '0 2px 10px rgba(0,0,0,0.35)',
           transition: 'box-shadow 0.2s ease',
