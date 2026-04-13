@@ -4,7 +4,7 @@
  */
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Info, Tv2, Play } from 'lucide-react'
+import { Info, Tv2 } from 'lucide-react'
 import { resolveTitle, resolveOverview, statusZh, statusColor, fmtDateZh } from '../lib/i18n'
 import { resolveShowPoster } from '../lib/image'
 import type { ShowProgress } from '@trakt-dashboard/types'
@@ -72,19 +72,8 @@ export function HeroSection({ progress, onWatchClick }: HeroSectionProps) {
                   <Tv2 size={40} className="text-[var(--color-border)]" />
                 </div>
               )}
-              
-              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                <div className="w-14 h-14 rounded-full backdrop-blur-md bg-white/20 border border-white/30 flex items-center justify-center shadow-2xl transform scale-90 group-hover:scale-100 transition-transform duration-300">
-                  <Play className="text-white ml-1 w-6 h-6 fill-white" />
-                </div>
-              </div>
             </div>
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent pointer-events-none" />
-            {secondary && (
-              <div className="absolute bottom-4 left-4 right-4 text-white pointer-events-none">
-                <p className="font-display text-2xl leading-snug opacity-90">{secondary}</p>
-              </div>
-            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none" />
           </div>
         </motion.div>
 
