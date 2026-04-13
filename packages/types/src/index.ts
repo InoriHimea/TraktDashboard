@@ -248,7 +248,10 @@ export interface EpisodeDetailData {
     posterPath: string | null
     genres: string[]
     traktId: number | null
+    traktSlug: string | null
     tmdbId: number
+    imdbId: string | null
+    tvdbId: number | null
   }
   seasonEpisodes: EpisodeProgress[]
 }

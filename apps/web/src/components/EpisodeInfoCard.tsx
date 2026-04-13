@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, History, Star, Clock, Calendar } from 'lucide-react'
+import { Check, Star, Clock, Calendar } from 'lucide-react'
 import { EpisodePlaceholder } from './ui/EpisodePlaceholder'
 import { resolveEpisodeStill } from '../lib/image'
 import type { EpisodeDetailData } from '@trakt-dashboard/types'
@@ -26,8 +26,8 @@ export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeI
       position: 'relative',
       borderRadius: 16,
       overflow: 'hidden',
-      background: 'var(--color-surface)',
-      border: '1px solid var(--color-border-subtle)',
+      background: '#0f0f17',
+      border: '1px solid rgba(255,255,255,0.06)',
     }}>
       {/* Blurred background image */}
       {showImg && (
@@ -36,16 +36,16 @@ export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeI
           backgroundImage: `url(${stillUrl})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          filter: 'blur(40px) saturate(1.4)',
-          transform: 'scale(1.1)',
-          opacity: 0.18,
+          filter: 'blur(48px) saturate(1.6) brightness(0.7)',
+          transform: 'scale(1.15)',
+          opacity: 0.35,
           pointerEvents: 'none',
         }} />
       )}
       {/* Dark overlay for readability */}
       <div style={{
         position: 'absolute', inset: 0,
-        background: 'linear-gradient(135deg, rgba(8,8,14,0.85) 0%, rgba(15,15,23,0.7) 100%)',
+        background: 'linear-gradient(135deg, rgba(8,8,14,0.82) 0%, rgba(15,15,23,0.65) 100%)',
         pointerEvents: 'none',
       }} />
 
@@ -55,7 +55,7 @@ export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeI
         display: 'flex',
         flexDirection: 'row',
         gap: 28,
-        padding: '28px 28px 24px',
+        padding: '32px 32px 28px',
       }}>
         {/* ── Left: still image ── */}
         <div style={{ width: 340, flexShrink: 0 }}>
@@ -159,6 +159,38 @@ export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeI
                 {overview}
               </p>
             )}
+
+            {/* External ID links */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', paddingTop: 2 }}>
+              {data.show.traktId && (
+                <ExternalLink
+                  href={`https://trakt.tv/shows/${data.show.traktSlug ?? data.show.traktId}/seasons/${data.seasonNumber}/episodes/${data.episodeNumber}`}
+                  label="Trakt"
+                  color="#ed1c24"
+                />
+              )}
+              {data.show.tmdbId && (
+                <ExternalLink
+                  href={`https://www.themoviedb.org/tv/${data.show.tmdbId}/season/${data.seasonNumber}/episode/${data.episodeNumber}`}
+                  label="TMDB"
+                  color="#01b4e4"
+                />
+              )}
+              {data.show.imdbId && (
+                <ExternalLink
+                  href={`https://www.imdb.com/title/${data.show.imdbId}/`}
+                  label="IMDb"
+                  color="#f5c518"
+                />
+              )}
+              {data.show.tvdbId && (
+                <ExternalLink
+                  href={`https://thetvdb.com/?tab=series&id=${data.show.tvdbId}`}
+                  label="TVDB"
+                  color="#6cb4e4"
+                />
+              )}
+            </div>
           </div>
 
           {/* Action buttons */}
@@ -246,5 +278,43 @@ function MetaPill({ icon, label, highlight }: { icon?: React.ReactNode; label: s
       {icon}
       {label}
     </span>
+  )
+}
+
+function ExternalLink({ href, label, color }: { href: string; label: string; color: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+        padding: '2px 8px',
+        borderRadius: 4,
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: '0.04em',
+        textDecoration: 'none',
+        background: `${color}18`,
+        color: color,
+        border: `1px solid ${color}30`,
+        transition: 'all 0.15s ease',
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.background = `${color}30`
+        e.currentTarget.style.borderColor = `${color}60`
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.background = `${color}18`
+        e.currentTarget.style.borderColor = `${color}30`
+      }}
+    >
+      {label}
+      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+        <polyline points="15 3 21 3 21 9"/>
+        <line x1="10" y1="14" x2="21" y2="3"/>
+      </svg>
+    </a>
   )
 }
