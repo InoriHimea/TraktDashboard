@@ -26,9 +26,10 @@ export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeI
       position: 'relative',
       borderRadius: 16,
       overflow: 'hidden',
-      background: '#0f0f17',
-      border: '1px solid rgba(255,255,255,0.06)',
+      background: 'var(--color-surface)',
+      border: '1px solid var(--color-border-subtle)',
       boxShadow: '0 20px 60px rgba(0,0,0,0.45), 0 8px 24px rgba(0,0,0,0.3)',
+      minHeight: 280,
     }}>
       {/* Blurred background image */}
       {showImg && (
@@ -50,206 +51,143 @@ export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeI
         pointerEvents: 'none',
       }} />
 
-      {/* ── Content: vertical stack ── */}
-      <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', padding: '28px 32px 28px' }}>
-
-        {/* Row 1: breadcrumb */}
-        <p style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.03em', margin: '0 0 10px' }}>
-          <span style={{ color: 'var(--color-accent)', opacity: 0.9 }}>{data.show.title}</span>
-          <span style={{ margin: '0 8px', opacity: 0.3 }}>/</span>
-          <span>{seasonLabel} · Episode {data.episodeNumber}</span>
-        </p>
-
-        {/* Row 2: title */}
-        <h1 style={{
-          fontSize: 32,
-          fontWeight: 800,
-          color: '#fff',
-          lineHeight: 1.15,
-          margin: '0 0 14px',
-          letterSpacing: '-0.02em',
-          textShadow: '0 2px 12px rgba(0,0,0,0.5)',
-        }}>
-          {title || `S${data.seasonNumber}E${data.episodeNumber}`}
-        </h1>
-
-        {/* Row 3: meta pills */}
-        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 20 }}>
-          {data.airDate && (
-            <MetaPill icon={<Calendar size={10} />} label={new Date(data.airDate).getFullYear().toString()} />
-          )}
-          {data.runtime && (
-            <MetaPill icon={<Clock size={10} />} label={`${data.runtime} 分钟`} />
-          )}
-          {data.show.genres?.[0] && (
-            <MetaPill label={data.show.genres[0]} />
-          )}
-          {data.traktRating !== null && (
-            <MetaPill
-              icon={<Star size={10} style={{ fill: '#fbbf24', color: '#fbbf24' }} />}
-              label={`${data.traktRating}%`}
-              highlight
-            />
-          )}
+      {/* ── Content: left image + right metadata (matches rendered HTML) ── */}
+      <div style={{
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'row',
+        gap: 56,
+        padding: '40px 36px',
+        alignItems: 'center',
+      }}>
+        {/* Left: still image */}
+        <div style={{ width: 360, flexShrink: 0 }}>
+          <div style={{
+            position: 'relative',
+            width: '100%',
+            aspectRatio: '16/9',
+            borderRadius: 10,
+            overflow: 'hidden',
+            background: 'var(--color-surface-3)',
+            boxShadow: '0 12px 40px rgba(0,0,0,0.7)',
+          }}>
+            {showImg ? (
+              <img
+                src={stillUrl}
+                alt={title || ''}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              <EpisodePlaceholder seasonNumber={data.seasonNumber} episodeNumber={data.episodeNumber} />
+            )}
+            <div style={{
+              position: 'absolute', inset: 0,
+              background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 45%)',
+              pointerEvents: 'none',
+            }} />
+            {data.watched && (
+              <div style={{
+                position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)',
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                background: 'rgba(255,255,255,0.95)', color: '#000',
+                fontSize: 9, fontWeight: 800, letterSpacing: '0.1em',
+                padding: '4px 10px', borderRadius: 999,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+              }}>
+                <Check size={8} strokeWidth={3.5} />
+                WATCHED
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Row 4: image + right content side by side */}
-        <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', marginBottom: 24 }}>
-          {/* Still image */}
-          <div style={{ width: 300, flexShrink: 0 }}>
-            <div style={{
-              position: 'relative',
-              width: '100%',
-              aspectRatio: '16/9',
-              borderRadius: 10,
-              overflow: 'hidden',
-              background: 'rgba(255,255,255,0.05)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+        {/* Right: top block + buttons, gap:150 pushes buttons to bottom */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 150, justifyContent: 'center', padding: 0 }}>
+
+          {/* Top block */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 25 }}>
+            <p style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.03em', margin: 0 }}>
+              <span style={{ color: 'var(--color-accent)', opacity: 0.9 }}>{data.show.title}</span>
+              <span style={{ margin: '0 8px', opacity: 0.3 }}>/</span>
+              <span>{seasonLabel} · Episode {data.episodeNumber}</span>
+            </p>
+
+            <h1 style={{
+              fontSize: 28, fontWeight: 800, color: '#fff',
+              lineHeight: 1.2, margin: 0, letterSpacing: '-0.02em',
+              textShadow: '0 2px 12px rgba(0,0,0,0.5)',
             }}>
-              {showImg ? (
-                <img
-                  src={stillUrl}
-                  alt={title || ''}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={() => setImgError(true)}
-                />
-              ) : (
-                <EpisodePlaceholder seasonNumber={data.seasonNumber} episodeNumber={data.episodeNumber} />
-              )}
-              <div style={{
-                position: 'absolute', inset: 0,
-                background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 45%)',
-                pointerEvents: 'none',
-              }} />
-              {data.watched && (
-                <div style={{
-                  position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)',
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
-                  background: 'rgba(255,255,255,0.95)', color: '#000',
-                  fontSize: 9, fontWeight: 800, letterSpacing: '0.1em',
-                  padding: '4px 10px', borderRadius: 999,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-                }}>
-                  <Check size={8} strokeWidth={3.5} />
-                  WATCHED
-                </div>
+              {title || `S${data.seasonNumber}E${data.episodeNumber}`}
+            </h1>
+
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+              {data.airDate && <MetaPill icon={<Calendar size={10} />} label={new Date(data.airDate).getFullYear().toString()} />}
+              {data.runtime && <MetaPill icon={<Clock size={10} />} label={`${data.runtime} 分钟`} />}
+              {data.show.genres?.[0] && <MetaPill label={data.show.genres[0]} />}
+              {data.traktRating !== null && (
+                <MetaPill icon={<Star size={10} style={{ fill: '#fbbf24', color: '#fbbf24' }} />} label={`${data.traktRating}%`} highlight />
               )}
             </div>
-          </div>
 
-          {/* Right: overview + external links */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', paddingTop: 2 }}>
+              {data.show.traktId && <ExternalLink href={`https://trakt.tv/shows/${data.show.traktSlug ?? data.show.traktId}/seasons/${data.seasonNumber}/episodes/${data.episodeNumber}`} label="Trakt" color="#ed1c24" />}
+              {data.show.tmdbId && <ExternalLink href={`https://www.themoviedb.org/tv/${data.show.tmdbId}/season/${data.seasonNumber}/episode/${data.episodeNumber}`} label="TMDB" color="#01b4e4" />}
+              {data.show.imdbId && <ExternalLink href={`https://www.imdb.com/title/${data.show.imdbId}/`} label="IMDb" color="#f5c518" />}
+              {data.show.tvdbId && <ExternalLink href={`https://thetvdb.com/?tab=series&id=${data.show.tvdbId}`} label="TVDB" color="#6cb4e4" />}
+            </div>
+
             {overview && (
               <p style={{
-                fontSize: 13.5,
-                color: 'rgba(255,255,255,0.65)',
-                lineHeight: 1.75,
-                margin: 0,
-                display: '-webkit-box',
-                WebkitLineClamp: 5,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
+                fontSize: 13.5, color: 'rgba(255,255,255,0.6)', lineHeight: 1.7,
+                display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical',
+                overflow: 'hidden', margin: 0,
               }}>
                 {overview}
               </p>
             )}
-
-            {/* External ID links */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              {data.show.traktId && (
-                <ExternalLink
-                  href={`https://trakt.tv/shows/${data.show.traktSlug ?? data.show.traktId}/seasons/${data.seasonNumber}/episodes/${data.episodeNumber}`}
-                  label="Trakt"
-                  color="#ed1c24"
-                />
-              )}
-              {data.show.tmdbId && (
-                <ExternalLink
-                  href={`https://www.themoviedb.org/tv/${data.show.tmdbId}/season/${data.seasonNumber}/episode/${data.episodeNumber}`}
-                  label="TMDB"
-                  color="#01b4e4"
-                />
-              )}
-              {data.show.imdbId && (
-                <ExternalLink
-                  href={`https://www.imdb.com/title/${data.show.imdbId}/`}
-                  label="IMDb"
-                  color="#f5c518"
-                />
-              )}
-              {data.show.tvdbId && (
-                <ExternalLink
-                  href={`https://thetvdb.com/?tab=series&id=${data.show.tvdbId}`}
-                  label="TVDB"
-                  color="#6cb4e4"
-                />
-              )}
-            </div>
           </div>
+
+          {/* Bottom: action buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button
+              onClick={onWatchClick}
+              onMouseEnter={() => setWatchHover(true)}
+              onMouseLeave={() => setWatchHover(false)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '10px 24px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '0.01em',
+                background: watchHover ? 'linear-gradient(135deg, #6d5ce6, #5b4bd4)' : 'linear-gradient(135deg, #7c6af7, #6d5ce6)',
+                boxShadow: watchHover ? '0 6px 24px rgba(124,106,247,0.55)' : '0 4px 16px rgba(124,106,247,0.4)',
+                transition: 'all 0.15s ease',
+                transform: watchHover ? 'translateY(-1px)' : 'none',
+              }}
+            >
+              <Check size={14} strokeWidth={3} />
+              标记为已观看
+            </button>
+
+            <button
+              onClick={onHistoryClick}
+              title="观看历史"
+              style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                width: 40, height: 40, borderRadius: 8, cursor: 'pointer',
+                color: 'rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.1)', transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>
+              </svg>
+            </button>
+          </div>
+
         </div>
-
-        {/* Row 5: action buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button
-            onClick={onWatchClick}
-            onMouseEnter={() => setWatchHover(true)}
-            onMouseLeave={() => setWatchHover(false)}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              padding: '10px 24px',
-              borderRadius: 8,
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: 13,
-              fontWeight: 700,
-              color: '#fff',
-              background: watchHover
-                ? 'linear-gradient(135deg, #6d5ce6, #5b4bd4)'
-                : 'linear-gradient(135deg, #7c6af7, #6d5ce6)',
-              boxShadow: watchHover
-                ? '0 6px 24px rgba(124,106,247,0.55)'
-                : '0 4px 16px rgba(124,106,247,0.4)',
-              transition: 'all 0.15s ease',
-              transform: watchHover ? 'translateY(-1px)' : 'none',
-              letterSpacing: '0.01em',
-            }}
-          >
-            <Check size={14} strokeWidth={3} />
-            标记为已观看
-          </button>
-
-          <button
-            onClick={onHistoryClick}
-            title="观看历史"
-            style={{
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              width: 40, height: 40,
-              borderRadius: 8,
-              cursor: 'pointer',
-              color: 'rgba(255,255,255,0.5)',
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.color = '#fff'
-              e.currentTarget.style.background = 'rgba(255,255,255,0.12)'
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.color = 'rgba(255,255,255,0.5)'
-              e.currentTarget.style.background = 'rgba(255,255,255,0.06)'
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
-            }}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-              <path d="M3 3v5h5"/>
-              <path d="M12 7v5l4 2"/>
-            </svg>
-          </button>
-        </div>
-
       </div>
     </div>
   )
