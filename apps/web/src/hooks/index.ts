@@ -132,7 +132,7 @@ export function useEpisodeDetail(showId: number, season: number, episode: number
   return useQuery<EpisodeDetailData>({
     queryKey: ['episode-detail', showId, season, episode],
     queryFn: () => api.episodes.detail(showId, season, episode).then(r => r.data),
-    enabled: showId > 0 && season > 0 && episode > 0,
+    enabled: showId > 0 && season >= 0 && episode > 0,
     staleTime: 1000 * 60 * 5,
   })
 }
@@ -153,7 +153,7 @@ export function useEpisodeHistory(showId: number, season: number, episode: numbe
   return useQuery<WatchHistoryEntry[]>({
     queryKey: ['episode-history', showId, season, episode],
     queryFn: () => api.episodes.history(showId, season, episode).then(r => r.data),
-    enabled: showId > 0,
+    enabled: showId > 0 && season >= 0 && episode > 0,
   })
 }
 

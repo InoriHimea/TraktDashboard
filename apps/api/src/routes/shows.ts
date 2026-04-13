@@ -133,8 +133,11 @@ showRoutes.get('/:id', async (c) => {
 
   const watchedMap = new Map<number, string>()
   for (const w of watched) {
-    if (!watchedMap.has(w.episodeId)) {
+    if (!watchedMap.has(w.episodeId) && w.watchedAt) {
       watchedMap.set(w.episodeId, w.watchedAt.toISOString())
+    } else if (!watchedMap.has(w.episodeId)) {
+      // watchedAt is null (Unknown date) — still mark as watched
+      watchedMap.set(w.episodeId, '')
     }
   }
 
@@ -228,10 +231,10 @@ showRoutes.get('/:id/seasons', async (c) => {
 showRoutes.get('/:showId/episodes/:season/:episode', async (c) => {
   const userId = c.get('userId')
   const showId = parseBoundedInt(c.req.param('showId'), -1, 1, Number.MAX_SAFE_INTEGER)
-  const season = parseBoundedInt(c.req.param('season'), -1, 1, 1000)
+  const season = parseBoundedInt(c.req.param('season'), -1, 0, 1000)
   const episode = parseBoundedInt(c.req.param('episode'), -1, 1, 1000)
   
-  if (showId < 1 || season < 1 || episode < 1) {
+  if (showId < 1 || season < 0 || episode < 1) {
     return c.json({ error: 'Invalid parameters' }, 400)
   }
 
@@ -341,10 +344,10 @@ showRoutes.get('/:showId/episodes/:season/:episode', async (c) => {
 showRoutes.post('/:showId/episodes/:season/:episode/watch', async (c) => {
   const userId = c.get('userId')
   const showId = parseBoundedInt(c.req.param('showId'), -1, 1, Number.MAX_SAFE_INTEGER)
-  const season = parseBoundedInt(c.req.param('season'), -1, 1, 1000)
+  const season = parseBoundedInt(c.req.param('season'), -1, 0, 1000)
   const episode = parseBoundedInt(c.req.param('episode'), -1, 1, 1000)
   
-  if (showId < 1 || season < 1 || episode < 1) {
+  if (showId < 1 || season < 0 || episode < 1) {
     return c.json({ error: 'Invalid parameters' }, 400)
   }
 
@@ -377,10 +380,10 @@ showRoutes.post('/:showId/episodes/:season/:episode/watch', async (c) => {
 showRoutes.get('/:showId/episodes/:season/:episode/history', async (c) => {
   const userId = c.get('userId')
   const showId = parseBoundedInt(c.req.param('showId'), -1, 1, Number.MAX_SAFE_INTEGER)
-  const season = parseBoundedInt(c.req.param('season'), -1, 1, 1000)
+  const season = parseBoundedInt(c.req.param('season'), -1, 0, 1000)
   const episode = parseBoundedInt(c.req.param('episode'), -1, 1, 1000)
   
-  if (showId < 1 || season < 1 || episode < 1) {
+  if (showId < 1 || season < 0 || episode < 1) {
     return c.json({ error: 'Invalid parameters' }, 400)
   }
 
