@@ -7,6 +7,7 @@ import { EpisodeSeasonStrip } from '../components/EpisodeSeasonStrip'
 import { WatchActionPanel } from '../components/WatchActionPanel'
 import { WatchHistoryPanel } from '../components/WatchHistoryPanel'
 import { Button } from '../components/ui/Button'
+import { resolveEpisodeStill } from '../lib/image'
 
 interface RouteParams {
   showId: string
@@ -75,95 +76,68 @@ function PageError({ onRetry }: { onRetry: () => void }) {
 export default function EpisodeDetailPage() {
   const { showId, season, episode } = useParams<RouteParams>()
   const navigate = useNavigate()
-
-  const showIdNum = Number(showId)
-  const seasonNum = Number(season)
-  const episodeNum = Number(episode)
-
-  if (
-    !showId || !season || !episode ||
-    !Number.isInteger(showIdNum) || !Number.isInteger(seasonNum) || !Number.isInteger(episodeNum) ||
-    showIdNum <= 0 || seasonNum < 0 || episodeNum <= 0
-  ) {
+  // ... (参数校验逻辑不变) ...
+  const showIdNum = Number(showId); const seasonNum = Number(season); const episodeNum = Number(episode);
+  if (!showId || !season || !episode || !Number.isInteger(showIdNum) || !Number.isInteger(seasonNum) || !Number.isInteger(episodeNum) || showIdNum <= 0 || seasonNum < 0 || episodeNum <= 0) {
     return <Navigate to="/progress" replace />
   }
 
   const { data, isLoading, error, refetch } = useEpisodeDetail(showIdNum, seasonNum, episodeNum)
-
   const [watchPanelOpen, setWatchPanelOpen] = useState(false)
   const [historyPanelOpen, setHistoryPanelOpen] = useState(false)
 
   if (isLoading) return <EpisodeDetailSkeleton />
   if (error) return <PageError onRetry={() => refetch()} />
+  if (!data) return <div className="w-full min-h-screen flex items-center justify-center">未找到该集</div>
 
-  if (!data) {
-    return (
-      <div className="w-full min-h-screen bg-[var(--color-bg)] flex items-center justify-center">
-        <div className="text-center flex flex-col items-center gap-4">
-          <p className="text-[var(--color-text-muted)] text-lg">未找到该集</p>
-          <Button variant="ghost" size="md" icon={<ArrowLeft size={15} />} onClick={() => navigate(-1)}>
-            返回
-          </Button>
-        </div>
-      </div>
-    )
-  }
+  // 提取背景图
+  const bgImageUrl = resolveEpisodeStill(data.stillPath)
 
   return (
-    <main className="w-full min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
-      {/* 修复：增加 mx-auto，并使用 px-10 py-12 提供舒适的四周留白 */}
-      <div className="max-w-[1200px] mx-auto px-8 md:px-10 py-12 flex flex-col gap-10">
-        
-        {/* Back button */}
-        <div>
-          <button
-            onClick={() => navigate(-1)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors border border-[var(--color-border)]"
-          >
-            <ArrowLeft size={16} />
-            返回我的进度
-          </button>
+    // 强制满宽，相对定位用于放置背景
+    <main className="relative flex flex-col flex-1 w-full min-h-[calc(100vh-64px)] overflow-hidden bg-[var(--color-bg)]">
+      
+      {/* 沉浸式模糊背景 (Cinematic Background) */}
+      {bgImageUrl && (
+        <>
+          <div 
+            className="absolute inset-0 z-0 opacity-15 saturate-150 scale-110"
+            style={{ backgroundImage: `url(${bgImageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(80px)' }}
+          />
+          {/* 渐变遮罩，保证文字可读性 */}
+          <div className="absolute inset-0 z-0 bg-gradient-to-b from-transparent to-[var(--color-bg)] opacity-80" />
+        </>
+      )}
+
+      {/* 核心内容区：绝对居中，增加超大留白 */}
+      <div className="relative z-10 w-full flex-1 flex flex-col items-center px-6 sm:px-10 py-12">
+        <div className="w-full max-w-[1100px] flex flex-col gap-10">
+          
+          {/* 返回按钮 (更精致的药丸样式) */}
+          <div className="self-start">
+            <button
+              onClick={() => navigate(-1)}
+              className="group flex items-center gap-2 px-5 py-2.5 rounded-full bg-[var(--color-surface)]/60 backdrop-blur-md border border-[var(--color-border)] shadow-sm text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all duration-300"
+            >
+              <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+              返回进度
+            </button>
+          </div>
+
+          <article>
+            <EpisodeInfoCard data={data} onWatchClick={() => setWatchPanelOpen(true)} onHistoryClick={() => setHistoryPanelOpen(true)} />
+          </article>
+
+          <section className="pt-8">
+            <EpisodeSeasonStrip episodes={data.seasonEpisodes} seasonNumber={data.seasonNumber} currentEpisodeNumber={data.episodeNumber} showId={data.showId} />
+          </section>
+
         </div>
-
-        {/* 使用你原本真实的组件和数据 */}
-        <article>
-          <EpisodeInfoCard
-            data={data}
-            onWatchClick={() => setWatchPanelOpen(true)}
-            onHistoryClick={() => setHistoryPanelOpen(true)}
-          />
-        </article>
-
-        <section>
-          <EpisodeSeasonStrip
-            episodes={data.seasonEpisodes}
-            seasonNumber={data.seasonNumber}
-            currentEpisodeNumber={data.episodeNumber}
-            showId={data.showId}
-          />
-        </section>
       </div>
 
-      {/* Panels 保持不变 */}
-      <WatchActionPanel
-        open={watchPanelOpen}
-        onClose={() => setWatchPanelOpen(false)}
-        episodeId={data.episodeId}
-        showId={data.showId}
-        seasonNumber={data.seasonNumber}
-        episodeNumber={data.episodeNumber}
-        airDate={data.airDate}
-        onSuccess={() => refetch()}
-      />
-
-      <WatchHistoryPanel
-        open={historyPanelOpen}
-        onClose={() => setHistoryPanelOpen(false)}
-        showId={data.showId}
-        seasonNumber={data.seasonNumber}
-        episodeNumber={data.episodeNumber}
-        onDeleted={() => refetch()}
-      />
+      {/* Panels ... */}
+      <WatchActionPanel open={watchPanelOpen} onClose={() => setWatchPanelOpen(false)} episodeId={data.episodeId} showId={data.showId} seasonNumber={data.seasonNumber} episodeNumber={data.episodeNumber} airDate={data.airDate} onSuccess={() => refetch()} />
+      <WatchHistoryPanel open={historyPanelOpen} onClose={() => setHistoryPanelOpen(false)} showId={data.showId} seasonNumber={data.seasonNumber} episodeNumber={data.episodeNumber} onDeleted={() => refetch()} />
     </main>
   )
 }

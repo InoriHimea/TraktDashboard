@@ -42,6 +42,14 @@
   --radius-xl: 20px;
 }
 
+html, body, #root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  /* 如果有 display: flex 等属性，确保带有 flex-direction: column; width: 100%; */
+}
+
 /* CSS 变量别名 — 供 var() 引用，与旧代码兼容 */
 :root {
   --font-sans: var(--font-family-sans);
