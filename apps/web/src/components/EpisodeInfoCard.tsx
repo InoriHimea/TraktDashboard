@@ -54,11 +54,12 @@ export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeI
         position: 'relative',
         display: 'flex',
         flexDirection: 'row',
-        gap: 28,
-        padding: '32px 32px 28px',
+        gap: 32,
+        padding: '36px 36px 32px',
+        alignItems: 'center',
       }}>
-        {/* ── Left: still image ── */}
-        <div style={{ width: 340, flexShrink: 0 }}>
+        {/* ── Left: still image — vertically centered, taller ── */}
+        <div style={{ width: 360, flexShrink: 0 }}>
           <div style={{
             position: 'relative',
             width: '100%',
@@ -66,7 +67,7 @@ export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeI
             borderRadius: 10,
             overflow: 'hidden',
             background: 'var(--color-surface-3)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+            boxShadow: '0 12px 40px rgba(0,0,0,0.7)',
           }}>
             {showImg ? (
               <img
@@ -102,8 +103,8 @@ export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeI
         </div>
 
         {/* ── Right: metadata ── */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14, justifyContent: 'space-between', padding: '2px 0' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16, justifyContent: 'center', padding: '0' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {/* Breadcrumb */}
             <p style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.03em', margin: 0 }}>
               <span style={{ color: 'var(--color-accent)', opacity: 0.9 }}>{data.show.title}</span>
@@ -194,7 +195,7 @@ export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeI
           </div>
 
           {/* Action buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {/* Primary: Mark as watched */}
             <button
               onClick={onWatchClick}

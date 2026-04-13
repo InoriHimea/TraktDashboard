@@ -31,7 +31,7 @@ export function EpisodeSeasonStrip({
   const seasonLabel = seasonNumber === 0 ? 'Specials' : `Season ${seasonNumber}`
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '20px 24px', borderRadius: 16, border: '1px solid var(--color-border-subtle)', background: 'var(--color-surface)' }}>
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 6,
@@ -57,8 +57,6 @@ export function EpisodeSeasonStrip({
           paddingBottom: 6,
           scrollbarWidth: 'thin',
           scrollbarColor: 'var(--color-border) transparent',
-          marginLeft: -2,
-          paddingLeft: 2,
         }}
       >
         {episodes.map((ep) => {
