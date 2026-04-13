@@ -1,5 +1,5 @@
 // Task 9.2: Replace all `any` with concrete types from @trakt-dashboard/types
-import type { AuthStatus, ShowProgress, SyncState, SyncDebugState, StatsOverview, PaginatedResponse, ApiResponse, UserSettings, NowPlayingEpisode } from '@trakt-dashboard/types'
+import type { AuthStatus, ShowProgress, SyncState, SyncDebugState, StatsOverview, PaginatedResponse, ApiResponse, UserSettings, NowPlayingEpisode, EpisodeDetailData, WatchHistoryEntry } from '@trakt-dashboard/types'
 
 const API_BASE = '/api'
 
@@ -29,6 +29,27 @@ export const api = {
       ),
     detail: (id: number) =>
       request<ApiResponse<ShowProgress>>(`/shows/${id}`),
+    history: (showId: number) =>
+      request<ApiResponse<WatchHistoryEntry[]>>(`/shows/${showId}/history`),
+    deleteHistory: (showId: number, historyId: number) =>
+      request<{ ok: boolean }>(`/shows/${showId}/history/${historyId}`, { method: 'DELETE' }),
+    reset: (showId: number) =>
+      request<ApiResponse<ShowProgress>>(`/shows/${showId}/reset`, { method: 'POST' }),
+  },
+  episodes: {
+    detail: (showId: number, season: number, episode: number) =>
+      request<ApiResponse<EpisodeDetailData>>(
+        `/shows/${showId}/episodes/${season}/${episode}`
+      ),
+    watch: (showId: number, season: number, episode: number, watchedAt: string | null) =>
+      request<{ ok: boolean; historyId: number }>(
+        `/shows/${showId}/episodes/${season}/${episode}/watch`,
+        { method: 'POST', body: JSON.stringify({ watchedAt }) }
+      ),
+    history: (showId: number, season: number, episode: number) =>
+      request<ApiResponse<WatchHistoryEntry[]>>(
+        `/shows/${showId}/episodes/${season}/${episode}/history`
+      ),
   },
   sync: {
     status: () => request<ApiResponse<SyncState>>('/sync/status'),

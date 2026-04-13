@@ -223,3 +223,49 @@ export interface UserSettings {
   syncIntervalMinutes: number
   httpProxy: string | null
 }
+
+// ─── Episode Detail ───────────────────────────────────────────────────────────
+
+export interface EpisodeDetailData {
+  episodeId: number
+  showId: number
+  seasonNumber: number
+  episodeNumber: number
+  title: string | null
+  translatedTitle: string | null
+  overview: string | null
+  translatedOverview: string | null
+  airDate: string | null
+  runtime: number | null
+  stillPath: string | null
+  watched: boolean
+  watchedAt: string | null
+  traktRating: number | null        // 0–100 integer
+  directors: string[]
+  show: {
+    id: number
+    title: string
+    posterPath: string | null
+    genres: string[]
+    traktId: number | null
+    tmdbId: number
+  }
+  seasonEpisodes: EpisodeProgress[]
+}
+
+export interface WatchHistoryEntry {
+  id: number
+  episodeId: number
+  seasonNumber: number
+  episodeNumber: number
+  episodeTitle: string | null
+  watchedAt: string | null    // ISO 8601 or null (Unknown date)
+  source: 'trakt' | 'manual'
+}
+
+export interface WatchResetCursor {
+  id: number
+  userId: number
+  showId: number
+  resetAt: string    // ISO 8601
+}

@@ -1,11 +1,12 @@
 import { useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, RefreshCw } from 'lucide-react'
-import { useShowDetail } from '../hooks'
+import { ArrowLeft, RefreshCw, History } from 'lucide-react'
+import { useShowDetail, useResetProgress } from '../hooks'
 import { HeroSection } from '../components/HeroSection'
 import { SeasonTab } from '../components/SeasonTab'
 import { EpisodeGrid } from '../components/EpisodeGrid'
+import { WatchHistoryPanel } from '../components/WatchHistoryPanel'
 import { Button } from '../components/ui/Button'
 import { resolveTitle } from '../lib/i18n'
 
@@ -71,7 +72,12 @@ export default function ShowDetailPage() {
   const navigate = useNavigate()
   const { data: progress, isLoading, error, refetch } = useShowDetail(Number(id))
   const [activeSeason, setActiveSeason] = useState<number | null>(null)
+  const [historyPanelOpen, setHistoryPanelOpen] = useState(false)
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
+  const [resetError, setResetError] = useState<string | null>(null)
   const episodesRef = useRef<HTMLDivElement>(null)
+
+  const resetProgress = useResetProgress(Number(id))
 
   if (isLoading) return <PageSkeleton />
   if (error)     return <PageError onRetry={() => refetch()} />
@@ -93,6 +99,21 @@ export default function ShowDetailPage() {
   const currentSeasonNumber = activeSeason ?? seasons[0]?.seasonNumber ?? 1
   const currentSeason = seasons.find(s => s.seasonNumber === currentSeasonNumber) ?? seasons[0]
 
+  // Compute overall progress
+  const totalEpisodes = show.totalEpisodes ?? seasons.reduce((s, x) => s + x.episodeCount, 0)
+  const totalWatched = seasons.reduce((s, x) => s + x.watchedCount, 0)
+  const isComplete = totalEpisodes > 0 && totalWatched >= totalEpisodes
+
+  const handleResetConfirm = async () => {
+    setResetError(null)
+    try {
+      await resetProgress.mutateAsync()
+      setResetConfirmOpen(false)
+    } catch (err) {
+      setResetError(err instanceof Error ? err.message : '重置失败，请重试')
+    }
+  }
+
   function scrollToEpisodes() {
     episodesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
@@ -103,6 +124,41 @@ export default function ShowDetailPage() {
 
         {/* Hero 三栏区 */}
         <HeroSection progress={progress} onWatchClick={scrollToEpisodes} />
+
+        {/* Watch again + History buttons (shown when 100% complete) */}
+        {isComplete && (
+          <div className="flex items-center gap-3 mt-4 px-6 lg:px-10">
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() => setResetConfirmOpen(true)}
+            >
+              再看一遍...
+            </Button>
+            <Button
+              variant="ghost"
+              size="md"
+              icon={<History size={15} />}
+              onClick={() => setHistoryPanelOpen(true)}
+            >
+              观看历史
+            </Button>
+          </div>
+        )}
+
+        {/* History button (always visible) */}
+        {!isComplete && (
+          <div className="flex items-center gap-3 mt-4 px-6 lg:px-10">
+            <Button
+              variant="ghost"
+              size="md"
+              icon={<History size={15} />}
+              onClick={() => setHistoryPanelOpen(true)}
+            >
+              观看历史
+            </Button>
+          </div>
+        )}
 
         {/* 季/集区域 */}
         <div ref={episodesRef} style={{ marginTop: '40px', paddingTop: '32px', borderTop: '1px solid var(--color-border-subtle)' }}>
@@ -140,6 +196,7 @@ export default function ShowDetailPage() {
                   key={currentSeasonNumber}
                   episodes={currentSeason.episodes}
                   seasonNumber={currentSeasonNumber}
+                  showId={Number(id)}
                 />
               ) : (
                 <motion.p
@@ -154,6 +211,65 @@ export default function ShowDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Reset Confirm Dialog */}
+      <AnimatePresence>
+        {resetConfirmOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+              onClick={() => { setResetConfirmOpen(false); setResetError(null) }}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="fixed z-50 bg-[var(--color-surface)] rounded-2xl shadow-2xl border border-[var(--color-border)] w-[420px] max-w-[90vw] p-6"
+              style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-lg font-semibold text-[var(--color-text)] mb-2">再看一遍？</h3>
+              <p className="text-sm text-[var(--color-text-muted)] mb-4">
+                这将重置观看进度，但所有历史记录会完整保留。你可以随时在观看历史中查看之前的记录。
+              </p>
+              {resetError && (
+                <div className="mb-4 p-3 rounded-lg bg-red-950/40 border border-red-500/20 text-sm text-red-400">
+                  {resetError}
+                </div>
+              )}
+              <div className="flex gap-3 justify-end">
+                <Button
+                  variant="ghost"
+                  size="md"
+                  onClick={() => { setResetConfirmOpen(false); setResetError(null) }}
+                  disabled={resetProgress.isPending}
+                >
+                  取消
+                </Button>
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={handleResetConfirm}
+                  disabled={resetProgress.isPending}
+                >
+                  {resetProgress.isPending ? '重置中...' : '确认重置'}
+                </Button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Watch History Panel */}
+      <WatchHistoryPanel
+        open={historyPanelOpen}
+        onClose={() => setHistoryPanelOpen(false)}
+        showId={Number(id)}
+        onDeleted={() => refetch()}
+      />
     </div>
   )
 }

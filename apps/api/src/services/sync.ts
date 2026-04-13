@@ -1,5 +1,5 @@
-import { getDb, shows, seasons, episodes, watchHistory, userShowProgress, syncState, userSettings } from '@trakt-dashboard/db'
-import { eq, and, sql } from 'drizzle-orm'
+import { getDb, shows, seasons, episodes, watchHistory, userShowProgress, syncState, userSettings, watchResetCursors } from '@trakt-dashboard/db'
+import { eq, and, sql, or, gt, isNull, desc } from 'drizzle-orm'
 import { getTraktClient } from './trakt.js'
 import { getTmdbShow, getTmdbSeason } from './tmdb.js'
 import pLimit from 'p-limit'
@@ -605,6 +605,49 @@ async function findOrCreateEpisode(showId: number, tmdbId: number, seasonNum: nu
   }
 }
 
+// ─── Watched Episodes Computation (Cursor-Aware) ─────────────────────────────
+
+export async function computeWatchedEpisodes(userId: number, showId: number): Promise<number> {
+  const db = getDb()
+  
+  // Get latest WatchResetCursor (max resetAt)
+  const [cursor] = await db
+    .select({ resetAt: watchResetCursors.resetAt })
+    .from(watchResetCursors)
+    .where(and(
+      eq(watchResetCursors.userId, userId),
+      eq(watchResetCursors.showId, showId)
+    ))
+    .orderBy(desc(watchResetCursors.resetAt))
+    .limit(1)
+
+  const resetAt = cursor?.resetAt ?? null
+
+  // Build WHERE conditions
+  const whereConditions = [
+    eq(watchHistory.userId, userId),
+    eq(episodes.showId, showId),
+  ]
+  
+  // Cursor filter: watchedAt > resetAt OR watchedAt IS NULL
+  if (resetAt) {
+    whereConditions.push(
+      or(
+        gt(watchHistory.watchedAt, resetAt),
+        isNull(watchHistory.watchedAt)
+      )!
+    )
+  }
+
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(distinct ${watchHistory.episodeId})` })
+    .from(watchHistory)
+    .innerJoin(episodes, eq(watchHistory.episodeId, episodes.id))
+    .where(and(...whereConditions))
+
+  return Number(count)
+}
+
 // ─── Progress recalc ──────────────────────────────────────────────────────────
 
 export async function recalcShowProgress(userId: number, showId: number): Promise<void> {
@@ -616,11 +659,8 @@ export async function recalcShowProgress(userId: number, showId: number): Promis
     .where(and(eq(episodes.showId, showId), sql`air_date IS NOT NULL AND air_date <= ${today}`))
   const airedEpisodes = Number(airedResult?.count || 0)
 
-  const [watchedResult] = await db.select({ count: sql<number>`count(distinct episode_id)` })
-    .from(watchHistory)
-    .innerJoin(episodes, eq(watchHistory.episodeId, episodes.id))
-    .where(and(eq(watchHistory.userId, userId), eq(episodes.showId, showId)))
-  const watchedEpisodes = Number(watchedResult?.count || 0)
+  // Use computeWatchedEpisodes for cursor-aware calculation
+  const watchedEpisodes = await computeWatchedEpisodes(userId, showId)
 
   const [lastWatched] = await db.select({ watchedAt: watchHistory.watchedAt })
     .from(watchHistory)

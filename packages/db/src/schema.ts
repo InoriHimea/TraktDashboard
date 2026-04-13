@@ -96,14 +96,13 @@ export const watchHistory = pgTable('watch_history', {
   id: serial('id').primaryKey(),
   userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   episodeId: integer('episode_id').notNull().references(() => episodes.id, { onDelete: 'cascade' }),
-  watchedAt: timestamp('watched_at').notNull(),
+  watchedAt: timestamp('watched_at'),
+  source: text('source').notNull().default('manual'),
   traktPlayId: text('trakt_play_id').unique(),
 }, (t) => [
   index('watch_history_user_idx').on(t.userId),
   index('watch_history_episode_idx').on(t.episodeId),
   index('watch_history_watched_at_idx').on(t.watchedAt),
-  // Task 6.1: Composite unique index for deduplication (traktPlayId can be null)
-  uniqueIndex('watch_history_dedup_idx').on(t.userId, t.episodeId, t.watchedAt),
 ])
 
 // ─── User Show Progress (materialized cache) ───────────────────────────────────
@@ -168,3 +167,16 @@ export const userSettings = pgTable('user_settings', {
   httpProxy: text('http_proxy'),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
+
+// ─── Watch Reset Cursors ───────────────────────────────────────────────────────
+
+export const watchResetCursors = pgTable('watch_reset_cursors', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  showId: integer('show_id').notNull().references(() => shows.id, { onDelete: 'cascade' }),
+  resetAt: timestamp('reset_at').notNull().defaultNow(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('wrc_user_show_idx').on(t.userId, t.showId),
+  index('wrc_reset_at_idx').on(t.resetAt),
+])

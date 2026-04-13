@@ -4,6 +4,7 @@
  * 每集: 16:9 缩略图 + 底部时长胶囊 + 已看对勾 + 标题 + S·E 标签
  */
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Check, MoreVertical } from 'lucide-react'
 import { resolveEpisodeTitle } from '../lib/i18n'
@@ -14,9 +15,10 @@ import type { EpisodeProgress } from '@trakt-dashboard/types'
 interface EpisodeGridProps {
   episodes: EpisodeProgress[]
   seasonNumber: number
+  showId: number
 }
 
-export function EpisodeGrid({ episodes, seasonNumber }: EpisodeGridProps) {
+export function EpisodeGrid({ episodes, seasonNumber, showId }: EpisodeGridProps) {
   return (
     <AnimatePresence mode="wait">
       <motion.div
@@ -37,6 +39,7 @@ export function EpisodeGrid({ episodes, seasonNumber }: EpisodeGridProps) {
               episode={ep}
               index={i}
               seasonNumber={seasonNumber}
+              showId={showId}
             />
           ))}
         </div>
@@ -51,9 +54,11 @@ interface EpisodeThumbnailProps {
   episode: EpisodeProgress
   index: number
   seasonNumber: number
+  showId: number
 }
 
-function EpisodeThumbnail({ episode, index, seasonNumber }: EpisodeThumbnailProps) {
+function EpisodeThumbnail({ episode, index, seasonNumber, showId }: EpisodeThumbnailProps) {
+  const navigate = useNavigate()
   const [imgError, setImgError] = useState(false)
 
   const title = resolveEpisodeTitle(episode)
@@ -63,16 +68,23 @@ function EpisodeThumbnail({ episode, index, seasonNumber }: EpisodeThumbnailProp
   const isUnaired = episode.aired === false
   const epCode = `S${String(seasonNumber).padStart(2, '0')} · E${String(episode.episodeNumber).padStart(2, '0')}`
 
+  const handleClick = () => {
+    if (!isUnaired) {
+      navigate(`/shows/${showId}/seasons/${seasonNumber}/episodes/${episode.episodeNumber}`)
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, delay: Math.min(index * 0.03, 0.35), ease: [0.16, 1, 0.3, 1] }}
       className={[
-        'shrink-0 snap-start flex flex-col gap-2 group cursor-pointer',
-        isUnaired ? 'opacity-40 cursor-default' : '',
+        'shrink-0 snap-start flex flex-col gap-2 group',
+        isUnaired ? 'opacity-40 cursor-default' : 'cursor-pointer',
       ].join(' ')}
       style={{ width: '260px' }}
+      onClick={handleClick}
     >
       {/* 缩略图 */}
       <div className="relative w-full aspect-video rounded-md overflow-hidden bg-[var(--color-surface-3)]">

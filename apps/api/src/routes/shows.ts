@@ -1,7 +1,10 @@
 import { Hono } from 'hono'
-import { getDb, shows, seasons, episodes, watchHistory, userShowProgress } from '@trakt-dashboard/db'
-import { eq, and, desc, asc, sql, like } from 'drizzle-orm'
+import { getDb, shows, seasons, episodes, watchHistory, userShowProgress, watchResetCursors } from '@trakt-dashboard/db'
+import { eq, and, desc, asc, sql, like, or, gt, isNull } from 'drizzle-orm'
 import type { ShowProgress, SeasonProgress, EpisodeProgress, ShowStatus } from '@trakt-dashboard/types'
+import { getTmdbEpisodeDetail } from '../services/tmdb.js'
+import { getTraktClient } from '../services/trakt.js'
+import { recalcShowProgress, computeWatchedEpisodes } from '../services/sync.js'
 
 export const showRoutes = new Hono<{ Variables: { userId: number } }>()
 
@@ -219,4 +222,316 @@ showRoutes.get('/:id/seasons', async (c) => {
     .orderBy(asc(seasons.seasonNumber))
 
   return c.json({ data: allSeasons })
+})
+
+// GET /api/shows/:showId/episodes/:season/:episode
+showRoutes.get('/:showId/episodes/:season/:episode', async (c) => {
+  const userId = c.get('userId')
+  const showId = parseBoundedInt(c.req.param('showId'), -1, 1, Number.MAX_SAFE_INTEGER)
+  const season = parseBoundedInt(c.req.param('season'), -1, 1, 1000)
+  const episode = parseBoundedInt(c.req.param('episode'), -1, 1, 1000)
+  
+  if (showId < 1 || season < 1 || episode < 1) {
+    return c.json({ error: 'Invalid parameters' }, 400)
+  }
+
+  const db = getDb()
+  
+  // Check show exists
+  const [show] = await db.select().from(shows).where(eq(shows.id, showId))
+  if (!show) return c.json({ error: 'Show not found' }, 404)
+
+  // Check episode exists
+  const [ep] = await db.select().from(episodes).where(and(
+    eq(episodes.showId, showId),
+    eq(episodes.seasonNumber, season),
+    eq(episodes.episodeNumber, episode)
+  ))
+  if (!ep) return c.json({ error: 'Episode not found' }, 404)
+
+  // Get latest watch record (cursor-aware)
+  const [latestWatch] = await db.select()
+    .from(watchHistory)
+    .where(and(
+      eq(watchHistory.userId, userId),
+      eq(watchHistory.episodeId, ep.id)
+    ))
+    .orderBy(desc(watchHistory.watchedAt))
+    .limit(1)
+
+  const watched = !!latestWatch
+  const watchedAt = latestWatch?.watchedAt?.toISOString() ?? null
+
+  // Get TMDB directors (degradation on failure)
+  const { directors } = await getTmdbEpisodeDetail(
+    show.tmdbId,
+    season,
+    episode,
+    show.displayLanguage ?? undefined,
+    userId
+  )
+
+  // Get Trakt rating (degradation on failure)
+  let traktRating: number | null = null
+  if (show.traktId) {
+    traktRating = await getTraktClient().getEpisodeRating(show.traktId, season, episode, userId)
+  }
+
+  // Get all episodes in current season
+  const seasonEpisodes = await db.select().from(episodes)
+    .where(and(
+      eq(episodes.showId, showId),
+      eq(episodes.seasonNumber, season)
+    ))
+    .orderBy(asc(episodes.episodeNumber))
+
+  const watchedEpisodeIds = (await db.select({ episodeId: watchHistory.episodeId })
+    .from(watchHistory)
+    .where(eq(watchHistory.userId, userId)))
+    .map(r => r.episodeId)
+
+  const today = new Date().toISOString().split('T')[0]
+  const seasonEpisodesProgress = seasonEpisodes.map(e => ({
+    episodeId: e.id,
+    seasonNumber: e.seasonNumber,
+    episodeNumber: e.episodeNumber,
+    title: e.title,
+    translatedTitle: (e as any).translatedTitle ?? null,
+    overview: e.overview,
+    translatedOverview: (e as any).translatedOverview ?? null,
+    airDate: e.airDate,
+    watched: watchedEpisodeIds.includes(e.id),
+    watchedAt: null,  // Not needed for strip
+    aired: !!e.airDate && e.airDate <= today,
+    stillPath: e.stillPath,
+    runtime: e.runtime,
+  }))
+
+  return c.json({
+    data: {
+      episodeId: ep.id,
+      showId: show.id,
+      seasonNumber: season,
+      episodeNumber: episode,
+      title: ep.title,
+      translatedTitle: (ep as any).translatedTitle ?? null,
+      overview: ep.overview,
+      translatedOverview: (ep as any).translatedOverview ?? null,
+      airDate: ep.airDate,
+      runtime: ep.runtime,
+      stillPath: ep.stillPath,
+      watched,
+      watchedAt,
+      traktRating,
+      directors,
+      show: {
+        id: show.id,
+        title: show.title,
+        posterPath: show.posterPath,
+        genres: show.genres as string[],
+        traktId: show.traktId,
+        tmdbId: show.tmdbId,
+      },
+      seasonEpisodes: seasonEpisodesProgress,
+    },
+  })
+})
+
+// POST /api/shows/:showId/episodes/:season/:episode/watch
+showRoutes.post('/:showId/episodes/:season/:episode/watch', async (c) => {
+  const userId = c.get('userId')
+  const showId = parseBoundedInt(c.req.param('showId'), -1, 1, Number.MAX_SAFE_INTEGER)
+  const season = parseBoundedInt(c.req.param('season'), -1, 1, 1000)
+  const episode = parseBoundedInt(c.req.param('episode'), -1, 1, 1000)
+  
+  if (showId < 1 || season < 1 || episode < 1) {
+    return c.json({ error: 'Invalid parameters' }, 400)
+  }
+
+  const body = await c.req.json()
+  const watchedAt = body.watchedAt  // string | null
+
+  const db = getDb()
+  
+  const [ep] = await db.select().from(episodes).where(and(
+    eq(episodes.showId, showId),
+    eq(episodes.seasonNumber, season),
+    eq(episodes.episodeNumber, episode)
+  ))
+  if (!ep) return c.json({ error: 'Episode not found' }, 404)
+
+  const [result] = await db.insert(watchHistory).values({
+    userId,
+    episodeId: ep.id,
+    watchedAt: watchedAt ? new Date(watchedAt) : null,
+    source: 'manual',
+  }).returning({ id: watchHistory.id })
+
+  // Recalc progress
+  await recalcShowProgress(userId, showId)
+
+  return c.json({ ok: true, historyId: result.id }, 201)
+})
+
+// GET /api/shows/:showId/episodes/:season/:episode/history
+showRoutes.get('/:showId/episodes/:season/:episode/history', async (c) => {
+  const userId = c.get('userId')
+  const showId = parseBoundedInt(c.req.param('showId'), -1, 1, Number.MAX_SAFE_INTEGER)
+  const season = parseBoundedInt(c.req.param('season'), -1, 1, 1000)
+  const episode = parseBoundedInt(c.req.param('episode'), -1, 1, 1000)
+  
+  if (showId < 1 || season < 1 || episode < 1) {
+    return c.json({ error: 'Invalid parameters' }, 400)
+  }
+
+  const db = getDb()
+  
+  const history = await db.select({
+    id: watchHistory.id,
+    episodeId: episodes.id,
+    seasonNumber: episodes.seasonNumber,
+    episodeNumber: episodes.episodeNumber,
+    episodeTitle: episodes.title,
+    watchedAt: watchHistory.watchedAt,
+    source: watchHistory.source,
+  })
+    .from(watchHistory)
+    .innerJoin(episodes, eq(watchHistory.episodeId, episodes.id))
+    .where(and(
+      eq(watchHistory.userId, userId),
+      eq(episodes.showId, showId),
+      eq(episodes.seasonNumber, season),
+      eq(episodes.episodeNumber, episode)
+    ))
+    .orderBy(sql`watched_at DESC NULLS LAST`)
+
+  return c.json({
+    data: history.map(h => ({
+      ...h,
+      watchedAt: h.watchedAt?.toISOString() ?? null,
+    })),
+  })
+})
+
+// GET /api/shows/:showId/history
+showRoutes.get('/:showId/history', async (c) => {
+  const userId = c.get('userId')
+  const showId = parseBoundedInt(c.req.param('showId'), -1, 1, Number.MAX_SAFE_INTEGER)
+  
+  if (showId < 1) {
+    return c.json({ error: 'Invalid show id' }, 400)
+  }
+
+  const db = getDb()
+  
+  const history = await db.select({
+    id: watchHistory.id,
+    episodeId: episodes.id,
+    seasonNumber: episodes.seasonNumber,
+    episodeNumber: episodes.episodeNumber,
+    episodeTitle: episodes.title,
+    watchedAt: watchHistory.watchedAt,
+    source: watchHistory.source,
+  })
+    .from(watchHistory)
+    .innerJoin(episodes, eq(watchHistory.episodeId, episodes.id))
+    .where(and(
+      eq(watchHistory.userId, userId),
+      eq(episodes.showId, showId)
+    ))
+    .orderBy(sql`watched_at DESC NULLS LAST`)
+
+  return c.json({
+    data: history.map(h => ({
+      ...h,
+      watchedAt: h.watchedAt?.toISOString() ?? null,
+    })),
+  })
+})
+
+// DELETE /api/shows/:showId/history/:historyId
+showRoutes.delete('/:showId/history/:historyId', async (c) => {
+  const userId = c.get('userId')
+  const showId = parseBoundedInt(c.req.param('showId'), -1, 1, Number.MAX_SAFE_INTEGER)
+  const historyId = parseBoundedInt(c.req.param('historyId'), -1, 1, Number.MAX_SAFE_INTEGER)
+  
+  if (showId < 1 || historyId < 1) {
+    return c.json({ error: 'Invalid parameters' }, 400)
+  }
+
+  const db = getDb()
+  
+  // Verify ownership
+  const [record] = await db.select()
+    .from(watchHistory)
+    .innerJoin(episodes, eq(watchHistory.episodeId, episodes.id))
+    .where(and(
+      eq(watchHistory.id, historyId),
+      eq(watchHistory.userId, userId),
+      eq(episodes.showId, showId)
+    ))
+  
+  if (!record) return c.json({ error: 'History record not found' }, 404)
+
+  await db.delete(watchHistory).where(eq(watchHistory.id, historyId))
+  
+  // Recalc progress
+  await recalcShowProgress(userId, showId)
+
+  return c.json({ ok: true })
+})
+
+// POST /api/shows/:showId/reset
+showRoutes.post('/:showId/reset', async (c) => {
+  const userId = c.get('userId')
+  const showId = parseBoundedInt(c.req.param('showId'), -1, 1, Number.MAX_SAFE_INTEGER)
+  
+  if (showId < 1) {
+    return c.json({ error: 'Invalid show id' }, 400)
+  }
+
+  const db = getDb()
+  
+  const [show] = await db.select().from(shows).where(eq(shows.id, showId))
+  if (!show) return c.json({ error: 'Show not found' }, 404)
+
+  // Insert reset cursor
+  await db.insert(watchResetCursors).values({
+    userId,
+    showId,
+    resetAt: new Date(),
+  })
+
+  // Recalc progress (will use new cursor)
+  await recalcShowProgress(userId, showId)
+
+  // Return updated progress
+  const [progress] = await db.select().from(userShowProgress)
+    .where(and(eq(userShowProgress.userId, userId), eq(userShowProgress.showId, showId)))
+
+  const airedEpisodes = progress?.airedEpisodes ?? 0
+  const watchedEpisodes = progress?.watchedEpisodes ?? 0
+
+  return c.json({
+    data: {
+      show: {
+        ...show,
+        status: show.status as ShowStatus,
+        genres: show.genres as string[],
+        lastSyncedAt: show.lastSyncedAt.toISOString(),
+        createdAt: show.createdAt.toISOString(),
+        originalName: show.originalName ?? null,
+        translatedName: show.translatedName ?? null,
+        translatedOverview: (show as any).translatedOverview ?? null,
+        displayLanguage: show.displayLanguage ?? null,
+      },
+      airedEpisodes,
+      watchedEpisodes,
+      nextEpisode: null,
+      lastWatchedAt: progress?.lastWatchedAt?.toISOString() || null,
+      completed: progress?.completed ?? false,
+      percentage: airedEpisodes > 0 ? Math.round((watchedEpisodes / airedEpisodes) * 100) : 0,
+      seasons: [],
+    },
+  })
 })

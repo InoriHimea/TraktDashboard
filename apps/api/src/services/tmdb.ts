@@ -161,3 +161,61 @@ export function getTmdbImageUrl(path: string | null, size = 'w500'): string | nu
   if (!path) return null
   return `https://image.tmdb.org/t/p/${size}${path}`
 }
+
+export async function getTmdbEpisodeDetail(
+  tmdbShowId: number,
+  seasonNumber: number,
+  episodeNumber: number,
+  language?: string,
+  userId?: number
+): Promise<{ directors: string[] }> {
+  const db = getDb()
+  const cacheKey = language
+    ? `tmdb_episode_${tmdbShowId}_s${seasonNumber}e${episodeNumber}_${language}`
+    : `tmdb_episode_${tmdbShowId}_s${seasonNumber}e${episodeNumber}`
+
+  // Check cache (TTL 7 days)
+  const [cached] = await db.select().from(metadataCache)
+    .where(and(
+      eq(metadataCache.source, 'tmdb_episode'),
+      eq(metadataCache.externalId, cacheKey)
+    ))
+  
+  if (cached) {
+    const age = Date.now() - new Date(cached.cachedAt).getTime()
+    if (age < CACHE_TTL_HOURS * 60 * 60 * 1000) {
+      return cached.data as { directors: string[] }
+    }
+  }
+
+  // Fetch from TMDB (with degradation on failure)
+  try {
+    const params: Record<string, string> = { append_to_response: 'credits' }
+    if (language) params.language = language
+    
+    const data = await tmdbFetch<any>(
+      `/tv/${tmdbShowId}/season/${seasonNumber}/episode/${episodeNumber}`,
+      params,
+      userId
+    )
+
+    const directors = (data.credits?.crew ?? [])
+      .filter((c: any) => c.job === 'Director')
+      .map((c: any) => c.name)
+
+    const result = { directors }
+
+    // Write cache
+    await db.insert(metadataCache)
+      .values({ source: 'tmdb_episode', externalId: cacheKey, data: result, cachedAt: new Date() })
+      .onConflictDoUpdate({
+        target: [metadataCache.source, metadataCache.externalId],
+        set: { data: result, cachedAt: new Date() },
+      })
+
+    return result
+  } catch (e) {
+    console.warn(`[tmdb] Episode detail fetch failed for ${tmdbShowId} s${seasonNumber}e${episodeNumber}:`, e)
+    return { directors: [] }  // Degradation: return empty
+  }
+}

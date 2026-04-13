@@ -3,6 +3,7 @@ import { useAuth } from './hooks'
 import Layout from './components/Layout'
 import ProgressPage from './pages/ProgressPage'
 import ShowDetailPage from './pages/ShowDetailPage'
+import EpisodeDetailPage from './pages/EpisodeDetailPage'
 import StatsPage from './pages/StatsPage'
 import SyncPage from './pages/SyncPage'
 import SettingsPage from './pages/SettingsPage'
@@ -36,6 +37,7 @@ export default function App() {
         <Route path="/" element={<Navigate to="/progress" replace />} />
         <Route path="/progress" element={<ProgressPage />} />
         <Route path="/shows/:id" element={<ShowDetailPage />} />
+        <Route path="/shows/:showId/seasons/:season/episodes/:episode" element={<EpisodeDetailPage />} />
         <Route path="/stats" element={<StatsPage />} />
         <Route path="/sync" element={<SyncPage />} />
         <Route path="/settings" element={<SettingsPage />} />

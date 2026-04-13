@@ -366,5 +366,19 @@ export function getTraktClient() {
         })
       return data
     },
+
+    getEpisodeRating: async (traktId: number, season: number, episode: number, userId: number): Promise<number | null> => {
+      try {
+        const data = await traktFetch<{ rating: number; votes: number }>(
+          `/shows/${traktId}/seasons/${season}/episodes/${episode}/ratings`,
+          userId
+        )
+        // Convert 0-10 float to 0-100 integer
+        return Math.round(data.rating * 10)
+      } catch (e) {
+        console.warn(`[trakt] Episode rating fetch failed for ${traktId} s${season}e${episode}:`, e)
+        return null  // Degradation
+      }
+    },
   }
 }
