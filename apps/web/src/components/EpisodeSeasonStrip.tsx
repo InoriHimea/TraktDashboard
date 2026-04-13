@@ -31,17 +31,35 @@ export function EpisodeSeasonStrip({
   const seasonLabel = seasonNumber === 0 ? 'Specials' : `Season ${seasonNumber}`
 
   return (
-    <div style={{ borderRadius: 16, border: '1px solid var(--color-border)', background: 'var(--color-surface)', padding: 24 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20, fontSize: 13, fontWeight: 600, color: 'var(--color-text-muted)' }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 6,
+        fontSize: 12, fontWeight: 600,
+        color: 'var(--color-text-muted)',
+        letterSpacing: '0.04em',
+        textTransform: 'uppercase',
+      }}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}>
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
         <span>Seasons</span>
-        <span style={{ opacity: 0.3 }}>/</span>
-        <span style={{ color: 'var(--color-text)' }}>{seasonLabel}</span>
+        <span style={{ opacity: 0.25 }}>/</span>
+        <span style={{ color: 'var(--color-text-secondary)' }}>{seasonLabel}</span>
       </div>
 
-      {/* Horizontal scroll */}
+      {/* Horizontal scroll — no outer card, just the strip */}
       <div
-        style={{ display: 'flex', gap: 20, overflowX: 'auto', paddingBottom: 8, scrollbarWidth: 'thin', scrollbarColor: 'var(--color-border) transparent' }}
+        style={{
+          display: 'flex',
+          gap: 12,
+          overflowX: 'auto',
+          paddingBottom: 6,
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'var(--color-border) transparent',
+          marginLeft: -2,
+          paddingLeft: 2,
+        }}
       >
         {episodes.map((ep) => {
           const isCurrent = ep.episodeNumber === currentEpisodeNumber
@@ -79,36 +97,54 @@ interface EpisodeThumbnailProps {
 const EpisodeThumbnail = React.forwardRef<HTMLDivElement, EpisodeThumbnailProps>(
   ({ episode, seasonNumber, isCurrent, isUnaired, onNavigate }, ref) => {
     const [imgError, setImgError] = useState(false)
+    const [hovered, setHovered] = useState(false)
 
     const title = resolveEpisodeTitle(episode)
     const stillUrl = resolveEpisodeStill(episode.stillPath)
     const showImg = stillUrl && !imgError
     const isWatched = episode.watched
-    const epCode = `S${String(seasonNumber).padStart(2, '0')} • E${String(episode.episodeNumber).padStart(2, '0')}`
+    const epCode = `S${String(seasonNumber).padStart(2, '0')} · E${String(episode.episodeNumber).padStart(2, '0')}`
 
     return (
       <div
         ref={ref}
-        className={[
-          'w-[260px] shrink-0 group',
-          isUnaired ? 'opacity-60 cursor-default' : 'cursor-pointer',
-        ].join(' ')}
+        style={{
+          width: 220,
+          flexShrink: 0,
+          cursor: isUnaired ? 'default' : 'pointer',
+          opacity: isUnaired ? 0.5 : 1,
+        }}
         onClick={() => !isUnaired && onNavigate(seasonNumber, episode.episodeNumber)}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
         aria-current={isCurrent ? 'true' : undefined}
         aria-label={`${epCode} ${title}`}
       >
         {/* Thumbnail */}
-        <div
-          className={[
-            'relative w-full aspect-video rounded-lg overflow-hidden mb-3 shadow-md',
-            isCurrent ? 'ring-2 ring-violet-500' : '',
-          ].join(' ')}
-        >
+        <div style={{
+          position: 'relative',
+          width: '100%',
+          aspectRatio: '16/9',
+          borderRadius: 8,
+          overflow: 'hidden',
+          marginBottom: 10,
+          boxShadow: isCurrent
+            ? '0 0 0 2px var(--color-accent), 0 6px 20px rgba(0,0,0,0.5)'
+            : hovered
+            ? '0 6px 20px rgba(0,0,0,0.5)'
+            : '0 2px 10px rgba(0,0,0,0.35)',
+          transition: 'box-shadow 0.2s ease',
+          background: 'var(--color-surface-3)',
+        }}>
           {showImg ? (
             <img
               src={stillUrl}
               alt={title}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              style={{
+                width: '100%', height: '100%', objectFit: 'cover',
+                transform: hovered ? 'scale(1.04)' : 'scale(1)',
+                transition: 'transform 0.3s ease',
+              }}
               loading="lazy"
               onError={() => setImgError(true)}
             />
@@ -116,20 +152,59 @@ const EpisodeThumbnail = React.forwardRef<HTMLDivElement, EpisodeThumbnailProps>
             <EpisodePlaceholder seasonNumber={seasonNumber} episodeNumber={episode.episodeNumber} />
           )}
 
-          {/* Gradient */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+          {/* Gradient overlay */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 50%)',
+            pointerEvents: 'none',
+          }} />
 
           {/* Runtime badge */}
           {episode.runtime && (
-            <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-white px-1.5 py-0.5 rounded text-[10px] font-medium">
-              {episode.runtime}分钟
+            <div style={{
+              position: 'absolute', bottom: 7, left: 8,
+              background: 'rgba(0,0,0,0.7)',
+              backdropFilter: 'blur(4px)',
+              color: 'rgba(255,255,255,0.85)',
+              padding: '2px 6px',
+              borderRadius: 4,
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: '0.02em',
+            }}>
+              {episode.runtime}m
+            </div>
+          )}
+
+          {/* Watched checkmark */}
+          {isWatched && (
+            <div style={{
+              position: 'absolute', bottom: 7, right: 8,
+              width: 20, height: 20,
+              borderRadius: '50%',
+              background: 'var(--color-accent)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 2px 6px rgba(124,106,247,0.5)',
+            }}>
+              <Check size={10} strokeWidth={3} color="#fff" />
             </div>
           )}
 
           {/* Unaired overlay */}
           {isUnaired && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-              <span className="text-[9px] font-medium px-2 py-0.5 rounded-full bg-black/60 border border-white/10 text-white/60">
+            <div style={{
+              position: 'absolute', inset: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(0,0,0,0.35)',
+            }}>
+              <span style={{
+                fontSize: 9, fontWeight: 700, letterSpacing: '0.08em',
+                padding: '3px 8px', borderRadius: 4,
+                background: 'rgba(0,0,0,0.7)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: 'rgba(255,255,255,0.5)',
+                textTransform: 'uppercase',
+              }}>
                 未播出
               </span>
             </div>
@@ -137,27 +212,33 @@ const EpisodeThumbnail = React.forwardRef<HTMLDivElement, EpisodeThumbnailProps>
         </div>
 
         {/* Title row */}
-        <div className="flex justify-between items-start gap-2">
-          <div className="overflow-hidden flex-1">
-            <h4
-              className={[
-                'text-sm font-semibold truncate transition-colors',
-                isCurrent
-                  ? 'text-[var(--color-accent)]'
-                  : isWatched
-                  ? 'text-[var(--color-text-muted)] group-hover:text-[var(--color-accent)]'
-                  : 'text-[var(--color-text)] group-hover:text-[var(--color-accent)]',
-              ].join(' ')}
-            >
-              {title || `Episode ${episode.episodeNumber}`}
-            </h4>
-            <p className="text-[var(--color-text-muted)] text-xs mt-0.5 font-medium">{epCode}</p>
-          </div>
-
-          {/* Watched check */}
-          {isWatched && (
-            <Check size={13} className="text-[var(--color-accent)] mt-0.5 shrink-0" strokeWidth={2.5} />
-          )}
+        <div>
+          <h4 style={{
+            fontSize: 12.5,
+            fontWeight: 600,
+            margin: 0,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            color: isCurrent
+              ? 'var(--color-accent)'
+              : hovered
+              ? 'var(--color-text-base)'
+              : isWatched
+              ? 'var(--color-text-muted)'
+              : 'var(--color-text-secondary)',
+            transition: 'color 0.15s',
+          }}>
+            {title || `Episode ${episode.episodeNumber}`}
+          </h4>
+          <p style={{
+            fontSize: 11,
+            color: 'var(--color-text-muted)',
+            margin: '3px 0 0',
+            fontWeight: 500,
+          }}>
+            {epCode}
+          </p>
         </div>
       </div>
     )

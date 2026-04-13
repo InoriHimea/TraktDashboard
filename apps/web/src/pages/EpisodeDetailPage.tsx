@@ -62,7 +62,7 @@ export default function EpisodeDetailPage() {
   return (
     <main style={{ flex: 1, background: 'var(--color-bg)', color: 'var(--color-text)' }}>
       {/* Centered content wrapper */}
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 40px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 40px 48px', display: 'flex', flexDirection: 'column', gap: 24 }}>
 
         {/* Back button */}
         <button
