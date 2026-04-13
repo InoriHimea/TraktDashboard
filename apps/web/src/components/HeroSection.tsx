@@ -23,6 +23,9 @@ export function HeroSection({ progress, onWatchClick }: HeroSectionProps) {
   const overview = resolveOverview(show)
   const sColor = statusColor(show.status)
   const sLabel = statusZh(show.status)
+
+  // Watched badge: all aired episodes watched
+  const isAllWatched = progress.airedEpisodes > 0 && progress.watchedEpisodes >= progress.airedEpisodes
   const year = show.firstAired ? new Date(show.firstAired).getFullYear() : null
   const isAiring = show.status === 'returning series' || show.status === 'in production'
 
@@ -75,6 +78,19 @@ export function HeroSection({ progress, onWatchClick }: HeroSectionProps) {
             </div>
             <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none" />
           </div>
+
+          {/* Watched badge */}
+          {isAllWatched && (
+            <div className="flex justify-center mt-3">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--color-surface-2)] border border-emerald-500/30 shadow-sm">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" className="text-emerald-400 shrink-0">
+                  <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M20 6L9 17" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span className="text-[11px] font-bold tracking-widest text-emerald-400 uppercase">Watched</span>
+              </div>
+            </div>
+          )}
         </motion.div>
 
         {/* ── 2. 中: 主信息 ── */}
