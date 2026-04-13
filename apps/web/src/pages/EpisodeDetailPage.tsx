@@ -10,11 +10,11 @@ import { Button } from '../components/ui/Button'
 
 function EpisodeDetailSkeleton() {
   return (
-    <div className="flex-1 w-full bg-[var(--color-bg)]">
-      <div className="w-full max-w-[1100px] mx-auto px-6 lg:px-10 py-10 space-y-6 animate-pulse">
-        <div className="w-20 h-5 rounded bg-[var(--color-surface-3)]" />
-        <div className="w-full h-[280px] rounded-2xl bg-[var(--color-surface)]" />
-        <div className="w-full h-[220px] rounded-2xl bg-[var(--color-surface)]" />
+    <div style={{ flex: 1, background: 'var(--color-bg)', padding: '40px 0' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 40px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div style={{ width: 80, height: 20, borderRadius: 6, background: 'var(--color-surface-3)', animation: 'pulse 1.5s infinite' }} />
+        <div style={{ width: '100%', height: 280, borderRadius: 16, background: 'var(--color-surface)' }} />
+        <div style={{ width: '100%', height: 220, borderRadius: 16, background: 'var(--color-surface)' }} />
       </div>
     </div>
   )
@@ -22,9 +22,9 @@ function EpisodeDetailSkeleton() {
 
 function PageError({ onRetry }: { onRetry: () => void }) {
   return (
-    <div className="flex-1 w-full flex items-center justify-center">
-      <div className="text-center flex flex-col items-center gap-4">
-        <p className="text-[var(--color-text-muted)] text-sm">加载失败</p>
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+        <p style={{ color: 'var(--color-text-muted)', fontSize: 14 }}>加载失败</p>
         <Button variant="secondary" size="md" icon={<RefreshCw size={14} />} onClick={onRetry}>重试</Button>
       </div>
     </div>
@@ -54,42 +54,53 @@ export default function EpisodeDetailPage() {
   if (isLoading) return <EpisodeDetailSkeleton />
   if (error) return <PageError onRetry={() => refetch()} />
   if (!data) return (
-    <div className="flex-1 w-full flex items-center justify-center text-[var(--color-text-muted)] text-sm">
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)', fontSize: 14 }}>
       未找到该集
     </div>
   )
 
   return (
-    <main className="flex-1 w-full bg-[var(--color-bg)]">
-      <div className="w-full max-w-[1100px] mx-auto px-6 lg:px-10 py-8 flex flex-col gap-5">
+    <main style={{ flex: 1, background: 'var(--color-bg)', color: 'var(--color-text)' }}>
+      {/* Centered content wrapper */}
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 40px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-        {/* Back */}
+        {/* Back button */}
         <button
           onClick={() => navigate(-1)}
-          className="self-start flex items-center gap-1.5 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors group"
+          style={{
+            alignSelf: 'flex-start',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: 13,
+            fontWeight: 500,
+            color: 'var(--color-text-muted)',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '4px 0',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-text)')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-text-muted)')}
         >
-          <ArrowLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" />
+          <ArrowLeft size={15} />
           返回
         </button>
 
         {/* Info card */}
-        <article>
-          <EpisodeInfoCard
-            data={data}
-            onWatchClick={() => setWatchPanelOpen(true)}
-            onHistoryClick={() => setHistoryPanelOpen(true)}
-          />
-        </article>
+        <EpisodeInfoCard
+          data={data}
+          onWatchClick={() => setWatchPanelOpen(true)}
+          onHistoryClick={() => setHistoryPanelOpen(true)}
+        />
 
         {/* Season strip */}
-        <section>
-          <EpisodeSeasonStrip
-            episodes={data.seasonEpisodes}
-            seasonNumber={data.seasonNumber}
-            currentEpisodeNumber={data.episodeNumber}
-            showId={data.showId}
-          />
-        </section>
+        <EpisodeSeasonStrip
+          episodes={data.seasonEpisodes}
+          seasonNumber={data.seasonNumber}
+          currentEpisodeNumber={data.episodeNumber}
+          showId={data.showId}
+        />
 
       </div>
 

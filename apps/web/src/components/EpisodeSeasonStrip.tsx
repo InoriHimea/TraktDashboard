@@ -31,18 +31,17 @@ export function EpisodeSeasonStrip({
   const seasonLabel = seasonNumber === 0 ? 'Specials' : `Season ${seasonNumber}`
 
   return (
-    <div className="mt-6 bg-[var(--color-surface)] p-6 rounded-2xl border border-[var(--color-border)]">
+    <div style={{ borderRadius: 16, border: '1px solid var(--color-border)', background: 'var(--color-surface)', padding: 24 }}>
       {/* Header */}
-      <div className="flex items-center gap-2 mb-6 text-sm font-semibold text-[var(--color-text-muted)]">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20, fontSize: 13, fontWeight: 600, color: 'var(--color-text-muted)' }}>
         <span>Seasons</span>
-        <span className="text-[var(--color-border)]">/</span>
-        <span className="text-[var(--color-text)]">{seasonLabel}</span>
+        <span style={{ opacity: 0.3 }}>/</span>
+        <span style={{ color: 'var(--color-text)' }}>{seasonLabel}</span>
       </div>
 
       {/* Horizontal scroll */}
       <div
-        className="flex gap-5 overflow-x-auto pb-4"
-        style={{ scrollbarWidth: 'thin', scrollbarColor: 'var(--color-border) transparent' }}
+        style={{ display: 'flex', gap: 20, overflowX: 'auto', paddingBottom: 8, scrollbarWidth: 'thin', scrollbarColor: 'var(--color-border) transparent' }}
       >
         {episodes.map((ep) => {
           const isCurrent = ep.episodeNumber === currentEpisodeNumber
