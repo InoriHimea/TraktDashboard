@@ -117,17 +117,16 @@ export default function EpisodeDetailPage() {
 
   return (
     <main className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
-      <div className="max-w-[1200px] mx-auto px-8 py-8">
+      <div className="max-w-[1100px] mx-auto px-6 py-10">
         {/* Back button */}
         <div className="mb-6">
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<ArrowLeft size={14} />}
+          <button
             onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
           >
+            <ArrowLeft size={15} />
             返回
-          </Button>
+          </button>
         </div>
 
         {/* Episode Info Card */}
