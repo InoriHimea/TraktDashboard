@@ -28,6 +28,7 @@ export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeI
       overflow: 'hidden',
       background: '#0f0f17',
       border: '1px solid rgba(255,255,255,0.06)',
+      boxShadow: '0 20px 60px rgba(0,0,0,0.45), 0 8px 24px rgba(0,0,0,0.3)',
     }}>
       {/* Blurred background image */}
       {showImg && (
@@ -55,7 +56,7 @@ export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeI
         display: 'flex',
         flexDirection: 'row',
         gap: 32,
-        padding: '36px 36px 32px',
+        padding: '48px 36px 44px',
         alignItems: 'center',
       }}>
         {/* ── Left: still image — vertically centered, taller ── */}
