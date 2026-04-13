@@ -182,11 +182,13 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
         for (const entry of entries) {
           const ep = await findOrCreateEpisode(showId, tmdbId, entry.episode.season, entry.episode.number)
           if (!ep) continue
+          // Use traktPlayId unique constraint for dedup
+          const traktPlayId = String(entry.id)
           await db.insert(watchHistory).values({
             userId, episodeId: ep.id,
             watchedAt: new Date(entry.watched_at),
-            traktPlayId: String(entry.id),
-          }).onConflictDoNothing()
+            traktPlayId,
+          }).onConflictDoNothing({ target: watchHistory.traktPlayId })
         }
         await recalcShowProgress(userId, showId)
       } catch (e) {
@@ -560,11 +562,20 @@ async function syncEpisodeProgress(userId: number, showId: number, tmdbId: numbe
       if (!ep.completed || !ep.last_watched_at) continue
       const episode = await findOrCreateEpisode(showId, tmdbId, season.number, ep.number)
       if (!episode) continue
-      await db.insert(watchHistory).values({
-        userId, episodeId: episode.id,
-        watchedAt: new Date(ep.last_watched_at),
-        traktPlayId: null,
-      }).onConflictDoNothing({ target: [watchHistory.userId, watchHistory.episodeId, watchHistory.watchedAt] })
+      const watchedAt = new Date(ep.last_watched_at)
+      // Check if this exact record already exists
+      const [existing] = await db.select().from(watchHistory).where(and(
+        eq(watchHistory.userId, userId),
+        eq(watchHistory.episodeId, episode.id),
+        eq(watchHistory.watchedAt, watchedAt)
+      ))
+      if (!existing) {
+        await db.insert(watchHistory).values({
+          userId, episodeId: episode.id,
+          watchedAt,
+          traktPlayId: null,
+        })
+      }
     }
   }
 }
