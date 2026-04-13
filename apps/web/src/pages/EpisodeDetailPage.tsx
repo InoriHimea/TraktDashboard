@@ -8,14 +8,13 @@ import { WatchActionPanel } from '../components/WatchActionPanel'
 import { WatchHistoryPanel } from '../components/WatchHistoryPanel'
 import { Button } from '../components/ui/Button'
 
-interface RouteParams { showId: string; season: string; episode: string }
-
 function EpisodeDetailSkeleton() {
   return (
     <div className="flex-1 w-full bg-[var(--color-bg)]">
-      <div className="w-full max-w-[1200px] mx-auto px-6 lg:px-12 py-10 space-y-10">
-        <div className="w-24 h-6 rounded bg-[var(--color-surface-3)] animate-pulse" />
-        <div className="w-full h-[400px] rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] animate-pulse" />
+      <div className="w-full max-w-[1100px] mx-auto px-6 lg:px-10 py-10 space-y-6 animate-pulse">
+        <div className="w-20 h-5 rounded bg-[var(--color-surface-3)]" />
+        <div className="w-full h-[280px] rounded-2xl bg-[var(--color-surface)]" />
+        <div className="w-full h-[220px] rounded-2xl bg-[var(--color-surface)]" />
       </div>
     </div>
   )
@@ -23,26 +22,28 @@ function EpisodeDetailSkeleton() {
 
 function PageError({ onRetry }: { onRetry: () => void }) {
   return (
-    <div className="flex-1 w-full bg-[var(--color-bg)] flex items-center justify-center">
+    <div className="flex-1 w-full flex items-center justify-center">
       <div className="text-center flex flex-col items-center gap-4">
-        <div className="w-12 h-12 rounded-full bg-[var(--color-error)]/10 text-[var(--color-error)] flex items-center justify-center">
-          ⚠
-        </div>
-        <p className="text-[var(--color-text-muted)]">加载失败</p>
-        <Button variant="secondary" size="md" icon={<RefreshCw size={14} />} onClick={onRetry}>
-          重试
-        </Button>
+        <p className="text-[var(--color-text-muted)] text-sm">加载失败</p>
+        <Button variant="secondary" size="md" icon={<RefreshCw size={14} />} onClick={onRetry}>重试</Button>
       </div>
     </div>
   )
 }
 
 export default function EpisodeDetailPage() {
-  const { showId, season, episode } = useParams<RouteParams>()
+  const { showId, season, episode } = useParams()
   const navigate = useNavigate()
 
-  const showIdNum = Number(showId); const seasonNum = Number(season); const episodeNum = Number(episode);
-  if (!showId || !season || !episode || !Number.isInteger(showIdNum) || !Number.isInteger(seasonNum) || !Number.isInteger(episodeNum) || showIdNum <= 0 || seasonNum < 0 || episodeNum <= 0) {
+  const showIdNum = Number(showId)
+  const seasonNum = Number(season)
+  const episodeNum = Number(episode)
+
+  if (
+    !showId || !season || !episode ||
+    !Number.isInteger(showIdNum) || !Number.isInteger(seasonNum) || !Number.isInteger(episodeNum) ||
+    showIdNum <= 0 || seasonNum < 0 || episodeNum <= 0
+  ) {
     return <Navigate to="/progress" replace />
   }
 
@@ -52,47 +53,64 @@ export default function EpisodeDetailPage() {
 
   if (isLoading) return <EpisodeDetailSkeleton />
   if (error) return <PageError onRetry={() => refetch()} />
-  if (!data) return <div className="flex-1 w-full flex items-center justify-center text-[var(--color-text-muted)]">未找到该集</div>
+  if (!data) return (
+    <div className="flex-1 w-full flex items-center justify-center text-[var(--color-text-muted)] text-sm">
+      未找到该集
+    </div>
+  )
 
   return (
-    <main className="flex-1 w-full bg-[var(--color-bg)] flex flex-col items-center">
-      
-      {/* 核心容器：最大宽度 1200px，左右留出 lg:px-12 的宽裕边距 */}
-      <div className="w-full max-w-[1200px] px-6 sm:px-8 lg:px-12 py-10 lg:py-12 flex flex-col gap-8">
-        
-        {/* 返回按钮：简洁的文字链接样式 */}
-        <div className="self-start">
-          <button
-            onClick={() => navigate(-1)}
-            className="group flex items-center gap-2 text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
-          >
-            <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-            返回进度
-          </button>
-        </div>
+    <main className="flex-1 w-full bg-[var(--color-bg)]">
+      <div className="w-full max-w-[1100px] mx-auto px-6 lg:px-10 py-8 flex flex-col gap-5">
 
+        {/* Back */}
+        <button
+          onClick={() => navigate(-1)}
+          className="self-start flex items-center gap-1.5 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors group"
+        >
+          <ArrowLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" />
+          返回
+        </button>
+
+        {/* Info card */}
         <article>
-          <EpisodeInfoCard 
-            data={data} 
-            onWatchClick={() => setWatchPanelOpen(true)} 
-            onHistoryClick={() => setHistoryPanelOpen(true)} 
+          <EpisodeInfoCard
+            data={data}
+            onWatchClick={() => setWatchPanelOpen(true)}
+            onHistoryClick={() => setHistoryPanelOpen(true)}
           />
         </article>
 
-        <section className="pt-6">
-          <EpisodeSeasonStrip 
-            episodes={data.seasonEpisodes} 
-            seasonNumber={data.seasonNumber} 
-            currentEpisodeNumber={data.episodeNumber} 
-            showId={data.showId} 
+        {/* Season strip */}
+        <section>
+          <EpisodeSeasonStrip
+            episodes={data.seasonEpisodes}
+            seasonNumber={data.seasonNumber}
+            currentEpisodeNumber={data.episodeNumber}
+            showId={data.showId}
           />
         </section>
 
       </div>
 
-      {/* Panels */}
-      <WatchActionPanel open={watchPanelOpen} onClose={() => setWatchPanelOpen(false)} episodeId={data.episodeId} showId={data.showId} seasonNumber={data.seasonNumber} episodeNumber={data.episodeNumber} airDate={data.airDate} onSuccess={() => refetch()} />
-      <WatchHistoryPanel open={historyPanelOpen} onClose={() => setHistoryPanelOpen(false)} showId={data.showId} seasonNumber={data.seasonNumber} episodeNumber={data.episodeNumber} onDeleted={() => refetch()} />
+      <WatchActionPanel
+        open={watchPanelOpen}
+        onClose={() => setWatchPanelOpen(false)}
+        episodeId={data.episodeId}
+        showId={data.showId}
+        seasonNumber={data.seasonNumber}
+        episodeNumber={data.episodeNumber}
+        airDate={data.airDate}
+        onSuccess={() => refetch()}
+      />
+      <WatchHistoryPanel
+        open={historyPanelOpen}
+        onClose={() => setHistoryPanelOpen(false)}
+        showId={data.showId}
+        seasonNumber={data.seasonNumber}
+        episodeNumber={data.episodeNumber}
+        onDeleted={() => refetch()}
+      />
     </main>
   )
 }

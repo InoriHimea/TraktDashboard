@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, MoreVertical, Star } from 'lucide-react'
+import { Check, History, Star } from 'lucide-react'
 import { EpisodePlaceholder } from './ui/EpisodePlaceholder'
 import { resolveEpisodeStill } from '../lib/image'
 import type { EpisodeDetailData } from '@trakt-dashboard/types'
@@ -19,81 +19,119 @@ export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeI
   const showImg = stillUrl && !imgError
 
   const seasonLabel = data.seasonNumber === 0 ? 'Specials' : `Season ${data.seasonNumber}`
+  const epCode = `S${String(data.seasonNumber).padStart(2, '0')} · E${String(data.episodeNumber).padStart(2, '0')}`
 
   return (
-    <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 bg-[var(--color-surface)] p-6 sm:p-8 lg:p-10 rounded-3xl border border-[var(--color-border)] shadow-sm">
-      
-      {/* 左侧海报：固定比例与合理宽度 */}
-      <div className="w-full lg:w-[420px] shrink-0 group relative rounded-2xl overflow-hidden aspect-video bg-[var(--color-surface-2)] border border-[var(--color-border-subtle)]">
-        {showImg ? (
-          <img
-            src={stillUrl}
-            alt={title}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-            onError={() => setImgError(true)}
-          />
-        ) : (
-          <EpisodePlaceholder seasonNumber={data.seasonNumber} episodeNumber={data.episodeNumber} />
-        )}
-        
-        {/* 已观看角标 */}
-        {data.watched && (
-          <div className="absolute bottom-4 left-4 flex items-center gap-1.5 bg-[var(--color-surface)]/90 backdrop-blur-sm text-[var(--color-watched)] px-3 py-1.5 rounded-lg text-xs font-bold tracking-wider shadow-sm">
-            <Check size={14} strokeWidth={3} />
-            WATCHED
-          </div>
-        )}
+    <div
+      className="flex flex-col md:flex-row gap-6 p-6 rounded-2xl border border-[var(--color-border)] shadow-xl"
+      style={{ background: 'var(--color-surface)' }}
+    >
+      {/* ── Left: still image ── */}
+      <div className="w-full md:w-[340px] shrink-0">
+        <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-[var(--color-surface-3)] shadow-lg group">
+          {showImg ? (
+            <img
+              src={stillUrl}
+              alt={title || epCode}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <EpisodePlaceholder seasonNumber={data.seasonNumber} episodeNumber={data.episodeNumber} />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
+
+          {/* Watched badge */}
+          {data.watched && (
+            <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2">
+              <span className="inline-flex items-center gap-1 bg-white text-black text-[10px] font-bold tracking-widest px-2.5 py-1 rounded-full shadow">
+                <Check size={9} strokeWidth={3} />
+                WATCHED
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* 右侧信息：优化行高与间距 */}
-      <div className="flex flex-col flex-1 justify-center py-2">
-        
-        <div className="space-y-3 mb-5">
-          <div className="text-sm font-semibold tracking-wide flex items-center gap-2">
+      {/* ── Right: metadata ── */}
+      <div className="flex flex-col justify-between flex-1 gap-3 py-1">
+        {/* Top section */}
+        <div className="flex flex-col gap-3">
+          {/* Breadcrumb */}
+          <p className="text-xs font-semibold tracking-wide text-[var(--color-text-muted)]">
             <span className="text-[var(--color-accent)]">{data.show.title}</span>
-            <span className="text-[var(--color-text-muted)]">/</span>
-            <span className="text-[var(--color-text-muted)]">{seasonLabel} · Ep {data.episodeNumber}</span>
-          </div>
-          <h1 className="text-3xl lg:text-4xl font-bold text-[var(--color-text)] tracking-tight leading-tight">
-            {title || `Episode ${data.episodeNumber}`}
-          </h1>
-        </div>
+            <span className="mx-1.5 opacity-40">/</span>
+            <span>{seasonLabel} · Episode {data.episodeNumber}</span>
+          </p>
 
-        {/* 元数据 */}
-        <div className="flex items-center flex-wrap gap-3 text-sm text-[var(--color-text-muted)] font-medium mb-6">
-          {data.airDate && <span>{new Date(data.airDate).getFullYear()}</span>}
-          {data.runtime && <><Dot /><span>{data.runtime} min</span></>}
+          {/* Title */}
+          <h1 className="text-2xl font-bold text-[var(--color-text)] leading-snug tracking-tight">
+            {title || epCode}
+          </h1>
+
+          {/* Meta chips */}
+          <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-sm text-[var(--color-text-muted)]">
+            {data.airDate && <span>{new Date(data.airDate).getFullYear()}</span>}
+            {data.runtime && (
+              <>
+                <Dot />
+                <span>{data.runtime} 分钟</span>
+              </>
+            )}
+            {data.show.genres?.[0] && (
+              <>
+                <Dot />
+                <span>{data.show.genres[0]}</span>
+              </>
+            )}
+            {data.directors?.length > 0 && (
+              <>
+                <Dot />
+                <span className="truncate max-w-[200px]">{data.directors.join(', ')}</span>
+              </>
+            )}
+          </div>
+
+          {/* Rating */}
           {data.traktRating !== null && (
-            <>
-              <Dot />
-              <span className="flex items-center gap-1 text-[var(--color-accent)] font-bold">
-                <Star size={14} fill="currentColor" /> {data.traktRating}%
-              </span>
-            </>
+            <div className="flex items-center gap-1.5 w-fit">
+              <Star size={14} className="text-[var(--color-accent)] fill-[var(--color-accent)]" />
+              <span className="text-base font-bold text-[var(--color-text)]">{data.traktRating}%</span>
+              <span className="text-xs text-[var(--color-text-muted)]">Trakt</span>
+            </div>
+          )}
+
+          {/* Overview */}
+          {overview && (
+            <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed line-clamp-4">
+              {overview}
+            </p>
           )}
         </div>
 
-        {/* 简介 */}
-        {overview && (
-          <p className="text-[var(--color-text-secondary)] text-[15px] leading-relaxed mb-8">
-            {overview}
-          </p>
-        )}
-
-        {/* 底部操作按钮：使用主题的主色调 (Violet) */}
-        <div className="flex items-center gap-4 mt-auto">
+        {/* Actions */}
+        <div className="flex items-center gap-2 pt-1">
           <button
             onClick={onWatchClick}
-            className="flex items-center justify-center gap-2 bg-[var(--color-accent)] hover:bg-[var(--color-accent-light)] text-white px-8 py-3.5 rounded-xl font-bold text-sm transition-colors shadow-sm shadow-[var(--color-accent-glow)]"
+            aria-label="标记为已观看"
+            className="inline-flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold text-white transition-all duration-150 active:scale-95"
+            style={{
+              background: 'linear-gradient(135deg, #7c6af7, #6d5ce6)',
+              boxShadow: '0 4px 14px rgba(124,106,247,0.35)',
+            }}
           >
-            <Check size={18} strokeWidth={2.5} />
+            <Check size={15} strokeWidth={2.5} />
             标记为已观看
           </button>
+
           <button
             onClick={onHistoryClick}
-            className="flex items-center justify-center w-12 h-[48px] rounded-xl bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+            aria-label="观看历史"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:border-[var(--color-accent)]/40 hover:text-[var(--color-text)] transition-all duration-150 active:scale-95"
+            style={{ background: 'var(--color-surface-2)' }}
           >
-            <MoreVertical size={20} />
+            <History size={14} />
+            历史
           </button>
         </div>
       </div>
@@ -102,5 +140,5 @@ export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeI
 }
 
 function Dot() {
-  return <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-border-base)] inline-block" />
+  return <span className="w-1 h-1 rounded-full bg-current opacity-30 inline-block" />
 }
