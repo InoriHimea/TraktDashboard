@@ -26,8 +26,8 @@ export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeI
       position: 'relative',
       borderRadius: 16,
       overflow: 'hidden',
-      background: '#0f0f17',
-      border: '1px solid rgba(255,255,255,0.06)',
+      background: 'var(--color-surface)',
+      border: '1px solid var(--color-border-subtle)',
       boxShadow: '0 20px 60px rgba(0,0,0,0.45), 0 8px 24px rgba(0,0,0,0.3)',
       minHeight: 280,
     }}>
@@ -57,16 +57,15 @@ export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeI
         display: 'flex',
         flexDirection: 'row',
         gap: 32,
-        padding: '48px 36px 44px',
+        padding: '40px 36px 40px',
         alignItems: 'center',
       }}>
         {/* ── Left: still image — vertically centered, taller ── */}
-        <div style={{ width: 360, flexShrink: 0, alignSelf: 'stretch' }}>
+        <div style={{ width: 360, flexShrink: 0 }}>
           <div style={{
             position: 'relative',
             width: '100%',
-            height: '100%',
-            minHeight: 190,
+            aspectRatio: '16/9',
             borderRadius: 10,
             overflow: 'hidden',
             background: 'var(--color-surface-3)',
@@ -106,8 +105,8 @@ export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeI
         </div>
 
         {/* ── Right: metadata ── */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16, justifyContent: 'center', padding: '0' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 24, justifyContent: 'center', padding: '0' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
             {/* Breadcrumb */}
             <p style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.03em', margin: 0 }}>
               <span style={{ color: 'var(--color-accent)', opacity: 0.9 }}>{data.show.title}</span>
