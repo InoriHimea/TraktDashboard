@@ -177,3 +177,27 @@ button, a { transition: opacity 0.15s, background 0.15s, color 0.15s; }
     poster-border-spin 2.4s linear infinite,
     poster-border-hue  6s linear infinite;
 }
+
+/* Hero gradient — used by EpisodeDetailPage backdrop */
+.hero-gradient {
+  background: linear-gradient(
+    to bottom,
+    rgba(5, 5, 5, 0.2) 0%,
+    rgba(5, 5, 5, 0.4) 50%,
+    rgba(5, 5, 5, 1) 100%
+  );
+}
+
+/* Episode horizontal scroll custom scrollbar */
+.episode-scrollbar::-webkit-scrollbar { height: 4px; }
+.episode-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+.episode-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 138, 168, 0.3);
+  border-radius: 10px;
+}
+.episode-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 138, 168, 0.5);
+}

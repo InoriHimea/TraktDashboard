@@ -1,20 +1,19 @@
 import { useState } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
-import { ArrowLeft, RefreshCw } from "lucide-react";
+import { ArrowLeft, RefreshCw, Home, Search, Play } from "lucide-react";
 import { useEpisodeDetail } from "../hooks";
 import { EpisodeInfoCard } from "../components/EpisodeInfoCard";
 import { EpisodeSeasonStrip } from "../components/EpisodeSeasonStrip";
 import { WatchActionPanel } from "../components/WatchActionPanel";
 import { WatchHistoryPanel } from "../components/WatchHistoryPanel";
-import { Button } from "../components/ui/Button";
 import { resolveEpisodeStill } from "../lib/image";
 
 function EpisodeDetailSkeleton() {
     return (
-        <div style={{ flex: 1, minHeight: "100vh", background: "var(--color-bg)" }}>
-            <div style={{ height: "80vh", background: "var(--color-surface-2)", animation: "pulse 1.5s infinite" }} />
-            <div style={{ maxWidth: 1280, margin: "0 auto", padding: "48px 32px" }}>
-                <div style={{ width: "100%", height: 220, borderRadius: 16, background: "var(--color-surface)" }} />
+        <div className="min-h-screen bg-[#050505]">
+            <div className="h-[80vh] bg-white/5 animate-pulse" />
+            <div className="max-w-7xl mx-auto px-8 mt-12">
+                <div className="w-full h-56 rounded-2xl bg-white/5 animate-pulse" />
             </div>
         </div>
     );
@@ -22,10 +21,16 @@ function EpisodeDetailSkeleton() {
 
 function PageError({ onRetry }: { onRetry: () => void }) {
     return (
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
-                <p style={{ color: "var(--color-text-muted)", fontSize: 14 }}>加载失败</p>
-                <Button variant="secondary" size="md" icon={<RefreshCw size={14} />} onClick={onRetry}>重试</Button>
+        <div className="flex-1 flex items-center justify-center min-h-screen bg-[#050505]">
+            <div className="flex flex-col items-center gap-4">
+                <p className="text-zinc-400 text-sm">加载失败</p>
+                <button
+                    onClick={onRetry}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white text-sm transition-all cursor-pointer"
+                >
+                    <RefreshCw className="size-3.5" />
+                    重试
+                </button>
             </div>
         </div>
     );
@@ -56,7 +61,7 @@ export default function EpisodeDetailPage() {
     if (isLoading) return <EpisodeDetailSkeleton />;
     if (error) return <PageError onRetry={() => refetch()} />;
     if (!data) return (
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-text-muted)", fontSize: 14 }}>
+        <div className="flex-1 flex items-center justify-center min-h-screen bg-[#050505] text-zinc-400 text-sm">
             未找到该集
         </div>
     );
@@ -64,92 +69,69 @@ export default function EpisodeDetailPage() {
     const stillUrl = resolveEpisodeStill(data.stillPath);
 
     return (
-        <div style={{ flex: 1, background: "var(--color-bg)", color: "#fff" }}>
+        <div className="min-h-screen pb-24 md:pb-12 bg-[#050505] text-white">
 
             {/* ── Hero Section ── */}
-            <section style={{
-                position: "relative",
-                width: "100%",
-                minHeight: "80vh",
-                display: "flex",
-                alignItems: "flex-end",
-                overflow: "hidden",
-            }}>
+            <section className="relative w-full flex items-end overflow-hidden min-h-[80vh]">
                 {/* Background: blurred still */}
-                <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
+                <div className="absolute inset-0 z-0">
                     {stillUrl ? (
                         <img
                             src={stillUrl}
                             alt=""
-                            style={{
-                                width: "100%", height: "100%",
-                                objectFit: "cover",
-                                transform: "scale(1.05)",
-                                filter: "blur(4px) brightness(0.4)",
-                            }}
+                            className="w-full h-full object-cover scale-105 blur-sm brightness-[0.4]"
                         />
                     ) : (
-                        <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 100%)" }} />
+                        <div className="w-full h-full" style={{ background: "linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 100%)" }} />
                     )}
                     {/* Bottom fade to page bg */}
-                    <div style={{
-                        position: "absolute", inset: 0,
-                        background: "linear-gradient(to bottom, rgba(5,5,5,0.15) 0%, rgba(5,5,5,0.45) 55%, rgba(5,5,5,1) 100%)",
-                    }} />
+                    <div className="absolute inset-0 hero-gradient" />
                 </div>
 
                 {/* Back button — floating top-left */}
                 <button
                     onClick={() => navigate(-1)}
-                    style={{
-                        position: "absolute", top: 24, left: 32, zIndex: 20,
-                        display: "flex", alignItems: "center", gap: 6,
-                        fontSize: 13, fontWeight: 500,
-                        color: "rgba(255,255,255,0.65)",
-                        background: "rgba(255,255,255,0.08)",
-                        border: "1px solid rgba(255,255,255,0.12)",
-                        borderRadius: 8, cursor: "pointer", padding: "7px 14px",
-                        backdropFilter: "blur(10px)",
-                        transition: "all 0.15s",
-                    }}
-                    onMouseEnter={e => {
-                        e.currentTarget.style.color = "#fff";
-                        e.currentTarget.style.background = "rgba(255,255,255,0.15)";
-                    }}
-                    onMouseLeave={e => {
-                        e.currentTarget.style.color = "rgba(255,255,255,0.65)";
-                        e.currentTarget.style.background = "rgba(255,255,255,0.08)";
-                    }}
+                    className="absolute top-6 left-8 z-20 flex items-center gap-1.5 text-xs font-medium text-white/65 bg-white/8 border border-white/12 rounded-lg px-3.5 py-1.5 backdrop-blur-md hover:text-white hover:bg-white/15 transition-all cursor-pointer"
                 >
-                    <ArrowLeft size={14} />
+                    <ArrowLeft className="size-3.5" />
                     返回
                 </button>
 
                 {/* Hero content — grid: left text + right thumbnail */}
-                <div style={{
-                    position: "relative", zIndex: 10,
-                    width: "100%", maxWidth: 1280, margin: "0 auto",
-                    padding: "0 32px 64px",
-                    display: "grid",
-                    gridTemplateColumns: "1fr auto",
-                    gap: 48,
-                    alignItems: "flex-end",
-                }}>
-                    <EpisodeInfoCard
-                        data={data}
-                        onWatchClick={() => setWatchPanelOpen(true)}
-                        onHistoryClick={() => setHistoryPanelOpen(true)}
-                    />
+                <div className="relative z-10 w-full max-w-7xl mx-auto px-8 pb-16 grid grid-cols-1 lg:grid-cols-12 gap-12 items-end">
+                    <div className="lg:col-span-8">
+                        <EpisodeInfoCard
+                            data={data}
+                            onWatchClick={() => setWatchPanelOpen(true)}
+                            onHistoryClick={() => setHistoryPanelOpen(true)}
+                        />
+                    </div>
+                    {/* Right thumbnail — desktop only */}
+                    {stillUrl && (
+                        <div className="hidden lg:block lg:col-span-4 group relative">
+                            <div className="aspect-video rounded-2xl overflow-hidden border border-white/10 shadow-2xl transition-transform duration-500 group-hover:scale-[1.02]">
+                                <img
+                                    src={stillUrl}
+                                    alt=""
+                                    className="w-full h-full object-cover"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Play className="size-16 text-white fill-white" />
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </section>
 
             {/* ── Episodes Section ── */}
-            <section style={{ maxWidth: 1280, margin: "0 auto", padding: "48px 32px 80px" }}>
+            <section className="max-w-7xl mx-auto px-8 mt-12 mb-20">
                 <EpisodeSeasonStrip
                     episodes={data.seasonEpisodes}
                     seasonNumber={data.seasonNumber}
                     currentEpisodeNumber={data.episodeNumber}
                     showId={data.showId}
+                    watched={data.watched}
                 />
             </section>
 
@@ -171,6 +153,21 @@ export default function EpisodeDetailPage() {
                 episodeNumber={data.episodeNumber}
                 onDeleted={() => refetch()}
             />
+
+            {/* ── Mobile Bottom Nav ── */}
+            <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center px-6 pb-6 pt-3 md:hidden bg-[#050505]/90 backdrop-blur-lg z-50 rounded-t-3xl shadow-[0_-10px_40px_-15px_rgba(0,0,0,1)] border-t border-white/5">
+                <button
+                    onClick={() => navigate('/progress')}
+                    className="flex flex-col items-center justify-center text-zinc-400 hover:text-white transition-all cursor-pointer"
+                >
+                    <Home className="size-5" />
+                    <span className="text-[10px] uppercase tracking-widest mt-1">Home</span>
+                </button>
+                <button className="flex flex-col items-center justify-center text-zinc-400 hover:text-white transition-all cursor-pointer">
+                    <Search className="size-5" />
+                    <span className="text-[10px] uppercase tracking-widest mt-1">Search</span>
+                </button>
+            </nav>
         </div>
     );
 }

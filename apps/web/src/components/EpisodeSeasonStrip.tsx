@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { cn } from "../lib/utils";
 import { resolveEpisodeTitle } from "../lib/i18n";
 import { resolveEpisodeStill } from "../lib/image";
 import { EpisodePlaceholder } from "./ui/EpisodePlaceholder";
@@ -11,6 +12,7 @@ interface EpisodeSeasonStripProps {
     seasonNumber: number;
     currentEpisodeNumber: number;
     showId: number;
+    watched: boolean;
 }
 
 export function EpisodeSeasonStrip({
@@ -18,6 +20,7 @@ export function EpisodeSeasonStrip({
     seasonNumber,
     currentEpisodeNumber,
     showId,
+    watched,
 }: EpisodeSeasonStripProps) {
     const navigate = useNavigate();
     const currentRef = useRef<HTMLDivElement>(null);
@@ -36,48 +39,71 @@ export function EpisodeSeasonStrip({
         seasonNumber === 0 ? "Specials" : `Season ${seasonNumber}`;
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+        <div className="flex flex-col gap-6">
             {/* Header */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <h2 style={{
-                    fontSize: 20, fontWeight: 700, margin: 0,
-                    color: "var(--color-text-base)",
-                    letterSpacing: "-0.01em",
-                    display: "flex", alignItems: "center", gap: 12,
-                }}>
-                    SEASONS
-                    <span style={{ display: "inline-block", width: 40, height: 2, background: "rgba(255,255,255,0.1)", borderRadius: 2 }} />
-                    <span style={{ color: "var(--color-text-secondary)" }}>{seasonLabel.toUpperCase()}</span>
+            <div className="flex items-center justify-between mb-8">
+                <h2 className="text-2xl font-bold tracking-tight flex items-center gap-3 text-white">
+                    SEASONS / SPECIALS
+                    <span className="w-12 h-0.5 bg-white/10" />
                 </h2>
+                {/* VIEW ALL — only in unwatched/grid mode */}
+                {!watched && (
+                    <button
+                        className="text-[#ff8aa8] text-xs font-bold tracking-widest uppercase flex items-center gap-2 hover:translate-x-1 transition-transform cursor-pointer"
+                        onClick={() => navigate(`/shows/${showId}`)}
+                    >
+                        VIEW ALL <ArrowRight className="size-3.5" />
+                    </button>
+                )}
             </div>
 
-            {/* Horizontal scroll */}
-            <div style={{
-                display: "flex",
-                gap: 20,
-                overflowX: "auto",
-                paddingTop: 4,
-                paddingBottom: 12,
-                scrollbarWidth: "thin",
-                scrollbarColor: "rgba(255,255,255,0.15) transparent",
-            }}>
-                {episodes.map((ep) => {
-                    const isCurrent = ep.episodeNumber === currentEpisodeNumber;
-                    const isUnaired = ep.aired === false;
-                    return (
-                        <EpisodeThumbnail
-                            key={ep.episodeId}
-                            episode={ep}
-                            seasonNumber={seasonNumber}
-                            showId={showId}
-                            isCurrent={isCurrent}
-                            isUnaired={isUnaired}
-                            ref={isCurrent ? currentRef : null}
-                            onNavigate={(s, e) => navigate(`/shows/${showId}/seasons/${s}/episodes/${e}`)}
-                        />
-                    );
-                })}
-            </div>
+            {/* Episode list — conditional layout */}
+            {watched ? (
+                /* Horizontal scroll (watched state) */
+                <div className="flex overflow-x-auto gap-6 pb-6 episode-scrollbar scroll-smooth">
+                    {episodes.map((ep) => {
+                        const isCurrent = ep.episodeNumber === currentEpisodeNumber;
+                        const isUnaired = ep.aired === false;
+                        return (
+                            <EpisodeThumbnail
+                                key={ep.episodeId}
+                                episode={ep}
+                                seasonNumber={seasonNumber}
+                                showId={showId}
+                                isCurrent={isCurrent}
+                                isUnaired={isUnaired}
+                                className="flex-none w-[280px]"
+                                ref={isCurrent ? currentRef : null}
+                                onNavigate={(s, e) =>
+                                    navigate(`/shows/${showId}/seasons/${s}/episodes/${e}`)
+                                }
+                            />
+                        );
+                    })}
+                </div>
+            ) : (
+                /* Responsive grid (unwatched state) */
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {episodes.map((ep) => {
+                        const isCurrent = ep.episodeNumber === currentEpisodeNumber;
+                        const isUnaired = ep.aired === false;
+                        return (
+                            <EpisodeThumbnail
+                                key={ep.episodeId}
+                                episode={ep}
+                                seasonNumber={seasonNumber}
+                                showId={showId}
+                                isCurrent={isCurrent}
+                                isUnaired={isUnaired}
+                                ref={isCurrent ? currentRef : null}
+                                onNavigate={(s, e) =>
+                                    navigate(`/shows/${showId}/seasons/${s}/episodes/${e}`)
+                                }
+                            />
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }
@@ -90,103 +116,73 @@ interface EpisodeThumbnailProps {
     showId: number;
     isCurrent: boolean;
     isUnaired: boolean;
+    className?: string;
     onNavigate: (season: number, episode: number) => void;
 }
 
 const EpisodeThumbnail = React.forwardRef<
     HTMLDivElement,
     EpisodeThumbnailProps
->(({ episode, seasonNumber, isCurrent, isUnaired, onNavigate }, ref) => {
+>(({ episode, seasonNumber, isCurrent, isUnaired, className, onNavigate }, ref) => {
     const [imgError, setImgError] = useState(false);
-    const [hovered, setHovered] = useState(false);
 
     const title = resolveEpisodeTitle(episode);
     const stillUrl = resolveEpisodeStill(episode.stillPath);
     const showImg = stillUrl && !imgError;
-    const isWatched = episode.watched;
     const epCode = `S${String(seasonNumber).padStart(2, "0")} · E${String(episode.episodeNumber).padStart(2, "0")}`;
 
     return (
         <div
             ref={ref}
-            style={{
-                width: 280,
-                flexShrink: 0,
-                cursor: isUnaired ? "default" : "pointer",
-                opacity: isUnaired ? 0.5 : 1,
-            }}
+            className={cn(
+                "group cursor-pointer",
+                isUnaired && "opacity-50 cursor-default",
+                className
+            )}
             onClick={() => !isUnaired && onNavigate(seasonNumber, episode.episodeNumber)}
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
             aria-current={isCurrent ? "true" : undefined}
             aria-label={`${epCode} ${title}`}
         >
             {/* Thumbnail */}
-            <div style={{
-                position: "relative",
-                width: "100%",
-                aspectRatio: "16/9",
-                borderRadius: 12,
-                overflow: "hidden",
-                marginBottom: 12,
-                background: "var(--color-surface-3)",
-                border: "1px solid rgba(255,255,255,0.05)",
-                boxShadow: hovered ? "0 12px 32px rgba(0,0,0,0.6)" : "0 4px 16px rgba(0,0,0,0.4)",
-                transition: "box-shadow 0.2s ease",
-            }}>
+            <div
+                className={cn(
+                    "relative aspect-video rounded-xl overflow-hidden mb-3 bg-zinc-900 shadow-xl",
+                    isCurrent
+                        ? "ring-2 ring-[#ff8aa8] ring-offset-4 ring-offset-[#050505]"
+                        : "border border-white/5"
+                )}
+            >
                 {showImg ? (
                     <img
                         src={stillUrl}
                         alt={title}
-                        style={{
-                            width: "100%", height: "100%", objectFit: "cover",
-                            transform: hovered ? "scale(1.08)" : "scale(1)",
-                            transition: "transform 0.5s ease",
-                        }}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                         loading="lazy"
                         onError={() => setImgError(true)}
                     />
                 ) : (
-                    <EpisodePlaceholder seasonNumber={seasonNumber} episodeNumber={episode.episodeNumber} />
+                    <EpisodePlaceholder
+                        seasonNumber={seasonNumber}
+                        episodeNumber={episode.episodeNumber}
+                    />
                 )}
 
-                {/* Gradient */}
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 50%)", pointerEvents: "none" }} />
-
-                {/* Runtime badge — bottom right */}
+                {/* Duration badge */}
                 {episode.runtime && (
-                    <div style={{
-                        position: "absolute", bottom: 8, right: 8,
-                        background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)",
-                        color: "#fff", padding: "2px 7px", borderRadius: 4,
-                        fontSize: 10, fontWeight: 700,
-                    }}>
+                    <div className="absolute bottom-2 right-2 bg-black/80 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-bold text-white">
                         {episode.runtime}m
-                    </div>
-                )}
-
-                {/* Watched checkmark — bottom right (replaces runtime position if both) */}
-                {isWatched && (
-                    <div style={{
-                        position: "absolute", bottom: 8, right: episode.runtime ? 52 : 8,
-                        width: 22, height: 22, borderRadius: "50%",
-                        background: "var(--color-accent)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        boxShadow: "0 2px 8px rgba(124,106,247,0.5)",
-                    }}>
-                        <Check size={11} strokeWidth={3} color="#fff" />
                     </div>
                 )}
 
                 {/* Current episode overlay tint */}
                 {isCurrent && (
-                    <div style={{ position: "absolute", inset: 0, background: "rgba(124,106,247,0.1)", mixBlendMode: "overlay", pointerEvents: "none" }} />
+                    <div className="absolute inset-0 bg-[#ff8aa8]/10 mix-blend-overlay pointer-events-none" />
                 )}
 
-                {/* Unaired */}
+                {/* Unaired overlay */}
                 {isUnaired && (
-                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.35)" }}>
-                        <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", padding: "3px 8px", borderRadius: 4, background: "rgba(0,0,0,0.7)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/35">
+                        <span className="text-[9px] font-bold tracking-[0.08em] px-2 py-0.5 rounded bg-black/70 border border-white/10 text-white/50 uppercase">
                             未播出
                         </span>
                     </div>
@@ -195,17 +191,17 @@ const EpisodeThumbnail = React.forwardRef<
 
             {/* Title */}
             <div>
-                <h4 style={{
-                    fontSize: 13,
-                    fontWeight: 700,
-                    margin: 0,
-                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                    color: isCurrent ? "var(--color-accent)" : hovered ? "var(--color-text-base)" : "var(--color-text-secondary)",
-                    transition: "color 0.15s",
-                }}>
+                <h3
+                    className={cn(
+                        "font-bold text-sm truncate",
+                        isCurrent
+                            ? "text-[#ff8aa8]"
+                            : "text-white group-hover:text-[#ff8aa8] transition-colors"
+                    )}
+                >
                     {title || `Episode ${episode.episodeNumber}`}
-                </h4>
-                <p style={{ fontSize: 11, color: "var(--color-text-muted)", margin: "4px 0 0", fontWeight: 500, letterSpacing: "0.04em" }}>
+                </h3>
+                <p className="text-xs text-zinc-500 tracking-wider mt-1">
                     {epCode}
                 </p>
             </div>
