@@ -36,67 +36,34 @@ export function EpisodeSeasonStrip({
         seasonNumber === 0 ? "Specials" : `Season ${seasonNumber}`;
 
     return (
-        <div
-            style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 14,
-                padding: "20px 24px",
-                borderRadius: 16,
-                border: "1px solid var(--color-border-subtle)",
-                background: "var(--color-surface)",
-            }}
-        >
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
             {/* Header */}
-            <div
-                style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: "var(--color-text-muted)",
-                    letterSpacing: "0.04em",
-                    textTransform: "uppercase",
-                }}
-            >
-                <svg
-                    width="13"
-                    height="13"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    style={{ opacity: 0.5 }}
-                >
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
-                </svg>
-                <span>Seasons</span>
-                <span style={{ opacity: 0.25 }}>/</span>
-                <span style={{ color: "var(--color-text-secondary)" }}>
-                    {seasonLabel}
-                </span>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <h2 style={{
+                    fontSize: 20, fontWeight: 700, margin: 0,
+                    color: "var(--color-text-base)",
+                    letterSpacing: "-0.01em",
+                    display: "flex", alignItems: "center", gap: 12,
+                }}>
+                    SEASONS
+                    <span style={{ display: "inline-block", width: 40, height: 2, background: "rgba(255,255,255,0.1)", borderRadius: 2 }} />
+                    <span style={{ color: "var(--color-text-secondary)" }}>{seasonLabel.toUpperCase()}</span>
+                </h2>
             </div>
 
-            {/* Horizontal scroll — no outer card, just the strip */}
-            <div
-                style={{
-                    display: "flex",
-                    gap: 12,
-                    overflowX: "auto",
-                    paddingTop: 4,
-                    paddingBottom: 6,
-                    scrollbarWidth: "thin",
-                    scrollbarColor: "var(--color-border) transparent",
-                }}
-            >
+            {/* Horizontal scroll */}
+            <div style={{
+                display: "flex",
+                gap: 20,
+                overflowX: "auto",
+                paddingTop: 4,
+                paddingBottom: 12,
+                scrollbarWidth: "thin",
+                scrollbarColor: "rgba(255,255,255,0.15) transparent",
+            }}>
                 {episodes.map((ep) => {
                     const isCurrent = ep.episodeNumber === currentEpisodeNumber;
                     const isUnaired = ep.aired === false;
-
                     return (
                         <EpisodeThumbnail
                             key={ep.episodeId}
@@ -106,11 +73,7 @@ export function EpisodeSeasonStrip({
                             isCurrent={isCurrent}
                             isUnaired={isUnaired}
                             ref={isCurrent ? currentRef : null}
-                            onNavigate={(s, e) =>
-                                navigate(
-                                    `/shows/${showId}/seasons/${s}/episodes/${e}`,
-                                )
-                            }
+                            onNavigate={(s, e) => navigate(`/shows/${showId}/seasons/${s}/episodes/${e}`)}
                         />
                     );
                 })}
@@ -147,170 +110,102 @@ const EpisodeThumbnail = React.forwardRef<
         <div
             ref={ref}
             style={{
-                width: 220,
+                width: 280,
                 flexShrink: 0,
                 cursor: isUnaired ? "default" : "pointer",
                 opacity: isUnaired ? 0.5 : 1,
             }}
-            onClick={() =>
-                !isUnaired && onNavigate(seasonNumber, episode.episodeNumber)
-            }
+            onClick={() => !isUnaired && onNavigate(seasonNumber, episode.episodeNumber)}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
             aria-current={isCurrent ? "true" : undefined}
             aria-label={`${epCode} ${title}`}
         >
             {/* Thumbnail */}
-            <div
-                style={{
-                    position: "relative",
-                    width: "100%",
-                    aspectRatio: "16/9",
-                    borderRadius: 8,
-                    overflow: "hidden",
-                    marginBottom: 10,
-                    boxShadow: hovered
-                        ? "0 6px 20px rgba(0,0,0,0.5)"
-                        : "0 2px 10px rgba(0,0,0,0.35)",
-                    transition: "box-shadow 0.2s ease",
-                    background: "var(--color-surface-3)",
-                }}
-            >
+            <div style={{
+                position: "relative",
+                width: "100%",
+                aspectRatio: "16/9",
+                borderRadius: 12,
+                overflow: "hidden",
+                marginBottom: 12,
+                background: "var(--color-surface-3)",
+                border: "1px solid rgba(255,255,255,0.05)",
+                boxShadow: hovered ? "0 12px 32px rgba(0,0,0,0.6)" : "0 4px 16px rgba(0,0,0,0.4)",
+                transition: "box-shadow 0.2s ease",
+            }}>
                 {showImg ? (
                     <img
                         src={stillUrl}
                         alt={title}
                         style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                            transform: hovered ? "scale(1.04)" : "scale(1)",
-                            transition: "transform 0.3s ease",
+                            width: "100%", height: "100%", objectFit: "cover",
+                            transform: hovered ? "scale(1.08)" : "scale(1)",
+                            transition: "transform 0.5s ease",
                         }}
                         loading="lazy"
                         onError={() => setImgError(true)}
                     />
                 ) : (
-                    <EpisodePlaceholder
-                        seasonNumber={seasonNumber}
-                        episodeNumber={episode.episodeNumber}
-                    />
+                    <EpisodePlaceholder seasonNumber={seasonNumber} episodeNumber={episode.episodeNumber} />
                 )}
 
-                {/* Gradient overlay */}
-                <div
-                    style={{
-                        position: "absolute",
-                        inset: 0,
-                        background:
-                            "linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 50%)",
-                        pointerEvents: "none",
-                    }}
-                />
+                {/* Gradient */}
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 50%)", pointerEvents: "none" }} />
 
-                {/* Runtime badge */}
+                {/* Runtime badge — bottom right */}
                 {episode.runtime && (
-                    <div
-                        style={{
-                            position: "absolute",
-                            bottom: 7,
-                            left: 8,
-                            background: "rgba(0,0,0,0.7)",
-                            backdropFilter: "blur(4px)",
-                            color: "rgba(255,255,255,0.85)",
-                            padding: "2px 6px",
-                            borderRadius: 4,
-                            fontSize: 10,
-                            fontWeight: 600,
-                            letterSpacing: "0.02em",
-                        }}
-                    >
+                    <div style={{
+                        position: "absolute", bottom: 8, right: 8,
+                        background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)",
+                        color: "#fff", padding: "2px 7px", borderRadius: 4,
+                        fontSize: 10, fontWeight: 700,
+                    }}>
                         {episode.runtime}m
                     </div>
                 )}
 
-                {/* Watched checkmark */}
+                {/* Watched checkmark — bottom right (replaces runtime position if both) */}
                 {isWatched && (
-                    <div
-                        style={{
-                            position: "absolute",
-                            bottom: 7,
-                            right: 8,
-                            width: 20,
-                            height: 20,
-                            borderRadius: "50%",
-                            background: "var(--color-accent)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            boxShadow: "0 2px 6px rgba(124,106,247,0.5)",
-                        }}
-                    >
-                        <Check size={10} strokeWidth={3} color="#fff" />
+                    <div style={{
+                        position: "absolute", bottom: 8, right: episode.runtime ? 52 : 8,
+                        width: 22, height: 22, borderRadius: "50%",
+                        background: "var(--color-accent)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        boxShadow: "0 2px 8px rgba(124,106,247,0.5)",
+                    }}>
+                        <Check size={11} strokeWidth={3} color="#fff" />
                     </div>
                 )}
 
-                {/* Unaired overlay */}
+                {/* Current episode overlay tint */}
+                {isCurrent && (
+                    <div style={{ position: "absolute", inset: 0, background: "rgba(124,106,247,0.1)", mixBlendMode: "overlay", pointerEvents: "none" }} />
+                )}
+
+                {/* Unaired */}
                 {isUnaired && (
-                    <div
-                        style={{
-                            position: "absolute",
-                            inset: 0,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            background: "rgba(0,0,0,0.35)",
-                        }}
-                    >
-                        <span
-                            style={{
-                                fontSize: 9,
-                                fontWeight: 700,
-                                letterSpacing: "0.08em",
-                                padding: "3px 8px",
-                                borderRadius: 4,
-                                background: "rgba(0,0,0,0.7)",
-                                border: "1px solid rgba(255,255,255,0.1)",
-                                color: "rgba(255,255,255,0.5)",
-                                textTransform: "uppercase",
-                            }}
-                        >
+                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.35)" }}>
+                        <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", padding: "3px 8px", borderRadius: 4, background: "rgba(0,0,0,0.7)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>
                             未播出
                         </span>
                     </div>
                 )}
             </div>
 
-            {/* Title row */}
+            {/* Title */}
             <div>
-                <h4
-                    style={{
-                        fontSize: 12.5,
-                        fontWeight: 600,
-                        margin: 0,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        color: isCurrent
-                            ? "var(--color-accent)"
-                            : hovered
-                              ? "var(--color-text-base)"
-                              : isWatched
-                                ? "var(--color-text-muted)"
-                                : "var(--color-text-secondary)",
-                        transition: "color 0.15s",
-                    }}
-                >
+                <h4 style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    margin: 0,
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    color: isCurrent ? "var(--color-accent)" : hovered ? "var(--color-text-base)" : "var(--color-text-secondary)",
+                    transition: "color 0.15s",
+                }}>
                     {title || `Episode ${episode.episodeNumber}`}
                 </h4>
-                <p
-                    style={{
-                        fontSize: 11,
-                        color: "var(--color-text-muted)",
-                        margin: "3px 0 0",
-                        fontWeight: 500,
-                    }}
-                >
+                <p style={{ fontSize: 11, color: "var(--color-text-muted)", margin: "4px 0 0", fontWeight: 500, letterSpacing: "0.04em" }}>
                     {epCode}
                 </p>
             </div>
