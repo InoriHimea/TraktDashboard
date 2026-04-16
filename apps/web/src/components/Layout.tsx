@@ -17,7 +17,6 @@ export default function Layout({ children }: { children: ReactNode }) {
                 minHeight: "100vh",
                 background: "var(--color-bg)",
                 position: "relative",
-                overflow: "hidden",
             }}
         >
             {/* Ambient glow blobs 保持完全不变 */}

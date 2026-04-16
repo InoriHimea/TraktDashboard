@@ -64,7 +64,7 @@ export default function EpisodeDetailPage() {
     const stillUrl = resolveEpisodeStill(data.stillPath);
 
     return (
-        <main style={{ flex: 1, background: "var(--color-bg)", color: "#fff" }}>
+        <div style={{ flex: 1, background: "var(--color-bg)", color: "#fff" }}>
 
             {/* ── Hero Section ── */}
             <section style={{
@@ -171,6 +171,6 @@ export default function EpisodeDetailPage() {
                 episodeNumber={data.episodeNumber}
                 onDeleted={() => refetch()}
             />
-        </main>
+        </div>
     );
 }
