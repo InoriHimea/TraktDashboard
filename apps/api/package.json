@@ -1,29 +1,30 @@
 {
-  "name": "@trakt-dashboard/api",
-  "version": "0.2.0",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "bun --watch src/index.ts",
-    "start": "bun src/index.ts",
-    "db:generate": "cd ../../packages/db && pnpm db:generate",
-    "db:migrate": "bun src/migrate.ts"
-  },
-  "dependencies": {
-    "@trakt-dashboard/db": "workspace:*",
-    "@trakt-dashboard/types": "workspace:*",
-    "bullmq": "^5.73.1",
-    "dayjs": "^1.11.20",
-    "drizzle-orm": "^0.45.2",
-    "hono": "^4.12.12",
-    "ioredis": "^5.10.1",
-    "jose": "^6.2.2",
-    "p-limit": "^7.3.0",
-    "postgres": "^3.4.9"
-  },
-  "devDependencies": {
-    "@types/bun": "latest",
-    "@types/node": "^22.10.2",
-    "fast-check": "^3.23.2"
-  }
+    "name": "@trakt-dashboard/api",
+    "version": "0.2.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "true",
+        "dev": "bun --watch src/index.ts",
+        "start": "bun src/index.ts",
+        "db:generate": "cd ../../packages/db && pnpm db:generate",
+        "db:migrate": "bun src/migrate.ts"
+    },
+    "dependencies": {
+        "@trakt-dashboard/db": "workspace:*",
+        "@trakt-dashboard/types": "workspace:*",
+        "bullmq": "^5.73.1",
+        "dayjs": "^1.11.20",
+        "drizzle-orm": "^0.45.2",
+        "hono": "^4.12.12",
+        "ioredis": "^5.10.1",
+        "jose": "^6.2.2",
+        "p-limit": "^7.3.0",
+        "postgres": "^3.4.9"
+    },
+    "devDependencies": {
+        "@types/bun": "latest",
+        "@types/node": "^22.10.2",
+        "fast-check": "^3.23.2"
+    }
 }

@@ -1,88 +1,103 @@
 name: trakt-dashboard
 
+# ⚠️  Required environment variables — copy .env.example to .env and fill in values:
+#   POSTGRES_PASSWORD   strong password for the database
+#   TRAKT_CLIENT_ID     Trakt OAuth application client ID
+#   TRAKT_CLIENT_SECRET Trakt OAuth application client secret
+#   TMDB_API_KEY        TMDB v3 API key
+#   API_SECRET          random secret for session signing (e.g. openssl rand -hex 32)
+
 services:
-  # ─── PostgreSQL ───────────────────────────────────────────────────────────────
-  postgres:
-    image: postgres:16-alpine
-    container_name: trakt-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-trakt}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trakt}
-      POSTGRES_DB: ${POSTGRES_DB:-trakt_dashboard}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-trakt} -d ${POSTGRES_DB:-trakt_dashboard}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
+    # ─── PostgreSQL ───────────────────────────────────────────────────────────────
+    postgres:
+        image: postgres:16-alpine
+        container_name: trakt-db
+        restart: unless-stopped
+        environment:
+            POSTGRES_USER: ${POSTGRES_USER:-trakt}
+            # :? causes docker compose to abort with an error if the variable is unset or empty
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Please set POSTGRES_PASSWORD in your .env file}
+            POSTGRES_DB: ${POSTGRES_DB:-trakt_dashboard}
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        ports:
+            # Bind to loopback only — do not expose the database to the network
+            - "127.0.0.1:5432:5432"
+        healthcheck:
+            test:
+                [
+                    "CMD-SHELL",
+                    "pg_isready -U ${POSTGRES_USER:-trakt} -d ${POSTGRES_DB:-trakt_dashboard}",
+                ]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 20s
 
-  # ─── KeyDB (Redis-compatible, replaces Redis) ─────────────────────────────────
-  redis:
-    image: eqalpha/keydb:latest
-    container_name: trakt-keydb
-    restart: unless-stopped
-    command: keydb-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
-    volumes:
-      - redis_data:/data
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "keydb-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    # ─── KeyDB (Redis-compatible, replaces Redis) ─────────────────────────────────
+    redis:
+        image: eqalpha/keydb:v6.3.4
+        container_name: trakt-keydb
+        restart: unless-stopped
+        # volatile-lru: only evict keys that have a TTL set, protecting persistent data
+        command: keydb-server --appendonly yes --maxmemory 128mb --maxmemory-policy volatile-lru
+        volumes:
+            - redis_data:/data
+        ports:
+            # Bind to loopback only — do not expose Redis to the network
+            - "127.0.0.1:6379:6379"
+        healthcheck:
+            test: ["CMD", "keydb-cli", "ping"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
 
-  # ─── API (Bun + Hono) ─────────────────────────────────────────────────────────
-  api:
-    image: ${API_IMAGE:-ghcr.io/inorihimea/trakt-dashboard-api:latest}
-    container_name: trakt-api
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-trakt}:${POSTGRES_PASSWORD:-trakt}@postgres:5432/${POSTGRES_DB:-trakt_dashboard}
-      REDIS_URL: redis://redis:6379
-      TRAKT_CLIENT_ID: ${TRAKT_CLIENT_ID}
-      TRAKT_CLIENT_SECRET: ${TRAKT_CLIENT_SECRET}
-      TRAKT_REDIRECT_URI: ${TRAKT_REDIRECT_URI:-http://localhost/auth/callback}
-      TMDB_API_KEY: ${TMDB_API_KEY}
-      TVDB_API_KEY: ${TVDB_API_KEY}
-      API_PORT: 3001
-      API_SECRET: ${API_SECRET}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
-      SYNC_INTERVAL_MINUTES: ${SYNC_INTERVAL_MINUTES:-15}
-      NODE_ENV: production
-      # Optional HTTP proxy for TMDB/Trakt access
-      HTTP_PROXY: ${HTTP_PROXY:-}
-      HTTPS_PROXY: ${HTTPS_PROXY:-}
-    ports:
-      - "3001:3001"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
+    # ─── API (Bun + Hono) ─────────────────────────────────────────────────────────
+    api:
+        image: ${API_IMAGE:-ghcr.io/inorihimea/trakt-dashboard-api:latest}
+        container_name: trakt-api
+        restart: unless-stopped
+        depends_on:
+            postgres:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+        environment:
+            DATABASE_URL: postgresql://${POSTGRES_USER:-trakt}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-trakt_dashboard}
+            REDIS_URL: redis://redis:6379
+            TRAKT_CLIENT_ID: ${TRAKT_CLIENT_ID}
+            TRAKT_CLIENT_SECRET: ${TRAKT_CLIENT_SECRET}
+            TRAKT_REDIRECT_URI: ${TRAKT_REDIRECT_URI:-http://localhost/auth/callback}
+            TMDB_API_KEY: ${TMDB_API_KEY}
+            TVDB_API_KEY: ${TVDB_API_KEY}
+            API_PORT: 3001
+            API_SECRET: ${API_SECRET}
+            FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+            SYNC_INTERVAL_MINUTES: ${SYNC_INTERVAL_MINUTES:-15}
+            NODE_ENV: production
+            # Optional HTTP proxy for TMDB/Trakt access
+            HTTP_PROXY: ${HTTP_PROXY:-}
+            HTTPS_PROXY: ${HTTPS_PROXY:-}
+        ports:
+            - "3001:3001"
+        healthcheck:
+            test:
+                ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
+            interval: 15s
+            timeout: 5s
+            retries: 3
+            start_period: 30s
 
-  # ─── Web (Nginx serving Vite build) ──────────────────────────────────────────
-  web:
-    image: ${WEB_IMAGE:-ghcr.io/inorihimea/trakt-dashboard-web:latest}
-    container_name: trakt-web
-    restart: unless-stopped
-    depends_on:
-      api:
-        condition: service_healthy
-    ports:
-      - "80:80"
+    # ─── Web (Nginx serving Vite build) ──────────────────────────────────────────
+    # Nginx is a static file server + reverse proxy — it does not need to wait for
+    # the API to be healthy before starting (requests are proxied at runtime).
+    web:
+        image: ${WEB_IMAGE:-ghcr.io/inorihimea/trakt-dashboard-web:latest}
+        container_name: trakt-web
+        restart: unless-stopped
+        ports:
+            - "80:80"
 
 volumes:
-  postgres_data:
-  redis_data:
+    postgres_data:
+    redis_data:

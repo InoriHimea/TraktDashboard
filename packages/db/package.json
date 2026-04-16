@@ -1,20 +1,21 @@
 {
-  "name": "@trakt-dashboard/db",
-  "version": "0.0.1",
-  "private": true,
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
-  "scripts": {
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
-  },
-  "dependencies": {
-    "drizzle-orm": "^0.38.3",
-    "postgres": "^3.4.5"
-  },
-  "devDependencies": {
-    "drizzle-kit": "^0.30.1",
-    "@types/node": "^22.10.2"
-  }
+    "name": "@trakt-dashboard/db",
+    "version": "0.0.1",
+    "private": true,
+    "main": "./src/index.ts",
+    "types": "./src/index.ts",
+    "scripts": {
+        "build": "true",
+        "db:generate": "drizzle-kit generate",
+        "db:migrate": "drizzle-kit migrate",
+        "db:studio": "drizzle-kit studio"
+    },
+    "dependencies": {
+        "drizzle-orm": "^0.38.3",
+        "postgres": "^3.4.5"
+    },
+    "devDependencies": {
+        "drizzle-kit": "^0.30.1",
+        "@types/node": "^22.10.2"
+    }
 }
