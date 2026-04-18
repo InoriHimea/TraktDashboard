@@ -63,10 +63,10 @@ export default function EpisodeDetailPage() {
             </header>
 
             {/* 主内容区：极致的留白 pt-12 md:pt-20 以及 gap-12 lg:gap-24 */}
-            <main className="max-w-[1400px] mx-auto px-12 md:px-20 lg:px-28 pt-12 md:pt-20 flex flex-col md:flex-row gap-12 lg:gap-24 items-start">
+            <main className="max-w-[1400px] mx-auto px-12 md:px-20 lg:px-28 pt-12 md:pt-20 flex flex-col md:flex-row gap-12 lg:gap-24 items-start overflow-visible">
                 
                 {/* 左侧海报区 — group 必须写在这里，Tailwind v4 @apply 不支持 variant 标记类 */}
-                <div className="w-full md:w-[380px] lg:w-[480px] shrink-0 relative group">
+                <div className="w-full md:w-[380px] lg:w-[480px] shrink-0 relative group overflow-visible">
                     <div className="w-full aspect-video rounded-2xl overflow-hidden bg-muted shadow-2xl border border-border/30 relative">
                         {stillUrl ? (
                             <img 
