@@ -526,14 +526,36 @@ async function upsertShowFromTrakt(
                     return;
                 }
 
-                // Fetch TMDB episode translations if displayLanguage set
+                // Fetch TMDB episode data (translations + still images)
+                // Always fetch base TMDB season (no language) to get still_path
                 let tmdbEpisodeMap = new Map<
                     number,
                     {
                         translatedTitle: string | null;
                         translatedOverview: string | null;
+                        stillPath: string | null;
                     }
                 >();
+                try {
+                    // Always fetch base season for still_path (language-neutral)
+                    const baseTmdbSeason = await getTmdbSeason(
+                        tmdbId,
+                        s.number,
+                        undefined,
+                        userId,
+                    );
+                    for (const ep of baseTmdbSeason.episodes || []) {
+                        tmdbEpisodeMap.set(ep.episode_number, {
+                            translatedTitle: null,
+                            translatedOverview: null,
+                            stillPath: ep.still_path || null,
+                        });
+                    }
+                } catch (e) {
+                    console.warn(
+                        `[sync] TMDB base season fetch failed for tmdb ${tmdbId} s${s.number}: ${toErrorMessage(e)}`,
+                    );
+                }
                 if (displayLanguage) {
                     try {
                         const tmdbSeason = await getTmdbSeason(
@@ -543,9 +565,12 @@ async function upsertShowFromTrakt(
                             userId,
                         );
                         for (const ep of tmdbSeason.episodes || []) {
+                            const existing = tmdbEpisodeMap.get(ep.episode_number);
                             tmdbEpisodeMap.set(ep.episode_number, {
                                 translatedTitle: ep.name?.trim() || null,
                                 translatedOverview: ep.overview?.trim() || null,
+                                // Preserve still_path from base fetch if available
+                                stillPath: existing?.stillPath ?? ep.still_path ?? null,
                             });
                         }
                     } catch (e) {
@@ -567,6 +592,7 @@ async function upsertShowFromTrakt(
                         tmdbEp.translatedOverview !== ep.overview
                             ? tmdbEp.translatedOverview
                             : null;
+                    const stillPath = tmdbEp?.stillPath ?? null;
 
                     await db
                         .insert(episodes)
@@ -581,7 +607,7 @@ async function upsertShowFromTrakt(
                             translatedOverview: translatedEpOverview,
                             runtime: ep.runtime,
                             airDate: ep.first_aired,
-                            stillPath: null,
+                            stillPath,
                             traktId: ep.ids.trakt,
                             tmdbId: ep.ids.tmdb,
                         })
@@ -598,6 +624,7 @@ async function upsertShowFromTrakt(
                                 translatedOverview: translatedEpOverview,
                                 runtime: ep.runtime,
                                 airDate: ep.first_aired,
+                                stillPath,
                                 traktId: ep.ids.trakt,
                                 tmdbId: ep.ids.tmdb,
                             },
