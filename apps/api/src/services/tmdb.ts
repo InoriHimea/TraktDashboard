@@ -89,15 +89,27 @@ async function tmdbFetch<T>(
     const url = new URL(`${TMDB_BASE}${path}`);
     if (params)
         Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+
     const proxyUrl = await getProxyUrl(userId);
     const fetchOpts = buildFetchOptions(proxyUrl);
+
+    // TMDB supports two auth methods:
+    // - v4 Read Access Token (long JWT starting with "eyJ"): Authorization: Bearer <token>
+    // - v3 API Key (short alphanumeric): ?api_key=<key>
+    const isBearer = apiKey.startsWith("eyJ");
     const opts: RequestInit = {
         ...fetchOpts,
         headers: {
             ...((fetchOpts as any).headers || {}),
-            Authorization: `Bearer ${apiKey}`,
+            ...(isBearer
+                ? { Authorization: `Bearer ${apiKey}` }
+                : {}),
         },
     };
+    if (!isBearer) {
+        url.searchParams.set("api_key", apiKey);
+    }
+
     const res = await fetchWithRetry(url.toString(), proxyUrl, 3, opts);
     if (!res.ok) throw new Error(`TMDB ${res.status}: ${path}`);
     return res.json() as Promise<T>;
