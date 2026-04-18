@@ -59,24 +59,10 @@ html, body, #root {
 
 /* CSS 变量别名 — 供 var() 引用，与旧代码兼容 */
 :root {
-  /* 原有的 */
   --font-sans: var(--font-family-sans);
   --font-display: var(--font-family-display);
   --color-border: var(--color-border-base);
   --color-text: var(--color-text-base);
-
-  /* ✅ 新增：shadcn 所需的无前缀变量 */
-  --background:         var(--color-bg);
-  --foreground:         var(--color-text-base);
-  --border:             var(--color-border-base);
-  --muted:              var(--color-surface-4);
-  --muted-foreground:   var(--color-text-muted);
-  --primary:            var(--color-accent);
-  --primary-foreground: #ffffff;
-  --card:               var(--color-surface);
-  --card-foreground:    var(--color-text-base);
-  --ring:               var(--color-accent);
-  --radius:             10px;
 }
 
 *, *::before, *::after {
@@ -221,9 +207,6 @@ button, a { transition: opacity 0.15s, background 0.15s, color 0.15s; }
   background: rgba(255, 138, 168, 0.5);
 }
 
-.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
-.no-scrollbar::-webkit-scrollbar { display: none; }
-
 /* =========================================
    Trakt Dashboard Layout Components 
    (Integrated with the custom theme above)
@@ -246,6 +229,7 @@ button, a { transition: opacity 0.15s, background 0.15s, color 0.15s; }
   }
 
   /* 左侧：海报容器 */
+  /* NOTE: 'group' 必须直接写在 HTML class 属性上，Tailwind v4 的 @apply 不接受 variant 标记类 */
   .trakt-summary-poster {
     @apply w-full md:w-[320px] lg:w-[380px] shrink-0 relative;
   }
