@@ -51,3 +51,13 @@ export function resolveBackdrop(
 ): string | null {
     return tmdbImage(backdropPath, "original");
 }
+
+/**
+ * Returns a backdrop sized for episode thumbnail fallback (w1280).
+ * Used when an episode has no stillPath.
+ */
+export function resolveBackdropFallback(
+    backdropPath: string | null | undefined,
+): string | null {
+    return tmdbImage(backdropPath, "w1280");
+}

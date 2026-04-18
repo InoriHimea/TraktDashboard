@@ -79,9 +79,59 @@ function DeleteHistoryModal({
   );
 }
 
+/** 通用二次确认弹框 */
+function ConfirmModal({
+  title,
+  description,
+  confirmLabel,
+  confirmClassName,
+  onConfirm,
+  onClose,
+}: {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  confirmClassName?: string;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="relative z-10 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl w-[380px] max-w-[90vw] p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-base font-bold text-foreground mb-2">{title}</h3>
+        <p className="text-sm text-muted-foreground mb-6">{description}</p>
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 h-10 rounded-lg text-sm font-bold text-muted-foreground hover:text-foreground bg-muted hover:bg-muted/70 transition-colors"
+          >
+            取消
+          </button>
+          <button
+            onClick={onConfirm}
+            className={[
+              'flex-1 h-10 rounded-lg text-sm font-bold transition-colors',
+              confirmClassName ?? 'bg-indigo-500 hover:bg-indigo-600 text-white',
+            ].join(' ')}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function EpisodeInfoCard({ data, onHistoryClick, isWatched, onRefetch }: EpisodeInfoCardProps) {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  // 二次确认弹窗状态
+  const [confirmWatchOpen, setConfirmWatchOpen] = useState(false);
+  const [confirmUnwatchOpen, setConfirmUnwatchOpen] = useState(false);
 
   const overview = data.translatedOverview ?? data.overview;
   const episodeTitle = data.translatedTitle ?? data.title;
@@ -97,14 +147,14 @@ export function EpisodeInfoCard({ data, onHistoryClick, isWatched, onRefetch }: 
   const { data: historyEntries = [] } = useEpisodeHistory(data.showId, data.seasonNumber, data.episodeNumber);
   const deleteHistory = useDeleteHistory(data.showId, data.seasonNumber, data.episodeNumber);
 
-  // 单钩：弹出日期选择，确认后标记已观看
+  // 单钩：先弹确认，确认后弹日期选择，选择时间后标记已观看
   const handleMarkWatched = async (isoString: string) => {
     await markWatched.mutateAsync(isoString);
     setDatePickerOpen(false);
     onRefetch();
   };
 
-  // 双钩：删除观看历史
+  // 双钩：先弹确认，确认后执行删除逻辑
   const handleUnwatch = async () => {
     if (historyEntries.length === 0) return;
     if (historyEntries.length === 1) {
@@ -262,7 +312,7 @@ export function EpisodeInfoCard({ data, onHistoryClick, isWatched, onRefetch }: 
       >
         {/* Watch 按钮 — 固定宽度保持一致 */}
         <button
-          onClick={isWatched ? handleUnwatch : () => setDatePickerOpen(true)}
+          onClick={isWatched ? () => setConfirmUnwatchOpen(true) : () => setConfirmWatchOpen(true)}
           disabled={markWatched.isPending || deleteHistory.isPending}
           className={[
             'h-12 w-36 flex items-center justify-center gap-2 rounded-lg transition-all active:scale-95 shadow-md text-sm font-bold tracking-wide disabled:opacity-60 disabled:cursor-not-allowed',
@@ -302,6 +352,35 @@ export function EpisodeInfoCard({ data, onHistoryClick, isWatched, onRefetch }: 
           entries={historyEntries}
           onConfirm={handleDeleteEntry}
           onClose={() => setDeleteModalOpen(false)}
+        />
+      )}
+
+      {/* ── 标记已观看二次确认 ── */}
+      {confirmWatchOpen && (
+        <ConfirmModal
+          title="标记为已观看"
+          description="确认将此集标记为已观看？你可以在下一步选择观看时间。"
+          confirmLabel="继续"
+          onConfirm={() => {
+            setConfirmWatchOpen(false);
+            setDatePickerOpen(true);
+          }}
+          onClose={() => setConfirmWatchOpen(false)}
+        />
+      )}
+
+      {/* ── 取消观看二次确认 ── */}
+      {confirmUnwatchOpen && (
+        <ConfirmModal
+          title="取消观看记录"
+          description="确认删除此集的观看记录？此操作不可撤销。"
+          confirmLabel="删除"
+          confirmClassName="bg-red-500 hover:bg-red-600 text-white"
+          onConfirm={() => {
+            setConfirmUnwatchOpen(false);
+            handleUnwatch();
+          }}
+          onClose={() => setConfirmUnwatchOpen(false)}
         />
       )}
     </div>

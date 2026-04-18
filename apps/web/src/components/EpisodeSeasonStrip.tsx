@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ImageOff } from "lucide-react";
 import { cn } from "../lib/utils";
 import { resolveEpisodeStill } from "../lib/image";
 import { resolveEpisodeTitle } from "../lib/i18n";
@@ -11,13 +10,16 @@ interface EpisodeSeasonStripProps {
     seasonNumber: number;
     currentEpisodeNumber: number;
     showId?: number | string;
+    /** 当集没有 stillPath 时的替代图（节目 backdrop） */
+    fallbackImageUrl?: string | null;
 }
 
 export function EpisodeSeasonStrip({
     episodes,
     seasonNumber,
     currentEpisodeNumber,
-    showId
+    showId,
+    fallbackImageUrl,
 }: EpisodeSeasonStripProps) {
     const currentRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
@@ -57,6 +59,8 @@ export function EpisodeSeasonStrip({
                     {episodes.map((episode) => {
                         const isCurrent = Number(episode.episodeNumber) === Number(currentEpisodeNumber);
                         const stillUrl = resolveEpisodeStill(episode.stillPath);
+                        // 无 still 时用节目 backdrop 作为替代
+                        const thumbUrl = stillUrl ?? fallbackImageUrl ?? null;
 
                         return (
                             <div
@@ -71,9 +75,9 @@ export function EpisodeSeasonStrip({
                                         ? "border-2 border-purple-500 ring-4 ring-purple-500/20"
                                         : "border border-border/30 hover:border-foreground/30"
                                 )}>
-                                    {stillUrl ? (
+                                    {thumbUrl ? (
                                         <img
-                                            src={stillUrl}
+                                            src={thumbUrl}
                                             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                                             alt=""
                                         />

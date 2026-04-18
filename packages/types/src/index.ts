@@ -264,6 +264,7 @@ export interface EpisodeDetailData {
         title: string;
         translatedName: string | null;
         posterPath: string | null;
+        backdropPath: string | null;
         genres: string[];
         traktId: number | null;
         traktSlug: string | null;
