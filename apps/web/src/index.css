@@ -40,6 +40,14 @@
   --radius-md: 10px;
   --radius-lg: 14px;
   --radius-xl: 20px;
+
+  /* 为了兼容 shadcn 和原生 Tailwind 习惯的别名映射 */
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-text-base);
+  --color-border: var(--color-border-base);
+  --color-muted: var(--color-surface-4);
+  --color-muted-foreground: var(--color-text-muted);
+  --color-primary: var(--color-accent);
 }
 
 html, body, #root {
@@ -47,7 +55,6 @@ html, body, #root {
   min-height: 100vh;
   margin: 0;
   padding: 0;
-  /* 如果有 display: flex 等属性，确保带有 flex-direction: column; width: 100%; */
 }
 
 /* CSS 变量别名 — 供 var() 引用，与旧代码兼容 */
@@ -109,7 +116,7 @@ input::placeholder { color: var(--color-text-muted); }
 /* Smooth transitions for interactive elements */
 button, a { transition: opacity 0.15s, background 0.15s, color 0.15s; }
 
-/* Shared card style — used by HeroSection stats and sidebar */
+/* Shared card style */
 .hero-card {
   border-radius: 12px;
   border: 1px solid rgba(255,255,255,0.07);
@@ -135,7 +142,7 @@ button, a { transition: opacity 0.15s, background 0.15s, color 0.15s; }
   --color-text-muted:     #8884a8;
 }
 
-/* Poster hover shimmer — animated border glow with color cycling */
+/* Poster hover shimmer */
 @keyframes poster-border-spin {
   0%   { --shimmer-angle: 0deg; }
   100% { --shimmer-angle: 360deg; }
@@ -178,7 +185,6 @@ button, a { transition: opacity 0.15s, background 0.15s, color 0.15s; }
     poster-border-hue  6s linear infinite;
 }
 
-/* Hero gradient — used by EpisodeDetailPage backdrop */
 .hero-gradient {
   background: linear-gradient(
     to bottom,
@@ -188,7 +194,6 @@ button, a { transition: opacity 0.15s, background 0.15s, color 0.15s; }
   );
 }
 
-/* Episode horizontal scroll custom scrollbar */
 .episode-scrollbar::-webkit-scrollbar { height: 4px; }
 .episode-scrollbar::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.05);
@@ -200,4 +205,67 @@ button, a { transition: opacity 0.15s, background 0.15s, color 0.15s; }
 }
 .episode-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 138, 168, 0.5);
+}
+
+/* =========================================
+   Trakt Dashboard Layout Components 
+   (Integrated with the custom theme above)
+   ========================================= */
+@layer components {
+  /* 页面主容器 */
+  .trakt-page-container {
+    @apply min-h-screen overflow-x-hidden;
+    /* 背景和字体通过 body 继承了你的噪点设计 */
+  }
+
+  /* 统一宽度的约束容器：设置最大的两边留白 */
+  .trakt-bound {
+    @apply max-w-[1400px] mx-auto px-6 md:px-12 lg:px-20 w-full;
+  }
+
+  /* 顶部主内容区 (左右两栏) */
+  .trakt-summary-container {
+    @apply flex flex-col md:flex-row gap-10 lg:gap-16 pt-10 md:pt-16 items-start;
+  }
+
+  /* 左侧：海报容器 */
+  .trakt-summary-poster {
+    @apply w-full md:w-[320px] lg:w-[380px] shrink-0 relative group;
+  }
+  
+  /* 海报图片包裹层，使用新主题的颜色 */
+  .trakt-poster-image-wrap {
+    @apply w-full aspect-video rounded-xl overflow-hidden shadow-2xl border relative;
+    border-color: var(--color-border-base);
+    background-color: var(--color-surface-2);
+  }
+
+  /* 紫色的 Watched 标签 */
+  .trakt-stem-tag {
+    @apply absolute -top-3 -left-3 rounded-lg shadow-xl flex items-center gap-1.5 px-3 py-1.5 z-10 border;
+    background-color: var(--color-surface);
+    border-color: var(--color-border-base);
+  }
+
+  /* 右侧：文字与按钮容器 */
+  .trakt-summary-content {
+    @apply w-full md:flex-1 flex flex-col min-w-0;
+  }
+
+  /* 底部：剧集滚动条包裹层 */
+  .trakt-season-strip-section {
+    @apply w-full mt-20 pt-12 border-t;
+    border-color: var(--color-border-base);
+    background-color: var(--color-surface);
+  }
+
+  /* 横向滚动列表的隐藏滚动条设置 */
+  .trakt-season-scroll {
+    @apply flex gap-5 overflow-x-auto pb-10 snap-x snap-mandatory scroll-smooth w-full;
+    scrollbar-width: none; 
+    -ms-overflow-style: none;
+  }
+  .trakt-season-scroll::-webkit-scrollbar {
+    display: none;
+  }
 }
