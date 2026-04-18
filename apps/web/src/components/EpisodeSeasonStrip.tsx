@@ -60,7 +60,7 @@ export function EpisodeSeasonStrip({
             {/* Episode list — conditional layout */}
             {watched ? (
                 /* Horizontal scroll (watched state) */
-                <div className="flex overflow-x-auto gap-6 pb-6 episode-scrollbar scroll-smooth">
+                <div className="flex overflow-x-auto gap-8 pb-6 episode-scrollbar scroll-smooth">
                     {episodes.map((ep) => {
                         const isCurrent = ep.episodeNumber === currentEpisodeNumber;
                         const isUnaired = ep.aired === false;
@@ -72,7 +72,7 @@ export function EpisodeSeasonStrip({
                                 showId={showId}
                                 isCurrent={isCurrent}
                                 isUnaired={isUnaired}
-                                className="flex-none w-[280px]"
+                                className="flex-none w-[300px]"
                                 ref={isCurrent ? currentRef : null}
                                 onNavigate={(s, e) =>
                                     navigate(`/shows/${showId}/seasons/${s}/episodes/${e}`)
@@ -83,7 +83,7 @@ export function EpisodeSeasonStrip({
                 </div>
             ) : (
                 /* Responsive grid (unwatched state) */
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                     {episodes.map((ep) => {
                         const isCurrent = ep.episodeNumber === currentEpisodeNumber;
                         const isUnaired = ep.aired === false;

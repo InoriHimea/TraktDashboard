@@ -101,9 +101,9 @@ export default function EpisodeDetailPage() {
                     返回
                 </button>
 
-                {/* Hero content — fills full height, content pinned to bottom */}
-                <div className="absolute inset-0 z-10 flex items-end">
-                    <div className="w-full max-w-7xl mx-auto px-12 md:px-16 pb-16 grid grid-cols-1 lg:grid-cols-12 gap-10 items-end">
+                {/* Hero content — fills full height, content pinned to bottom with more breathing room */}
+                <div className="absolute inset-0 z-10 flex items-end pb-20">
+                    <div className="w-full max-w-7xl mx-auto px-12 md:px-16 grid grid-cols-1 lg:grid-cols-12 gap-10 items-end">
                         {/* Left: Episode thumbnail — desktop only */}
                         {stillUrl && (
                             <div className="hidden lg:flex lg:col-span-5 items-end">
