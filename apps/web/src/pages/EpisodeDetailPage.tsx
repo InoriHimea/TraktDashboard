@@ -9,10 +9,10 @@ import { resolveEpisodeStillLarge } from "../lib/image";
 
 function EpisodeDetailSkeleton() {
     return (
-        <div className="min-h-screen bg-background flex flex-col">
+        <div className="min-h-screen bg-background flex flex-col w-full">
             <div className="w-full h-16 border-b border-border/40" />
-            <div className="max-w-[1600px] mx-auto px-8 md:px-16 lg:px-24 w-full mt-16 flex flex-col md:flex-row gap-12 lg:gap-24">
-                <div className="w-full md:w-[380px] lg:w-[480px] aspect-video bg-muted animate-pulse rounded-2xl" />
+            <div className="w-full mx-auto px-12 md:px-20 lg:px-28 mt-16 flex flex-col md:flex-row gap-12" style={{ maxWidth: '1200px' }}>
+                <div className="w-full md:w-[320px] lg:w-[420px] aspect-video bg-muted animate-pulse rounded-2xl" />
                 <div className="w-full md:flex-1 h-80 bg-muted animate-pulse rounded-2xl" />
             </div>
         </div>
@@ -21,7 +21,7 @@ function EpisodeDetailSkeleton() {
 
 function PageError({ onRetry }: { onRetry: () => void }) {
     return (
-        <div className="flex-1 flex items-center justify-center min-h-screen bg-background text-foreground">
+        <div className="flex-1 flex items-center justify-center min-h-screen bg-background text-foreground w-full">
             <div className="flex flex-col items-center gap-6">
                 <p className="text-muted-foreground text-lg">加载失败</p>
                 <button onClick={onRetry} className="bg-muted px-6 py-3 rounded-xl hover:bg-muted/80 font-bold">重试</button>
@@ -45,14 +45,16 @@ export default function EpisodeDetailPage() {
     if (isError || !data) return <PageError onRetry={() => refetch()} />;
 
     const stillUrl = resolveEpisodeStillLarge(data?.stillPath as string);
+    // 假设这是获取到的观看状态
     const isWatched = true; 
 
     return (
-        <div className="min-h-screen bg-background text-foreground pb-32 md:pb-20 flex flex-col gap-8 md:gap-12">
+        // 父容器加上 flex flex-col gap-8 md:gap-12 确保上下大区块(Header/Main/Section)有明显间距
+        <div className="min-h-screen w-full bg-background text-foreground pb-32 md:pb-20 flex flex-col gap-8 md:gap-12 overflow-x-hidden">
             
-            {/* 顶部导航 */}
-            <header className="sticky top-0 z-10 bg-background/90 backdrop-blur-md border-b border-border/40 h-16 flex items-center shrink-0">
-                <div className="max-w-[1600px] w-full mx-auto px-12 md:px-20 lg:px-28 flex items-center">
+            <header className="sticky top-0 z-10 bg-background/90 backdrop-blur-md border-b border-border/40 h-16 flex items-center shrink-0 w-full">
+                {/* 彻底抛弃 Tailwind 的 px 边距类，直接用原生百分比宽度强制留白 */}
+                <div className="flex items-center" style={{ width: '90%', maxWidth: '1200px', margin: '0 auto' }}>
                     <button 
                         onClick={() => navigate(-1)}
                         className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
@@ -63,11 +65,13 @@ export default function EpisodeDetailPage() {
                 </div>
             </header>
 
-            {/* 主内容区：由于外层有了 gap，这里可以适当减小或保留原有的 pt-12 */}
-            <main className="max-w-[1400px] mx-auto px-12 md:px-20 lg:px-28 flex flex-col md:flex-row gap-12 lg:gap-24 items-start overflow-visible w-full">
-                
-                {/* 左侧海报区 — group 必须写在这里，Tailwind v4 @apply 不支持 variant 标记类 */}
-                <div className="w-full md:w-[380px] lg:w-[480px] shrink-0 relative group overflow-visible">
+            {/* 主内容区 */}
+            <main 
+                className="flex flex-col md:flex-row gap-12 lg:gap-20 items-start overflow-visible"
+                style={{ width: '90%', maxWidth: '1200px', margin: '0 auto' }}
+            >
+                {/* 左侧海报区 */}
+                <div className="w-full md:w-[360px] lg:w-[440px] shrink-0 relative group overflow-visible">
                     <div className="w-full aspect-video rounded-2xl overflow-hidden bg-muted shadow-2xl border border-border/30 relative">
                         {stillUrl ? (
                             <img 
@@ -82,17 +86,17 @@ export default function EpisodeDetailPage() {
                         )}
                     </div>
                     
-                    {/* Watched 标签 */}
+                    {/* Watched 标签：放在图片底部偏上一点点 */}
                     {isWatched && (
-                        <div className="absolute -top-4 left-8 bg-background border border-border rounded-xl shadow-xl flex items-center gap-2 px-4 py-2 z-10">
+                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-background/95 backdrop-blur border border-border rounded-xl shadow-xl flex items-center gap-2 px-4 py-2 z-10">
                             <Check className="size-5 text-purple-500" strokeWidth={3} />
-                            <span className="text-xs font-extrabold uppercase tracking-widest text-foreground">Watched</span>
+                            <span className="text-xs font-extrabold uppercase tracking-widest text-foreground whitespace-nowrap">Watched</span>
                         </div>
                     )}
                 </div>
 
                 {/* 右侧内容区 */}
-                <div className="w-full md:flex-1 flex flex-col min-w-0 pt-2 md:pt-0">
+                <div className="w-full md:flex-1 flex flex-col min-w-0 pt-4 md:pt-0">
                     <EpisodeInfoCard 
                         data={data} 
                         isWatched={isWatched}
@@ -101,8 +105,8 @@ export default function EpisodeDetailPage() {
                 </div>
             </main>
 
-            {/* 剧集列表条：顶部拉开 margin (mt-20 pt-16) */}
-            <section className="w-full mt-20 pt-16 border-t border-border/40 bg-muted/5">
+            {/* 剧集列表条 */}
+            <section className="w-full pt-8 border-t border-border/40 bg-muted/5">
                 <EpisodeSeasonStrip 
                     showId={data.showId}
                     seasonNumber={data.seasonNumber}

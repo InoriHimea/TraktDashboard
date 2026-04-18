@@ -1,6 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap');
 @import "tailwindcss";
 
+@source "../src";
+
 @theme {
   --font-family-display: "Instrument Serif", serif;
   --font-family-sans: "Inter", system-ui, sans-serif;

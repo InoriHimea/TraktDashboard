@@ -3,4 +3,6 @@ packages:
   - packages/*
 
 ignoredBuiltDependencies:
+  - esbuild
+  - msgpackr-extract
   - msw

@@ -239,9 +239,9 @@ export default function App() {
                                     element={<Navigate to="/progress" replace />}
                                 />
                                 <Route
-                    path="/shows/:showId/seasons/:season/episodes/:episode"
-                    element={<EpisodeDetailPage />}
-                />
+                                    path="/shows/:showId/seasons/:season/episodes/:episode"
+                                    element={<EpisodeDetailPage />}
+                                />
                             </Routes>
                         </Layout>
                     }

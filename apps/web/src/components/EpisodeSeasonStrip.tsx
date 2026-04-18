@@ -29,39 +29,48 @@ export function EpisodeSeasonStrip({
 
     const seasonLabel = seasonNumber === 0 ? "Specials" : `Season ${seasonNumber}`;
 
-    return (
+ return (
         <div className="flex flex-col w-full pb-12">
-            {/* 标题对齐主内容的 Padding */}
-            <div className="max-w-[1600px] mx-auto px-8 md:px-16 lg:px-24 w-full mb-8">
+            {/* 1. 标题容器：保持原样居中 */}
+            <div className="w-full mb-8" style={{ width: '90%', maxWidth: '1200px', margin: '0 auto' }}>
                 <h2 className="text-xl font-black tracking-[0.2em] uppercase text-foreground">
                     {seasonLabel}
                 </h2>
             </div>
 
-            {/* 滚动容器也使用一致的起止 Padding，卡片间距拉大到 gap-6 */}
-            <div className="flex gap-6 overflow-x-auto px-8 md:px-16 lg:px-24 pt-12 pb-10 snap-x snap-mandatory scroll-smooth w-full no-scrollbar">
-                {episodes.map((episode: EpisodeProgress) => {
+            {/* 2. 横向滚动条：去除所有 padding，恢复纯净的全宽 (full-bleed) 容器 */}
+            <div className="flex gap-6 overflow-x-auto pt-12 pb-10 snap-x snap-mandatory scroll-smooth w-full no-scrollbar">
+                
+                {/* 注意：在 map 中加入 index 索引 */}
+                {episodes.map((episode, index) => {
+                    // 判断是否为第一张或最后一张卡片
+                    const isFirst = index === 0;
+                    const isLast = index === episodes.length - 1;
+                    
+                    const epCode = `${seasonNumber}x${episode.episodeNumber.toString().padStart(2, '0')}`;
                     const isCurrent = episode.episodeNumber === currentEpisodeNumber;
-                    const stillUrl = resolveEpisodeStill(episode.stillPath as string); 
-                    const epCode = `${seasonNumber}x${String(episode.episodeNumber).padStart(2, '0')}`;
+                    const stillUrl = resolveEpisodeStill(episode.stillPath);
 
                     return (
                         <div 
                             key={episode.episodeNumber}
-                            ref={isCurrent ? currentRef : null}
                             onClick={() => navigate(`/shows/${showId}/seasons/${seasonNumber}/episodes/${episode.episodeNumber}`)}
                             className="group flex-none w-[280px] md:w-[320px] snap-start flex flex-col gap-4 cursor-pointer"
+                            style={{
+                                // 核心魔法：只有第一集有左边距，最后一集有右边距！
+                                // max(5%, calc(50% - 600px)) 完美复刻上方宽度的数学原理
+                                marginLeft: isFirst ? 'max(5%, calc(50% - 600px))' : '0',
+                                marginRight: isLast ? 'max(5%, calc(50% - 600px))' : '0'
+                            }}
                         >
                             <div className={cn(
-                                "relative w-full aspect-video rounded-2xl overflow-hidden bg-muted shadow-lg border",
-                                isCurrent 
-                                    ? "border-purple-500 ring-2 ring-purple-500 ring-offset-4 ring-offset-background" 
-                                    : "border-border/30 hover:border-foreground/30 transition-all"
+                                "relative w-full aspect-video rounded-2xl overflow-hidden bg-muted shadow-lg transition-all",
+                                isCurrent ? "border border-purple-500 ring-2 ring-purple-500 ring-offset-4 ring-offset-background" : "border border-border/30 hover:border-foreground/30"
                             )}>
                                 {stillUrl ? (
                                     <img 
                                         src={stillUrl} 
-                                        alt={`Episode ${episode.episodeNumber}`} 
+                                        alt={episode.title || `Episode ${episode.episodeNumber}`} 
                                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                                     />
                                 ) : (
@@ -90,6 +99,12 @@ export function EpisodeSeasonStrip({
                         </div>
                     );
                 })}
+                
+                {/* 3. 在列表末尾加一个隐形的垫片，防止滑到最右边时贴边（修补 Flexbox 的 Bug） */}
+                <div 
+                    className="shrink-0" 
+                    style={{ width: 'calc((100vw - min(1200px, 90vw)) / 2 - 24px)' }} 
+                />
             </div>
         </div>
     );
