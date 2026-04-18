@@ -262,6 +262,7 @@ export interface EpisodeDetailData {
     show: {
         id: number;
         title: string;
+        translatedName: string | null;
         posterPath: string | null;
         genres: string[];
         traktId: number | null;

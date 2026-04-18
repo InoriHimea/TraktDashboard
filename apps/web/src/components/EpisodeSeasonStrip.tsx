@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ImageOff } from "lucide-react";
 import { cn } from "../lib/utils";
 import { resolveEpisodeStill } from "../lib/image";
+import { resolveEpisodeTitle } from "../lib/i18n";
 import type { EpisodeProgress } from "@trakt-dashboard/types";
 
 interface EpisodeSeasonStripProps {
@@ -55,7 +56,6 @@ export function EpisodeSeasonStrip({
                 <div className="flex gap-6">
                     {episodes.map((episode) => {
                         const isCurrent = Number(episode.episodeNumber) === Number(currentEpisodeNumber);
-                        const epCode = `${seasonNumber}x${episode.episodeNumber.toString().padStart(2, '0')}`;
                         const stillUrl = resolveEpisodeStill(episode.stillPath);
 
                         return (
@@ -83,16 +83,20 @@ export function EpisodeSeasonStrip({
                                         </div>
                                     )}
                                 </div>
-                                <div className="px-2 mt-1 flex flex-col gap-1.5">
+                                <div className="px-2 mt-1 flex flex-col gap-1">
+                                    {/* 剧集标题（i18n） */}
                                     <h3 className={cn(
                                         "font-black text-base truncate",
                                         isCurrent
                                             ? "text-purple-500"
                                             : "text-foreground group-hover:text-purple-500 transition-colors"
                                     )}>
-                                        <span className="text-muted-foreground/60 font-bold mr-3">{epCode}</span>
-                                        {episode.title || `Episode ${episode.episodeNumber}`}
+                                        {resolveEpisodeTitle(episode)}
                                     </h3>
+                                    {/* 集数标识单独一行 */}
+                                    <span className="text-xs font-bold text-muted-foreground/60 uppercase tracking-wider">
+                                        S{String(seasonNumber).padStart(2, '0')}·E{String(episode.episodeNumber).padStart(2, '0')}
+                                    </span>
                                 </div>
                             </div>
                         );

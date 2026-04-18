@@ -330,6 +330,7 @@ showRoutes.get('/:showId/episodes/:season/:episode', async (c) => {
       show: {
         id: show.id,
         title: show.title,
+        translatedName: show.translatedName ?? null,
         posterPath: show.posterPath,
         genres: show.genres as string[],
         traktId: show.traktId,
