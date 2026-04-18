@@ -95,7 +95,7 @@ export default function EpisodeDetailPage() {
                 {/* Back button — floating top-left */}
                 <button
                     onClick={() => navigate(-1)}
-                    className="absolute top-6 left-8 z-20 flex items-center gap-1.5 text-xs font-medium text-white/65 bg-white/10 border border-white/15 rounded-lg px-3.5 py-1.5 backdrop-blur-md hover:text-white hover:bg-white/20 transition-all cursor-pointer"
+                    className="absolute top-6 left-12 md:left-16 z-20 flex items-center gap-1.5 text-xs font-medium text-white/65 bg-white/10 border border-white/15 rounded-lg px-3.5 py-1.5 backdrop-blur-md hover:text-white hover:bg-white/20 transition-all cursor-pointer"
                 >
                     <ArrowLeft className="size-3.5" />
                     返回
@@ -103,8 +103,8 @@ export default function EpisodeDetailPage() {
 
                 {/* Hero content — fills full height, content pinned to bottom */}
                 <div className="absolute inset-0 z-10 flex items-end">
-                    <div className="w-full max-w-7xl mx-auto px-8 pb-16 grid grid-cols-1 lg:grid-cols-12 gap-12 items-end">
-                        <div className="lg:col-span-8">
+                    <div className="w-full max-w-7xl mx-auto px-12 md:px-16 pb-16 grid grid-cols-1 lg:grid-cols-12 gap-12 items-end">
+                        <div className="lg:col-span-7">
                             <EpisodeInfoCard
                                 data={data}
                                 onWatchClick={() => setWatchPanelOpen(true)}
@@ -113,7 +113,7 @@ export default function EpisodeDetailPage() {
                         </div>
                         {/* Right thumbnail — desktop only */}
                         {stillUrl && (
-                            <div className="hidden lg:flex lg:col-span-4 items-end group relative">
+                            <div className="hidden lg:flex lg:col-span-5 items-end group relative">
                                 <div className="w-full aspect-video rounded-2xl overflow-hidden border border-white/10 shadow-2xl transition-transform duration-500 group-hover:scale-[1.02] relative">
                                     <img
                                         src={stillUrl}
@@ -131,7 +131,7 @@ export default function EpisodeDetailPage() {
             </section>
 
             {/* ── Episodes Section ── */}
-            <section className="max-w-7xl mx-auto px-8 mt-12 mb-20">
+            <section className="max-w-7xl mx-auto px-12 md:px-16 mt-14 mb-24">
                 <EpisodeSeasonStrip
                     episodes={data.seasonEpisodes}
                     seasonNumber={data.seasonNumber}
