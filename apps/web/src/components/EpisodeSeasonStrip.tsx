@@ -1,21 +1,25 @@
 import React, { useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { ImageOff } from "lucide-react";
 import { cn } from "../lib/utils";
+import { resolveEpisodeStill } from "../lib/image";
 import type { EpisodeProgress } from "@trakt-dashboard/types";
 
 interface EpisodeSeasonStripProps {
     episodes: EpisodeProgress[];
     seasonNumber: number;
     currentEpisodeNumber: number;
-    showId?: number; 
+    showId?: number | string; 
 }
 
 export function EpisodeSeasonStrip({ 
     episodes, 
     seasonNumber, 
-    currentEpisodeNumber
+    currentEpisodeNumber,
+    showId
 }: EpisodeSeasonStripProps) {
     const currentRef = useRef<HTMLDivElement>(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         if (currentRef.current) {
@@ -27,26 +31,27 @@ export function EpisodeSeasonStrip({
 
     return (
         <div className="flex flex-col w-full">
-            {/* 标题区域：保持与主内容对齐的边距 */}
             <div className="max-w-7xl mx-auto px-6 lg:px-12 w-full mb-6">
                 <h2 className="text-xl font-extrabold tracking-widest uppercase text-foreground/80">
                     {seasonLabel}
                 </h2>
             </div>
 
-            {/* 滚动区域：不限制宽度，直接撑满屏幕，靠内边距对齐首项 */}
             <div className="flex gap-5 overflow-x-auto px-6 lg:px-12 pb-8 snap-x snap-mandatory scroll-smooth w-full no-scrollbar">
                 {episodes.map((episode: EpisodeProgress) => {
                     const isCurrent = episode.episodeNumber === currentEpisodeNumber;
-                    const stillUrl = episode.stillPath; 
+                    
+                    // 修正報錯：傳入路徑字符串而非整個對象
+                    // 根據 EpisodeProgress 的定義，這裡傳入 episode.stillPath
+                    const stillUrl = resolveEpisodeStill(episode.stillPath as string); 
 
                     return (
                         <div 
                             key={episode.episodeNumber}
                             ref={isCurrent ? currentRef : null}
+                            onClick={() => navigate(`/shows/${showId}/seasons/${seasonNumber}/episodes/${episode.episodeNumber}`)}
                             className="group flex-none w-[260px] md:w-[280px] snap-start flex flex-col gap-3 cursor-pointer"
                         >
-                            {/* 卡片缩略图 */}
                             <div className={cn(
                                 "relative w-full aspect-video rounded-xl overflow-hidden bg-background shadow-md border",
                                 isCurrent 
@@ -70,7 +75,6 @@ export function EpisodeSeasonStrip({
                                 </div>
                             </div>
 
-                            {/* 卡片文字信息 */}
                             <div className="px-1">
                                 <h3 className={cn(
                                     "font-bold text-sm truncate",
