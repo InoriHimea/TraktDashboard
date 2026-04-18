@@ -48,7 +48,7 @@ export default function EpisodeDetailPage() {
     const isWatched = true; 
 
     return (
-        <div className="min-h-screen bg-background text-foreground pb-32 md:pb-20 overflow-x-hidden">
+        <div className="min-h-screen bg-background text-foreground pb-32 md:pb-20">
             {/* 顶部导航：加宽左右 padding */}
             <header className="sticky top-0 z-10 bg-background/90 backdrop-blur-md border-b border-border/40 h-16 flex items-center">
                 <div className="max-w-[1600px] w-full mx-auto px-8 md:px-16 lg:px-24 flex items-center">
