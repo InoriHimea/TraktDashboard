@@ -83,7 +83,7 @@ export default function EpisodeDetailPage() {
                     
                     {/* Watched 标签 */}
                     {isWatched && (
-                        <div className="absolute -top-4 -left-3 bg-background border border-border rounded-xl shadow-xl flex items-center gap-2 px-4 py-2 z-10">
+                        <div className="absolute -top-4 left-0 bg-background border border-border rounded-xl shadow-xl flex items-center gap-2 px-4 py-2 z-10">
                             <Check className="size-5 text-purple-500" strokeWidth={3} />
                             <span className="text-xs font-extrabold uppercase tracking-widest text-foreground">Watched</span>
                         </div>
