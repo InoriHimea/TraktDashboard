@@ -103,15 +103,15 @@ export default function EpisodeDetailPage() {
 
                 {/* Hero content — fills full height, content pinned to bottom */}
                 <div className="absolute inset-0 z-10 flex items-end">
-                    <div className="w-full max-w-7xl mx-auto px-12 md:px-16 pb-16 grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
+                    <div className="w-full max-w-7xl mx-auto px-12 md:px-16 pb-16 grid grid-cols-1 lg:grid-cols-12 gap-10 items-end">
                         {/* Left: Episode thumbnail — desktop only */}
                         {stillUrl && (
-                            <div className="hidden lg:flex lg:col-span-4 items-end group relative">
-                                <div className="w-full aspect-[2/3] rounded-2xl overflow-hidden border border-white/10 shadow-2xl transition-transform duration-500 group-hover:scale-[1.02] relative">
+                            <div className="hidden lg:flex lg:col-span-5 items-end">
+                                <div className="w-full aspect-video rounded-2xl overflow-hidden border border-white/10 shadow-2xl relative group">
                                     <img
                                         src={stillUrl}
                                         alt=""
-                                        className="w-full h-full object-cover"
+                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                     />
                                     {data.watched && (
                                         <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-lg flex items-center gap-2">
@@ -126,7 +126,7 @@ export default function EpisodeDetailPage() {
                             </div>
                         )}
                         {/* Right: Episode info */}
-                        <div className="lg:col-span-8">
+                        <div className="lg:col-span-7">
                             <EpisodeInfoCard
                                 data={data}
                                 onWatchClick={() => setWatchPanelOpen(true)}

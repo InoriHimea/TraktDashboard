@@ -13,27 +13,27 @@ export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeI
   const episodeTitle = data.translatedTitle ?? data.title
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
 
       {/* Breadcrumb: Show name · Season X · Episode Y */}
       <nav className="flex items-center gap-2 text-zinc-400 text-sm font-medium">
-        <span>{data.show.title}</span>
-        <span>·</span>
-        <span>{seasonLabel}</span>
-        <span>·</span>
-        <span>Episode {data.episodeNumber}</span>
+        <span className="truncate">{data.show.title}</span>
+        <span className="flex-shrink-0">·</span>
+        <span className="flex-shrink-0">{seasonLabel}</span>
+        <span className="flex-shrink-0">·</span>
+        <span className="flex-shrink-0">Episode {data.episodeNumber}</span>
       </nav>
 
-      {/* Episode title — large headline */}
+      {/* Episode title — large headline, no wrap */}
       {episodeTitle && (
-        <h1 className="text-white font-bold tracking-tight leading-tight"
+        <h1 className="text-white font-bold tracking-tight leading-tight truncate"
             style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)' }}>
           {episodeTitle}
         </h1>
       )}
 
       {/* Metadata badges */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3 pt-2">
         {data.airDate && (
           <MetaBadge label={new Date(data.airDate).getFullYear().toString()} />
         )}
@@ -49,7 +49,7 @@ export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeI
       </div>
 
       {/* External link pills */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 pt-1">
         {data.show.traktSlug && (
           <ExternalPill
             href={`https://trakt.tv/shows/${data.show.traktSlug}/seasons/${data.seasonNumber}/episodes/${data.episodeNumber}`}
@@ -78,15 +78,17 @@ export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeI
 
       {/* Overview */}
       {overview && (
-        <p className="text-zinc-300 text-sm leading-relaxed max-w-xl">{overview}</p>
+        <p className="text-zinc-300 text-sm leading-relaxed max-w-2xl pt-2">{overview}</p>
       )}
 
       {/* Action buttons — conditional on watch status */}
-      {data.watched ? (
-        <WatchedActions onWatchClick={onWatchClick} onHistoryClick={onHistoryClick} />
-      ) : (
-        <UnwatchedActions onWatchClick={onWatchClick} onHistoryClick={onHistoryClick} />
-      )}
+      <div className="pt-4">
+        {data.watched ? (
+          <WatchedActions onWatchClick={onWatchClick} onHistoryClick={onHistoryClick} />
+        ) : (
+          <UnwatchedActions onWatchClick={onWatchClick} onHistoryClick={onHistoryClick} />
+        )}
+      </div>
     </div>
   )
 }
