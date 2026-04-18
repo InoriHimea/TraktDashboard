@@ -1,48 +1,66 @@
-import { History, Check, ExternalLink } from 'lucide-react';
+import { ExternalLink, Calendar, Clock } from 'lucide-react';
 import type { EpisodeDetailData } from '@trakt-dashboard/types';
 
 interface EpisodeInfoCardProps {
   data: EpisodeDetailData;
-  onHistoryClick: () => void;
 }
 
-export function EpisodeInfoCard({ data, onHistoryClick }: EpisodeInfoCardProps) {
+export function EpisodeInfoCard({ data }: EpisodeInfoCardProps) {
   const overview = data.translatedOverview ?? data.overview;
   const episodeTitle = data.translatedTitle ?? data.title;
-  
-  const seasonStr = String(data.seasonNumber).padStart(2, '0');
-  const epStr = String(data.episodeNumber).padStart(2, '0');
-
-  // 根據 IDE 錯誤訊息，ID 是直接掛在 data 和 data.show 下面的
   const show = data.show;
 
+  // 格式化日期 (例如：2026年4月18日)
+  const airDateStr = data.airDate 
+    ? new Date(data.airDate).toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' }) 
+    : '';
+
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex items-center gap-3">
-        <span className="px-2.5 py-1 bg-primary/15 text-primary rounded-md text-xs font-bold tracking-widest">
-          S{seasonStr} E{epStr}
-        </span>
-        <span className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
-          {show?.title}
-        </span>
+    <div className="flex flex-col gap-2 md:gap-3">
+      {/* 剧集名称 (Trakt 味：主题色，全大写，较小字号) */}
+      <div className="text-primary font-bold tracking-widest uppercase text-xs md:text-sm">
+        {show?.title}
       </div>
 
+      {/* 单集大标题 */}
       {episodeTitle && (
         <h1 className="text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground leading-tight">
           {episodeTitle}
         </h1>
       )}
 
+      {/* Season X / Episode Y (Trakt 经典格式) */}
+      <h2 className="text-xl md:text-2xl font-light text-muted-foreground mt-1">
+        Season {data.seasonNumber} <span className="mx-2 font-thin text-border">/</span> Episode {data.episodeNumber}
+      </h2>
+
+      {/* Meta 信息：播出日期与时长 */}
+      <div className="flex flex-wrap items-center gap-5 text-sm text-muted-foreground/80 mt-2 font-medium">
+        {airDateStr && (
+          <div className="flex items-center gap-1.5">
+            <Calendar className="size-4" />
+            <span>{airDateStr}</span>
+          </div>
+        )}
+        {data.runtime > 0 && (
+          <div className="flex items-center gap-1.5">
+            <Clock className="size-4" />
+            <span>{data.runtime} mins</span>
+          </div>
+        )}
+      </div>
+
+      {/* 简介文本 */}
       {overview && (
-        <p className="text-muted-foreground/90 leading-relaxed max-w-2xl text-base mt-2">
+        <p className="text-foreground/90 leading-relaxed max-w-3xl text-base md:text-lg mt-4 font-normal">
           {overview}
         </p>
       )}
 
-      {/* 修正後的外部鏈接邏輯 */}
-      <div className="flex flex-wrap items-center gap-2 pt-2">
+      {/* 外部链接按钮 (保持极客风格) */}
+      <div className="flex flex-wrap items-center gap-2 pt-6">
         {show?.imdbId && (
-            <a href={`https://www.imdb.com/title/${show.imdbId}`} target="_blank" rel="noreferrer" 
+            <a href={`https://www.imdb.com/title/${show?.imdbId}`} target="_blank" rel="noreferrer" 
                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#F5C518]/10 text-[#F5C518] hover:bg-[#F5C518]/20 rounded-lg text-xs font-bold transition-colors">
                 IMDB <ExternalLink className="size-3" />
             </a>
@@ -60,26 +78,11 @@ export function EpisodeInfoCard({ data, onHistoryClick }: EpisodeInfoCardProps) 
             </a>
         )}
         {show?.tvdbId && (
-            <a href={`https://thetvdb.com/deref/${show.tvdbId}`} target="_blank" rel="noreferrer" 
+            <a href={`https://thetvdb.com/deref/${show?.tvdbId}`} target="_blank" rel="noreferrer" 
                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00A72F]/10 text-[#00A72F] hover:bg-[#00A72F]/20 rounded-lg text-xs font-bold transition-colors">
                 TVDB <ExternalLink className="size-3" />
             </a>
         )}
-      </div>
-
-      <div className="flex flex-wrap items-center gap-4 mt-2">
-        <button className="bg-primary text-primary-foreground hover:bg-primary/90 h-12 px-6 flex items-center justify-center gap-2.5 shadow-md active:scale-[0.98] transition-all rounded-xl cursor-pointer font-bold tracking-wide">
-          <Check strokeWidth={3} className="size-5" />
-          <span>標記已看</span>
-        </button>
-
-        <button
-          onClick={onHistoryClick}
-          className="bg-secondary/60 text-secondary-foreground hover:bg-secondary h-12 px-6 flex items-center justify-center gap-2.5 shadow-sm active:scale-[0.98] transition-all rounded-xl cursor-pointer font-bold tracking-wide"
-        >
-          <History className="size-5" />
-          <span>歷史記錄</span>
-        </button>
       </div>
     </div>
   );

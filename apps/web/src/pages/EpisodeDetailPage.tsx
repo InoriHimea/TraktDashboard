@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Home, Search, ImageOff } from "lucide-react";
+import { ArrowLeft, Home, Search, ImageOff, Check, History } from "lucide-react";
 import { useEpisodeDetail } from "../hooks";
 import { EpisodeInfoCard } from "../components/EpisodeInfoCard";
 import { EpisodeSeasonStrip } from "../components/EpisodeSeasonStrip";
@@ -11,9 +11,9 @@ function EpisodeDetailSkeleton() {
     return (
         <div className="min-h-screen bg-background flex flex-col">
             <div className="w-full h-14 border-b border-border" />
-            <div className="max-w-7xl mx-auto px-6 lg:px-12 w-full mt-8 flex flex-col md:flex-row gap-8">
-                <div className="w-full md:w-[40%] aspect-video bg-muted animate-pulse rounded-2xl" />
-                <div className="w-full md:w-[60%] h-40 bg-muted animate-pulse rounded-2xl" />
+            <div className="max-w-7xl mx-auto px-6 lg:px-12 w-full mt-8 flex flex-col md:flex-row gap-10">
+                <div className="w-full md:w-[35%] aspect-video bg-muted animate-pulse rounded-xl" />
+                <div className="w-full md:w-[65%] h-40 bg-muted animate-pulse rounded-xl" />
             </div>
         </div>
     );
@@ -48,7 +48,6 @@ export default function EpisodeDetailPage() {
 
     return (
         <div className="min-h-screen bg-background text-foreground pb-24 md:pb-12 overflow-x-hidden">
-            {/* 顶部导航 */}
             <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border">
                 <div className="max-w-7xl mx-auto px-6 lg:px-12 h-14 flex items-center">
                     <button 
@@ -61,12 +60,11 @@ export default function EpisodeDetailPage() {
                 </div>
             </header>
 
-            {/* 上半部分：受约束的剧集详情（有左右边距） */}
-            <main className="max-w-7xl mx-auto px-6 lg:px-12 pt-10 flex flex-col md:flex-row gap-10 items-start">
+            <main className="max-w-7xl mx-auto px-6 lg:px-12 pt-8 flex flex-col md:flex-row gap-10 lg:gap-14 items-start">
                 
-                {/* 左侧：固定宽度的截图容器 */}
-                <div className="w-full md:w-[45%] lg:w-[40%] shrink-0 flex flex-col relative group">
-                    <div className="w-full aspect-video rounded-2xl overflow-hidden bg-muted shadow-xl border border-border/50 relative">
+                {/* 🎯 左侧栏：截图 + 按钮（Trakt 经典布局） */}
+                <div className="w-full md:w-[45%] lg:w-[35%] shrink-0 flex flex-col gap-4">
+                    <div className="w-full aspect-video rounded-xl overflow-hidden bg-muted shadow-lg border border-border/50 relative">
                         {stillUrl ? (
                             <img 
                                 src={stillUrl} 
@@ -76,25 +74,33 @@ export default function EpisodeDetailPage() {
                         ) : (
                             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-muted">
                                 <ImageOff className="size-12 opacity-30 text-muted-foreground" />
-                                <span className="text-xs font-bold uppercase tracking-[0.2em] opacity-30 text-muted-foreground">
-                                    No Image
-                                </span>
                             </div>
                         )}
                     </div>
+
+                    {/* 操作按钮组移至此处 */}
+                    <div className="flex flex-col gap-3">
+                        <button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-12 flex items-center justify-center gap-2.5 shadow-md active:scale-[0.98] transition-all rounded-lg cursor-pointer font-bold tracking-wide">
+                            <Check strokeWidth={3} className="size-5" />
+                            <span>标记已看</span>
+                        </button>
+                        <button
+                            onClick={() => setHistoryPanelOpen(true)}
+                            className="w-full bg-secondary/60 text-secondary-foreground hover:bg-secondary h-12 flex items-center justify-center gap-2.5 shadow-sm active:scale-[0.98] transition-all rounded-lg cursor-pointer font-bold tracking-wide"
+                        >
+                            <History className="size-5" />
+                            <span>添加历史记录</span>
+                        </button>
+                    </div>
                 </div>
 
-                {/* 右侧：剧集信息，自适应剩余空间 */}
-                <div className="w-full md:flex-1 flex flex-col justify-center">
-                    <EpisodeInfoCard 
-                        data={data} 
-                        onHistoryClick={() => setHistoryPanelOpen(true)} 
-                    />
+                {/* 🎯 右侧栏：纯粹的剧集信息文本流 */}
+                <div className="w-full md:flex-1 flex flex-col pt-1 md:pt-0">
+                    <EpisodeInfoCard data={data} />
                 </div>
             </main>
 
-            {/* 下半部分：挣脱容器，全宽度的剧集滚动条 */}
-            <section className="w-full mt-16 pt-10 border-t border-border bg-muted/20">
+            <section className="w-full mt-16 pt-10 border-t border-border bg-muted/10">
                 <EpisodeSeasonStrip 
                     showId={data.showId}
                     seasonNumber={data.seasonNumber}
@@ -112,7 +118,6 @@ export default function EpisodeDetailPage() {
                 onDeleted={() => refetch()}
             />
 
-            {/* 移动端底部导航 */}
             <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center px-6 pb-6 pt-3 md:hidden bg-background/90 backdrop-blur-lg z-50 border-t border-border shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
                 <button onClick={() => navigate('/progress')} className="flex flex-col items-center justify-center text-muted-foreground hover:text-foreground transition-all">
                     <Home className="size-5" />

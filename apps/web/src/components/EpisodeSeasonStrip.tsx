@@ -40,10 +40,10 @@ export function EpisodeSeasonStrip({
             <div className="flex gap-5 overflow-x-auto px-6 lg:px-12 pb-8 snap-x snap-mandatory scroll-smooth w-full no-scrollbar">
                 {episodes.map((episode: EpisodeProgress) => {
                     const isCurrent = episode.episodeNumber === currentEpisodeNumber;
-                    
-                    // 修正報錯：傳入路徑字符串而非整個對象
-                    // 根據 EpisodeProgress 的定義，這裡傳入 episode.stillPath
                     const stillUrl = resolveEpisodeStill(episode.stillPath as string); 
+                    
+                    // Trakt 风格的集数标识，如: 1x01
+                    const epCode = `${seasonNumber}x${String(episode.episodeNumber).padStart(2, '0')}`;
 
                     return (
                         <div 
@@ -69,19 +69,25 @@ export function EpisodeSeasonStrip({
                                         <ImageOff className="size-8 text-muted-foreground/30" />
                                     </div>
                                 )}
-                                
-                                <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded-md tracking-wider">
-                                    EP {episode.episodeNumber}
-                                </div>
                             </div>
 
-                            <div className="px-1">
+                            {/* 标题部分加入 Trakt 的 1x01 标识 */}
+                            <div className="px-1 mt-1 flex flex-col gap-1">
                                 <h3 className={cn(
                                     "font-bold text-sm truncate",
                                     isCurrent ? "text-primary" : "text-foreground group-hover:text-primary transition-colors"
                                 )}>
+                                    <span className="text-muted-foreground font-normal mr-2">
+                                        {epCode}
+                                    </span>
                                     {episode.title || `Episode ${episode.episodeNumber}`}
                                 </h3>
+                                {/* 选填：如果有对应数据可以展示播出日期 */}
+                                {episode.airDate && (
+                                    <p className="text-xs text-muted-foreground/70 font-medium">
+                                        {new Date(episode.airDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     );
