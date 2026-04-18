@@ -19,7 +19,7 @@ export default function EpisodeDetailPage() {
     const isWatched = true; 
 
     // 定义统一的限宽样式，确保上下绝对对齐
-    const containerStyle = { width: '90%', maxWidth: '1200px', margin: '0 auto' };
+    const containerStyle = { width: '94%', maxWidth: '1440px', margin: '0 auto' };
 
     return (
         <div className="min-h-screen w-full bg-background text-foreground pb-32 md:pb-20 flex flex-col gap-8 md:gap-12 overflow-x-hidden">
@@ -36,7 +36,7 @@ export default function EpisodeDetailPage() {
             {/* 主内容区 */}
             <main 
                 className="w-full mx-auto flex flex-col md:flex-row items-center" 
-                style={{ width: '90%', maxWidth: '1200px', margin: '0 auto', gap: '48px' }}
+                style={{ width: '94%', maxWidth: '1440px', margin: '0 auto', gap: '48px' }}
             >
                 {/* 左侧：让图片在容器高度内垂直居中 */}
                 <div className="w-full md:w-[380px] lg:w-[460px] shrink-0 flex items-center justify-center">
@@ -64,7 +64,14 @@ export default function EpisodeDetailPage() {
             </main>
 
             {/* 剧集列表 */}
-            <section className="w-full pt-8 border-t border-border/40 bg-muted/5">
+            <section
+                className="w-full border-t border-border/40 bg-muted/5"
+                style={{
+                    paddingTop: '3rem',
+                    paddingLeft: 'calc((100vw - min(1440px, 94vw)) / 2)',
+                    paddingRight: 'calc((100vw - min(1440px, 94vw)) / 2)',
+                }}
+            >
                 <EpisodeSeasonStrip 
                     showId={data.showId} 
                     seasonNumber={data.seasonNumber} 

@@ -4,46 +4,22 @@ import type { EpisodeDetailData } from '@trakt-dashboard/types';
 interface EpisodeInfoCardProps {
   data: EpisodeDetailData;
   onHistoryClick: () => void;
-  /** 当前集是否已标记为已观看 */
   isWatched: boolean;
 }
 
-/** 单 checkmark（未观看） */
 function SingleCheckIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path
-        d="M4 12.5L9 17.5L20 6.5"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M4 12.5L9 17.5L20 6.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-/** 双 checkmark（已观看） */
 function DoubleCheckIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* 第一条（偏左，半透明） */}
-      <path
-        d="M2 12.5L7 17.5L18 6.5"
-        stroke="currentColor"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity="0.5"
-      />
-      {/* 第二条（前景） */}
-      <path
-        d="M6 12.5L11 17.5L22 6.5"
-        stroke="currentColor"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M2 12.5L7 17.5L18 6.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.5" />
+      <path d="M6 12.5L11 17.5L22 6.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -57,39 +33,43 @@ export function EpisodeInfoCard({ data, onHistoryClick, isWatched }: EpisodeInfo
   const runtime = data.runtime || 24;
 
   return (
-    <div className="flex flex-col">
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
 
-      {/* ── 面包屑 + 标题 ── */}
-      <div className="mb-6">
-        <div className="flex flex-wrap items-center gap-2 text-sm md:text-base mb-3">
-          <span className="font-extrabold text-foreground hover:text-primary transition-colors cursor-pointer tracking-wide">
-            {show?.title}
-          </span>
-          <span className="text-muted-foreground/50 font-black">/</span>
-          <span className="text-muted-foreground font-bold tracking-wide">
-            Season {data.seasonNumber} • Episode {data.episodeNumber}
-          </span>
-        </div>
-
-        {episodeTitle && (
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-foreground leading-[1.1] mb-5">
-            {episodeTitle}
-          </h1>
-        )}
-
-        <p className="text-muted-foreground text-sm md:text-base font-bold uppercase tracking-widest">
-          {year}
-          <span className="mx-2 opacity-30">•</span>
-          {runtime} mins
-          <span className="mx-2 opacity-30">•</span>
-          TV-14
-          <span className="mx-2 opacity-30">•</span>
-          Anime
-        </p>
+      {/* ── 面包屑 ── */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', marginBottom: '20px' }}
+        className="text-sm md:text-base">
+        <span className="font-extrabold text-foreground hover:text-primary transition-colors cursor-pointer tracking-wide">
+          {show?.title}
+        </span>
+        <span className="text-muted-foreground/50 font-black">/</span>
+        <span className="text-muted-foreground font-bold tracking-wide">
+          Season {data.seasonNumber} • Episode {data.episodeNumber}
+        </span>
       </div>
 
+      {/* ── 标题 ── */}
+      {episodeTitle && (
+        <h1
+          style={{ marginBottom: '24px' }}
+          className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-foreground leading-[1.1]"
+        >
+          {episodeTitle}
+        </h1>
+      )}
+
+      {/* ── 元信息行 ── */}
+      <p style={{ marginBottom: '32px' }} className="text-muted-foreground text-sm md:text-base font-bold uppercase tracking-widest">
+        {year}
+        <span className="mx-2 opacity-30">•</span>
+        {runtime} mins
+        <span className="mx-2 opacity-30">•</span>
+        TV-14
+        <span className="mx-2 opacity-30">•</span>
+        Anime
+      </p>
+
       {/* ── Trakt + IMDb 评分 ── */}
-      <div className="flex items-center gap-8 mb-8">
+      <div style={{ display: 'flex', alignItems: 'center', gap: '32px', marginBottom: '40px' }}>
         <div className="flex items-center gap-2.5 cursor-pointer group/star">
           <div className="text-primary group-hover/star:scale-110 transition-transform">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
@@ -117,16 +97,15 @@ export function EpisodeInfoCard({ data, onHistoryClick, isWatched }: EpisodeInfo
 
       {/* ── 简介 ── */}
       {overview && (
-        <div className="mb-10">
+        <div style={{ marginBottom: '48px' }}>
           <p
             className="text-muted-foreground/80 text-base md:text-lg font-medium max-w-3xl"
-            style={{ 
-              display: '-webkit-box', 
-              WebkitLineClamp: 6, 
-              WebkitBoxOrient: 'vertical', 
+            style={{
+              display: '-webkit-box',
+              WebkitLineClamp: 6,
+              WebkitBoxOrient: 'vertical',
               overflow: 'hidden',
-              // 🌟 强行设置行高，确保“间距生效”
-              lineHeight: '2', 
+              lineHeight: '2',
             }}
           >
             {overview}
@@ -134,27 +113,28 @@ export function EpisodeInfoCard({ data, onHistoryClick, isWatched }: EpisodeInfo
         </div>
       )}
 
-      {/* ── 操作栏（无 RATE）── */}
-      <div className="mt-auto pt-6 border-t border-border/30 flex items-center gap-3">
+      {/* ── 操作栏 ── */}
+      <div style={{ paddingTop: '24px', borderTop: '1px solid color-mix(in srgb, var(--border) 30%, transparent)', display: 'flex', alignItems: 'center', gap: '12px' }}>
 
         {/* Watch 按钮 */}
         <button
           className={[
-            'h-12 w-14 flex items-center justify-center rounded-xl transition-all active:scale-95 shadow-md',
+            'h-12 w-28 flex items-center justify-center gap-2 rounded-lg transition-all active:scale-95 shadow-md text-sm font-bold tracking-wide',
             isWatched
-              ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-purple-900/40'
+              ? 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-indigo-900/40'
               : 'bg-muted hover:bg-muted/70 text-muted-foreground hover:text-foreground',
           ].join(' ')}
           aria-label={isWatched ? '已观看' : '标记为已观看'}
           title={isWatched ? 'Watched' : 'Mark as watched'}
         >
           {isWatched ? <DoubleCheckIcon /> : <SingleCheckIcon />}
+          <span>{isWatched ? 'Watched' : 'Watch'}</span>
         </button>
 
         {/* History 按钮 */}
         <button
           onClick={onHistoryClick}
-          className="h-12 w-12 bg-muted hover:bg-muted/70 text-muted-foreground hover:text-foreground flex items-center justify-center rounded-xl transition-all active:scale-95"
+          className="h-12 w-16 bg-muted hover:bg-muted/70 text-muted-foreground hover:text-foreground flex items-center justify-center rounded-lg transition-all active:scale-95"
           aria-label="观看历史"
           title="Watch history"
         >
