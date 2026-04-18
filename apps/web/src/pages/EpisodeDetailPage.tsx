@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
-import { ArrowLeft, RefreshCw, Home, Search, Play } from "lucide-react";
+import { ArrowLeft, RefreshCw, Home, Search, Play, Check } from "lucide-react";
 import { useEpisodeDetail } from "../hooks";
 import { EpisodeInfoCard } from "../components/EpisodeInfoCard";
 import { EpisodeSeasonStrip } from "../components/EpisodeSeasonStrip";
