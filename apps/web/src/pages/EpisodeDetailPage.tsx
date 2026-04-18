@@ -70,10 +70,13 @@ export default function EpisodeDetailPage() {
     const backdropUrl = resolveEpisodeStillLarge(data.stillPath);
 
     return (
-        <div className="min-h-screen pb-24 md:pb-12 bg-[#050505] text-white">
+        <div className="pb-24 md:pb-12 bg-[#050505] text-white">
 
             {/* ── Hero Section ── */}
-            <section className="relative w-full flex items-end overflow-hidden min-h-[80vh] bg-[#0a0a14]">
+            <section
+                className="relative w-full overflow-hidden bg-[#0a0a14]"
+                style={{ height: "calc(100vh - 56px)", minHeight: "520px" }}
+            >
                 {/* Background: blurred still */}
                 <div className="absolute inset-0 z-0">
                     {backdropUrl ? (
@@ -98,30 +101,32 @@ export default function EpisodeDetailPage() {
                     返回
                 </button>
 
-                {/* Hero content — grid: left text + right thumbnail */}
-                <div className="relative z-10 w-full max-w-7xl mx-auto px-8 pb-16 grid grid-cols-1 lg:grid-cols-12 gap-12 items-end">
-                    <div className="lg:col-span-8">
-                        <EpisodeInfoCard
-                            data={data}
-                            onWatchClick={() => setWatchPanelOpen(true)}
-                            onHistoryClick={() => setHistoryPanelOpen(true)}
-                        />
-                    </div>
-                    {/* Right thumbnail — desktop only */}
-                    {stillUrl && (
-                        <div className="hidden lg:block lg:col-span-4 group relative">
-                            <div className="aspect-video rounded-2xl overflow-hidden border border-white/10 shadow-2xl transition-transform duration-500 group-hover:scale-[1.02]">
-                                <img
-                                    src={stillUrl}
-                                    alt=""
-                                    className="w-full h-full object-cover"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Play className="size-16 text-white fill-white" />
+                {/* Hero content — fills full height, content pinned to bottom */}
+                <div className="absolute inset-0 z-10 flex items-end">
+                    <div className="w-full max-w-7xl mx-auto px-8 pb-16 grid grid-cols-1 lg:grid-cols-12 gap-12 items-end">
+                        <div className="lg:col-span-8">
+                            <EpisodeInfoCard
+                                data={data}
+                                onWatchClick={() => setWatchPanelOpen(true)}
+                                onHistoryClick={() => setHistoryPanelOpen(true)}
+                            />
+                        </div>
+                        {/* Right thumbnail — desktop only */}
+                        {stillUrl && (
+                            <div className="hidden lg:flex lg:col-span-4 items-end group relative">
+                                <div className="w-full aspect-video rounded-2xl overflow-hidden border border-white/10 shadow-2xl transition-transform duration-500 group-hover:scale-[1.02] relative">
+                                    <img
+                                        src={stillUrl}
+                                        alt=""
+                                        className="w-full h-full object-cover"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Play className="size-16 text-white fill-white" />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
             </section>
 
