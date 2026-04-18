@@ -119,8 +119,15 @@ export function EpisodeInfoCard({ data, onHistoryClick, isWatched }: EpisodeInfo
       {overview && (
         <div className="mb-10">
           <p
-            className="text-muted-foreground/80 leading-[1.85] text-base md:text-lg font-medium max-w-3xl"
-            style={{ display: '-webkit-box', WebkitLineClamp: 6, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+            className="text-muted-foreground/80 text-base md:text-lg font-medium max-w-3xl"
+            style={{ 
+              display: '-webkit-box', 
+              WebkitLineClamp: 6, 
+              WebkitBoxOrient: 'vertical', 
+              overflow: 'hidden',
+              // 🌟 强行设置行高，确保“间距生效”
+              lineHeight: '2', 
+            }}
           >
             {overview}
           </p>
