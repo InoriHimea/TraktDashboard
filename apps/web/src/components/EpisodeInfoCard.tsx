@@ -9,35 +9,28 @@ interface EpisodeInfoCardProps {
 
 export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeInfoCardProps) {
   const overview = data.translatedOverview ?? data.overview
-  const seasonLabel = data.seasonNumber === 0 ? 'SPECIALS' : `SEASON ${String(data.seasonNumber).padStart(2, '0')}`
+  const seasonLabel = data.seasonNumber === 0 ? 'Specials' : `Season ${data.seasonNumber}`
   const episodeTitle = data.translatedTitle ?? data.title
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
 
-      {/* Top row: Show name (left) + Season (right) */}
-      <div className="flex items-start justify-between gap-6">
-        <span className="text-white/60 text-xs font-medium tracking-wider uppercase truncate flex-1">
-          {data.show.title}
-        </span>
-        <span className="text-[#ff8aa8] text-xs font-bold tracking-widest uppercase flex-shrink-0">
-          {seasonLabel}
-        </span>
-      </div>
+      {/* Breadcrumb: Show name · Season X · Episode Y */}
+      <nav className="flex items-center gap-2 text-zinc-400 text-sm font-medium">
+        <span>{data.show.title}</span>
+        <span>·</span>
+        <span>{seasonLabel}</span>
+        <span>·</span>
+        <span>Episode {data.episodeNumber}</span>
+      </nav>
 
-      {/* Episode title — large pink */}
+      {/* Episode title — large headline */}
       {episodeTitle && (
-        <h2 className="text-[#ff8aa8] font-bold tracking-wide leading-tight"
-            style={{ fontSize: 'clamp(1.25rem, 3vw, 1.75rem)' }}>
+        <h1 className="text-white font-bold tracking-tight leading-tight"
+            style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)' }}>
           {episodeTitle}
-        </h2>
+        </h1>
       )}
-
-      {/* Episode number — hero headline */}
-      <h1 className="text-white font-extrabold tracking-tight leading-none"
-          style={{ fontSize: 'clamp(3.5rem, 10vw, 6rem)' }}>
-        第 {data.episodeNumber} 集
-      </h1>
 
       {/* Metadata badges */}
       <div className="flex flex-wrap items-center gap-3">
