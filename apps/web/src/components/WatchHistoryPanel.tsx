@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { Trash2, AlertCircle } from "lucide-react";
+import { Trash2, AlertCircle, Clock, Eye } from "lucide-react";
 import { SlidingPanel } from "./SlidingPanel";
-import { Button } from "./ui/Button";
 import { useEpisodeHistory, useShowHistory, useDeleteHistory } from "../hooks";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -26,25 +25,15 @@ export function WatchHistoryPanel({
     episodeNumber,
     onDeleted,
 }: WatchHistoryPanelProps) {
-    const [confirmingDelete, setConfirmingDelete] = useState<number | null>(
-        null,
-    );
+    const [confirmingDelete, setConfirmingDelete] = useState<number | null>(null);
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    // Use episode history if season/episode provided, otherwise show history
-    const isEpisodeHistory =
-        seasonNumber !== undefined && episodeNumber !== undefined;
-    const episodeHistoryQuery = useEpisodeHistory(
-        showId,
-        seasonNumber ?? 0,
-        episodeNumber ?? 0,
-    );
+    const isEpisodeHistory = seasonNumber !== undefined && episodeNumber !== undefined;
+    const episodeHistoryQuery = useEpisodeHistory(showId, seasonNumber ?? 0, episodeNumber ?? 0);
     const showHistoryQuery = useShowHistory(showId);
-
     const query = isEpisodeHistory ? episodeHistoryQuery : showHistoryQuery;
     const { data: history, isLoading } = query;
-
     const deleteHistory = useDeleteHistory(showId);
 
     const handleDelete = async (historyId: number) => {
@@ -65,128 +54,188 @@ export function WatchHistoryPanel({
         if (!watchedAt) return "未知时间";
         try {
             const d = dayjs(watchedAt);
-            const relative = d.locale("zh-cn").fromNow();
-            const absolute = d.format("YYYY/MM/DD HH:mm");
-            return `${relative} (${absolute})`;
+            return {
+                relative: d.locale("zh-cn").fromNow(),
+                absolute: d.format("YYYY/MM/DD HH:mm"),
+            };
         } catch {
-            return watchedAt;
+            return { relative: watchedAt, absolute: "" };
         }
     };
 
     return (
-        <SlidingPanel
-            open={open}
-            onClose={onClose}
-            title={isEpisodeHistory ? "观看历史" : "全剧观看历史"}
-        >
-            <div className="p-6">
-                {isLoading && (
-                    <div className="flex items-center justify-center py-12">
-                        <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin border-[var(--color-accent)]" />
-                    </div>
-                )}
+        <>
+            <SlidingPanel
+                open={open}
+                onClose={onClose}
+                title={isEpisodeHistory ? "观看历史" : "全剧观看历史"}
+            >
+                <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '12px', position: 'relative' }}>
 
-                {!isLoading && (!history || history.length === 0) && (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                        <div className="w-12 h-12 rounded-xl bg-[var(--color-surface-2)] flex items-center justify-center mb-3">
-                            <AlertCircle
-                                size={20}
-                                className="text-[var(--color-text-muted)]"
-                            />
+                    {/* Loading */}
+                    {isLoading && (
+                        <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
+                            <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin border-[var(--color-accent)]" />
                         </div>
-                        <p className="text-sm text-[var(--color-text-muted)]">
-                            暂无观看记录
-                        </p>
-                    </div>
-                )}
+                    )}
 
-                {!isLoading && history && history.length > 0 && (
-                    <div className="space-y-3">
-                        {history.map((entry) => (
+                    {/* Empty state */}
+                    {!isLoading && (!history || history.length === 0) && (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 0', gap: '16px', textAlign: 'center' }}>
+                            <div style={{
+                                width: '56px', height: '56px', borderRadius: '16px',
+                                background: 'var(--color-surface-2)',
+                                border: '1px solid var(--color-border)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                                <Eye size={22} className="text-[var(--color-text-muted)]" />
+                            </div>
+                            <div>
+                                <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text)', marginBottom: '4px' }}>暂无观看记录</p>
+                                <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>观看后记录将出现在这里</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* History entries */}
+                    {!isLoading && history && history.length > 0 && history.map((entry, index) => {
+                        const time = formatWatchedAt(entry.watchedAt);
+                        const isConfirming = confirmingDelete === entry.id;
+                        const isDeleting = deletingId === entry.id;
+
+                        return (
                             <div
                                 key={entry.id}
-                                className="p-4 rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)]"
+                                style={{
+                                    borderRadius: '14px',
+                                    border: '1px solid var(--color-border)',
+                                    background: 'var(--color-surface-2)',
+                                    overflow: 'hidden',
+                                    transition: 'border-color 0.15s',
+                                }}
                             >
-                                {/* Episode title (for show history) */}
-                                {!isEpisodeHistory && (
-                                    <div className="text-sm font-medium text-[var(--color-text)] mb-2">
-                                        S
-                                        {String(entry.seasonNumber).padStart(
-                                            2,
-                                            "0",
-                                        )}{" "}
-                                        · E
-                                        {String(entry.episodeNumber).padStart(
-                                            2,
-                                            "0",
-                                        )}
-                                        {entry.episodeTitle &&
-                                            ` - ${entry.episodeTitle}`}
+                                {/* Entry header */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px' }}>
+                                    {/* Index badge */}
+                                    <div style={{
+                                        width: '32px', height: '32px', borderRadius: '8px', flexShrink: 0,
+                                        background: 'var(--color-accent, #6366f1)1a',
+                                        border: '1px solid var(--color-accent, #6366f1)33',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    }}>
+                                        <Clock size={14} className="text-[var(--color-accent)]" />
                                     </div>
-                                )}
 
-                                {/* Watched at */}
-                                <div className="text-xs text-[var(--color-text-muted)] mb-3">
-                                    {formatWatchedAt(entry.watchedAt)}
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        {/* Episode label for show history */}
+                                        {!isEpisodeHistory && (
+                                            <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text)', marginBottom: '2px', letterSpacing: '0.01em' }}>
+                                                S{String(entry.seasonNumber).padStart(2, "0")} · E{String(entry.episodeNumber).padStart(2, "0")}
+                                                {entry.episodeTitle && (
+                                                    <span style={{ fontWeight: 400, color: 'var(--color-text-muted)', marginLeft: '6px' }}>
+                                                        {entry.episodeTitle}
+                                                    </span>
+                                                )}
+                                            </p>
+                                        )}
+                                        {/* Time */}
+                                        <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
+                                            {typeof time === 'string' ? time : (
+                                                <>
+                                                    <span style={{ fontWeight: 500, color: 'var(--color-text)' }}>{time.relative}</span>
+                                                    <span style={{ margin: '0 4px', opacity: 0.4 }}>·</span>
+                                                    {time.absolute}
+                                                </>
+                                            )}
+                                        </p>
+                                    </div>
+
+                                    {/* Delete trigger */}
+                                    {!isConfirming && (
+                                        <button
+                                            onClick={() => setConfirmingDelete(entry.id)}
+                                            style={{
+                                                width: '30px', height: '30px', borderRadius: '8px', flexShrink: 0,
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                color: 'var(--color-text-muted)',
+                                                transition: 'background 0.15s, color 0.15s',
+                                                background: 'transparent', border: 'none', cursor: 'pointer',
+                                            }}
+                                            onMouseEnter={e => {
+                                                (e.currentTarget as HTMLElement).style.background = '#fee2e2';
+                                                (e.currentTarget as HTMLElement).style.color = '#ef4444';
+                                            }}
+                                            onMouseLeave={e => {
+                                                (e.currentTarget as HTMLElement).style.background = 'transparent';
+                                                (e.currentTarget as HTMLElement).style.color = 'var(--color-text-muted)';
+                                            }}
+                                            aria-label="删除记录"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    )}
                                 </div>
 
-                                {/* Delete button or confirmation */}
-                                {confirmingDelete === entry.id ? (
-                                    <div className="space-y-2">
-                                        <p className="text-xs text-[var(--color-text-muted)]">
-                                            确认删除此记录？
+                                {/* Inline confirm strip */}
+                                {isConfirming && (
+                                    <div style={{
+                                        borderTop: '1px solid var(--color-border)',
+                                        background: '#fff5f5',
+                                        padding: '12px 16px',
+                                        display: 'flex', alignItems: 'center', gap: '10px',
+                                    }}>
+                                        <AlertCircle size={14} style={{ color: '#ef4444', flexShrink: 0 }} />
+                                        <p style={{ flex: 1, fontSize: '12px', color: '#dc2626', fontWeight: 500 }}>
+                                            确认删除此集的观看记录？此操作不可撤销。
                                         </p>
-                                        <div className="flex gap-2">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() =>
-                                                    setConfirmingDelete(null)
-                                                }
-                                                className="flex-1 text-xs"
+                                        <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                                            <button
+                                                onClick={() => setConfirmingDelete(null)}
+                                                style={{
+                                                    height: '30px', padding: '0 14px', borderRadius: '8px',
+                                                    fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                                                    border: '1px solid var(--color-border)',
+                                                    background: 'var(--color-surface-2)',
+                                                    color: 'var(--color-text)',
+                                                    transition: 'background 0.15s',
+                                                }}
                                             >
                                                 取消
-                                            </Button>
-                                            <Button
-                                                variant="secondary"
-                                                size="sm"
-                                                onClick={() =>
-                                                    handleDelete(entry.id)
-                                                }
-                                                disabled={
-                                                    deletingId === entry.id
-                                                }
-                                                className="flex-1 text-xs"
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(entry.id)}
+                                                disabled={isDeleting}
+                                                style={{
+                                                    height: '30px', padding: '0 14px', borderRadius: '8px',
+                                                    fontSize: '12px', fontWeight: 700, cursor: isDeleting ? 'default' : 'pointer',
+                                                    border: 'none',
+                                                    background: '#ef4444',
+                                                    color: '#fff',
+                                                    opacity: isDeleting ? 0.6 : 1,
+                                                    transition: 'opacity 0.15s',
+                                                }}
                                             >
-                                                {deletingId === entry.id
-                                                    ? "删除中..."
-                                                    : "确认删除"}
-                                            </Button>
+                                                {isDeleting ? "删除中…" : "删除"}
+                                            </button>
                                         </div>
                                     </div>
-                                ) : (
-                                    <button
-                                        onClick={() =>
-                                            setConfirmingDelete(entry.id)
-                                        }
-                                        className="flex items-center gap-2 text-xs text-red-400 hover:text-red-300 transition-colors"
-                                    >
-                                        <Trash2 size={12} />
-                                        删除记录
-                                    </button>
                                 )}
                             </div>
-                        ))}
-                    </div>
-                )}
+                        );
+                    })}
 
-                {/* Error message */}
-                {error && (
-                    <div className="mt-4 p-3 rounded-lg bg-red-950/40 border border-red-500/20 text-sm text-red-400">
-                        {error}
-                    </div>
-                )}
-            </div>
-        </SlidingPanel>
+                    {/* Error */}
+                    {error && (
+                        <div style={{
+                            marginTop: '8px', padding: '12px 14px', borderRadius: '10px',
+                            background: '#fef2f2', border: '1px solid #fecaca',
+                            fontSize: '13px', color: '#dc2626', fontWeight: 500,
+                        }}>
+                            {error}
+                        </div>
+                    )}
+                </div>
+            </SlidingPanel>
+        </>
     );
 }
