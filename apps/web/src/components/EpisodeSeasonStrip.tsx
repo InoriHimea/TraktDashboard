@@ -30,19 +30,19 @@ export function EpisodeSeasonStrip({
     const seasonLabel = seasonNumber === 0 ? "Specials" : `Season ${seasonNumber}`;
 
     return (
-        <div className="flex flex-col w-full">
-            <div className="max-w-7xl mx-auto px-6 lg:px-12 w-full mb-6">
-                <h2 className="text-xl font-extrabold tracking-widest uppercase text-foreground/80">
+        <div className="flex flex-col w-full pb-12">
+            {/* 标题对齐主内容的 Padding */}
+            <div className="max-w-[1600px] mx-auto px-8 md:px-16 lg:px-24 w-full mb-8">
+                <h2 className="text-xl font-black tracking-[0.2em] uppercase text-foreground">
                     {seasonLabel}
                 </h2>
             </div>
 
-            <div className="flex gap-5 overflow-x-auto px-6 lg:px-12 pb-8 snap-x snap-mandatory scroll-smooth w-full no-scrollbar">
+            {/* 滚动容器也使用一致的起止 Padding，卡片间距拉大到 gap-6 */}
+            <div className="flex gap-6 overflow-x-auto px-8 md:px-16 lg:px-24 pb-10 snap-x snap-mandatory scroll-smooth w-full no-scrollbar">
                 {episodes.map((episode: EpisodeProgress) => {
                     const isCurrent = episode.episodeNumber === currentEpisodeNumber;
                     const stillUrl = resolveEpisodeStill(episode.stillPath as string); 
-                    
-                    // Trakt 风格的集数标识，如: 1x01
                     const epCode = `${seasonNumber}x${String(episode.episodeNumber).padStart(2, '0')}`;
 
                     return (
@@ -50,41 +50,39 @@ export function EpisodeSeasonStrip({
                             key={episode.episodeNumber}
                             ref={isCurrent ? currentRef : null}
                             onClick={() => navigate(`/shows/${showId}/seasons/${seasonNumber}/episodes/${episode.episodeNumber}`)}
-                            className="group flex-none w-[260px] md:w-[280px] snap-start flex flex-col gap-3 cursor-pointer"
+                            className="group flex-none w-[280px] md:w-[320px] snap-start flex flex-col gap-4 cursor-pointer"
                         >
                             <div className={cn(
-                                "relative w-full aspect-video rounded-xl overflow-hidden bg-background shadow-md border",
+                                "relative w-full aspect-video rounded-2xl overflow-hidden bg-muted shadow-lg border",
                                 isCurrent 
-                                    ? "border-primary ring-2 ring-primary ring-offset-2 ring-offset-background" 
-                                    : "border-border/50 hover:border-foreground/30 transition-all"
+                                    ? "border-primary ring-2 ring-primary ring-offset-4 ring-offset-background" 
+                                    : "border-border/30 hover:border-foreground/30 transition-all"
                             )}>
                                 {stillUrl ? (
                                     <img 
                                         src={stillUrl} 
                                         alt={`Episode ${episode.episodeNumber}`} 
-                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                                     />
                                 ) : (
                                     <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
-                                        <ImageOff className="size-8 text-muted-foreground/30" />
+                                        <ImageOff className="size-10 opacity-20 text-muted-foreground" />
                                     </div>
                                 )}
                             </div>
 
-                            {/* 标题部分加入 Trakt 的 1x01 标识 */}
-                            <div className="px-1 mt-1 flex flex-col gap-1">
+                            <div className="px-2 mt-1 flex flex-col gap-1.5">
                                 <h3 className={cn(
-                                    "font-bold text-sm truncate",
+                                    "font-black text-base truncate",
                                     isCurrent ? "text-primary" : "text-foreground group-hover:text-primary transition-colors"
                                 )}>
-                                    <span className="text-muted-foreground font-normal mr-2">
+                                    <span className="text-muted-foreground/60 font-bold mr-3">
                                         {epCode}
                                     </span>
                                     {episode.title || `Episode ${episode.episodeNumber}`}
                                 </h3>
-                                {/* 选填：如果有对应数据可以展示播出日期 */}
                                 {episode.airDate && (
-                                    <p className="text-xs text-muted-foreground/70 font-medium">
+                                    <p className="text-sm text-muted-foreground/70 font-bold tracking-wide">
                                         {new Date(episode.airDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                                     </p>
                                 )}
