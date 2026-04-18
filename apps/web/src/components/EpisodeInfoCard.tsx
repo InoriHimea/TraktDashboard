@@ -9,38 +9,35 @@ interface EpisodeInfoCardProps {
 
 export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeInfoCardProps) {
   const overview = data.translatedOverview ?? data.overview
-  const seasonLabel = data.seasonNumber === 0 ? 'Specials' : `Season ${String(data.seasonNumber).padStart(2, '0')}`
-  // Use translated show title if available (show object may carry translatedName from API)
-  const showDisplayTitle = (data.show as any).translatedName ?? data.show.title
+  const seasonLabel = data.seasonNumber === 0 ? 'SPECIALS' : `SEASON ${String(data.seasonNumber).padStart(2, '0')}`
+  const episodeTitle = data.translatedTitle ?? data.title
 
   return (
     <div className="space-y-6">
 
-      {/* Title row: Episode number (left) + Show/Season (right) */}
+      {/* Top row: Show name (left) + Season (right) */}
       <div className="flex items-start justify-between gap-6">
-        {/* Left: Episode number — hero headline */}
-        <h1 className="text-white font-extrabold tracking-tight leading-none flex-shrink-0"
-            style={{ fontSize: 'clamp(3rem, 8vw, 5.5rem)' }}>
-          第 {data.episodeNumber} 集
-        </h1>
-
-        {/* Right: Show title + season — small label */}
-        <div className="flex flex-col items-end gap-1 pt-2 text-right">
-          <span className="text-white/50 text-xs font-semibold tracking-widest uppercase truncate max-w-xs">
-            {showDisplayTitle}
-          </span>
-          <span className="text-[#ff8aa8] text-xs font-bold tracking-widest uppercase">
-            {seasonLabel}
-          </span>
-        </div>
+        <span className="text-white/60 text-xs font-medium tracking-wider uppercase truncate flex-1">
+          {data.show.title}
+        </span>
+        <span className="text-[#ff8aa8] text-xs font-bold tracking-widest uppercase flex-shrink-0">
+          {seasonLabel}
+        </span>
       </div>
 
-      {/* Episode title (translated) — secondary accent */}
-      {data.translatedTitle && (
-        <p className="text-[#f472b6] text-base font-semibold tracking-wide leading-snug">
-          {data.translatedTitle}
-        </p>
+      {/* Episode title — large pink */}
+      {episodeTitle && (
+        <h2 className="text-[#ff8aa8] font-bold tracking-wide leading-tight"
+            style={{ fontSize: 'clamp(1.25rem, 3vw, 1.75rem)' }}>
+          {episodeTitle}
+        </h2>
       )}
+
+      {/* Episode number — hero headline */}
+      <h1 className="text-white font-extrabold tracking-tight leading-none"
+          style={{ fontSize: 'clamp(3.5rem, 10vw, 6rem)' }}>
+        第 {data.episodeNumber} 集
+      </h1>
 
       {/* Metadata badges */}
       <div className="flex flex-wrap items-center gap-3">
