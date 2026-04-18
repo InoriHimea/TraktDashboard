@@ -48,9 +48,10 @@ export default function EpisodeDetailPage() {
     const isWatched = true; 
 
     return (
-        <div className="min-h-screen bg-background text-foreground pb-32 md:pb-20">
-            {/* 顶部导航：加宽左右 padding */}
-            <header className="sticky top-0 z-10 bg-background/90 backdrop-blur-md border-b border-border/40 h-16 flex items-center">
+        <div className="min-h-screen bg-background text-foreground pb-32 md:pb-20 flex flex-col gap-8 md:gap-12">
+            
+            {/* 顶部导航 */}
+            <header className="sticky top-0 z-10 bg-background/90 backdrop-blur-md border-b border-border/40 h-16 flex items-center shrink-0">
                 <div className="max-w-[1600px] w-full mx-auto px-12 md:px-20 lg:px-28 flex items-center">
                     <button 
                         onClick={() => navigate(-1)}
@@ -62,8 +63,8 @@ export default function EpisodeDetailPage() {
                 </div>
             </header>
 
-            {/* 主内容区：极致的留白 pt-12 md:pt-20 以及 gap-12 lg:gap-24 */}
-            <main className="max-w-[1400px] mx-auto px-12 md:px-20 lg:px-28 pt-12 md:pt-20 flex flex-col md:flex-row gap-12 lg:gap-24 items-start overflow-visible">
+            {/* 主内容区：由于外层有了 gap，这里可以适当减小或保留原有的 pt-12 */}
+            <main className="max-w-[1400px] mx-auto px-12 md:px-20 lg:px-28 flex flex-col md:flex-row gap-12 lg:gap-24 items-start overflow-visible w-full">
                 
                 {/* 左侧海报区 — group 必须写在这里，Tailwind v4 @apply 不支持 variant 标记类 */}
                 <div className="w-full md:w-[380px] lg:w-[480px] shrink-0 relative group overflow-visible">
