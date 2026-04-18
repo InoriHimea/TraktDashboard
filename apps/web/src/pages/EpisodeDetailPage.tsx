@@ -51,7 +51,7 @@ export default function EpisodeDetailPage() {
         <div className="min-h-screen bg-background text-foreground pb-32 md:pb-20">
             {/* 顶部导航：加宽左右 padding */}
             <header className="sticky top-0 z-10 bg-background/90 backdrop-blur-md border-b border-border/40 h-16 flex items-center">
-                <div className="max-w-[1600px] w-full mx-auto px-8 md:px-16 lg:px-24 flex items-center">
+                <div className="max-w-[1600px] w-full mx-auto px-12 md:px-20 lg:px-28 flex items-center">
                     <button 
                         onClick={() => navigate(-1)}
                         className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
@@ -63,7 +63,7 @@ export default function EpisodeDetailPage() {
             </header>
 
             {/* 主内容区：极致的留白 pt-12 md:pt-20 以及 gap-12 lg:gap-24 */}
-            <main className="max-w-[1400px] mx-auto px-8 md:px-16 lg:px-24 pt-12 md:pt-20 flex flex-col md:flex-row gap-12 lg:gap-24 items-start">
+            <main className="max-w-[1400px] mx-auto px-12 md:px-20 lg:px-28 pt-12 md:pt-20 flex flex-col md:flex-row gap-12 lg:gap-24 items-start">
                 
                 {/* 左侧海报区 — group 必须写在这里，Tailwind v4 @apply 不支持 variant 标记类 */}
                 <div className="w-full md:w-[380px] lg:w-[480px] shrink-0 relative group">
@@ -119,7 +119,7 @@ export default function EpisodeDetailPage() {
                 onDeleted={() => refetch()}
             />
 
-            <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center px-8 pb-8 pt-4 md:hidden bg-background/95 backdrop-blur-xl z-50 border-t border-border/40 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.2)]">
+            <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center px-12 pb-8 pt-4 md:hidden bg-background/95 backdrop-blur-xl z-50 border-t border-border/40 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.2)]">
                 <button onClick={() => navigate('/progress')} className="flex flex-col items-center justify-center text-muted-foreground hover:text-foreground transition-all">
                     <Home className="size-6" />
                     <span className="text-[10px] font-bold uppercase tracking-widest mt-1.5">Home</span>

@@ -39,7 +39,7 @@ export function EpisodeSeasonStrip({
             </div>
 
             {/* 滚动容器也使用一致的起止 Padding，卡片间距拉大到 gap-6 */}
-            <div className="flex gap-6 overflow-x-auto px-8 md:px-16 lg:px-24 py-4 pb-10 snap-x snap-mandatory scroll-smooth w-full no-scrollbar">
+            <div className="flex gap-6 overflow-x-auto px-8 md:px-16 lg:px-24 pt-8 pb-10 snap-x snap-mandatory scroll-smooth w-full no-scrollbar">
                 {episodes.map((episode: EpisodeProgress) => {
                     const isCurrent = episode.episodeNumber === currentEpisodeNumber;
                     const stillUrl = resolveEpisodeStill(episode.stillPath as string); 
