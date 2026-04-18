@@ -14,17 +14,25 @@ export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeI
   const showDisplayTitle = (data.show as any).translatedName ?? data.show.title
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
 
-      {/* Show title + season — small label row */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <span className="text-white/50 text-xs font-semibold tracking-widest uppercase truncate max-w-xs">
-          {showDisplayTitle}
-        </span>
-        <span className="text-white/20 text-xs">·</span>
-        <span className="text-[#ff8aa8] text-xs font-bold tracking-widest uppercase">
-          {seasonLabel}
-        </span>
+      {/* Title row: Episode number (left) + Show/Season (right) */}
+      <div className="flex items-start justify-between gap-6">
+        {/* Left: Episode number — hero headline */}
+        <h1 className="text-white font-extrabold tracking-tight leading-none flex-shrink-0"
+            style={{ fontSize: 'clamp(3rem, 8vw, 5.5rem)' }}>
+          第 {data.episodeNumber} 集
+        </h1>
+
+        {/* Right: Show title + season — small label */}
+        <div className="flex flex-col items-end gap-1 pt-2 text-right">
+          <span className="text-white/50 text-xs font-semibold tracking-widest uppercase truncate max-w-xs">
+            {showDisplayTitle}
+          </span>
+          <span className="text-[#ff8aa8] text-xs font-bold tracking-widest uppercase">
+            {seasonLabel}
+          </span>
+        </div>
       </div>
 
       {/* Episode title (translated) — secondary accent */}
@@ -33,12 +41,6 @@ export function EpisodeInfoCard({ data, onWatchClick, onHistoryClick }: EpisodeI
           {data.translatedTitle}
         </p>
       )}
-
-      {/* Episode number — hero headline */}
-      <h1 className="text-white font-extrabold tracking-tight leading-none"
-          style={{ fontSize: 'clamp(3rem, 8vw, 5.5rem)' }}>
-        第 {data.episodeNumber} 集
-      </h1>
 
       {/* Metadata badges */}
       <div className="flex flex-wrap items-center gap-3">
@@ -132,14 +134,14 @@ function ExternalPill({ href, label }: { href: string; label: string }) {
 // Watched state: 3 buttons
 function WatchedActions({ onWatchClick, onHistoryClick }: { onWatchClick: () => void; onHistoryClick: () => void }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 pt-2">
+    <div className="flex flex-wrap items-center gap-4 pt-4">
       {/* Done-all indicator — purple, icon only */}
       <button
-        className="bg-purple-600 h-12 w-12 rounded-xl flex items-center justify-center shadow-md active:scale-[0.98] transition-all hover:bg-purple-700 cursor-pointer shrink-0"
+        className="bg-purple-600 h-14 w-48 rounded-xl flex items-center justify-center shadow-md active:scale-[0.98] transition-all hover:bg-purple-700 cursor-pointer shrink-0"
         aria-label="已观看"
         tabIndex={-1}
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="1 12 5 16 13 8" />
           <polyline points="9 12 13 16 21 8" />
         </svg>
@@ -148,19 +150,19 @@ function WatchedActions({ onWatchClick, onHistoryClick }: { onWatchClick: () => 
       {/* Watch again — teal */}
       <button
         onClick={onWatchClick}
-        className="bg-teal-700 h-12 px-6 rounded-xl flex items-center justify-center gap-2.5 shadow-md active:scale-[0.98] transition-all hover:bg-teal-800 cursor-pointer shrink-0"
+        className="bg-teal-700 h-14 w-48 rounded-xl flex items-center justify-center gap-3 shadow-md active:scale-[0.98] transition-all hover:bg-teal-800 cursor-pointer shrink-0"
       >
-        <Check className="size-4 text-white" strokeWidth={2.5} />
-        <span className="text-white text-sm font-bold tracking-wide whitespace-nowrap">再看一次</span>
+        <Check className="text-white" strokeWidth={2.5} />
+        <span className="text-white font-bold tracking-wide whitespace-nowrap">再看一次</span>
       </button>
 
       {/* History — slate */}
       <button
         onClick={onHistoryClick}
-        className="bg-slate-700 h-12 px-6 rounded-xl flex items-center justify-center gap-2.5 shadow-md active:scale-[0.98] transition-all hover:bg-slate-800 cursor-pointer shrink-0"
+        className="bg-slate-700 h-14 w-48 rounded-xl flex items-center justify-center gap-3 shadow-md active:scale-[0.98] transition-all hover:bg-slate-800 cursor-pointer shrink-0"
       >
-        <History className="size-4 text-white" />
-        <span className="text-white text-sm font-bold tracking-wide">历史记录</span>
+        <History className="text-white" />
+        <span className="text-white font-bold tracking-wide">历史记录</span>
       </button>
     </div>
   )
@@ -169,23 +171,23 @@ function WatchedActions({ onWatchClick, onHistoryClick }: { onWatchClick: () => 
 // Unwatched state: 2 buttons
 function UnwatchedActions({ onWatchClick, onHistoryClick }: { onWatchClick: () => void; onHistoryClick: () => void }) {
   return (
-    <div className="flex items-center gap-3 pt-2">
+    <div className="flex items-center gap-4 pt-4">
       {/* Mark as watched — light purple */}
       <button
         onClick={onWatchClick}
-        className="bg-[#F3E8FF] hover:bg-[#E9D5FF] h-12 px-6 flex items-center justify-center gap-2.5 shadow-lg active:scale-[0.98] transition-all border border-[#D8B4FE] rounded-xl cursor-pointer"
+        className="bg-[#F3E8FF] hover:bg-[#E9D5FF] w-40 py-3.5 flex items-center justify-center gap-2.5 shadow-lg active:scale-[0.98] transition-all border border-[#D8B4FE] rounded-xl cursor-pointer"
       >
-        <Check className="size-4 text-[#9333EA]" strokeWidth={2.5} />
-        <span className="text-[#9333EA] text-sm font-bold tracking-wide whitespace-nowrap">标记已看</span>
+        <Check className="text-[#9333EA]" strokeWidth={2.5} />
+        <span className="text-[#9333EA] font-bold tracking-wide whitespace-nowrap">标记已看</span>
       </button>
 
       {/* History — zinc */}
       <button
         onClick={onHistoryClick}
-        className="bg-zinc-800/80 hover:bg-zinc-800 h-12 px-6 flex items-center justify-center gap-2.5 shadow-lg active:scale-[0.98] transition-all border border-white/10 rounded-xl cursor-pointer"
+        className="bg-zinc-800/80 hover:bg-zinc-800 w-40 py-3.5 flex items-center justify-center gap-3 shadow-lg active:scale-[0.98] transition-all border border-white/10 rounded-xl cursor-pointer"
       >
-        <History className="size-4 text-zinc-300" />
-        <span className="text-zinc-200 text-sm font-bold tracking-wide">历史记录</span>
+        <History className="text-zinc-300" />
+        <span className="text-zinc-200 font-bold tracking-wide">历史记录</span>
       </button>
     </div>
   )
