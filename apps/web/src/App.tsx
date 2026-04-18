@@ -220,14 +220,6 @@ export default function App() {
     return (
         <ErrorBoundary>
             <Routes>
-                {/* EpisodeDetailPage 是全屏独立布局，必须在 Layout 之外渲染，
-                    否则 Layout 的 nav + 容器约束会破坏其内部 padding 和双层 header */}
-                <Route
-                    path="/shows/:showId/seasons/:season/episodes/:episode"
-                    element={<EpisodeDetailPage />}
-                />
-
-                {/* 其余页面走带全局导航的 Layout */}
                 <Route
                     path="/*"
                     element={
@@ -246,6 +238,10 @@ export default function App() {
                                     path="*"
                                     element={<Navigate to="/progress" replace />}
                                 />
+                                <Route
+                    path="/shows/:showId/seasons/:season/episodes/:episode"
+                    element={<EpisodeDetailPage />}
+                />
                             </Routes>
                         </Layout>
                     }
