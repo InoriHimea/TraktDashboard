@@ -219,27 +219,38 @@ export default function App() {
 
     return (
         <ErrorBoundary>
-            <Layout>
-                <Routes>
-                    <Route
-                        path="/"
-                        element={<Navigate to="/progress" replace />}
-                    />
-                    <Route path="/progress" element={<ProgressPage />} />
-                    <Route path="/shows/:id" element={<ShowDetailPage />} />
-                    <Route
-                        path="/shows/:showId/seasons/:season/episodes/:episode"
-                        element={<EpisodeDetailPage />}
-                    />
-                    <Route path="/stats" element={<StatsPage />} />
-                    <Route path="/sync" element={<SyncPage />} />
-                    <Route path="/settings" element={<SettingsPage />} />
-                    <Route
-                        path="*"
-                        element={<Navigate to="/progress" replace />}
-                    />
-                </Routes>
-            </Layout>
+            <Routes>
+                {/* EpisodeDetailPage 是全屏独立布局，必须在 Layout 之外渲染，
+                    否则 Layout 的 nav + 容器约束会破坏其内部 padding 和双层 header */}
+                <Route
+                    path="/shows/:showId/seasons/:season/episodes/:episode"
+                    element={<EpisodeDetailPage />}
+                />
+
+                {/* 其余页面走带全局导航的 Layout */}
+                <Route
+                    path="/*"
+                    element={
+                        <Layout>
+                            <Routes>
+                                <Route
+                                    path="/"
+                                    element={<Navigate to="/progress" replace />}
+                                />
+                                <Route path="/progress" element={<ProgressPage />} />
+                                <Route path="/shows/:id" element={<ShowDetailPage />} />
+                                <Route path="/stats" element={<StatsPage />} />
+                                <Route path="/sync" element={<SyncPage />} />
+                                <Route path="/settings" element={<SettingsPage />} />
+                                <Route
+                                    path="*"
+                                    element={<Navigate to="/progress" replace />}
+                                />
+                            </Routes>
+                        </Layout>
+                    }
+                />
+            </Routes>
         </ErrorBoundary>
     );
 }
