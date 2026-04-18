@@ -59,7 +59,7 @@ export function EpisodeInfoCard({ data, onHistoryClick }: EpisodeInfoCardProps) 
             IMDb
           </div>
           <div className="flex flex-col justify-center">
-            <span className="font-black text-foreground text-lg leading-none mb-1">{data.imdbId ? '7.7' : '-'}</span>
+            <span className="font-black text-foreground text-lg leading-none mb-1">{show?.imdbId ? '7.7' : '-'}</span>
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">18 Votes</span>
           </div>
         </div>
