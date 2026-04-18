@@ -24,6 +24,16 @@ export function resolveEpisodeStill(
 }
 
 /**
+ * Returns a large still image suitable for hero backdrops.
+ * Uses w1280 for good quality without full original overhead.
+ */
+export function resolveEpisodeStillLarge(
+    stillPath: string | null | undefined,
+): string | null {
+    return tmdbImage(stillPath, "w1280");
+}
+
+/**
  * Returns the best available poster URL for a show.
  */
 export function resolveShowPoster(

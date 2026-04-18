@@ -125,10 +125,10 @@ function ExternalPill({ href, label }: { href: string; label: string }) {
 // Watched state: 3 buttons
 function WatchedActions({ onWatchClick, onHistoryClick }: { onWatchClick: () => void; onHistoryClick: () => void }) {
   return (
-    <div className="flex items-center gap-4 pt-4 w-full max-w-2xl">
+    <div className="flex flex-wrap items-center gap-4 pt-4">
       {/* Done-all indicator — purple, icon only */}
       <button
-        className="bg-purple-600 h-14 w-48 rounded-xl flex items-center justify-center shadow-md active:scale-[0.98] transition-all hover:bg-purple-700 cursor-pointer"
+        className="bg-purple-600 h-14 w-48 rounded-xl flex items-center justify-center shadow-md active:scale-[0.98] transition-all hover:bg-purple-700 cursor-pointer shrink-0"
         aria-label="已观看"
         tabIndex={-1}
       >
@@ -142,7 +142,7 @@ function WatchedActions({ onWatchClick, onHistoryClick }: { onWatchClick: () => 
       {/* Watch again — teal */}
       <button
         onClick={onWatchClick}
-        className="bg-teal-700 h-14 w-48 rounded-xl flex items-center justify-center gap-3 shadow-md active:scale-[0.98] transition-all hover:bg-teal-800 cursor-pointer"
+        className="bg-teal-700 h-14 w-48 rounded-xl flex items-center justify-center gap-3 shadow-md active:scale-[0.98] transition-all hover:bg-teal-800 cursor-pointer shrink-0"
       >
         <Check className="text-white" strokeWidth={2.5} />
         <span className="text-white font-bold tracking-wide whitespace-nowrap">Watch again...</span>
@@ -151,7 +151,7 @@ function WatchedActions({ onWatchClick, onHistoryClick }: { onWatchClick: () => 
       {/* History — slate */}
       <button
         onClick={onHistoryClick}
-        className="bg-slate-700 h-14 w-48 rounded-xl flex items-center justify-center gap-3 shadow-md active:scale-[0.98] transition-all hover:bg-slate-800 cursor-pointer"
+        className="bg-slate-700 h-14 w-48 rounded-xl flex items-center justify-center gap-3 shadow-md active:scale-[0.98] transition-all hover:bg-slate-800 cursor-pointer shrink-0"
       >
         <History className="text-white" />
         <span className="text-white font-bold tracking-wide">History</span>

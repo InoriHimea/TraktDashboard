@@ -6,7 +6,7 @@ import { EpisodeInfoCard } from "../components/EpisodeInfoCard";
 import { EpisodeSeasonStrip } from "../components/EpisodeSeasonStrip";
 import { WatchActionPanel } from "../components/WatchActionPanel";
 import { WatchHistoryPanel } from "../components/WatchHistoryPanel";
-import { resolveEpisodeStill } from "../lib/image";
+import { resolveEpisodeStill, resolveEpisodeStillLarge } from "../lib/image";
 
 function EpisodeDetailSkeleton() {
     return (
@@ -67,22 +67,23 @@ export default function EpisodeDetailPage() {
     );
 
     const stillUrl = resolveEpisodeStill(data.stillPath);
+    const backdropUrl = resolveEpisodeStillLarge(data.stillPath);
 
     return (
         <div className="min-h-screen pb-24 md:pb-12 bg-[#050505] text-white">
 
             {/* ── Hero Section ── */}
-            <section className="relative w-full flex items-end overflow-hidden min-h-[80vh]">
+            <section className="relative w-full flex items-end overflow-hidden min-h-[80vh] bg-[#0a0a14]">
                 {/* Background: blurred still */}
                 <div className="absolute inset-0 z-0">
-                    {stillUrl ? (
+                    {backdropUrl ? (
                         <img
-                            src={stillUrl}
+                            src={backdropUrl}
                             alt=""
                             className="w-full h-full object-cover scale-105 blur-sm brightness-[0.4]"
                         />
                     ) : (
-                        <div className="w-full h-full" style={{ background: "linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 100%)" }} />
+                        <div className="w-full h-full bg-gradient-to-br from-[#0f0f1a] to-[#1a1a2e]" />
                     )}
                     {/* Bottom fade to page bg */}
                     <div className="absolute inset-0 hero-gradient" />
@@ -91,7 +92,7 @@ export default function EpisodeDetailPage() {
                 {/* Back button — floating top-left */}
                 <button
                     onClick={() => navigate(-1)}
-                    className="absolute top-6 left-8 z-20 flex items-center gap-1.5 text-xs font-medium text-white/65 bg-white/8 border border-white/12 rounded-lg px-3.5 py-1.5 backdrop-blur-md hover:text-white hover:bg-white/15 transition-all cursor-pointer"
+                    className="absolute top-6 left-8 z-20 flex items-center gap-1.5 text-xs font-medium text-white/65 bg-white/10 border border-white/15 rounded-lg px-3.5 py-1.5 backdrop-blur-md hover:text-white hover:bg-white/20 transition-all cursor-pointer"
                 >
                     <ArrowLeft className="size-3.5" />
                     返回
