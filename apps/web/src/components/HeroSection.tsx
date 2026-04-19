@@ -345,9 +345,9 @@ export function HeroSection({ progress, onWatchClick }: HeroSectionProps) {
                     className="hidden lg:flex flex-col bg-[var(--color-surface)] border border-[var(--color-border-subtle)] shadow-sm self-start"
                     style={{
                         flex: "0 0 350px",
-                        padding: "32px",
+                        padding: "20px",
                         borderRadius: "24px",
-                        gap: "28px",
+                        gap: "20px",
                         position: "sticky",
                         top: "32px",
                         maxHeight: "calc(100vh - 64px)",
@@ -389,8 +389,8 @@ export function HeroSection({ progress, onWatchClick }: HeroSectionProps) {
                         className="shrink-0"
                         style={{
                             display: "grid",
-                            gridTemplateColumns: "repeat(3, 1fr)",
-                            gap: "10px",
+                            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                            gap: "8px",
                             width: "100%",
                         }}
                     >

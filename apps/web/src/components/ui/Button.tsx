@@ -61,35 +61,33 @@ const VARIANTS: Record<Variant, string> = {
 
   /**
    * SECONDARY — glass/frosted, clearly clickable but visually subordinate.
-   * Visual cues: border, backdrop blur, inner glow, hover brightens.
+   * Uses CSS variables so it works on both dark and light backgrounds.
    */
   secondary: cn(
-    'bg-white/8 border border-white/18 text-white/80 backdrop-blur-sm',
-    'shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_2px_8px_rgba(0,0,0,0.25)]',
-    // Hover: brighter glass
-    'hover:bg-white/14 hover:border-white/28 hover:text-white',
-    'hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_4px_12px_rgba(0,0,0,0.3)]',
+    'bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-text)] backdrop-blur-sm',
+    'shadow-[0_1px_3px_rgba(0,0,0,0.08)]',
+    'hover:bg-[var(--color-surface)] hover:border-[var(--color-border)] hover:text-[var(--color-text)]',
+    'hover:shadow-[0_2px_8px_rgba(0,0,0,0.12)]',
     'hover:-translate-y-px',
-    // Active: press
-    'active:translate-y-px active:bg-white/6 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]',
+    'active:translate-y-px active:shadow-none',
   ),
 
   /**
    * GHOST — minimal, for utility/icon actions.
-   * Visual cues: transparent bg, hover reveals subtle fill, always has focus ring.
+   * Uses CSS variables so text and hover are always visible.
    */
   ghost: cn(
-    'bg-transparent border border-transparent text-white/45',
-    'hover:bg-white/8 hover:border-white/10 hover:text-white/75',
-    'active:bg-white/5 active:translate-y-px',
+    'bg-transparent border border-[var(--color-border-subtle)] text-[var(--color-text-muted)]',
+    'hover:bg-[var(--color-surface-2)] hover:border-[var(--color-border)] hover:text-[var(--color-text)]',
+    'active:translate-y-px',
   ),
 }
 
 // ─── Size styles ──────────────────────────────────────────────────────────────
 const SIZES: Record<Size, string> = {
-  sm: 'h-8  min-w-[2rem]  px-3   text-xs  rounded-lg',
-  md: 'h-10 min-w-[2.5rem] px-5  text-sm  rounded-xl',
-  lg: 'h-12 min-w-[3rem]  px-7   text-base rounded-xl',
+  sm: 'h-8  min-w-[2rem]  px-3   text-xs  rounded-md',
+  md: 'h-9  min-w-[2.5rem] px-4  text-sm  rounded-md',
+  lg: 'h-11 min-w-[3rem]  px-6   text-base rounded-lg',
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
