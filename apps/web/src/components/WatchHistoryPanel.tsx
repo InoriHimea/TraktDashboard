@@ -68,9 +68,11 @@ export function WatchHistoryPanel({
             <SlidingPanel
                 open={open}
                 onClose={onClose}
-                title={isEpisodeHistory ? "观看历史" : "全剧观看历史"}
+                title={isEpisodeHistory ? "单集观看历史" : "全剧观看历史"}
+                subtitle={history && history.length > 0 ? `共 ${history.length} 条记录` : undefined}
+                icon={<Clock size={16} style={{ color: '#6366f1' }} />}
             >
-                <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '12px', position: 'relative' }}>
+                <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '10px', position: 'relative' }}>
 
                     {/* Loading */}
                     {isLoading && (
@@ -102,6 +104,15 @@ export function WatchHistoryPanel({
                         const time = formatWatchedAt(entry.watchedAt);
                         const isConfirming = confirmingDelete === entry.id;
                         const isDeleting = deletingId === entry.id;
+                        // Alternate soft accent colors for the index badge
+                        const badgeColors = [
+                            { bg: 'rgba(99,102,241,0.10)', border: 'rgba(99,102,241,0.25)', dot: '#6366f1' },
+                            { bg: 'rgba(16,185,129,0.10)', border: 'rgba(16,185,129,0.25)', dot: '#10b981' },
+                            { bg: 'rgba(245,158,11,0.10)', border: 'rgba(245,158,11,0.25)', dot: '#f59e0b' },
+                            { bg: 'rgba(239,68,68,0.10)', border: 'rgba(239,68,68,0.22)', dot: '#ef4444' },
+                            { bg: 'rgba(139,92,246,0.10)', border: 'rgba(139,92,246,0.25)', dot: '#8b5cf6' },
+                        ];
+                        const badge = badgeColors[index % badgeColors.length];
 
                         return (
                             <div
@@ -111,58 +122,97 @@ export function WatchHistoryPanel({
                                     border: '1px solid var(--color-border)',
                                     background: 'var(--color-surface-2)',
                                     overflow: 'hidden',
-                                    transition: 'border-color 0.15s',
+                                    transition: 'border-color 0.15s, box-shadow 0.15s',
+                                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                                }}
+                                onMouseEnter={e => {
+                                    if (!isConfirming) (e.currentTarget as HTMLElement).style.boxShadow = '0 3px 10px rgba(0,0,0,0.09)';
+                                }}
+                                onMouseLeave={e => {
+                                    (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
                                 }}
                             >
-                                {/* Entry header */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px' }}>
-                                    {/* Index badge */}
+                                {/* Entry row */}
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '13px 14px' }}>
+                                    {/* Clock icon badge */}
                                     <div style={{
-                                        width: '32px', height: '32px', borderRadius: '8px', flexShrink: 0,
-                                        background: 'var(--color-accent, #6366f1)1a',
-                                        border: '1px solid var(--color-accent, #6366f1)33',
+                                        width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0,
+                                        marginTop: '1px',
+                                        background: badge.bg,
+                                        border: `1px solid ${badge.border}`,
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     }}>
-                                        <Clock size={14} className="text-[var(--color-accent)]" />
+                                        <Clock size={14} style={{ color: badge.dot }} />
                                     </div>
 
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        {/* Episode label for show history */}
+                                    {/* 3-line content */}
+                                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                        {/* Line 1: SxEx identifier — bold accent */}
                                         {!isEpisodeHistory && (
-                                            <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text)', marginBottom: '2px', letterSpacing: '0.01em' }}>
-                                                S{String(entry.seasonNumber).padStart(2, "0")} · E{String(entry.episodeNumber).padStart(2, "0")}
-                                                {entry.episodeTitle && (
-                                                    <span style={{ fontWeight: 400, color: 'var(--color-text-muted)', marginLeft: '6px' }}>
-                                                        {entry.episodeTitle}
-                                                    </span>
-                                                )}
+                                            <div style={{
+                                                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                            }}>
+                                                <span style={{
+                                                    fontSize: '11px', fontWeight: 700,
+                                                    letterSpacing: '0.06em',
+                                                    color: badge.dot,
+                                                    background: badge.bg,
+                                                    border: `1px solid ${badge.border}`,
+                                                    borderRadius: '6px',
+                                                    padding: '1px 7px',
+                                                    lineHeight: '18px',
+                                                    whiteSpace: 'nowrap',
+                                                }}>
+                                                    S{String(entry.seasonNumber).padStart(2, "0")}·E{String(entry.episodeNumber).padStart(2, "0")}
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {/* Line 2: Episode title */}
+                                        {entry.episodeTitle && (
+                                            <p style={{
+                                                fontSize: '13px', fontWeight: 600,
+                                                color: 'var(--color-text)',
+                                                lineHeight: 1.4,
+                                                margin: 0,
+                                                // allow wrapping for long titles
+                                            }}>
+                                                {entry.episodeTitle}
                                             </p>
                                         )}
-                                        {/* Time */}
-                                        <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
+
+                                        {/* Line 3: Time */}
+                                        <p style={{
+                                            fontSize: '11.5px',
+                                            color: 'var(--color-text-muted)',
+                                            lineHeight: 1.4,
+                                            margin: 0,
+                                            display: 'flex', alignItems: 'center', gap: '4px',
+                                        }}>
                                             {typeof time === 'string' ? time : (
                                                 <>
-                                                    <span style={{ fontWeight: 500, color: 'var(--color-text)' }}>{time.relative}</span>
-                                                    <span style={{ margin: '0 4px', opacity: 0.4 }}>·</span>
-                                                    {time.absolute}
+                                                    <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>{time.relative}</span>
+                                                    <span style={{ opacity: 0.35 }}>·</span>
+                                                    <span>{time.absolute}</span>
                                                 </>
                                             )}
                                         </p>
                                     </div>
 
-                                    {/* Delete trigger */}
+                                    {/* Delete button */}
                                     {!isConfirming && (
                                         <button
                                             onClick={() => setConfirmingDelete(entry.id)}
                                             style={{
-                                                width: '30px', height: '30px', borderRadius: '8px', flexShrink: 0,
+                                                width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0,
+                                                marginTop: '2px',
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                 color: 'var(--color-text-muted)',
                                                 transition: 'background 0.15s, color 0.15s',
                                                 background: 'transparent', border: 'none', cursor: 'pointer',
                                             }}
                                             onMouseEnter={e => {
-                                                (e.currentTarget as HTMLElement).style.background = '#fee2e2';
+                                                (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.10)';
                                                 (e.currentTarget as HTMLElement).style.color = '#ef4444';
                                             }}
                                             onMouseLeave={e => {
@@ -171,33 +221,32 @@ export function WatchHistoryPanel({
                                             }}
                                             aria-label="删除记录"
                                         >
-                                            <Trash2 size={14} />
+                                            <Trash2 size={13} />
                                         </button>
                                     )}
                                 </div>
 
-                                {/* Inline confirm strip */}
+                                {/* Confirm strip */}
                                 {isConfirming && (
                                     <div style={{
-                                        borderTop: '1px solid var(--color-border)',
-                                        background: '#fff5f5',
-                                        padding: '12px 16px',
-                                        display: 'flex', alignItems: 'center', gap: '10px',
+                                        borderTop: '1px solid rgba(239,68,68,0.15)',
+                                        background: 'rgba(254,242,242,0.8)',
+                                        padding: '10px 14px',
+                                        display: 'flex', alignItems: 'center', gap: '8px',
                                     }}>
-                                        <AlertCircle size={14} style={{ color: '#ef4444', flexShrink: 0 }} />
-                                        <p style={{ flex: 1, fontSize: '12px', color: '#dc2626', fontWeight: 500 }}>
-                                            确认删除此集的观看记录？此操作不可撤销。
+                                        <AlertCircle size={13} style={{ color: '#ef4444', flexShrink: 0 }} />
+                                        <p style={{ flex: 1, fontSize: '12px', color: '#dc2626', fontWeight: 500, margin: 0 }}>
+                                            确认删除？此操作不可撤销。
                                         </p>
-                                        <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                                        <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
                                             <button
                                                 onClick={() => setConfirmingDelete(null)}
                                                 style={{
-                                                    height: '30px', padding: '0 14px', borderRadius: '8px',
+                                                    height: '28px', padding: '0 12px', borderRadius: '7px',
                                                     fontSize: '12px', fontWeight: 600, cursor: 'pointer',
                                                     border: '1px solid var(--color-border)',
                                                     background: 'var(--color-surface-2)',
                                                     color: 'var(--color-text)',
-                                                    transition: 'background 0.15s',
                                                 }}
                                             >
                                                 取消
@@ -206,13 +255,14 @@ export function WatchHistoryPanel({
                                                 onClick={() => handleDelete(entry.id)}
                                                 disabled={isDeleting}
                                                 style={{
-                                                    height: '30px', padding: '0 14px', borderRadius: '8px',
-                                                    fontSize: '12px', fontWeight: 700, cursor: isDeleting ? 'default' : 'pointer',
+                                                    height: '28px', padding: '0 12px', borderRadius: '7px',
+                                                    fontSize: '12px', fontWeight: 700,
+                                                    cursor: isDeleting ? 'default' : 'pointer',
                                                     border: 'none',
-                                                    background: '#ef4444',
+                                                    background: 'linear-gradient(160deg, #f87171 0%, #ef4444 100%)',
+                                                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2), 0 2px 6px rgba(239,68,68,0.3)',
                                                     color: '#fff',
                                                     opacity: isDeleting ? 0.6 : 1,
-                                                    transition: 'opacity 0.15s',
                                                 }}
                                             >
                                                 {isDeleting ? "删除中…" : "删除"}

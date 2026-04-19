@@ -104,26 +104,26 @@ export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetCli
                         </div>
                         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent pointer-events-none" />
 
-                        {/* Watched badge — inside poster, bottom-center */}
+                        {/* Watched badge — inside poster, bottom-center, double-groove border */}
                         {isAllWatched && (
-                            <div className="absolute bottom-0 left-0 right-0 flex justify-center pb-6 pointer-events-none">
-                                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-md border border-emerald-400/40 shadow-lg">
-                                    <svg
-                                        width="12"
-                                        height="12"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        className="text-emerald-400 shrink-0"
-                                    >
-                                        <path
-                                            d="M20 6L9 17l-5-5"
-                                            stroke="currentColor"
-                                            strokeWidth="2.5"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                        />
+                            <div className="absolute bottom-0 left-0 right-0 flex justify-center pb-8 pointer-events-none">
+                                <div style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "6px",
+                                    padding: "6px 14px",
+                                    borderRadius: "99px",
+                                    background: "rgba(0,0,0,0.55)",
+                                    backdropFilter: "blur(12px)",
+                                    WebkitBackdropFilter: "blur(12px)",
+                                    // 双沟: outer glow ring + border + inner highlight
+                                    boxShadow: "0 0 0 1px rgba(52,211,153,0.55), 0 0 0 3px rgba(52,211,153,0.12), inset 0 1px 0 rgba(255,255,255,0.15), 0 4px 12px rgba(0,0,0,0.4)",
+                                    border: "1px solid rgba(52,211,153,0.7)",
+                                }}>
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" style={{ color: "#34d399", flexShrink: 0 }}>
+                                        <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/>
                                     </svg>
-                                    <span className="text-[10px] font-bold tracking-widest text-emerald-400 uppercase">
+                                    <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.12em", color: "#34d399", textTransform: "uppercase" }}>
                                         Watched
                                     </span>
                                 </div>
@@ -336,19 +336,34 @@ export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetCli
                                 style={{
                                     display: "inline-flex",
                                     alignItems: "center",
-                                    gap: "7px",
-                                    padding: "7px 18px",
+                                    gap: "8px",
+                                    padding: "8px 22px",
                                     borderRadius: "99px",
                                     fontSize: "13px",
-                                    fontWeight: 600,
+                                    fontWeight: 700,
+                                    letterSpacing: "0.02em",
                                     cursor: "pointer",
-                                    border: "1px solid rgba(124,58,237,0.35)",
-                                    borderTopColor: "rgba(124,58,237,0.55)",
-                                    background: "linear-gradient(180deg, rgba(124,58,237,0.10) 0%, rgba(124,58,237,0.04) 100%)",
-                                    color: "#7c3aed",
-                                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.2), 0 1px 3px rgba(124,58,237,0.12)",
+                                    // Cyber violet — gradient fill + glowing border
+                                    background: "linear-gradient(160deg, rgba(139,92,246,0.18) 0%, rgba(109,40,217,0.08) 100%)",
+                                    border: "1px solid rgba(139,92,246,0.5)",
+                                    borderTopColor: "rgba(167,139,250,0.7)",
+                                    color: "#8b5cf6",
+                                    // 3D: inner top highlight + colored outer glow + hard drop
+                                    boxShadow: "inset 0 1px 0 rgba(167,139,250,0.3), inset 0 -1px 0 rgba(0,0,0,0.15), 0 0 0 1px rgba(109,40,217,0.1), 0 2px 8px rgba(109,40,217,0.2), 0 1px 2px rgba(0,0,0,0.15)",
                                     transition: "all 0.15s ease",
                                 }}
+                                onMouseEnter={e => {
+                                    (e.currentTarget as HTMLButtonElement).style.boxShadow = "inset 0 1px 0 rgba(167,139,250,0.4), inset 0 -1px 0 rgba(0,0,0,0.2), 0 0 0 1px rgba(109,40,217,0.2), 0 4px 16px rgba(109,40,217,0.35), 0 2px 4px rgba(0,0,0,0.2)";
+                                    (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)";
+                                    (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(139,92,246,0.7)";
+                                }}
+                                onMouseLeave={e => {
+                                    (e.currentTarget as HTMLButtonElement).style.boxShadow = "inset 0 1px 0 rgba(167,139,250,0.3), inset 0 -1px 0 rgba(0,0,0,0.15), 0 0 0 1px rgba(109,40,217,0.1), 0 2px 8px rgba(109,40,217,0.2), 0 1px 2px rgba(0,0,0,0.15)";
+                                    (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
+                                    (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(139,92,246,0.5)";
+                                }}
+                                onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(1px)"; }}
+                                onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)"; }}
                             >
                                 再看一遍...
                             </button>
@@ -359,19 +374,34 @@ export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetCli
                                 style={{
                                     display: "inline-flex",
                                     alignItems: "center",
-                                    gap: "7px",
-                                    padding: "7px 18px",
+                                    gap: "8px",
+                                    padding: "8px 22px",
                                     borderRadius: "99px",
                                     fontSize: "13px",
-                                    fontWeight: 600,
+                                    fontWeight: 700,
+                                    letterSpacing: "0.02em",
                                     cursor: "pointer",
+                                    // Neutral glass — surface gradient + inset depth
+                                    background: "linear-gradient(160deg, var(--color-surface-2) 0%, var(--color-surface) 100%)",
                                     border: "1px solid var(--color-border)",
-                                    borderTopColor: "rgba(255,255,255,0.18)",
-                                    background: "linear-gradient(180deg, var(--color-surface-2) 0%, var(--color-surface) 100%)",
-                                    color: "var(--color-text-muted)",
-                                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.18), 0 1px 3px rgba(0,0,0,0.08)",
+                                    borderTopColor: "rgba(255,255,255,0.25)",
+                                    color: "var(--color-text-secondary)",
+                                    // 3D: inner top light + bottom press shadow + lift
+                                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.08), 0 1px 0 rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.08)",
                                     transition: "all 0.15s ease",
                                 }}
+                                onMouseEnter={e => {
+                                    (e.currentTarget as HTMLButtonElement).style.boxShadow = "inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.12), 0 2px 0 rgba(0,0,0,0.05), 0 5px 16px rgba(0,0,0,0.12)";
+                                    (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)";
+                                    (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text)";
+                                }}
+                                onMouseLeave={e => {
+                                    (e.currentTarget as HTMLButtonElement).style.boxShadow = "inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.08), 0 1px 0 rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.08)";
+                                    (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
+                                    (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text-secondary)";
+                                }}
+                                onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(1px)"; }}
+                                onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)"; }}
                             >
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
