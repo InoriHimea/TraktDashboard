@@ -412,19 +412,42 @@ async function upsertShowFromTrakt(
     let translatedName: string | null = null;
     let translatedOverview: string | null = null;
 
+    // Multi-language fallback chain: user locale → zh-TW → zh-HK → zh-SG → zh-CN → ja-JP → en-US
     if (displayLanguage) {
-        try {
-            const tmdbShow = await getTmdbShow(tmdbId, displayLanguage, userId);
-            posterPath = tmdbShow.poster_path || null;
-            backdropPath = tmdbShow.backdrop_path || null;
-            if (tmdbShow.name && tmdbShow.name !== traktDetail.title)
-                translatedName = tmdbShow.name;
-            if (tmdbShow.overview && tmdbShow.overview !== traktDetail.overview)
-                translatedOverview = tmdbShow.overview;
-        } catch (e) {
-            console.warn(
-                `[sync] TMDB show fetch failed for tmdb ${tmdbId}: ${toErrorMessage(e)}`,
-            );
+        const languageFallbackChain = [
+            displayLanguage,
+            'zh-TW',
+            'zh-HK',
+            'zh-SG',
+            'zh-CN',
+            'ja-JP',
+            'en-US'
+        ];
+        // Remove duplicates while preserving order
+        const uniqueLanguages = [...new Set(languageFallbackChain)];
+        
+        for (const lang of uniqueLanguages) {
+            try {
+                const tmdbShow = await getTmdbShow(tmdbId, lang, userId);
+                // Always get poster/backdrop from first successful fetch
+                if (!posterPath) posterPath = tmdbShow.poster_path || null;
+                if (!backdropPath) backdropPath = tmdbShow.backdrop_path || null;
+                
+                // Only update translations if we don't have them yet
+                if (!translatedName && tmdbShow.name && tmdbShow.name !== traktDetail.title) {
+                    translatedName = tmdbShow.name;
+                }
+                if (!translatedOverview && tmdbShow.overview && tmdbShow.overview !== traktDetail.overview) {
+                    translatedOverview = tmdbShow.overview;
+                }
+                
+                // If we have both translations, no need to try other languages
+                if (translatedName && translatedOverview) break;
+            } catch (e) {
+                console.warn(
+                    `[sync] TMDB show fetch failed for tmdb ${tmdbId} lang ${lang}: ${toErrorMessage(e)}`,
+                );
+            }
         }
     }
 
@@ -560,27 +583,54 @@ async function upsertShowFromTrakt(
                         `[sync] TMDB base season fetch failed for tmdb ${tmdbId} s${s.number}: ${toErrorMessage(e)}`,
                     );
                 }
+                
+                // Multi-language fallback chain: user locale → zh-TW → zh-HK → zh-SG → zh-CN → ja-JP → en-US
                 if (displayLanguage) {
-                    try {
-                        const tmdbSeason = await getTmdbSeason(
-                            tmdbId,
-                            s.number,
-                            displayLanguage,
-                            userId,
-                        );
-                        for (const ep of tmdbSeason.episodes || []) {
-                            const existing = tmdbEpisodeMap.get(ep.episode_number);
-                            tmdbEpisodeMap.set(ep.episode_number, {
-                                translatedTitle: ep.name?.trim() || null,
-                                translatedOverview: ep.overview?.trim() || null,
-                                // Preserve still_path from base fetch if available
-                                stillPath: existing?.stillPath ?? ep.still_path ?? null,
-                            });
+                    const languageFallbackChain = [
+                        displayLanguage,
+                        'zh-TW',
+                        'zh-HK', 
+                        'zh-SG',
+                        'zh-CN',
+                        'ja-JP',
+                        'en-US'
+                    ];
+                    // Remove duplicates while preserving order
+                    const uniqueLanguages = [...new Set(languageFallbackChain)];
+                    
+                    for (const lang of uniqueLanguages) {
+                        try {
+                            const tmdbSeason = await getTmdbSeason(
+                                tmdbId,
+                                s.number,
+                                lang,
+                                userId,
+                            );
+                            for (const ep of tmdbSeason.episodes || []) {
+                                const existing = tmdbEpisodeMap.get(ep.episode_number);
+                                // Only update if we don't have a translation yet
+                                if (!existing?.translatedTitle && ep.name?.trim()) {
+                                    tmdbEpisodeMap.set(ep.episode_number, {
+                                        translatedTitle: ep.name.trim(),
+                                        translatedOverview: ep.overview?.trim() || existing?.translatedOverview || null,
+                                        stillPath: existing?.stillPath ?? ep.still_path ?? null,
+                                    });
+                                } else if (existing && !existing.translatedOverview && ep.overview?.trim()) {
+                                    // Update overview if we have title but missing overview
+                                    tmdbEpisodeMap.set(ep.episode_number, {
+                                        ...existing,
+                                        translatedOverview: ep.overview.trim(),
+                                    });
+                                }
+                            }
+                            // If we found translations, no need to try other languages
+                            const hasTranslations = Array.from(tmdbEpisodeMap.values()).some(v => v.translatedTitle);
+                            if (hasTranslations) break;
+                        } catch (e) {
+                            console.warn(
+                                `[sync] TMDB season fetch failed for tmdb ${tmdbId} s${s.number} lang ${lang}: ${toErrorMessage(e)}`,
+                            );
                         }
-                    } catch (e) {
-                        console.warn(
-                            `[sync] TMDB season fetch failed for tmdb ${tmdbId} s${s.number}: ${toErrorMessage(e)}`,
-                        );
                     }
                 }
 
