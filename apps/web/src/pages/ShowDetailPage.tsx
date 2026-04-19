@@ -162,7 +162,7 @@ export default function ShowDetailPage() {
 
                 {/* Watch again + History buttons (shown when 100% complete) */}
                 {isComplete && (
-                    <div className="flex items-center gap-3 mt-4 px-6 lg:px-10">
+                    <div className="w-full max-w-[1200px] mx-auto px-6 lg:px-10 mt-6 mb-2 flex items-center gap-3">
                         <Button
                             variant="secondary"
                             size="md"
@@ -183,7 +183,7 @@ export default function ShowDetailPage() {
 
                 {/* History button (always visible) */}
                 {!isComplete && (
-                    <div className="flex items-center gap-3 mt-4 px-6 lg:px-10">
+                    <div className="w-full max-w-[1200px] mx-auto px-6 lg:px-10 mt-6 mb-2 flex items-center gap-3">
                         <Button
                             variant="secondary"
                             size="md"

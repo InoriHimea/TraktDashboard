@@ -60,26 +60,34 @@ const VARIANTS: Record<Variant, string> = {
   ),
 
   /**
-   * SECONDARY — glass/frosted, clearly clickable but visually subordinate.
-   * Uses CSS variables so it works on both dark and light backgrounds.
+   * SECONDARY — raised glass, theme-aware, 3D tech feel.
+   * Top highlight + bottom shadow inset simulates physical button depth.
    */
   secondary: cn(
-    'bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-text)] backdrop-blur-sm',
-    'shadow-[0_1px_3px_rgba(0,0,0,0.08)]',
-    'hover:bg-[var(--color-surface)] hover:border-[var(--color-border)] hover:text-[var(--color-text)]',
-    'hover:shadow-[0_2px_8px_rgba(0,0,0,0.12)]',
+    'relative bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-text)]',
+    // 3D: top-edge light hit + bottom shadow + drop shadow for lift
+    'shadow-[inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-1px_0_rgba(0,0,0,0.1),0_2px_6px_rgba(0,0,0,0.14),0_1px_2px_rgba(0,0,0,0.08)]',
+    // Subtle gradient overlay for depth
+    'before:absolute before:inset-0 before:rounded-[inherit] before:bg-gradient-to-b before:from-white/[0.06] before:to-transparent before:pointer-events-none',
+    // Hover: lift + stronger glow
+    'hover:bg-[var(--color-surface)] hover:border-[var(--color-border)]',
+    'hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(0,0,0,0.12),0_5px_16px_rgba(0,0,0,0.18),0_2px_4px_rgba(0,0,0,0.1)]',
     'hover:-translate-y-px',
-    'active:translate-y-px active:shadow-none',
+    // Active: press — shadow collapses
+    'active:translate-y-px active:shadow-[inset_0_2px_5px_rgba(0,0,0,0.14),0_1px_2px_rgba(0,0,0,0.06)]',
   ),
 
   /**
-   * GHOST — minimal, for utility/icon actions.
-   * Uses CSS variables so text and hover are always visible.
+   * GHOST — outlined tech style, visible border, subtle depth on hover.
    */
   ghost: cn(
-    'bg-transparent border border-[var(--color-border-subtle)] text-[var(--color-text-muted)]',
+    'bg-transparent border border-[var(--color-border)] text-[var(--color-text-muted)]',
+    'shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]',
+    // Hover: surface appears, text brightens
     'hover:bg-[var(--color-surface-2)] hover:border-[var(--color-border)] hover:text-[var(--color-text)]',
-    'active:translate-y-px',
+    'hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_3px_8px_rgba(0,0,0,0.1)]',
+    'hover:-translate-y-px',
+    'active:translate-y-px active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)]',
   ),
 }
 

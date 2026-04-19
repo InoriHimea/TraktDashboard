@@ -344,7 +344,7 @@ export function HeroSection({ progress, onWatchClick }: HeroSectionProps) {
                     }}
                     className="hidden lg:flex flex-col bg-[var(--color-surface)] border border-[var(--color-border-subtle)] shadow-sm self-start"
                     style={{
-                        flex: "0 0 350px",
+                        flex: "0 0 400px",
                         padding: "20px",
                         borderRadius: "24px",
                         gap: "20px",
@@ -427,7 +427,7 @@ export function HeroSection({ progress, onWatchClick }: HeroSectionProps) {
                                     gap: "4px",
                                 }}
                             >
-                                <span className="text-[14px] font-bold text-[var(--color-text)] leading-none truncate">
+                                <span className="text-[14px] font-bold text-[var(--color-text)] leading-snug break-words">
                                     {value}
                                 </span>
                                 <span className="text-[11px] font-medium text-[var(--color-text-muted)] leading-none truncate">
