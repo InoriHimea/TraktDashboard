@@ -60,27 +60,27 @@ const VARIANTS: Record<Variant, string> = {
   ),
 
   /**
-   * SECONDARY — raised, theme-aware, 3D tech feel.
-   * Inset top-highlight + bottom shadow + drop shadow = physical button depth.
-   * Works on both dark and light backgrounds via CSS variables.
+   * SECONDARY — raised, vibrant accent text, 3D depth.
+   * Uses accent color for text to add vibrancy on any background.
    */
   secondary: cn(
-    'bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-text)]',
-    // 3D stack: top-edge light, bottom-edge dark, outer lift shadow
-    'shadow-[inset_0_1px_0_rgba(255,255,255,0.2),inset_0_-1px_0_rgba(0,0,0,0.12),0_1px_0_rgba(0,0,0,0.1),0_2px_6px_rgba(0,0,0,0.1),0_4px_12px_rgba(0,0,0,0.06)]',
-    'hover:bg-[var(--color-surface)] hover:-translate-y-px',
-    'hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.25),inset_0_-1px_0_rgba(0,0,0,0.14),0_2px_0_rgba(0,0,0,0.08),0_4px_14px_rgba(0,0,0,0.14),0_8px_20px_rgba(0,0,0,0.06)]',
-    'active:translate-y-px active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.14),inset_0_1px_0_rgba(0,0,0,0.06)]',
+    'bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-accent,#7c3aed)]',
+    // 3D: top highlight + bottom shadow + soft lift
+    'shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(0,0,0,0.1),0_1px_0_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.08),0_0_0_1px_rgba(124,58,237,0.06)]',
+    // Hover: violet border tint + lift + colored glow
+    'hover:bg-[var(--color-surface)] hover:border-[rgba(124,58,237,0.35)] hover:-translate-y-px',
+    'hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.28),inset_0_-1px_0_rgba(0,0,0,0.12),0_2px_0_rgba(0,0,0,0.06),0_6px_20px_rgba(124,58,237,0.15),0_2px_6px_rgba(0,0,0,0.08)]',
+    'active:translate-y-px active:shadow-[inset_0_2px_5px_rgba(0,0,0,0.14),0_1px_2px_rgba(0,0,0,0.06)]',
   ),
 
   /**
-   * GHOST — outlined, subtle 3D presence. Minimal but not invisible.
+   * GHOST — outlined, muted but with accent on hover.
    */
   ghost: cn(
     'bg-transparent border border-[var(--color-border)] text-[var(--color-text-muted)]',
-    'shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_1px_3px_rgba(0,0,0,0.08)]',
-    'hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)] hover:-translate-y-px',
-    'hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.12)]',
+    'shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_1px_3px_rgba(0,0,0,0.06)]',
+    'hover:bg-[var(--color-surface-2)] hover:border-[rgba(124,58,237,0.3)] hover:text-[var(--color-accent,#7c3aed)] hover:-translate-y-px',
+    'hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_4px_12px_rgba(124,58,237,0.12)]',
     'active:translate-y-px active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)]',
   ),
 }

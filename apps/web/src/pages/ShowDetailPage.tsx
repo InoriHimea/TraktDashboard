@@ -162,28 +162,34 @@ export default function ShowDetailPage() {
 
                 {/* Watch again + History buttons (shown when 100% complete) */}
                 {isComplete && (
-                    <div className="w-full max-w-[1200px] mx-auto px-6 lg:px-10 mt-6 mb-2 flex items-center gap-3">
-                        <Button
-                            variant="secondary"
-                            size="md"
-                            onClick={() => setResetConfirmOpen(true)}
-                        >
-                            再看一遍...
-                        </Button>
-                        <Button
-                            variant="secondary"
-                            size="md"
-                            icon={<History size={15} />}
-                            onClick={() => setHistoryPanelOpen(true)}
-                        >
-                            观看历史
-                        </Button>
+                    <div className="w-full max-w-[1200px] mx-auto px-6 lg:px-10 mt-4 mb-2 flex items-center">
+                        {/* Spacer matching poster width + gap so buttons align under the info column */}
+                        <div className="hidden lg:block shrink-0" style={{ width: "260px", marginRight: "40px" }} />
+                        <div className="flex items-center gap-3">
+                            <Button
+                                variant="secondary"
+                                size="md"
+                                onClick={() => setResetConfirmOpen(true)}
+                            >
+                                再看一遍...
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                size="md"
+                                icon={<History size={15} />}
+                                onClick={() => setHistoryPanelOpen(true)}
+                            >
+                                观看历史
+                            </Button>
+                        </div>
                     </div>
                 )}
 
                 {/* History button (always visible) */}
                 {!isComplete && (
-                    <div className="w-full max-w-[1200px] mx-auto px-6 lg:px-10 mt-6 mb-2 flex items-center gap-3">
+                    <div className="w-full max-w-[1200px] mx-auto px-6 lg:px-10 mt-4 mb-2 flex items-center">
+                        {/* Spacer matching poster width + gap */}
+                        <div className="hidden lg:block shrink-0" style={{ width: "260px", marginRight: "40px" }} />
                         <Button
                             variant="secondary"
                             size="md"

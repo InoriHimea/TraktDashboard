@@ -103,7 +103,7 @@ export function HeroSection({ progress, onWatchClick }: HeroSectionProps) {
 
                         {/* Watched badge — inside poster, bottom-center */}
                         {isAllWatched && (
-                            <div className="absolute bottom-0 left-0 right-0 flex justify-center pb-4 pointer-events-none">
+                            <div className="absolute bottom-0 left-0 right-0 flex justify-center pb-6 pointer-events-none">
                                 <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-md border border-emerald-400/40 shadow-lg">
                                     <svg
                                         width="12"
