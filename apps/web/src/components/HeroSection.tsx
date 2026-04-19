@@ -785,79 +785,133 @@ function ProgressBar({
         { length: Math.max(totalTicks - 1, 0) },
         (_, i) => i + 1,
     );
+    const r = Math.round(height / 2); // border-radius = half height for full pill
 
     return (
         <div
-            className="relative w-full overflow-hidden"
             style={{
+                position: "relative",
+                width: "100%",
                 height,
-                borderRadius: "10px",
-                backgroundColor: `rgba(${trackRgb}, 0.10)`,
-                // 3D track: inset shadow + subtle border
-                border: `1px solid rgba(${trackRgb}, 0.20)`,
-                boxShadow: `inset 0 2px 4px rgba(0,0,0,0.12), inset 0 1px 0 rgba(0,0,0,0.08)`,
+                borderRadius: r,
+                // Track: faint colored tint + subtle inset depth
+                backgroundColor: `rgba(${trackRgb}, 0.08)`,
+                border: `1px solid rgba(${trackRgb}, 0.18)`,
+                boxShadow: `inset 0 2px 6px rgba(0,0,0,0.10), inset 0 1px 0 rgba(0,0,0,0.05)`,
+                overflow: "hidden",
                 transform: "translateZ(0)",
             }}
         >
+            {/* Track ghost tick lines */}
+            {ticks.map((i) => {
+                const tickPos = (i / totalTicks) * 100;
+                return (
+                    <div
+                        key={i}
+                        style={{
+                            position: "absolute",
+                            top: "20%",
+                            bottom: "20%",
+                            left: `${tickPos}%`,
+                            width: "1px",
+                            background: `rgba(${trackRgb}, 0.25)`,
+                            pointerEvents: "none",
+                        }}
+                    />
+                );
+            })}
+
             {/* Track ghost label */}
             {labelLeft && (
-                <div className="absolute top-0 bottom-0 left-3 flex items-center z-0 pointer-events-none">
-                    <span
-                        className="text-[12px] font-bold tracking-wide whitespace-nowrap"
-                        style={{ color: `rgba(${trackRgb}, 0.55)` }}
-                    >
+                <div style={{
+                    position: "absolute", top: 0, bottom: 0, left: "12px",
+                    display: "flex", alignItems: "center", zIndex: 0, pointerEvents: "none",
+                }}>
+                    <span style={{
+                        fontSize: "12px", fontWeight: 700,
+                        color: `rgba(${trackRgb}, 0.45)`,
+                        whiteSpace: "nowrap",
+                    }}>
                         {labelLeft}
                     </span>
                 </div>
             )}
 
+            {/* Filled gel capsule */}
             {validPct > 0 && (
                 <div
-                    className="absolute top-0 bottom-0 left-0 z-10 overflow-hidden"
                     style={{
+                        position: "absolute",
+                        top: 0, bottom: 0, left: 0,
                         width: `${validPct}%`,
-                        // Cyber gradient: brighter start, deeper end
-                        background: `linear-gradient(90deg, ${colorFrom} 0%, ${colorTo} 60%, ${colorFrom}cc 100%)`,
-                        borderTopRightRadius: validPct === 100 ? "9px" : "3px",
-                        borderBottomRightRadius: validPct === 100 ? "9px" : "3px",
-                        // Top highlight + colored glow
-                        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 12px rgba(${trackRgb}, 0.5), 0 2px 6px rgba(${trackRgb}, 0.3)`,
+                        borderRadius: r,
+                        // Layer 1: base gradient (left-to-right color shift)
+                        background: `linear-gradient(90deg, ${colorFrom} 0%, ${colorTo} 100%)`,
+                        overflow: "hidden",
+                        // Outer glow for the gel effect
+                        boxShadow: `0 0 10px rgba(${trackRgb}, 0.45), 0 2px 6px rgba(${trackRgb}, 0.3), inset 0 1px 0 rgba(255,255,255,0.5)`,
+                        zIndex: 1,
                     }}
                 >
-                    {/* Scanline shimmer overlay */}
-                    <div
-                        className="absolute inset-0 pointer-events-none"
-                        style={{
-                            background: "linear-gradient(180deg, rgba(255,255,255,0.18) 0%, transparent 50%, rgba(0,0,0,0.08) 100%)",
-                        }}
-                    />
+                    {/* Layer 2: top specular highlight — the key to the gel "bubble" illusion */}
+                    <div style={{
+                        position: "absolute",
+                        top: 0, left: 0, right: 0,
+                        height: "55%",
+                        borderRadius: `${r}px ${r}px 40% 40% / ${r}px ${r}px 24px 24px`,
+                        background: "linear-gradient(180deg, rgba(255,255,255,0.70) 0%, rgba(255,255,255,0.15) 60%, transparent 100%)",
+                        pointerEvents: "none",
+                    }} />
 
-                    {/* Episode tick dividers */}
+                    {/* Layer 3: bottom depth shadow */}
+                    <div style={{
+                        position: "absolute",
+                        bottom: 0, left: 0, right: 0,
+                        height: "35%",
+                        background: "linear-gradient(0deg, rgba(0,0,0,0.18) 0%, transparent 100%)",
+                        pointerEvents: "none",
+                    }} />
+
+                    {/* Layer 4: inner side vignette for roundness */}
+                    <div style={{
+                        position: "absolute",
+                        inset: 0,
+                        background: "radial-gradient(ellipse at 50% 0%, transparent 40%, rgba(0,0,0,0.12) 100%)",
+                        pointerEvents: "none",
+                    }} />
+
+                    {/* Tick dividers inside fill */}
                     {ticks.map((i) => {
                         const tickPos = (i / totalTicks) * 100;
                         if (tickPos >= validPct) return null;
                         return (
                             <div
                                 key={i}
-                                className="absolute top-0 bottom-0"
                                 style={{
+                                    position: "absolute",
+                                    top: "15%", bottom: "15%",
                                     left: `${(tickPos / validPct) * 100}%`,
                                     width: "1px",
-                                    background: "rgba(255,255,255,0.2)",
+                                    background: "rgba(255,255,255,0.35)",
+                                    pointerEvents: "none",
                                 }}
                             />
                         );
                     })}
 
+                    {/* Label inside fill */}
                     {labelLeft && (
-                        <div className="absolute top-0 bottom-0 left-3 flex items-center z-20 pointer-events-none">
-                            <span
-                                className="text-[12px] font-bold tracking-wide whitespace-nowrap"
-                                style={{
-                                    color: "white",
-                                    textShadow: "0 1px 2px rgba(0,0,0,0.3)",
-                                }}
-                            >
+                        <div style={{
+                            position: "absolute", top: 0, bottom: 0, left: "12px",
+                            display: "flex", alignItems: "center", zIndex: 10, pointerEvents: "none",
+                        }}>
+                            <span style={{
+                                fontSize: "12px", fontWeight: 800,
+                                color: "rgba(255,255,255,0.95)",
+                                textShadow: `0 1px 3px rgba(0,0,0,0.3)`,
+                                whiteSpace: "nowrap",
+                                letterSpacing: "0.01em",
+                            }}>
                                 {labelLeft}
                             </span>
                         </div>
