@@ -51,8 +51,6 @@ export function t(key: TranslationKey, params?: Record<string, string | number>)
     return text;
 }
 
-import type { Show, EpisodeProgress } from "@trakt-dashboard/types";
-
 // ─── Show status ──────────────────────────────────────────────────────────────
 
 export const STATUS_ZH: Record<string, string> = {
