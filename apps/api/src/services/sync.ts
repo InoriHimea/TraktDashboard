@@ -578,7 +578,8 @@ async function upsertShowFromTrakt(
                 }
 
                 // Fetch TMDB episode data (translations + still images)
-                // Always fetch base TMDB season (no language) to get still_path
+                // tmdbEpisodeMap stores the best available title/overview per episode
+                // across the full fallback chain: locale → zh-TW → zh-HK → zh-SG → zh-CN → ja-JP → en-US
                 let tmdbEpisodeMap = new Map<
                     number,
                     {
@@ -587,8 +588,9 @@ async function upsertShowFromTrakt(
                         stillPath: string | null;
                     }
                 >();
+
+                // Step 1: Always fetch base season (no language) for still_path
                 try {
-                    // Always fetch base season for still_path (language-neutral)
                     const baseTmdbSeason = await getTmdbSeason(
                         tmdbId,
                         s.number,
@@ -601,85 +603,82 @@ async function upsertShowFromTrakt(
                             translatedOverview: null,
                             stillPath: ep.still_path || null,
                         });
-                        // Debug: log episodes without still_path
-                        if (!ep.still_path) {
-                            console.log(`[sync] No still_path for ${show.title} S${s.number}E${ep.episode_number}`);
-                        }
                     }
                 } catch (e) {
                     console.warn(
                         `[sync] TMDB base season fetch failed for tmdb ${tmdbId} s${s.number}: ${toErrorMessage(e)}`,
                     );
                 }
-                
-                // Multi-language fallback chain: user locale → zh-TW → zh-HK → zh-SG → zh-CN → ja-JP → en-US
-                if (displayLanguage) {
-                    const languageFallbackChain = [
-                        displayLanguage,
-                        'zh-TW',
-                        'zh-HK', 
-                        'zh-SG',
-                        'zh-CN',
-                        'ja-JP',
-                        'en-US'
-                    ];
-                    // Remove duplicates while preserving order
-                    const uniqueLanguages = [...new Set(languageFallbackChain)];
-                    
-                    for (const lang of uniqueLanguages) {
-                        try {
-                            const tmdbSeason = await getTmdbSeason(
-                                tmdbId,
-                                s.number,
-                                lang,
-                                userId,
-                            );
-                            for (const ep of tmdbSeason.episodes || []) {
-                                const existing = tmdbEpisodeMap.get(ep.episode_number);
-                                // Only update if we don't have a translation yet
-                                if (!existing?.translatedTitle && ep.name?.trim()) {
-                                    tmdbEpisodeMap.set(ep.episode_number, {
-                                        translatedTitle: ep.name.trim(),
-                                        translatedOverview: ep.overview?.trim() || existing?.translatedOverview || null,
-                                        stillPath: existing?.stillPath ?? ep.still_path ?? null,
-                                    });
-                                } else if (existing && !existing.translatedOverview && ep.overview?.trim()) {
-                                    // Update overview if we have title but missing overview
-                                    tmdbEpisodeMap.set(ep.episode_number, {
-                                        ...existing,
-                                        translatedOverview: ep.overview.trim(),
-                                    });
-                                }
-                            }
-                            // If we found translations, no need to try other languages
-                            const hasTranslations = Array.from(tmdbEpisodeMap.values()).some(v => v.translatedTitle);
-                            if (hasTranslations) break;
-                        } catch (e) {
-                            console.warn(
-                                `[sync] TMDB season fetch failed for tmdb ${tmdbId} s${s.number} lang ${lang}: ${toErrorMessage(e)}`,
-                            );
-                        }
+
+                // Step 2: Fill translations per-episode via fallback chain.
+                // Each episode independently walks the chain until it finds a non-empty title.
+                // This means ep3 can get en-US while ep1 gets zh-TW — no premature break.
+                const languageFallbackChain = displayLanguage
+                    ? [displayLanguage, 'zh-TW', 'zh-HK', 'zh-SG', 'zh-CN', 'ja-JP', 'en-US']
+                    : ['en-US'];
+                const uniqueLanguages = [...new Set(languageFallbackChain)];
+
+                // Cache fetched seasons to avoid duplicate requests
+                const fetchedSeasons = new Map<string, import("./tmdb.js").TmdbSeason>();
+                for (const lang of uniqueLanguages) {
+                    try {
+                        const tmdbSeason = await getTmdbSeason(tmdbId, s.number, lang, userId);
+                        fetchedSeasons.set(lang, tmdbSeason);
+                    } catch (e) {
+                        console.warn(
+                            `[sync] TMDB season fetch failed for tmdb ${tmdbId} s${s.number} lang ${lang}: ${toErrorMessage(e)}`,
+                        );
                     }
+                }
+
+                // For each episode, walk the chain and pick the first non-empty title/overview
+                const allEpisodeNumbers = new Set([
+                    ...Array.from(tmdbEpisodeMap.keys()),
+                    ...traktEpisodes.map(ep => ep.number),
+                ]);
+
+                for (const epNum of allEpisodeNumbers) {
+                    const existing = tmdbEpisodeMap.get(epNum) ?? {
+                        translatedTitle: null,
+                        translatedOverview: null,
+                        stillPath: null,
+                    };
+
+                    let bestTitle: string | null = null;
+                    let bestOverview: string | null = null;
+
+                    for (const lang of uniqueLanguages) {
+                        const season = fetchedSeasons.get(lang);
+                        if (!season) continue;
+                        const ep = season.episodes?.find(e => e.episode_number === epNum);
+                        if (!ep) continue;
+
+                        if (!bestTitle && ep.name?.trim()) {
+                            bestTitle = ep.name.trim();
+                        }
+                        if (!bestOverview && ep.overview?.trim()) {
+                            bestOverview = ep.overview.trim();
+                        }
+                        // Both found — no need to check further languages for this episode
+                        if (bestTitle && bestOverview) break;
+                    }
+
+                    tmdbEpisodeMap.set(epNum, {
+                        translatedTitle: bestTitle,
+                        translatedOverview: bestOverview,
+                        stillPath: existing.stillPath,
+                    });
                 }
 
                 for (const ep of traktEpisodes) {
                     const tmdbEp = tmdbEpisodeMap.get(ep.number);
-                    const translatedEpTitle =
-                        tmdbEp?.translatedTitle &&
-                        tmdbEp.translatedTitle !== ep.title
-                            ? tmdbEp.translatedTitle
-                            : null;
-                    const translatedEpOverview =
-                        tmdbEp?.translatedOverview &&
-                        tmdbEp.translatedOverview !== ep.overview
-                            ? tmdbEp.translatedOverview
-                            : null;
+                    // Store TMDB title as translatedTitle regardless of whether it matches
+                    // the Trakt title — resolveEpisodeTitle handles display priority.
+                    // This ensures en-US fallback titles are stored when locale translations
+                    // are unavailable, preventing "第 x 集" fallback for titled episodes.
+                    const translatedEpTitle = tmdbEp?.translatedTitle?.trim() || null;
+                    const translatedEpOverview = tmdbEp?.translatedOverview?.trim() || null;
                     const stillPath = tmdbEp?.stillPath ?? null;
-                    
-                    // Debug: log when saving episode with stillPath
-                    if (stillPath) {
-                        console.log(`[sync] Saving stillPath for ${show.title} S${s.number}E${ep.number}: ${stillPath}`);
-                    }
 
                     await db
                         .insert(episodes)

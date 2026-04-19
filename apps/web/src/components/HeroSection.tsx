@@ -18,9 +18,12 @@ import type { ShowProgress } from "@trakt-dashboard/types";
 interface HeroSectionProps {
     progress: ShowProgress;
     onWatchClick?: () => void;
+    onHistoryClick?: () => void;
+    onResetClick?: () => void;
+    isComplete?: boolean;
 }
 
-export function HeroSection({ progress, onWatchClick }: HeroSectionProps) {
+export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetClick, isComplete }: HeroSectionProps) {
     const { show, lastWatchedAt, seasons } = progress;
     const [posterError, setPosterError] = useState(false);
 
@@ -324,6 +327,61 @@ export function HeroSection({ progress, onWatchClick }: HeroSectionProps) {
                     </div>
 
                     <OverviewText text={overview} />
+
+                    {/* Action buttons — inline with middle column content */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                        {isComplete && onResetClick && (
+                            <button
+                                onClick={onResetClick}
+                                style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "7px",
+                                    padding: "7px 18px",
+                                    borderRadius: "99px",
+                                    fontSize: "13px",
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                    border: "1px solid rgba(124,58,237,0.35)",
+                                    borderTopColor: "rgba(124,58,237,0.55)",
+                                    background: "linear-gradient(180deg, rgba(124,58,237,0.10) 0%, rgba(124,58,237,0.04) 100%)",
+                                    color: "#7c3aed",
+                                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.2), 0 1px 3px rgba(124,58,237,0.12)",
+                                    transition: "all 0.15s ease",
+                                }}
+                            >
+                                再看一遍...
+                            </button>
+                        )}
+                        {onHistoryClick && (
+                            <button
+                                onClick={onHistoryClick}
+                                style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "7px",
+                                    padding: "7px 18px",
+                                    borderRadius: "99px",
+                                    fontSize: "13px",
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                    border: "1px solid var(--color-border)",
+                                    borderTopColor: "rgba(255,255,255,0.18)",
+                                    background: "linear-gradient(180deg, var(--color-surface-2) 0%, var(--color-surface) 100%)",
+                                    color: "var(--color-text-muted)",
+                                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.18), 0 1px 3px rgba(0,0,0,0.08)",
+                                    transition: "all 0.15s ease",
+                                }}
+                            >
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                                    <path d="M3 3v5h5"/>
+                                    <path d="M12 7v5l4 2"/>
+                                </svg>
+                                观看历史
+                            </button>
+                        )}
+                    </div>
                 </motion.div>
 
                 {/* ── 3. 右: 侧边栏 ── */}
@@ -697,70 +755,58 @@ function ProgressBar({
         (_, i) => i + 1,
     );
 
-    // Estimate label width in chars → px to decide if it fits inside the fill
-    const labelFitsInside = labelLeft
-        ? validPct >= Math.min(35, (labelLeft.length * 8 + 24) / 3.6)
-        : false;
-
     return (
-        <div className="relative w-full" style={{ height }}>
-            {/* Track */}
-            <div
-                className="absolute inset-0 rounded-lg overflow-hidden shadow-inner"
-                style={{
-                    backgroundColor: `rgba(${trackRgb}, 0.12)`,
-                    transform: "translateZ(0)",
-                }}
-            >
-                {validPct > 0 && (
-                    <div
-                        className="absolute top-0 bottom-0 left-0 z-10 overflow-hidden"
-                        style={{
-                            width: `${validPct}%`,
-                            background: `linear-gradient(90deg, ${colorFrom}, ${colorTo})`,
-                            borderTopRightRadius: validPct === 100 ? "8px" : "0",
-                            borderBottomRightRadius: validPct === 100 ? "8px" : "0",
-                        }}
-                    >
-                        {ticks.map((i) => {
-                            const tickPos = (i / totalTicks) * 100;
-                            if (tickPos >= validPct) return null;
-                            return (
-                                <div
-                                    key={i}
-                                    className="absolute top-0 bottom-0 bg-black/10 mix-blend-multiply"
-                                    style={{
-                                        left: `${(tickPos / validPct) * 100}%`,
-                                        width: "1px",
-                                    }}
-                                />
-                            );
-                        })}
-
-                        {/* Label inside fill — only when there's enough room */}
-                        {labelLeft && labelFitsInside && (
-                            <div className="absolute top-0 bottom-0 left-3 flex items-center z-20 pointer-events-none">
-                                <span className="text-[12px] font-bold tracking-wide text-white whitespace-nowrap drop-shadow-sm">
-                                    {labelLeft}
-                                </span>
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
-
-            {/* Label outside fill — shown when fill is too narrow */}
-            {labelLeft && !labelFitsInside && (
-                <div
-                    className="absolute top-0 bottom-0 flex items-center pointer-events-none z-20"
-                    style={{ left: `calc(${validPct}% + 8px)` }}
-                >
+        <div
+            className="relative w-full rounded-lg overflow-hidden shadow-inner"
+            style={{
+                height,
+                backgroundColor: `rgba(${trackRgb}, 0.12)`,
+                transform: "translateZ(0)", // 确保 Safari 圆角裁切
+            }}
+        >
+            {labelLeft && (
+                <div className="absolute top-0 bottom-0 left-3 flex items-center z-0 pointer-events-none">
                     <span
                         className="text-[12px] font-bold tracking-wide whitespace-nowrap"
-                        style={{ color: colorFrom }}
+                        style={{ color: `rgba(${trackRgb}, 0.65)` }}
                     >
                         {labelLeft}
                     </span>
+                </div>
+            )}
+
+            {validPct > 0 && (
+                <div
+                    className="absolute top-0 bottom-0 left-0 z-10 overflow-hidden"
+                    style={{
+                        width: `${validPct}%`,
+                        background: `linear-gradient(90deg, ${colorFrom}, ${colorTo})`,
+                        borderTopRightRadius: validPct === 100 ? "8px" : "0",
+                        borderBottomRightRadius: validPct === 100 ? "8px" : "0",
+                    }}
+                >
+                    {ticks.map((i) => {
+                        const tickPos = (i / totalTicks) * 100;
+                        if (tickPos >= validPct) return null;
+                        return (
+                            <div
+                                key={i}
+                                className="absolute top-0 bottom-0 bg-black/10 mix-blend-multiply"
+                                style={{
+                                    left: `${(tickPos / validPct) * 100}%`,
+                                    width: "1px",
+                                }}
+                            />
+                        );
+                    })}
+
+                    {labelLeft && (
+                        <div className="absolute top-0 bottom-0 left-3 flex items-center z-20 pointer-events-none">
+                            <span className="text-[12px] font-bold tracking-wide text-white whitespace-nowrap drop-shadow-sm">
+                                {labelLeft}
+                            </span>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

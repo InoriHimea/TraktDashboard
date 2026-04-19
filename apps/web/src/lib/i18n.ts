@@ -81,9 +81,11 @@ export function resolveOverview(show: Show): string {
 // Prefers translatedTitle (set during sync), falls back to original title.
 
 export function resolveEpisodeTitle(episode: EpisodeProgress): string {
-    const title = episode.translatedTitle || episode.title;
-    if (title && title.trim() !== "") return title;
-    // Season 0 = Specials
+    // 1. TMDB best translation (locale → zh-TW → ... → en-US, stored during sync)
+    if (episode.translatedTitle?.trim()) return episode.translatedTitle.trim();
+    // 2. Trakt original title
+    if (episode.title?.trim()) return episode.title.trim();
+    // 3. Numbered fallback
     if (episode.seasonNumber === 0) return `特别篇 ${episode.episodeNumber}`;
     return `第 ${episode.episodeNumber} 集`;
 }

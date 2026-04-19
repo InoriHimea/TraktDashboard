@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, RefreshCw, History } from "lucide-react";
+import { ArrowLeft, RefreshCw } from "lucide-react";
 import { useShowDetail, useResetProgress } from "../hooks";
 import { HeroSection } from "../components/HeroSection";
 import { SeasonTab } from "../components/SeasonTab";
@@ -158,54 +158,10 @@ export default function ShowDetailPage() {
                 <HeroSection
                     progress={progress}
                     onWatchClick={scrollToEpisodes}
+                    onHistoryClick={() => setHistoryPanelOpen(true)}
+                    onResetClick={isComplete ? () => setResetConfirmOpen(true) : undefined}
+                    isComplete={isComplete}
                 />
-
-                {/* Watch again + History buttons (shown when 100% complete) */}
-                {isComplete && (
-                    <div
-                        className="w-full max-w-[1200px] mx-auto mt-5 mb-2 flex items-center"
-                        style={{ paddingLeft: "40px", paddingRight: "40px" }}
-                    >
-                        {/* Spacer = poster (260px) + gap (40px) → aligns buttons under info column */}
-                        <div className="hidden lg:block shrink-0" style={{ width: "300px" }} />
-                        <div className="flex items-center gap-3">
-                            <Button
-                                variant="secondary"
-                                size="lg"
-                                onClick={() => setResetConfirmOpen(true)}
-                            >
-                                再看一遍...
-                            </Button>
-                            <Button
-                                variant="secondary"
-                                size="lg"
-                                icon={<History size={16} />}
-                                onClick={() => setHistoryPanelOpen(true)}
-                            >
-                                观看历史
-                            </Button>
-                        </div>
-                    </div>
-                )}
-
-                {/* History button (always visible) */}
-                {!isComplete && (
-                    <div
-                        className="w-full max-w-[1200px] mx-auto mt-5 mb-2 flex items-center"
-                        style={{ paddingLeft: "40px", paddingRight: "40px" }}
-                    >
-                        {/* Spacer = poster (260px) + gap (40px) */}
-                        <div className="hidden lg:block shrink-0" style={{ width: "300px" }} />
-                        <Button
-                            variant="secondary"
-                            size="lg"
-                            icon={<History size={16} />}
-                            onClick={() => setHistoryPanelOpen(true)}
-                        >
-                            观看历史
-                        </Button>
-                    </div>
-                )}
 
                 {/* 季/集区域 */}
                 <div
