@@ -695,7 +695,7 @@ export default function StatsPage() {
                                     style={{
                                         display: "flex",
                                         flexDirection: "column",
-                                        gap: "12px",
+                                        gap: "20px",
                                     }}
                                 >
                                     {stats.recentlyWatched
@@ -730,9 +730,9 @@ export default function StatsPage() {
                                                         style={{
                                                             position:
                                                                 "relative",
-                                                            width: "96px",
-                                                            height: "54px",
-                                                            borderRadius: "8px",
+                                                            width: "320px",
+                                                            height: "180px",
+                                                            borderRadius: "12px",
                                                             overflow: "hidden",
                                                             background:
                                                                 "var(--color-surface-3)",
@@ -749,8 +749,8 @@ export default function StatsPage() {
                                                                         r.stillPath ??
                                                                             r.posterPath,
                                                                         r.stillPath
-                                                                            ? "w300"
-                                                                            : "w92",
+                                                                            ? "w500"
+                                                                            : "w342",
                                                                     )!
                                                                 }
                                                                 alt=""
@@ -776,7 +776,7 @@ export default function StatsPage() {
                                                                 }}
                                                             >
                                                                 <Tv2
-                                                                    size={18}
+                                                                    size={32}
                                                                     color="var(--color-text-muted)"
                                                                 />
                                                             </div>
@@ -793,23 +793,24 @@ export default function StatsPage() {
                                                                 justifyContent:
                                                                     "center",
                                                                 paddingBottom:
-                                                                    "3px",
+                                                                    "8px",
                                                             }}
                                                         >
                                                             <div
                                                                 style={{
                                                                     background:
-                                                                        "rgba(0,0,0,0.7)",
+                                                                        "rgba(0,0,0,0.75)",
                                                                     backdropFilter:
-                                                                        "blur(4px)",
+                                                                        "blur(8px)",
                                                                     borderRadius:
-                                                                        "3px",
+                                                                        "6px",
                                                                     padding:
-                                                                        "1px 5px",
+                                                                        "4px 10px",
                                                                     fontSize:
-                                                                        "9px",
-                                                                    color: "rgba(255,255,255,0.85)",
-                                                                    lineHeight: 1.6,
+                                                                        "13px",
+                                                                    fontWeight: 600,
+                                                                    color: "rgba(255,255,255,0.95)",
+                                                                    lineHeight: 1.4,
                                                                 }}
                                                             >
                                                                 S
@@ -833,10 +834,10 @@ export default function StatsPage() {
                                                             style={{
                                                                 position:
                                                                     "absolute",
-                                                                top: "4px",
-                                                                right: "4px",
-                                                                width: "16px",
-                                                                height: "16px",
+                                                                top: "8px",
+                                                                right: "8px",
+                                                                width: "24px",
+                                                                height: "24px",
                                                                 borderRadius:
                                                                     "50%",
                                                                 background:
@@ -848,11 +849,11 @@ export default function StatsPage() {
                                                                     "center",
                                                                 justifyContent:
                                                                     "center",
-                                                                boxShadow: `0 1px 6px ${COLORS.emerald.base}99`,
+                                                                boxShadow: `0 2px 8px ${COLORS.emerald.base}99`,
                                                             }}
                                                         >
                                                             <CheckCircle2
-                                                                size={10}
+                                                                size={14}
                                                                 color="#fff"
                                                                 strokeWidth={
                                                                     2.5
@@ -866,16 +867,17 @@ export default function StatsPage() {
                                                         style={{
                                                             flex: 1,
                                                             minWidth: 0,
+                                                            display: "flex",
+                                                            flexDirection: "column",
+                                                            gap: "6px",
                                                         }}
                                                     >
                                                         <p
                                                             style={{
                                                                 fontSize:
-                                                                    "13px",
+                                                                    "16px",
                                                                 color: T1,
                                                                 fontWeight: 600,
-                                                                marginBottom:
-                                                                    "2px",
                                                                 overflow:
                                                                     "hidden",
                                                                 textOverflow:
@@ -889,8 +891,8 @@ export default function StatsPage() {
                                                         <p
                                                             style={{
                                                                 fontSize:
-                                                                    "11px",
-                                                                color: T3,
+                                                                    "14px",
+                                                                color: T2,
                                                                 overflow:
                                                                     "hidden",
                                                                 textOverflow:
@@ -911,17 +913,22 @@ export default function StatsPage() {
                                                                 ? ` · ${r.episodeTitle}`
                                                                 : ""}
                                                         </p>
+                                                        <span
+                                                            style={{
+                                                                fontSize: "13px",
+                                                                color: T3,
+                                                            }}
+                                                        >
+                                                            {r.watchedAt ? new Date(r.watchedAt).toLocaleString('zh-CN', {
+                                                                year: 'numeric',
+                                                                month: '2-digit',
+                                                                day: '2-digit',
+                                                                hour: '2-digit',
+                                                                minute: '2-digit',
+                                                                hour12: false
+                                                            }) : '未知时间'}
+                                                        </span>
                                                     </div>
-
-                                                    <span
-                                                        style={{
-                                                            fontSize: "11px",
-                                                            color: T3,
-                                                            flexShrink: 0,
-                                                        }}
-                                                    >
-                                                        {fmtDateZh(r.watchedAt)}
-                                                    </span>
                                                 </motion.div>
                                             ),
                                         )}
