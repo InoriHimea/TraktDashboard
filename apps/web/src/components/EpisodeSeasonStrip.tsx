@@ -1,9 +1,9 @@
 import { useEffect, useRef } from "react";
-import { ImageOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
 import { resolveEpisodeStill } from "../lib/image";
 import { resolveEpisodeTitle } from "../lib/i18n";
+import { EpisodePlaceholder } from "./ui/EpisodePlaceholder";
 import type { EpisodeProgress } from "@trakt-dashboard/types";
 
 interface EpisodeSeasonStripProps {
@@ -71,7 +71,7 @@ export function EpisodeSeasonStrip({
                                 className="group flex-none w-[280px] md:w-[320px] flex flex-col gap-4 cursor-pointer"
                             >
                                 <div className={cn(
-                                    "relative w-full aspect-video rounded-2xl overflow-hidden bg-muted shadow-lg transition-all",
+                                    "relative w-full aspect-video rounded-2xl overflow-hidden shadow-lg transition-all",
                                     isCurrent
                                         ? "border-2 border-purple-500 ring-4 ring-purple-500/20"
                                         : "border border-border/30 hover:border-foreground/30"
@@ -83,9 +83,10 @@ export function EpisodeSeasonStrip({
                                             alt=""
                                         />
                                     ) : (
-                                        <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
-                                            <ImageOff className="size-10 opacity-20 text-muted-foreground" />
-                                        </div>
+                                        <EpisodePlaceholder
+                                            seasonNumber={seasonNumber}
+                                            episodeNumber={episode.episodeNumber}
+                                        />
                                     )}
                                 </div>
                                 <div className="px-2 mt-1 flex flex-col gap-1">

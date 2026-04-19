@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, ImageOff, Check } from "lucide-react";
+import { ArrowLeft, Check } from "lucide-react";
 import { useEpisodeDetail } from "../hooks";
 import { EpisodeInfoCard } from "../components/EpisodeInfoCard";
 import { EpisodeSeasonStrip } from "../components/EpisodeSeasonStrip";
 import { WatchHistoryPanel } from "../components/WatchHistoryPanel";
+import { EpisodePlaceholder } from "../components/ui/EpisodePlaceholder";
 import { resolveEpisodeStillLarge, resolveBackdropFallback } from "../lib/image";
 
 export default function EpisodeDetailPage() {
@@ -64,13 +65,14 @@ export default function EpisodeDetailPage() {
             >
                 {/* 左侧：剧集截图 */}
                 <div className="w-full md:w-[380px] lg:w-[460px] shrink-0 flex items-center justify-center">
-                    <div className="w-full aspect-video rounded-2xl overflow-hidden bg-muted shadow-2xl border border-border/30 relative">
+                    <div className="w-full aspect-video rounded-2xl overflow-hidden shadow-2xl border border-border/30 relative">
                         {heroImageUrl ? (
                             <img src={heroImageUrl} className="w-full h-full object-cover" alt="" />
                         ) : (
-                            <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
-                                <ImageOff className="size-12 opacity-20" />
-                            </div>
+                            <EpisodePlaceholder
+                                seasonNumber={data.seasonNumber}
+                                episodeNumber={data.episodeNumber}
+                            />
                         )}
 
                         {/* Watched 标签：底部居中 */}
