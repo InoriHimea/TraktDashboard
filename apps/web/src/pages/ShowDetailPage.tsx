@@ -171,7 +171,7 @@ export default function ShowDetailPage() {
                             再看一遍...
                         </Button>
                         <Button
-                            variant="ghost"
+                            variant="secondary"
                             size="md"
                             icon={<History size={15} />}
                             onClick={() => setHistoryPanelOpen(true)}
@@ -185,7 +185,7 @@ export default function ShowDetailPage() {
                 {!isComplete && (
                     <div className="flex items-center gap-3 mt-4 px-6 lg:px-10">
                         <Button
-                            variant="ghost"
+                            variant="secondary"
                             size="md"
                             icon={<History size={15} />}
                             onClick={() => setHistoryPanelOpen(true)}
