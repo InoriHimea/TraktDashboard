@@ -73,9 +73,9 @@ const VARIANTS: Record<Variant, string> = {
 
 // ─── Sizes ────────────────────────────────────────────────────────────────────
 const SIZES: Record<Size, string> = {
-  sm: 'h-8  min-w-[2rem]   px-3  text-xs  rounded-md',
-  md: 'h-9  min-w-[2.5rem] px-4  text-sm  rounded-md',
-  lg: 'h-11 min-w-[3rem]   px-6  text-base rounded-lg',
+  sm: 'h-8  min-w-[2rem]   px-4   text-xs  rounded-full',
+  md: 'h-10 min-w-[2.5rem] px-5   text-sm  rounded-full',
+  lg: 'h-11 min-w-[3rem]   px-7   text-[15px] font-semibold rounded-full',
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────

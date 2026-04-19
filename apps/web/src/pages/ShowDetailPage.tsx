@@ -162,21 +162,24 @@ export default function ShowDetailPage() {
 
                 {/* Watch again + History buttons (shown when 100% complete) */}
                 {isComplete && (
-                    <div className="w-full max-w-[1200px] mx-auto px-6 lg:px-10 mt-4 mb-2 flex items-center">
-                        {/* Spacer matching poster width + gap so buttons align under the info column */}
-                        <div className="hidden lg:block shrink-0" style={{ width: "260px", marginRight: "40px" }} />
+                    <div
+                        className="w-full max-w-[1200px] mx-auto mt-5 mb-2 flex items-center"
+                        style={{ paddingLeft: "40px", paddingRight: "40px" }}
+                    >
+                        {/* Spacer = poster (260px) + gap (40px) → aligns buttons under info column */}
+                        <div className="hidden lg:block shrink-0" style={{ width: "300px" }} />
                         <div className="flex items-center gap-3">
                             <Button
                                 variant="secondary"
-                                size="md"
+                                size="lg"
                                 onClick={() => setResetConfirmOpen(true)}
                             >
                                 再看一遍...
                             </Button>
                             <Button
                                 variant="secondary"
-                                size="md"
-                                icon={<History size={15} />}
+                                size="lg"
+                                icon={<History size={16} />}
                                 onClick={() => setHistoryPanelOpen(true)}
                             >
                                 观看历史
@@ -187,13 +190,16 @@ export default function ShowDetailPage() {
 
                 {/* History button (always visible) */}
                 {!isComplete && (
-                    <div className="w-full max-w-[1200px] mx-auto px-6 lg:px-10 mt-4 mb-2 flex items-center">
-                        {/* Spacer matching poster width + gap */}
-                        <div className="hidden lg:block shrink-0" style={{ width: "260px", marginRight: "40px" }} />
+                    <div
+                        className="w-full max-w-[1200px] mx-auto mt-5 mb-2 flex items-center"
+                        style={{ paddingLeft: "40px", paddingRight: "40px" }}
+                    >
+                        {/* Spacer = poster (260px) + gap (40px) */}
+                        <div className="hidden lg:block shrink-0" style={{ width: "300px" }} />
                         <Button
                             variant="secondary"
-                            size="md"
-                            icon={<History size={15} />}
+                            size="lg"
+                            icon={<History size={16} />}
                             onClick={() => setHistoryPanelOpen(true)}
                         >
                             观看历史
@@ -242,20 +248,12 @@ export default function ShowDetailPage() {
                     {seasons.length > 0 && (
                         <div
                             style={{
-                                overflowX: "auto",
-                                overflowY: "hidden",
-                                marginBottom: "40px",
-                                scrollbarWidth: "none",
-                            }}
-                        >
-                        <div
-                            style={{
                                 display: "flex",
                                 gap: "24px",
+                                marginBottom: "40px",
+                                overflowX: "auto",
                                 paddingBottom: "8px",
-                                paddingTop: "10px",
-                                paddingLeft: "4px",
-                                paddingRight: "4px",
+                                scrollbarWidth: "none",
                             }}
                             role="tablist"
                             aria-label="选择季度"
@@ -272,7 +270,6 @@ export default function ShowDetailPage() {
                                     }
                                 />
                             ))}
-                        </div>
                         </div>
                     )}
 
