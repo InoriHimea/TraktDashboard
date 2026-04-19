@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { BarChart3, Tv2, RefreshCw, Settings, LogOut } from 'lucide-react'
 import { useNowPlaying } from '../hooks/index'
 import { NowPlayingPopup } from './NowPlayingPopup'
+import { t } from '../lib/i18n'
 
 interface TopNavProps {
   username: string | null
@@ -11,10 +12,10 @@ interface TopNavProps {
 }
 
 const NAV = [
-  { to: '/progress',  icon: Tv2,       label: 'Progress',    short: 'Progress' },
-  { to: '/stats',     icon: BarChart3,  label: 'Statistics',  short: 'Stats' },
-  { to: '/sync',      icon: RefreshCw,  label: 'Sync',        short: 'Sync' },
-  { to: '/settings',  icon: Settings,   label: 'Settings',    short: 'Settings' },
+  { to: '/progress',  icon: Tv2,       labelKey: 'nav.progress' },
+  { to: '/stats',     icon: BarChart3,  labelKey: 'nav.statistics' },
+  { to: '/sync',      icon: RefreshCw,  labelKey: 'nav.sync' },
+  { to: '/settings',  icon: Settings,   labelKey: 'nav.settings' },
 ]
 
 export default function TopNav({ username, onLogout }: TopNavProps) {
@@ -66,7 +67,7 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
 
         {/* Nav items */}
         <nav style={{ display: 'flex', alignItems: 'center', gap: '2px', flex: 1 }}>
-          {NAV.map(({ to, icon: Icon, label }) => {
+          {NAV.map(({ to, icon: Icon, labelKey }) => {
             const active = location.pathname.startsWith(to)
             return (
               <Link key={to} to={to} style={{ textDecoration: 'none' }}>
@@ -87,7 +88,7 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
                   }}
                 >
                   <Icon size={14} />
-                  <span className="nav-label-full" style={{ display: 'inline' }}>{label}</span>
+                  <span className="nav-label-full" style={{ display: 'inline' }}>{t(labelKey)}</span>
                   {active && (
                     <motion.div
                       layoutId="topnav-indicator"
@@ -115,7 +116,7 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
             <button
               data-testid="now-playing-trigger"
               onClick={() => setIsPopupOpen(prev => !prev)}
-              title="Now Playing"
+              title={t("common.nowPlaying")}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -142,7 +143,7 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
                   animation: 'pulse 1.5s ease-in-out infinite',
                 }}
               />
-              <span>Now Playing</span>
+              <span>{t("common.nowPlaying")}</span>
             </button>
           )}
 
@@ -153,7 +154,7 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
           )}
           <button
             onClick={onLogout}
-            title="Sign out"
+            title={t("common.signOut")}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -168,7 +169,7 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
             }}
           >
             <LogOut size={13} />
-            <span style={{ display: 'inline' }}>Sign out</span>
+            <span style={{ display: 'inline' }}>{t("common.signOut")}</span>
           </button>
         </div>
       </header>

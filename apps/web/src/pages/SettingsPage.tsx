@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Save, CheckCircle2, AlertCircle } from "lucide-react";
 import { useSettings, useUpdateSettings } from "../hooks";
 import { loadTheme, applyTheme, persistTheme, Theme } from "../lib/theme";
+import { t, setLocale } from "../lib/i18n";
 
 // Move styles outside component to avoid recreation on every render
 const inputStyle: React.CSSProperties = {
@@ -44,6 +45,8 @@ export default function SettingsPage() {
             setDisplayLanguage(settings.displayLanguage);
             setSyncIntervalMinutes(settings.syncIntervalMinutes);
             setHttpProxy(settings.httpProxy ?? "");
+            // Update UI locale based on settings
+            setLocale(settings.displayLanguage);
         }
     }, [settings]);
 
@@ -56,7 +59,7 @@ export default function SettingsPage() {
         if (!Number.isInteger(interval) || interval < 1 || interval > 10080) {
             setToast({
                 type: "error",
-                message: "同步间隔必须是 1 到 10080 之间的整数。",
+                message: t("settings.validationIntervalError"),
             });
             return;
         }
@@ -69,8 +72,7 @@ export default function SettingsPage() {
         ) {
             setToast({
                 type: "error",
-                message:
-                    "显示语言格式不正确，请使用 BCP 47 格式（如 zh-CN、en-US）。",
+                message: t("settings.validationLanguageError"),
             });
             return;
         }
@@ -80,7 +82,7 @@ export default function SettingsPage() {
         if (proxyValue && !/^https?:\/\/.+/i.test(proxyValue)) {
             setToast({
                 type: "error",
-                message: "代理地址必须以 http:// 或 https:// 开头。",
+                message: t("settings.validationProxyError"),
             });
             return;
         }
@@ -91,14 +93,16 @@ export default function SettingsPage() {
                 syncIntervalMinutes: interval,
                 httpProxy: proxyValue || null,
             });
+            // Update UI locale after successful save
+            setLocale(langTrimmed);
             setToast({
                 type: "success",
-                message: "Settings saved successfully.",
+                message: t("settings.saveSuccess"),
             });
             setTimeout(() => setToast(null), 3000);
         } catch (err: unknown) {
             const message =
-                err instanceof Error ? err.message : "Failed to save settings.";
+                err instanceof Error ? err.message : t("settings.saveFailed");
             setToast({ type: "error", message });
         }
     }
@@ -123,7 +127,7 @@ export default function SettingsPage() {
                         marginBottom: "6px",
                     }}
                 >
-                    Settings
+                    {t("settings.title")}
                 </h2>
                 <p
                     style={{
@@ -131,7 +135,7 @@ export default function SettingsPage() {
                         fontSize: "14px",
                     }}
                 >
-                    Configure display language, sync interval, and proxy.
+                    {t("settings.subtitle")}
                 </p>
             </div>
 
@@ -142,7 +146,7 @@ export default function SettingsPage() {
                         fontSize: "14px",
                     }}
                 >
-                    Loading settings…
+                    {t("common.loading")}
                 </p>
             ) : (
                 <motion.form
@@ -169,11 +173,11 @@ export default function SettingsPage() {
                     >
                         {/* Theme */}
                         <div>
-                            <label style={labelStyle}>Theme</label>
+                            <label style={labelStyle}>{t("settings.theme")}</label>
                             <div style={{ display: "flex", gap: "12px" }}>
-                                {(["dark", "light"] as Theme[]).map((t) => (
+                                {(["dark", "light"] as Theme[]).map((themeOption) => (
                                     <label
-                                        key={t}
+                                        key={themeOption}
                                         style={{
                                             display: "flex",
                                             alignItems: "center",
@@ -186,19 +190,19 @@ export default function SettingsPage() {
                                         <input
                                             type="radio"
                                             name="theme"
-                                            value={t}
-                                            checked={theme === t}
+                                            value={themeOption}
+                                            checked={theme === themeOption}
                                             onChange={() => {
-                                                setTheme(t);
-                                                applyTheme(t);
-                                                persistTheme(t);
+                                                setTheme(themeOption);
+                                                applyTheme(themeOption);
+                                                persistTheme(themeOption);
                                             }}
                                             style={{
                                                 accentColor:
                                                     "var(--color-accent)",
                                             }}
                                         />
-                                        {t.charAt(0).toUpperCase() + t.slice(1)}
+                                        {t(`settings.theme${themeOption.charAt(0).toUpperCase() + themeOption.slice(1)}`)}
                                     </label>
                                 ))}
                             </div>
@@ -213,14 +217,14 @@ export default function SettingsPage() {
 
                         {/* Display Language */}
                         <div>
-                            <label style={labelStyle}>Display Language</label>
+                            <label style={labelStyle}>{t("settings.displayLanguage")}</label>
                             <input
                                 type="text"
                                 value={displayLanguage}
                                 onChange={(e) =>
                                     setDisplayLanguage(e.target.value)
                                 }
-                                placeholder="e.g. zh-CN, en-US, ja-JP"
+                                placeholder={t("settings.displayLanguagePlaceholder")}
                                 style={inputStyle}
                             />
                             <p
@@ -231,8 +235,7 @@ export default function SettingsPage() {
                                     lineHeight: 1.5,
                                 }}
                             >
-                                BCP 47 language code for TMDB translated titles.
-                                Re-sync after changing.
+                                {t("settings.displayLanguageHint")}
                             </p>
                         </div>
 
@@ -246,7 +249,7 @@ export default function SettingsPage() {
                         {/* Sync Interval */}
                         <div>
                             <label style={labelStyle}>
-                                Sync Interval (minutes)
+                                {t("settings.syncInterval")}
                             </label>
                             <input
                                 type="number"
@@ -268,8 +271,7 @@ export default function SettingsPage() {
                                     lineHeight: 1.5,
                                 }}
                             >
-                                Auto-sync frequency. Range: 1–10080 minutes (up
-                                to 1 week).
+                                {t("settings.syncIntervalHint")}
                             </p>
                         </div>
 
@@ -282,12 +284,12 @@ export default function SettingsPage() {
 
                         {/* HTTP Proxy */}
                         <div>
-                            <label style={labelStyle}>HTTP Proxy</label>
+                            <label style={labelStyle}>{t("settings.httpProxy")}</label>
                             <input
                                 type="text"
                                 value={httpProxy}
                                 onChange={(e) => setHttpProxy(e.target.value)}
-                                placeholder="http://proxy.example.com:7890"
+                                placeholder={t("settings.httpProxyPlaceholder")}
                                 style={inputStyle}
                             />
                             <p
@@ -298,8 +300,7 @@ export default function SettingsPage() {
                                     lineHeight: 1.5,
                                 }}
                             >
-                                Optional. Routes TMDB and Trakt requests through
-                                a proxy. Leave empty to use env default.
+                                {t("settings.httpProxyHint")}
                             </p>
                         </div>
                     </div>
@@ -380,7 +381,7 @@ export default function SettingsPage() {
                             }}
                         >
                             <Save size={15} />
-                            {saving ? "Saving…" : "Save Settings"}
+                            {saving ? t("common.saving") : t("common.save")}
                         </motion.button>
                     </div>
                 </motion.form>

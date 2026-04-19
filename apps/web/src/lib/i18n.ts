@@ -4,8 +4,52 @@
  * Fallback order for content fields:
  *   1. translatedName / translatedOverview / translatedTitle (set during sync in user's language)
  *   2. title / overview / name (original, may be English)
- *   3. Hard-coded zh-CN UI strings (never fall back to English for UI chrome)
+ *   3. UI strings use translation files (zh-CN, en-US, etc.)
  */
+
+import type { Show, EpisodeProgress } from "@trakt-dashboard/types";
+import enUS from "../locales/en-US.json";
+import zhCN from "../locales/zh-CN.json";
+
+// ─── UI Translation System ────────────────────────────────────────────────────
+
+type TranslationKey = string;
+type Translations = typeof zhCN;
+
+const translations: Record<string, Translations> = {
+    "zh-CN": zhCN,
+    "zh-TW": zhCN, // Fallback to zh-CN for Traditional Chinese
+    "en-US": enUS,
+    "en": enUS,
+};
+
+let currentLocale = "zh-CN";
+
+export function setLocale(locale: string) {
+    currentLocale = locale;
+}
+
+export function getLocale(): string {
+    return currentLocale;
+}
+
+function getNestedValue(obj: any, path: string): string | undefined {
+    return path.split(".").reduce((acc, part) => acc?.[part], obj);
+}
+
+export function t(key: TranslationKey, params?: Record<string, string | number>): string {
+    const localeData = translations[currentLocale] || translations["zh-CN"];
+    let text = getNestedValue(localeData, key) || key;
+
+    // Replace {{param}} with actual values
+    if (params) {
+        Object.entries(params).forEach(([k, v]) => {
+            text = text.replace(new RegExp(`{{${k}}}`, "g"), String(v));
+        });
+    }
+
+    return text;
+}
 
 import type { Show, EpisodeProgress } from "@trakt-dashboard/types";
 

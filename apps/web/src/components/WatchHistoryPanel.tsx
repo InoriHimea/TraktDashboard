@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Trash2, AlertCircle, Clock, Eye } from "lucide-react";
 import { SlidingPanel } from "./SlidingPanel";
 import { useEpisodeHistory, useShowHistory, useDeleteHistory } from "../hooks";
+import { t } from "../lib/i18n";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/zh-cn";
@@ -44,14 +45,14 @@ export function WatchHistoryPanel({
             setConfirmingDelete(null);
             onDeleted();
         } catch (err) {
-            setError(err instanceof Error ? err.message : "删除失败，请重试");
+            setError(err instanceof Error ? err.message : t("watchHistory.deleteError"));
         } finally {
             setDeletingId(null);
         }
     };
 
     const formatWatchedAt = (watchedAt: string | null) => {
-        if (!watchedAt) return "未知时间";
+        if (!watchedAt) return t("watchHistory.unknownTime");
         try {
             const d = dayjs(watchedAt);
             return {
@@ -68,8 +69,8 @@ export function WatchHistoryPanel({
             <SlidingPanel
                 open={open}
                 onClose={onClose}
-                title={isEpisodeHistory ? "单集观看历史" : "全剧观看历史"}
-                subtitle={history && history.length > 0 ? `共 ${history.length} 条记录` : undefined}
+                title={isEpisodeHistory ? t("watchHistory.episodeTitle") : t("watchHistory.showTitle")}
+                subtitle={history && history.length > 0 ? t("watchHistory.recordCount", { count: history.length }) : undefined}
                 icon={<Clock size={16} style={{ color: '#6366f1' }} />}
             >
                 <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '10px', position: 'relative' }}>
@@ -93,8 +94,8 @@ export function WatchHistoryPanel({
                                 <Eye size={22} className="text-[var(--color-text-muted)]" />
                             </div>
                             <div>
-                                <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text)', marginBottom: '4px' }}>暂无观看记录</p>
-                                <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>观看后记录将出现在这里</p>
+                                <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text)', marginBottom: '4px' }}>{t("watchHistory.empty")}</p>
+                                <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{t("watchHistory.emptyHint")}</p>
                             </div>
                         </div>
                     )}
@@ -217,7 +218,7 @@ export function WatchHistoryPanel({
                                                 (e.currentTarget as HTMLElement).style.background = 'transparent';
                                                 (e.currentTarget as HTMLElement).style.color = 'var(--color-text-muted)';
                                             }}
-                                            aria-label="删除记录"
+                                            aria-label={t("watchHistory.deleteLabel")}
                                         >
                                             <Trash2 size={13} />
                                         </button>
@@ -234,7 +235,7 @@ export function WatchHistoryPanel({
                                     }}>
                                         <AlertCircle size={13} style={{ color: '#ef4444', flexShrink: 0 }} />
                                         <p style={{ flex: 1, fontSize: '12px', color: '#dc2626', fontWeight: 500, margin: 0 }}>
-                                            确认删除？此操作不可撤销。
+                                            {t("watchHistory.deleteConfirm")}
                                         </p>
                                         <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
                                             <button
@@ -247,7 +248,7 @@ export function WatchHistoryPanel({
                                                     color: 'var(--color-text)',
                                                 }}
                                             >
-                                                取消
+                                                {t("common.cancel")}
                                             </button>
                                             <button
                                                 onClick={() => handleDelete(entry.id)}
@@ -263,7 +264,7 @@ export function WatchHistoryPanel({
                                                     opacity: isDeleting ? 0.6 : 1,
                                                 }}
                                             >
-                                                {isDeleting ? "删除中…" : "删除"}
+                                                {isDeleting ? t("common.deleting") : t("common.delete")}
                                             </button>
                                         </div>
                                     </div>

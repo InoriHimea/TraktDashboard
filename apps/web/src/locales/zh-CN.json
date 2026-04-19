@@ -1,0 +1,56 @@
+{
+  "common": {
+    "loading": "加载中…",
+    "save": "保存",
+    "saving": "保存中…",
+    "cancel": "取消",
+    "delete": "删除",
+    "deleting": "删除中…",
+    "confirm": "确认",
+    "unknown": "未知",
+    "all": "全部",
+    "signOut": "退出登录",
+    "nowPlaying": "正在播放"
+  },
+  "nav": {
+    "progress": "进度",
+    "statistics": "统计",
+    "sync": "同步",
+    "settings": "设置"
+  },
+  "watchHistory": {
+    "episodeTitle": "单集观看历史",
+    "showTitle": "全剧观看历史",
+    "recordCount": "共 {{count}} 条记录",
+    "empty": "暂无观看记录",
+    "emptyHint": "观看后记录将出现在这里",
+    "deleteConfirm": "确认删除？此操作不可撤销。",
+    "deleteError": "删除失败，请重试",
+    "deleteLabel": "删除记录",
+    "unknownTime": "未知时间"
+  },
+  "settings": {
+    "title": "设置",
+    "subtitle": "配置显示语言、同步间隔和代理。",
+    "theme": "主题",
+    "themeDark": "深色",
+    "themeLight": "浅色",
+    "displayLanguage": "显示语言",
+    "displayLanguageHint": "TMDB 翻译标题的 BCP 47 语言代码。更改后需重新同步。",
+    "displayLanguagePlaceholder": "例如：zh-CN、en-US、ja-JP",
+    "syncInterval": "同步间隔（分钟）",
+    "syncIntervalHint": "自动同步频率。范围：1–10080 分钟（最多 1 周）。",
+    "httpProxy": "HTTP 代理",
+    "httpProxyHint": "可选。通过代理路由 TMDB 和 Trakt 请求。留空则使用环境变量默认值。",
+    "httpProxyPlaceholder": "http://proxy.example.com:7890",
+    "saveSuccess": "设置保存成功。",
+    "saveFailed": "保存设置失败。",
+    "validationIntervalError": "同步间隔必须是 1 到 10080 之间的整数。",
+    "validationLanguageError": "显示语言格式不正确，请使用 BCP 47 格式（如 zh-CN、en-US）。",
+    "validationProxyError": "代理地址必须以 http:// 或 https:// 开头。"
+  },
+  "progress": {
+    "watching": "追剧中",
+    "completed": "已完成"
+  }
+}

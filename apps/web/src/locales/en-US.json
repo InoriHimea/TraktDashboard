@@ -1,0 +1,56 @@
+{
+  "common": {
+    "loading": "Loading…",
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "deleting": "Deleting…",
+    "confirm": "Confirm",
+    "unknown": "Unknown",
+    "all": "All",
+    "signOut": "Sign out",
+    "nowPlaying": "Now Playing"
+  },
+  "nav": {
+    "progress": "Progress",
+    "statistics": "Statistics",
+    "sync": "Sync",
+    "settings": "Settings"
+  },
+  "watchHistory": {
+    "episodeTitle": "Episode Watch History",
+    "showTitle": "Show Watch History",
+    "recordCount": "{{count}} records",
+    "empty": "No watch history",
+    "emptyHint": "Records will appear here after watching",
+    "deleteConfirm": "Confirm deletion? This action cannot be undone.",
+    "deleteError": "Failed to delete, please try again",
+    "deleteLabel": "Delete record",
+    "unknownTime": "Unknown time"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Configure display language, sync interval, and proxy.",
+    "theme": "Theme",
+    "themeDark": "Dark",
+    "themeLight": "Light",
+    "displayLanguage": "Display Language",
+    "displayLanguageHint": "BCP 47 language code for TMDB translated titles. Re-sync after changing.",
+    "displayLanguagePlaceholder": "e.g. zh-CN, en-US, ja-JP",
+    "syncInterval": "Sync Interval (minutes)",
+    "syncIntervalHint": "Auto-sync frequency. Range: 1–10080 minutes (up to 1 week).",
+    "httpProxy": "HTTP Proxy",
+    "httpProxyHint": "Optional. Routes TMDB and Trakt requests through a proxy. Leave empty to use env default.",
+    "httpProxyPlaceholder": "http://proxy.example.com:7890",
+    "saveSuccess": "Settings saved successfully.",
+    "saveFailed": "Failed to save settings.",
+    "validationIntervalError": "Sync interval must be an integer between 1 and 10080.",
+    "validationLanguageError": "Display language format is incorrect, please use BCP 47 format (e.g. zh-CN, en-US).",
+    "validationProxyError": "Proxy address must start with http:// or https://."
+  },
+  "progress": {
+    "watching": "Watching",
+    "completed": "Completed"
+  }
+}

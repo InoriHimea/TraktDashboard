@@ -11,16 +11,17 @@ import {
 } from "lucide-react";
 import { useShowsProgress } from "../hooks";
 import { ShowCard } from "../components/ShowCard";
+import { t } from "../lib/i18n";
 
 const FILTERS = [
-    { key: "watching", label: "Watching", icon: Tv2, color: "#7c6af7" },
+    { key: "watching", labelKey: "progress.watching", icon: Tv2, color: "#7c6af7" },
     {
         key: "completed",
-        label: "Completed",
+        labelKey: "progress.completed",
         icon: CheckCircle2,
         color: "#10b981",
     },
-    { key: "all", label: "All", icon: LayoutGrid, color: "#0ea5e9" },
+    { key: "all", labelKey: "common.all", icon: LayoutGrid, color: "#0ea5e9" },
 ];
 
 export default function ProgressPage() {
@@ -80,7 +81,7 @@ export default function ProgressPage() {
                             padding: "3px",
                         }}
                     >
-                        {FILTERS.map(({ key, label, icon: Icon, color }) => (
+                        {FILTERS.map(({ key, labelKey, icon: Icon, color }) => (
                             <button
                                 key={key}
                                 onClick={() => setFilter(key)}
@@ -116,7 +117,7 @@ export default function ProgressPage() {
                                             : "var(--color-text-muted)"
                                     }
                                 />
-                                {label}
+                                {t(labelKey)}
                             </button>
                         ))}
                     </div>
