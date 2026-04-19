@@ -406,11 +406,22 @@ async function upsertShowFromTrakt(
     }
     const tmdbId = traktDetail.ids.tmdb;
 
-    // Fetch TMDB data for images + translations (only if displayLanguage set)
+    // Fetch TMDB data for images + translations
+    // Always fetch base (no language) first — this gives us reliable poster_path/backdrop_path
+    // and the seasons[] array with per-season poster_path values.
     let posterPath: string | null = null;
     let backdropPath: string | null = null;
     let translatedName: string | null = null;
     let translatedOverview: string | null = null;
+    let baseTmdbShow: import("./tmdb.js").TmdbShow | null = null;
+
+    try {
+        baseTmdbShow = await getTmdbShow(tmdbId, undefined, userId);
+        posterPath = baseTmdbShow.poster_path || null;
+        backdropPath = baseTmdbShow.backdrop_path || null;
+    } catch (e) {
+        console.warn(`[sync] TMDB base show fetch failed for tmdb ${tmdbId}: ${toErrorMessage(e)}`);
+    }
 
     // Multi-language fallback chain: user locale → zh-TW → zh-HK → zh-SG → zh-CN → ja-JP → en-US
     if (displayLanguage) {
@@ -423,17 +434,15 @@ async function upsertShowFromTrakt(
             'ja-JP',
             'en-US'
         ];
-        // Remove duplicates while preserving order
         const uniqueLanguages = [...new Set(languageFallbackChain)];
         
         for (const lang of uniqueLanguages) {
             try {
                 const tmdbShow = await getTmdbShow(tmdbId, lang, userId);
-                // Always get poster/backdrop from first successful fetch
+                // Poster/backdrop: prefer base (language-neutral), fall back to localized
                 if (!posterPath) posterPath = tmdbShow.poster_path || null;
                 if (!backdropPath) backdropPath = tmdbShow.backdrop_path || null;
                 
-                // Only update translations if we don't have them yet
                 if (!translatedName && tmdbShow.name && tmdbShow.name !== traktDetail.title) {
                     translatedName = tmdbShow.name;
                 }
@@ -441,7 +450,6 @@ async function upsertShowFromTrakt(
                     translatedOverview = tmdbShow.overview;
                 }
                 
-                // If we have both translations, no need to try other languages
                 if (translatedName && translatedOverview) break;
             } catch (e) {
                 console.warn(
@@ -509,17 +517,22 @@ async function upsertShowFromTrakt(
         })
         .returning({ id: shows.id });
 
-    // Build a map of season_number → poster_path from TMDB show data
-    // We fetch TMDB show once (already done above for posterPath/backdropPath),
-    // so re-use the data by fetching again with the same cache key (instant cache hit).
+    // Build a map of season_number → poster_path from the base TMDB show data (language-neutral)
     let tmdbSeasonPosterMap = new Map<number, string | null>();
-    try {
-        const tmdbShowForSeasons = await getTmdbShow(tmdbId, undefined, userId);
-        for (const ts of tmdbShowForSeasons.seasons || []) {
+    if (baseTmdbShow) {
+        for (const ts of baseTmdbShow.seasons || []) {
             tmdbSeasonPosterMap.set(ts.season_number, ts.poster_path || null);
         }
-    } catch (e) {
-        console.warn(`[sync] Failed to fetch TMDB season posters for tmdb ${tmdbId}: ${toErrorMessage(e)}`);
+    } else {
+        // baseTmdbShow failed earlier — try once more with no language
+        try {
+            const tmdbShowForSeasons = await getTmdbShow(tmdbId, undefined, userId);
+            for (const ts of tmdbShowForSeasons.seasons || []) {
+                tmdbSeasonPosterMap.set(ts.season_number, ts.poster_path || null);
+            }
+        } catch (e) {
+            console.warn(`[sync] Failed to fetch TMDB season posters for tmdb ${tmdbId}: ${toErrorMessage(e)}`);
+        }
     }
 
     // Upsert seasons + episodes concurrently

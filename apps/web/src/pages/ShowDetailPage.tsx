@@ -242,12 +242,20 @@ export default function ShowDetailPage() {
                     {seasons.length > 0 && (
                         <div
                             style={{
+                                overflowX: "auto",
+                                overflowY: "hidden",
+                                marginBottom: "40px",
+                                scrollbarWidth: "none",
+                            }}
+                        >
+                        <div
+                            style={{
                                 display: "flex",
                                 gap: "24px",
-                                marginBottom: "40px",
-                                overflowX: "auto",
                                 paddingBottom: "8px",
-                                scrollbarWidth: "none",
+                                paddingTop: "10px",
+                                paddingLeft: "4px",
+                                paddingRight: "4px",
                             }}
                             role="tablist"
                             aria-label="选择季度"
@@ -264,6 +272,7 @@ export default function ShowDetailPage() {
                                     }
                                 />
                             ))}
+                        </div>
                         </div>
                     )}
 
