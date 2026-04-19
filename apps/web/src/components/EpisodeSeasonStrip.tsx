@@ -88,6 +88,18 @@ export function EpisodeSeasonStrip({
                                             episodeNumber={episode.episodeNumber}
                                         />
                                     )}
+                                    
+                                    {/* 底部渐变 - 与 EpisodeGrid 一致 */}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none" />
+                                    
+                                    {/* 底部左: 时长标签 - 与 EpisodeGrid 一致 */}
+                                    {episode.runtime && (
+                                        <div className="absolute bottom-2 left-2">
+                                            <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-sm leading-none">
+                                                {episode.runtime}分钟
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="px-2 mt-1 flex flex-col gap-1">
                                     {/* 剧集标题（i18n） */}

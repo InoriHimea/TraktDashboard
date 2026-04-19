@@ -74,6 +74,9 @@ export default function EpisodeDetailPage() {
                                 episodeNumber={data.episodeNumber}
                             />
                         )}
+                        
+                        {/* 底部渐变 - 与 EpisodeGrid 一致 */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none" />
 
                         {/* Watched 标签：底部居中 */}
                         {isWatched && (
