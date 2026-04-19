@@ -225,7 +225,7 @@ export function EpisodeInfoCard({ data, onHistoryClick, isWatched, onRefetch }: 
       {data.traktRating != null && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '36px' }}>
           <div
-            className="inline-flex items-center gap-3 px-4 py-2.5 rounded-2xl border transition-all duration-200 cursor-default group/rating"
+            className="inline-flex items-center gap-2.5 px-3.5 py-2 rounded-xl border transition-all duration-200 cursor-default group/rating"
             style={{
               background: 'color-mix(in srgb, #a855f7 8%, transparent)',
               borderColor: 'color-mix(in srgb, #a855f7 22%, transparent)',
@@ -288,7 +288,7 @@ export function EpisodeInfoCard({ data, onHistoryClick, isWatched, onRefetch }: 
             href={imdbUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="group inline-flex items-center gap-2 px-3 py-2 rounded-xl border transition-all duration-200 hover:scale-[1.03] active:scale-[0.97]"
+            className="group inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-all duration-200 hover:scale-[1.03] active:scale-[0.97]"
             style={{
               background: 'color-mix(in srgb, #f5c518 7%, transparent)',
               borderColor: 'color-mix(in srgb, #f5c518 25%, transparent)',
@@ -320,7 +320,7 @@ export function EpisodeInfoCard({ data, onHistoryClick, isWatched, onRefetch }: 
             href={tmdbUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="group inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] text-[#01b4e4] text-xs font-bold tracking-wide"
+            className="group inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] text-[#01b4e4] text-xs font-bold tracking-wide"
             style={{
               background: 'color-mix(in srgb, #01b4e4 7%, transparent)',
               borderColor: 'color-mix(in srgb, #01b4e4 22%, transparent)',
@@ -354,7 +354,7 @@ export function EpisodeInfoCard({ data, onHistoryClick, isWatched, onRefetch }: 
             href={tvdbUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="group inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] text-xs font-bold tracking-wide"
+            className="group inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] text-xs font-bold tracking-wide"
             style={{
               color: '#6699ff',
               background: 'color-mix(in srgb, #6699ff 7%, transparent)',
@@ -389,7 +389,7 @@ export function EpisodeInfoCard({ data, onHistoryClick, isWatched, onRefetch }: 
             href={traktUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="group inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] text-xs font-bold tracking-wide"
+            className="group inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] text-xs font-bold tracking-wide"
             style={{
               color: '#ed1c24',
               background: 'color-mix(in srgb, #ed1c24 7%, transparent)',
@@ -434,36 +434,25 @@ export function EpisodeInfoCard({ data, onHistoryClick, isWatched, onRefetch }: 
           disabled={markWatched.isPending || deleteHistory.isPending}
           aria-label={isWatched ? '取消观看' : '标记为已观看'}
           title={isWatched ? '点击删除观看记录' : '标记为已观看'}
-          className="group relative h-11 flex items-center justify-center gap-2 rounded-xl transition-all duration-200 active:scale-[0.96] text-sm font-bold tracking-wide disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
+          className="group relative h-11 flex items-center justify-center gap-2 rounded-lg transition-all duration-150 active:scale-[0.97] active:translate-y-px text-sm font-bold tracking-wide disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
           style={{
-            minWidth: '148px',
-            paddingLeft: '20px',
-            paddingRight: '20px',
-            /* 渐变背景 — 浅色/深色均清晰 */
-            background: isWatched
-              ? 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)'
-              : 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)',
+            width: '152px',
+            background: 'linear-gradient(180deg, #8b5cf6 0%, #6d28d9 100%)',
             color: '#fff',
-            boxShadow: isWatched
-              ? '0 4px 20px color-mix(in srgb, #7c3aed 40%, transparent), inset 0 1px 0 rgba(255,255,255,0.15)'
-              : '0 4px 20px color-mix(in srgb, #7c3aed 30%, transparent), inset 0 1px 0 rgba(255,255,255,0.12)',
+            /* 立体感：顶部高光 + 底部暗边 + 外发光 */
+            boxShadow: '0 1px 0 rgba(0,0,0,0.35), 0 4px 18px color-mix(in srgb, #7c3aed 38%, transparent), inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.18)',
           }}
           onMouseEnter={e => {
-            if (!isWatched) {
-              (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 28px color-mix(in srgb, #7c3aed 55%, transparent), inset 0 1px 0 rgba(255,255,255,0.18)';
-              (e.currentTarget as HTMLElement).style.background = 'linear-gradient(135deg, #6d28d9 0%, #4338ca 100%)';
-            } else {
-              (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 28px color-mix(in srgb, #7c3aed 55%, transparent), inset 0 1px 0 rgba(255,255,255,0.18)';
-              (e.currentTarget as HTMLElement).style.background = 'linear-gradient(135deg, #6d28d9 0%, #4338ca 100%)';
-            }
+            (e.currentTarget as HTMLElement).style.background = 'linear-gradient(180deg, #7c3aed 0%, #5b21b6 100%)';
+            (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 0 rgba(0,0,0,0.4), 0 6px 24px color-mix(in srgb, #7c3aed 52%, transparent), inset 0 1px 0 rgba(255,255,255,0.24), inset 0 -1px 0 rgba(0,0,0,0.22)';
           }}
           onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px color-mix(in srgb, #7c3aed 35%, transparent), inset 0 1px 0 rgba(255,255,255,0.15)';
-            (e.currentTarget as HTMLElement).style.background = 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)';
+            (e.currentTarget as HTMLElement).style.background = 'linear-gradient(180deg, #8b5cf6 0%, #6d28d9 100%)';
+            (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 0 rgba(0,0,0,0.35), 0 4px 18px color-mix(in srgb, #7c3aed 38%, transparent), inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.18)';
           }}
         >
           {/* 悬停时的高光层 */}
-          <span className="absolute inset-0 bg-white/0 group-hover:bg-white/5 transition-colors duration-200 rounded-xl" />
+          <span className="absolute inset-0 bg-white/0 group-hover:bg-white/5 transition-colors duration-150 rounded-lg" />
           <span className="relative flex items-center gap-2">
             {isWatched ? <DoubleCheckIcon /> : <SingleCheckIcon />}
             <span>{isWatched ? '已观看' : '标记已观看'}</span>
@@ -475,22 +464,24 @@ export function EpisodeInfoCard({ data, onHistoryClick, isWatched, onRefetch }: 
           onClick={onHistoryClick}
           aria-label="观看历史"
           title="观看历史"
-          className="group h-11 flex items-center justify-center gap-2 rounded-xl border transition-all duration-200 active:scale-[0.96] text-sm font-bold tracking-wide text-muted-foreground hover:text-foreground"
+          className="group h-11 flex items-center justify-center gap-2 rounded-lg border transition-all duration-150 active:scale-[0.97] active:translate-y-px text-sm font-bold tracking-wide text-muted-foreground hover:text-foreground"
           style={{
-            minWidth: '132px',
-            paddingLeft: '18px',
-            paddingRight: '18px',
-            background: 'color-mix(in srgb, var(--muted) 60%, transparent)',
-            borderColor: 'color-mix(in srgb, var(--border) 60%, transparent)',
-            backdropFilter: 'blur(8px)',
+            width: '152px',
+            /* rgba 中性色在浅/深色背景下均清晰可见 */
+            background: 'rgba(128,128,128,0.10)',
+            borderColor: 'rgba(128,128,128,0.28)',
+            /* 立体感：顶部高光 + 底部暗边 */
+            boxShadow: '0 1px 0 rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -1px 0 rgba(0,0,0,0.08)',
           }}
           onMouseEnter={e => {
-            (e.currentTarget as HTMLElement).style.background = 'color-mix(in srgb, var(--muted) 90%, transparent)';
-            (e.currentTarget as HTMLElement).style.borderColor = 'color-mix(in srgb, var(--border) 100%, transparent)';
+            (e.currentTarget as HTMLElement).style.background = 'rgba(128,128,128,0.20)';
+            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(128,128,128,0.46)';
+            (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 0 rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.10)';
           }}
           onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.background = 'color-mix(in srgb, var(--muted) 60%, transparent)';
-            (e.currentTarget as HTMLElement).style.borderColor = 'color-mix(in srgb, var(--border) 60%, transparent)';
+            (e.currentTarget as HTMLElement).style.background = 'rgba(128,128,128,0.10)';
+            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(128,128,128,0.28)';
+            (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 0 rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -1px 0 rgba(0,0,0,0.08)';
           }}
         >
           <Clock size={16} className="shrink-0 opacity-70 group-hover:opacity-100 transition-opacity" />
