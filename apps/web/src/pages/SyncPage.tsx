@@ -573,6 +573,143 @@ export default function SyncPage() {
                     </div>
                 </motion.div>
             )}
+
+            {/* Sync Summary - 同步统计 */}
+            {sync?.status === "completed" && sync.total > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{
+                        marginTop: "16px",
+                        borderRadius: "var(--radius-lg)",
+                        padding: "24px",
+                        background: "var(--color-surface)",
+                        border: "1px solid var(--color-border-subtle)",
+                    }}
+                >
+                    <h3
+                        style={{
+                            fontSize: "14px",
+                            fontWeight: 600,
+                            color: "var(--color-text)",
+                            marginBottom: "16px",
+                        }}
+                    >
+                        同步统计
+                    </h3>
+                    <div
+                        style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr",
+                            gap: "16px",
+                        }}
+                    >
+                        {/* 成功列 */}
+                        <div
+                            style={{
+                                borderRadius: "var(--radius-md)",
+                                padding: "16px",
+                                background: "#10b98114",
+                                border: "1px solid #10b98128",
+                            }}
+                        >
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "8px",
+                                    marginBottom: "8px",
+                                }}
+                            >
+                                <CheckCircle2
+                                    size={16}
+                                    style={{ color: "#10b981" }}
+                                />
+                                <span
+                                    style={{
+                                        fontSize: "13px",
+                                        fontWeight: 600,
+                                        color: "#10b981",
+                                    }}
+                                >
+                                    成功
+                                </span>
+                            </div>
+                            <p
+                                style={{
+                                    fontSize: "28px",
+                                    fontWeight: 700,
+                                    color: "var(--color-text)",
+                                    lineHeight: 1,
+                                }}
+                            >
+                                {sync.total - failedShows.length}
+                            </p>
+                            <p
+                                style={{
+                                    fontSize: "12px",
+                                    color: "var(--color-text-muted)",
+                                    marginTop: "4px",
+                                }}
+                            >
+                                部剧集已同步
+                            </p>
+                        </div>
+
+                        {/* 失败列 */}
+                        <div
+                            style={{
+                                borderRadius: "var(--radius-md)",
+                                padding: "16px",
+                                background: failedShows.length > 0 ? "#ef444414" : "#6b728014",
+                                border: failedShows.length > 0 ? "1px solid #ef444428" : "1px solid #6b728028",
+                            }}
+                        >
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "8px",
+                                    marginBottom: "8px",
+                                }}
+                            >
+                                <AlertCircle
+                                    size={16}
+                                    style={{ color: failedShows.length > 0 ? "#ef4444" : "#6b7280" }}
+                                />
+                                <span
+                                    style={{
+                                        fontSize: "13px",
+                                        fontWeight: 600,
+                                        color: failedShows.length > 0 ? "#ef4444" : "#6b7280",
+                                    }}
+                                >
+                                    失败
+                                </span>
+                            </div>
+                            <p
+                                style={{
+                                    fontSize: "28px",
+                                    fontWeight: 700,
+                                    color: "var(--color-text)",
+                                    lineHeight: 1,
+                                }}
+                            >
+                                {failedShows.length}
+                            </p>
+                            <p
+                                style={{
+                                    fontSize: "12px",
+                                    color: "var(--color-text-muted)",
+                                    marginTop: "4px",
+                                }}
+                            >
+                                部剧集同步失败
+                            </p>
+                        </div>
+                    </div>
+                </motion.div>
+            )}
         </div>
     );
 }

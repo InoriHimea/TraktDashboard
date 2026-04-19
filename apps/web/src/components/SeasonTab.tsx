@@ -58,8 +58,8 @@ export function SeasonTab({ season, isActive, onClick }: SeasonTabProps) {
                             onError={() => setImgError(true)}
                         />
                     ) : (
-                        <div className="w-full h-full bg-[var(--color-surface-3)] flex items-center justify-center">
-                            <span className="text-[11px] text-white/30 font-bold">
+                        <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center border border-white/5">
+                            <span className="text-2xl text-white/40 font-black tracking-wider">
                                 {season.seasonNumber === 0
                                     ? "SP"
                                     : `S${season.seasonNumber}`}

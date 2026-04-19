@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Check, MoreVertical } from 'lucide-react'
 import { resolveEpisodeTitle } from '../lib/i18n'
-import { resolveEpisodeStill } from '../lib/image'
+import { resolveEpisodeStill, resolveBackdropFallback } from '../lib/image'
 import { EpisodePlaceholder } from './ui/EpisodePlaceholder'
 import type { EpisodeProgress } from '@trakt-dashboard/types'
 
@@ -16,9 +16,10 @@ interface EpisodeGridProps {
   episodes: EpisodeProgress[]
   seasonNumber: number
   showId: number
+  backdropPath?: string | null
 }
 
-export function EpisodeGrid({ episodes, seasonNumber, showId }: EpisodeGridProps) {
+export function EpisodeGrid({ episodes, seasonNumber, showId, backdropPath }: EpisodeGridProps) {
   return (
     <AnimatePresence mode="wait">
       <motion.div
@@ -40,6 +41,7 @@ export function EpisodeGrid({ episodes, seasonNumber, showId }: EpisodeGridProps
               index={i}
               seasonNumber={seasonNumber}
               showId={showId}
+              backdropPath={backdropPath}
             />
           ))}
         </div>
@@ -55,15 +57,19 @@ interface EpisodeThumbnailProps {
   index: number
   seasonNumber: number
   showId: number
+  backdropPath?: string | null
 }
 
-function EpisodeThumbnail({ episode, index, seasonNumber, showId }: EpisodeThumbnailProps) {
+function EpisodeThumbnail({ episode, index, seasonNumber, showId, backdropPath }: EpisodeThumbnailProps) {
   const navigate = useNavigate()
   const [imgError, setImgError] = useState(false)
 
   const title = resolveEpisodeTitle(episode)
   const stillUrl = resolveEpisodeStill(episode.stillPath)
-  const showImg = stillUrl && !imgError
+  // Fallback chain: stillPath → backdropPath → placeholder
+  const fallbackUrl = resolveBackdropFallback(backdropPath)
+  const imageUrl = stillUrl || fallbackUrl
+  const showImg = imageUrl && !imgError
   const isWatched = episode.watched
   const isUnaired = episode.aired === false
   const epCode = `S${String(seasonNumber).padStart(2, '0')} · E${String(episode.episodeNumber).padStart(2, '0')}`
@@ -90,7 +96,7 @@ function EpisodeThumbnail({ episode, index, seasonNumber, showId }: EpisodeThumb
       <div className="relative w-full aspect-video rounded-md overflow-hidden bg-[var(--color-surface-3)]">
         {showImg ? (
           <img
-            src={stillUrl}
+            src={imageUrl}
             alt={title}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             loading="lazy"

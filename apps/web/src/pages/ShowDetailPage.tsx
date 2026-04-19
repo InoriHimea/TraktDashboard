@@ -275,6 +275,7 @@ export default function ShowDetailPage() {
                                     episodes={currentSeason.episodes}
                                     seasonNumber={currentSeasonNumber}
                                     showId={showId}
+                                    backdropPath={show.backdropPath}
                                 />
                             ) : (
                                 <motion.p
