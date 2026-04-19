@@ -697,58 +697,70 @@ function ProgressBar({
         (_, i) => i + 1,
     );
 
+    // Estimate label width in chars → px to decide if it fits inside the fill
+    const labelFitsInside = labelLeft
+        ? validPct >= Math.min(35, (labelLeft.length * 8 + 24) / 3.6)
+        : false;
+
     return (
-        <div
-            className="relative w-full rounded-lg overflow-hidden shadow-inner"
-            style={{
-                height,
-                backgroundColor: `rgba(${trackRgb}, 0.12)`,
-                transform: "translateZ(0)", // 确保 Safari 圆角裁切
-            }}
-        >
-            {labelLeft && (
-                <div className="absolute top-0 bottom-0 left-3 flex items-center z-0 pointer-events-none">
+        <div className="relative w-full" style={{ height }}>
+            {/* Track */}
+            <div
+                className="absolute inset-0 rounded-lg overflow-hidden shadow-inner"
+                style={{
+                    backgroundColor: `rgba(${trackRgb}, 0.12)`,
+                    transform: "translateZ(0)",
+                }}
+            >
+                {validPct > 0 && (
+                    <div
+                        className="absolute top-0 bottom-0 left-0 z-10 overflow-hidden"
+                        style={{
+                            width: `${validPct}%`,
+                            background: `linear-gradient(90deg, ${colorFrom}, ${colorTo})`,
+                            borderTopRightRadius: validPct === 100 ? "8px" : "0",
+                            borderBottomRightRadius: validPct === 100 ? "8px" : "0",
+                        }}
+                    >
+                        {ticks.map((i) => {
+                            const tickPos = (i / totalTicks) * 100;
+                            if (tickPos >= validPct) return null;
+                            return (
+                                <div
+                                    key={i}
+                                    className="absolute top-0 bottom-0 bg-black/10 mix-blend-multiply"
+                                    style={{
+                                        left: `${(tickPos / validPct) * 100}%`,
+                                        width: "1px",
+                                    }}
+                                />
+                            );
+                        })}
+
+                        {/* Label inside fill — only when there's enough room */}
+                        {labelLeft && labelFitsInside && (
+                            <div className="absolute top-0 bottom-0 left-3 flex items-center z-20 pointer-events-none">
+                                <span className="text-[12px] font-bold tracking-wide text-white whitespace-nowrap drop-shadow-sm">
+                                    {labelLeft}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Label outside fill — shown when fill is too narrow */}
+            {labelLeft && !labelFitsInside && (
+                <div
+                    className="absolute top-0 bottom-0 flex items-center pointer-events-none z-20"
+                    style={{ left: `calc(${validPct}% + 8px)` }}
+                >
                     <span
                         className="text-[12px] font-bold tracking-wide whitespace-nowrap"
-                        style={{ color: `rgba(${trackRgb}, 0.65)` }}
+                        style={{ color: colorFrom }}
                     >
                         {labelLeft}
                     </span>
-                </div>
-            )}
-
-            {validPct > 0 && (
-                <div
-                    className="absolute top-0 bottom-0 left-0 z-10 overflow-hidden"
-                    style={{
-                        width: `${validPct}%`,
-                        background: `linear-gradient(90deg, ${colorFrom}, ${colorTo})`,
-                        borderTopRightRadius: validPct === 100 ? "8px" : "0",
-                        borderBottomRightRadius: validPct === 100 ? "8px" : "0",
-                    }}
-                >
-                    {ticks.map((i) => {
-                        const tickPos = (i / totalTicks) * 100;
-                        if (tickPos >= validPct) return null;
-                        return (
-                            <div
-                                key={i}
-                                className="absolute top-0 bottom-0 bg-black/10 mix-blend-multiply"
-                                style={{
-                                    left: `${(tickPos / validPct) * 100}%`,
-                                    width: "1px",
-                                }}
-                            />
-                        );
-                    })}
-
-                    {labelLeft && (
-                        <div className="absolute top-0 bottom-0 left-3 flex items-center z-20 pointer-events-none">
-                            <span className="text-[12px] font-bold tracking-wide text-white whitespace-nowrap drop-shadow-sm">
-                                {labelLeft}
-                            </span>
-                        </div>
-                    )}
                 </div>
             )}
         </div>

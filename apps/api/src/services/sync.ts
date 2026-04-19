@@ -509,11 +509,25 @@ async function upsertShowFromTrakt(
         })
         .returning({ id: shows.id });
 
+    // Build a map of season_number → poster_path from TMDB show data
+    // We fetch TMDB show once (already done above for posterPath/backdropPath),
+    // so re-use the data by fetching again with the same cache key (instant cache hit).
+    let tmdbSeasonPosterMap = new Map<number, string | null>();
+    try {
+        const tmdbShowForSeasons = await getTmdbShow(tmdbId, undefined, userId);
+        for (const ts of tmdbShowForSeasons.seasons || []) {
+            tmdbSeasonPosterMap.set(ts.season_number, ts.poster_path || null);
+        }
+    } catch (e) {
+        console.warn(`[sync] Failed to fetch TMDB season posters for tmdb ${tmdbId}: ${toErrorMessage(e)}`);
+    }
+
     // Upsert seasons + episodes concurrently
     const seasonLimit = pLimit(SEASON_CONCURRENCY);
     await Promise.all(
         traktSeasons.map((s) =>
             seasonLimit(async () => {
+                const seasonPosterPath = tmdbSeasonPosterMap.get(s.number) ?? null;
                 const [season] = await db
                     .insert(seasons)
                     .values({
@@ -522,7 +536,7 @@ async function upsertShowFromTrakt(
                         episodeCount: s.episode_count,
                         airDate: s.first_aired || null,
                         overview: s.overview || null,
-                        posterPath: null,
+                        posterPath: seasonPosterPath,
                     })
                     .onConflictDoUpdate({
                         target: [seasons.showId, seasons.seasonNumber],
@@ -530,6 +544,7 @@ async function upsertShowFromTrakt(
                             episodeCount: s.episode_count,
                             airDate: s.first_aired || null,
                             overview: s.overview || null,
+                            posterPath: seasonPosterPath,
                         },
                     })
                     .returning({ id: seasons.id });
