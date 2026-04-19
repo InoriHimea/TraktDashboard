@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { ImageOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
 import { resolveEpisodeStill } from "../lib/image";
