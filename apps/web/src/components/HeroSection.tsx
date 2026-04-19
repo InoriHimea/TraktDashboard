@@ -619,17 +619,18 @@ export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetCli
                                             className="flex items-baseline"
                                             style={{ gap: "10px" }}
                                         >
-                                            {/* 🚀 修复渐变字体底部被裁切的终极解法 */}
+                                            {/* Cyber percentage — gradient + glow shadow */}
                                             <span
                                                 className="text-gradient-ruby"
                                                 style={{
                                                     fontSize: "44px",
                                                     fontWeight: 900,
-                                                    lineHeight: 1.1, // 放宽行高
-                                                    paddingBottom: "8px", // 给底部留出渲染安全区
-                                                    marginBottom: "-8px", // 负边距拉回位置
+                                                    lineHeight: 1.1,
+                                                    paddingBottom: "8px",
+                                                    marginBottom: "-8px",
                                                     letterSpacing: "-0.02em",
                                                     display: "inline-block",
+                                                    filter: "drop-shadow(0 0 12px rgba(255,46,84,0.4)) drop-shadow(0 2px 4px rgba(255,46,84,0.2))",
                                                 }}
                                             >
                                                 {overallPct}%
@@ -787,18 +788,23 @@ function ProgressBar({
 
     return (
         <div
-            className="relative w-full rounded-lg overflow-hidden shadow-inner"
+            className="relative w-full overflow-hidden"
             style={{
                 height,
-                backgroundColor: `rgba(${trackRgb}, 0.12)`,
-                transform: "translateZ(0)", // 确保 Safari 圆角裁切
+                borderRadius: "10px",
+                backgroundColor: `rgba(${trackRgb}, 0.10)`,
+                // 3D track: inset shadow + subtle border
+                border: `1px solid rgba(${trackRgb}, 0.20)`,
+                boxShadow: `inset 0 2px 4px rgba(0,0,0,0.12), inset 0 1px 0 rgba(0,0,0,0.08)`,
+                transform: "translateZ(0)",
             }}
         >
+            {/* Track ghost label */}
             {labelLeft && (
                 <div className="absolute top-0 bottom-0 left-3 flex items-center z-0 pointer-events-none">
                     <span
                         className="text-[12px] font-bold tracking-wide whitespace-nowrap"
-                        style={{ color: `rgba(${trackRgb}, 0.65)` }}
+                        style={{ color: `rgba(${trackRgb}, 0.55)` }}
                     >
                         {labelLeft}
                     </span>
@@ -810,21 +816,34 @@ function ProgressBar({
                     className="absolute top-0 bottom-0 left-0 z-10 overflow-hidden"
                     style={{
                         width: `${validPct}%`,
-                        background: `linear-gradient(90deg, ${colorFrom}, ${colorTo})`,
-                        borderTopRightRadius: validPct === 100 ? "8px" : "0",
-                        borderBottomRightRadius: validPct === 100 ? "8px" : "0",
+                        // Cyber gradient: brighter start, deeper end
+                        background: `linear-gradient(90deg, ${colorFrom} 0%, ${colorTo} 60%, ${colorFrom}cc 100%)`,
+                        borderTopRightRadius: validPct === 100 ? "9px" : "3px",
+                        borderBottomRightRadius: validPct === 100 ? "9px" : "3px",
+                        // Top highlight + colored glow
+                        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 12px rgba(${trackRgb}, 0.5), 0 2px 6px rgba(${trackRgb}, 0.3)`,
                     }}
                 >
+                    {/* Scanline shimmer overlay */}
+                    <div
+                        className="absolute inset-0 pointer-events-none"
+                        style={{
+                            background: "linear-gradient(180deg, rgba(255,255,255,0.18) 0%, transparent 50%, rgba(0,0,0,0.08) 100%)",
+                        }}
+                    />
+
+                    {/* Episode tick dividers */}
                     {ticks.map((i) => {
                         const tickPos = (i / totalTicks) * 100;
                         if (tickPos >= validPct) return null;
                         return (
                             <div
                                 key={i}
-                                className="absolute top-0 bottom-0 bg-black/10 mix-blend-multiply"
+                                className="absolute top-0 bottom-0"
                                 style={{
                                     left: `${(tickPos / validPct) * 100}%`,
                                     width: "1px",
+                                    background: "rgba(255,255,255,0.2)",
                                 }}
                             />
                         );
@@ -832,7 +851,13 @@ function ProgressBar({
 
                     {labelLeft && (
                         <div className="absolute top-0 bottom-0 left-3 flex items-center z-20 pointer-events-none">
-                            <span className="text-[12px] font-bold tracking-wide text-white whitespace-nowrap drop-shadow-sm">
+                            <span
+                                className="text-[12px] font-bold tracking-wide whitespace-nowrap"
+                                style={{
+                                    color: "white",
+                                    textShadow: "0 1px 2px rgba(0,0,0,0.3)",
+                                }}
+                            >
                                 {labelLeft}
                             </span>
                         </div>

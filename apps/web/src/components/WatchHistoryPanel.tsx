@@ -133,11 +133,10 @@ export function WatchHistoryPanel({
                                 }}
                             >
                                 {/* Entry row */}
-                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '13px 14px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '13px 14px' }}>
                                     {/* Clock icon badge */}
                                     <div style={{
                                         width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0,
-                                        marginTop: '1px',
                                         background: badge.bg,
                                         border: `1px solid ${badge.border}`,
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -205,7 +204,6 @@ export function WatchHistoryPanel({
                                             onClick={() => setConfirmingDelete(entry.id)}
                                             style={{
                                                 width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0,
-                                                marginTop: '2px',
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                 color: 'var(--color-text-muted)',
                                                 transition: 'background 0.15s, color 0.15s',
