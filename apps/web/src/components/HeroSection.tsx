@@ -99,41 +99,34 @@ export function HeroSection({ progress, onWatchClick }: HeroSectionProps) {
                                 </div>
                             )}
                         </div>
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none" />
-                    </div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent pointer-events-none" />
 
-                    {/* Watched badge */}
-                    {isAllWatched && (
-                        <div className="flex justify-center mt-3">
-                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--color-surface-2)] border border-emerald-500/30 shadow-sm">
-                                <svg
-                                    width="13"
-                                    height="13"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    className="text-emerald-400 shrink-0"
-                                >
-                                    <path
-                                        d="M20 6L9 17l-5-5"
-                                        stroke="currentColor"
-                                        strokeWidth="2.5"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    />
-                                    <path
-                                        d="M20 6L9 17"
-                                        stroke="currentColor"
-                                        strokeWidth="2.5"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    />
-                                </svg>
-                                <span className="text-[11px] font-bold tracking-widest text-emerald-400 uppercase">
-                                    Watched
-                                </span>
+                        {/* Watched badge — inside poster, bottom-center */}
+                        {isAllWatched && (
+                            <div className="absolute bottom-0 left-0 right-0 flex justify-center pb-4 pointer-events-none">
+                                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-md border border-emerald-400/40 shadow-lg">
+                                    <svg
+                                        width="12"
+                                        height="12"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        className="text-emerald-400 shrink-0"
+                                    >
+                                        <path
+                                            d="M20 6L9 17l-5-5"
+                                            stroke="currentColor"
+                                            strokeWidth="2.5"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        />
+                                    </svg>
+                                    <span className="text-[10px] font-bold tracking-widest text-emerald-400 uppercase">
+                                        Watched
+                                    </span>
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </motion.div>
 
                 {/* ── 2. 中: 主信息 ── */}

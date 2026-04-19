@@ -60,33 +60,27 @@ const VARIANTS: Record<Variant, string> = {
   ),
 
   /**
-   * SECONDARY — raised glass, theme-aware, 3D tech feel.
-   * Top highlight + bottom shadow inset simulates physical button depth.
+   * SECONDARY — raised, theme-aware, 3D tech feel.
+   * Inset top-highlight + bottom shadow + drop shadow = physical button depth.
+   * Works on both dark and light backgrounds via CSS variables.
    */
   secondary: cn(
-    'relative bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-text)]',
-    // 3D: top-edge light hit + bottom shadow + drop shadow for lift
-    'shadow-[inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-1px_0_rgba(0,0,0,0.1),0_2px_6px_rgba(0,0,0,0.14),0_1px_2px_rgba(0,0,0,0.08)]',
-    // Subtle gradient overlay for depth
-    'before:absolute before:inset-0 before:rounded-[inherit] before:bg-gradient-to-b before:from-white/[0.06] before:to-transparent before:pointer-events-none',
-    // Hover: lift + stronger glow
-    'hover:bg-[var(--color-surface)] hover:border-[var(--color-border)]',
-    'hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(0,0,0,0.12),0_5px_16px_rgba(0,0,0,0.18),0_2px_4px_rgba(0,0,0,0.1)]',
-    'hover:-translate-y-px',
-    // Active: press — shadow collapses
-    'active:translate-y-px active:shadow-[inset_0_2px_5px_rgba(0,0,0,0.14),0_1px_2px_rgba(0,0,0,0.06)]',
+    'bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-text)]',
+    // 3D stack: top-edge light, bottom-edge dark, outer lift shadow
+    'shadow-[inset_0_1px_0_rgba(255,255,255,0.2),inset_0_-1px_0_rgba(0,0,0,0.12),0_1px_0_rgba(0,0,0,0.1),0_2px_6px_rgba(0,0,0,0.1),0_4px_12px_rgba(0,0,0,0.06)]',
+    'hover:bg-[var(--color-surface)] hover:-translate-y-px',
+    'hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.25),inset_0_-1px_0_rgba(0,0,0,0.14),0_2px_0_rgba(0,0,0,0.08),0_4px_14px_rgba(0,0,0,0.14),0_8px_20px_rgba(0,0,0,0.06)]',
+    'active:translate-y-px active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.14),inset_0_1px_0_rgba(0,0,0,0.06)]',
   ),
 
   /**
-   * GHOST — outlined tech style, visible border, subtle depth on hover.
+   * GHOST — outlined, subtle 3D presence. Minimal but not invisible.
    */
   ghost: cn(
     'bg-transparent border border-[var(--color-border)] text-[var(--color-text-muted)]',
-    'shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]',
-    // Hover: surface appears, text brightens
-    'hover:bg-[var(--color-surface-2)] hover:border-[var(--color-border)] hover:text-[var(--color-text)]',
-    'hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_3px_8px_rgba(0,0,0,0.1)]',
-    'hover:-translate-y-px',
+    'shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_1px_3px_rgba(0,0,0,0.08)]',
+    'hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)] hover:-translate-y-px',
+    'hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.12)]',
     'active:translate-y-px active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)]',
   ),
 }
