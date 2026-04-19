@@ -225,10 +225,11 @@ export function EpisodeInfoCard({ data, onHistoryClick, isWatched, onRefetch }: 
       {data.traktRating != null && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '36px' }}>
           <div
-            className="inline-flex items-center gap-2.5 px-3.5 py-2 rounded-xl border transition-all duration-200 cursor-default group/rating"
+            className="inline-flex items-center gap-3 rounded-xl border transition-all duration-200 cursor-default group/rating"
             style={{
-              background: 'color-mix(in srgb, #a855f7 8%, transparent)',
-              borderColor: 'color-mix(in srgb, #a855f7 22%, transparent)',
+              padding: '8px 14px',
+              background: 'rgba(168, 85, 247, 0.10)',
+              borderColor: 'rgba(168, 85, 247, 0.32)',
             }}
           >
             {/* 星星 icon */}
@@ -236,23 +237,23 @@ export function EpisodeInfoCard({ data, onHistoryClick, isWatched, onRefetch }: 
               className="shrink-0 group-hover/rating:scale-110 transition-transform duration-200"
               style={{ color: '#a855f7' }}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2L14.8214 8.11672L21.5106 8.90983L16.5651 13.4833L17.8779 20.0902L12 16.8L6.12215 20.0902L7.43493 13.4833L2.48944 8.90983L9.17863 8.11672L12 2Z" />
               </svg>
             </div>
 
             {/* 分隔线 */}
-            <div className="w-px h-6 bg-border/50 shrink-0" />
+            <div style={{ width: '1px', height: '22px', background: 'rgba(168, 85, 247, 0.25)', flexShrink: 0 }} />
 
             {/* 分数 + 标签 */}
-            <div className="flex flex-col leading-none gap-1">
-              <span className="font-black text-foreground text-lg leading-none tabular-nums">
+            <div className="flex flex-col leading-none" style={{ gap: '4px' }}>
+              <span className="font-black text-foreground tabular-nums" style={{ fontSize: '17px', lineHeight: 1 }}>
                 {data.traktRating}
-                <span className="text-sm font-bold text-muted-foreground">%</span>
+                <span className="font-bold text-muted-foreground" style={{ fontSize: '12px' }}>%</span>
               </span>
               <span
-                className="text-[9px] font-bold uppercase tracking-[0.2em]"
-                style={{ color: 'color-mix(in srgb, #a855f7 70%, var(--muted-foreground))' }}
+                className="font-bold uppercase"
+                style={{ fontSize: '9px', letterSpacing: '0.18em', color: 'rgba(168, 85, 247, 0.85)' }}
               >
                 Trakt Score
               </span>
@@ -285,135 +286,64 @@ export function EpisodeInfoCard({ data, onHistoryClick, isWatched, onRefetch }: 
         {/* IMDb — 琥珀/黄色系 */}
         {imdbUrl && (
           <a
-            href={imdbUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-all duration-200 hover:scale-[1.03] active:scale-[0.97]"
-            style={{
-              background: 'color-mix(in srgb, #f5c518 7%, transparent)',
-              borderColor: 'color-mix(in srgb, #f5c518 25%, transparent)',
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.background = 'color-mix(in srgb, #f5c518 16%, transparent)';
-              (e.currentTarget as HTMLElement).style.borderColor = 'color-mix(in srgb, #f5c518 45%, transparent)';
-              (e.currentTarget as HTMLElement).style.boxShadow = '0 0 14px color-mix(in srgb, #f5c518 20%, transparent)';
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.background = 'color-mix(in srgb, #f5c518 7%, transparent)';
-              (e.currentTarget as HTMLElement).style.borderColor = 'color-mix(in srgb, #f5c518 25%, transparent)';
-              (e.currentTarget as HTMLElement).style.boxShadow = 'none';
-            }}
+            href={imdbUrl} target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center rounded-lg border transition-all duration-200 hover:scale-[1.04] active:scale-[0.97]"
+            style={{ padding: '7px 11px', background: 'rgba(245,197,24,0.09)', borderColor: 'rgba(245,197,24,0.40)' }}
+            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(245,197,24,0.18)'; el.style.borderColor = 'rgba(245,197,24,0.65)'; el.style.boxShadow = '0 0 16px rgba(245,197,24,0.22)'; }}
+            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(245,197,24,0.09)'; el.style.borderColor = 'rgba(245,197,24,0.40)'; el.style.boxShadow = 'none'; }}
           >
-            <span
-              className="rounded-[5px] px-1.5 py-0.5 font-black text-[11px] tracking-tight leading-none"
-              style={{ background: '#f5c518', color: '#000' }}
-            >
+            <span className="rounded font-black leading-none" style={{ background: '#f5c518', color: '#000', fontSize: '11px', padding: '2px 5px', letterSpacing: '-0.02em' }}>
               IMDb
             </span>
-            <ExternalLink className="size-3 opacity-0 group-hover:opacity-50 transition-opacity" style={{ color: '#f5c518' }} />
           </a>
         )}
 
         {/* TMDB — 青蓝色系 */}
         {tmdbUrl && (
           <a
-            href={tmdbUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] text-[#01b4e4] text-xs font-bold tracking-wide"
-            style={{
-              background: 'color-mix(in srgb, #01b4e4 7%, transparent)',
-              borderColor: 'color-mix(in srgb, #01b4e4 22%, transparent)',
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.background = 'color-mix(in srgb, #01b4e4 16%, transparent)';
-              (e.currentTarget as HTMLElement).style.borderColor = 'color-mix(in srgb, #01b4e4 45%, transparent)';
-              (e.currentTarget as HTMLElement).style.boxShadow = '0 0 14px color-mix(in srgb, #01b4e4 18%, transparent)';
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.background = 'color-mix(in srgb, #01b4e4 7%, transparent)';
-              (e.currentTarget as HTMLElement).style.borderColor = 'color-mix(in srgb, #01b4e4 22%, transparent)';
-              (e.currentTarget as HTMLElement).style.boxShadow = 'none';
-            }}
+            href={tmdbUrl} target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border transition-all duration-200 hover:scale-[1.04] active:scale-[0.97] font-bold"
+            style={{ padding: '7px 11px', color: '#01b4e4', fontSize: '12px', letterSpacing: '0.04em', background: 'rgba(1,180,228,0.09)', borderColor: 'rgba(1,180,228,0.38)' }}
+            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(1,180,228,0.18)'; el.style.borderColor = 'rgba(1,180,228,0.62)'; el.style.boxShadow = '0 0 16px rgba(1,180,228,0.20)'; }}
+            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(1,180,228,0.09)'; el.style.borderColor = 'rgba(1,180,228,0.38)'; el.style.boxShadow = 'none'; }}
           >
-            {/* TMDB 小圆点 logo */}
-            <span className="flex items-center gap-1">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 4a6 6 0 1 1 0 12A6 6 0 0 1 12 6z" opacity="0.4"/>
-                <circle cx="12" cy="12" r="4"/>
-              </svg>
-              TMDB
-            </span>
-            <ExternalLink className="size-3 opacity-0 group-hover:opacity-60 transition-opacity" />
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+              <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 4a6 6 0 1 1 0 12A6 6 0 0 1 12 6z" opacity="0.4"/>
+              <circle cx="12" cy="12" r="4"/>
+            </svg>
+            TMDB
           </a>
         )}
 
         {/* TVDB — 靛蓝色系 */}
         {tvdbUrl && (
           <a
-            href={tvdbUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] text-xs font-bold tracking-wide"
-            style={{
-              color: '#6699ff',
-              background: 'color-mix(in srgb, #6699ff 7%, transparent)',
-              borderColor: 'color-mix(in srgb, #6699ff 22%, transparent)',
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.background = 'color-mix(in srgb, #6699ff 16%, transparent)';
-              (e.currentTarget as HTMLElement).style.borderColor = 'color-mix(in srgb, #6699ff 45%, transparent)';
-              (e.currentTarget as HTMLElement).style.boxShadow = '0 0 14px color-mix(in srgb, #6699ff 18%, transparent)';
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.background = 'color-mix(in srgb, #6699ff 7%, transparent)';
-              (e.currentTarget as HTMLElement).style.borderColor = 'color-mix(in srgb, #6699ff 22%, transparent)';
-              (e.currentTarget as HTMLElement).style.boxShadow = 'none';
-            }}
+            href={tvdbUrl} target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border transition-all duration-200 hover:scale-[1.04] active:scale-[0.97] font-bold"
+            style={{ padding: '7px 11px', color: '#6699ff', fontSize: '12px', letterSpacing: '0.04em', background: 'rgba(102,153,255,0.09)', borderColor: 'rgba(102,153,255,0.38)' }}
+            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(102,153,255,0.18)'; el.style.borderColor = 'rgba(102,153,255,0.62)'; el.style.boxShadow = '0 0 16px rgba(102,153,255,0.20)'; }}
+            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(102,153,255,0.09)'; el.style.borderColor = 'rgba(102,153,255,0.38)'; el.style.boxShadow = 'none'; }}
           >
-            <span className="flex items-center gap-1">
-              {/* TV 小图标 */}
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="2" y="7" width="20" height="14" rx="2"/>
-                <path d="M16 3l-4 4-4-4"/>
-              </svg>
-              TVDB
-            </span>
-            <ExternalLink className="size-3 opacity-0 group-hover:opacity-60 transition-opacity" />
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3l-4 4-4-4"/>
+            </svg>
+            TVDB
           </a>
         )}
 
         {/* Trakt — 红色系 */}
         {traktUrl && (
           <a
-            href={traktUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] text-xs font-bold tracking-wide"
-            style={{
-              color: '#ed1c24',
-              background: 'color-mix(in srgb, #ed1c24 7%, transparent)',
-              borderColor: 'color-mix(in srgb, #ed1c24 22%, transparent)',
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.background = 'color-mix(in srgb, #ed1c24 14%, transparent)';
-              (e.currentTarget as HTMLElement).style.borderColor = 'color-mix(in srgb, #ed1c24 40%, transparent)';
-              (e.currentTarget as HTMLElement).style.boxShadow = '0 0 14px color-mix(in srgb, #ed1c24 18%, transparent)';
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.background = 'color-mix(in srgb, #ed1c24 7%, transparent)';
-              (e.currentTarget as HTMLElement).style.borderColor = 'color-mix(in srgb, #ed1c24 22%, transparent)';
-              (e.currentTarget as HTMLElement).style.boxShadow = 'none';
-            }}
+            href={traktUrl} target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border transition-all duration-200 hover:scale-[1.04] active:scale-[0.97] font-bold"
+            style={{ padding: '7px 11px', color: '#ed1c24', fontSize: '12px', letterSpacing: '0.04em', background: 'rgba(237,28,36,0.09)', borderColor: 'rgba(237,28,36,0.38)' }}
+            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(237,28,36,0.17)'; el.style.borderColor = 'rgba(237,28,36,0.62)'; el.style.boxShadow = '0 0 16px rgba(237,28,36,0.20)'; }}
+            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(237,28,36,0.09)'; el.style.borderColor = 'rgba(237,28,36,0.38)'; el.style.boxShadow = 'none'; }}
           >
-            <span className="flex items-center gap-1">
-              {/* Trakt 小 checkmark logo */}
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 13L9 18L20 7"/>
-              </svg>
-              Trakt
-            </span>
-            <ExternalLink className="size-3 opacity-0 group-hover:opacity-60 transition-opacity" />
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <path d="M4 13L9 18L20 7"/>
+            </svg>
+            Trakt
           </a>
         )}
       </div>
@@ -422,7 +352,7 @@ export function EpisodeInfoCard({ data, onHistoryClick, isWatched, onRefetch }: 
       <div
         style={{
           paddingTop: '24px',
-          borderTop: '1px solid color-mix(in srgb, var(--border) 30%, transparent)',
+          borderTop: '1px solid rgba(128,128,128,0.18)',
           display: 'flex',
           alignItems: 'center',
           gap: '10px',

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test StillPath</title>
+</head>
+<body>
+    <h1>Testing Episode Still Path</h1>
+    <div id="output"></div>
+    
+    <script>
+        async function test() {
+            const output = document.getElementById('output');
+            
+            // Test episode detail API
+            try {
+                const res = await fetch('/api/shows/1/episodes/1/1');
+                const data = await res.json();
+                
+                output.innerHTML += '<h2>Episode Detail Response:</h2>';
+                output.innerHTML += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                
+                if (data.data && data.data.stillPath) {
+                    output.innerHTML += '<h2>Still Path Found:</h2>';
+                    output.innerHTML += '<p>' + data.data.stillPath + '</p>';
+                    
+                    const imgUrl = `/api/img/w300${data.data.stillPath}`;
+                    output.innerHTML += '<h2>Image URL:</h2>';
+                    output.innerHTML += '<p>' + imgUrl + '</p>';
+                    output.innerHTML += '<img src="' + imgUrl + '" style="max-width: 500px;" />';
+                } else {
+                    output.innerHTML += '<p style="color: red;">❌ No stillPath in response!</p>';
+                }
+            } catch (e) {
+                output.innerHTML += '<p style="color: red;">Error: ' + e.message + '</p>';
+            }
+        }
+        
+        test();
+    </script>
+</body>
+</html>

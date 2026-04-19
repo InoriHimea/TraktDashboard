@@ -17,11 +17,9 @@ export default function EpisodeDetailPage() {
 
     const isWatched = data.watched;
     const stillUrl = resolveEpisodeStillLarge(data.stillPath);
-    // 无 still 时用节目 backdrop 作为替代（16:9，最适合）
     const fallbackUrl = resolveBackdropFallback(data.show.backdropPath);
     const heroImageUrl = stillUrl ?? fallbackUrl;
 
-    // 定义统一的限宽样式，确保上下绝对对齐
     const containerStyle = { width: '94%', maxWidth: '1440px', margin: '0 auto' };
 
     return (
@@ -29,9 +27,32 @@ export default function EpisodeDetailPage() {
             {/* 顶部导航 */}
             <header className="sticky top-0 z-10 bg-background/90 backdrop-blur-md border-b border-border/40 h-16 flex items-center shrink-0 w-full">
                 <div style={containerStyle}>
-                    <button onClick={() => navigate(-1)} className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
-                        <ArrowLeft className="size-5" />
-                        <span className="text-sm font-bold uppercase tracking-wider">Back</span>
+                    {/* 返回按钮：使用 text-foreground/65 确保浅色/深色双端清晰可见 */}
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="group inline-flex items-center gap-2.5 rounded-lg transition-all duration-150 cursor-pointer"
+                        style={{
+                            padding: '6px 10px 6px 6px',
+                            marginLeft: '-6px',
+                            color: 'rgba(128,128,128,0.85)',
+                            background: 'transparent',
+                            border: '1px solid transparent',
+                        }}
+                        onMouseEnter={e => {
+                            const el = e.currentTarget as HTMLElement;
+                            el.style.color = 'var(--foreground)';
+                            el.style.background = 'rgba(128,128,128,0.10)';
+                            el.style.borderColor = 'rgba(128,128,128,0.20)';
+                        }}
+                        onMouseLeave={e => {
+                            const el = e.currentTarget as HTMLElement;
+                            el.style.color = 'rgba(128,128,128,0.85)';
+                            el.style.background = 'transparent';
+                            el.style.borderColor = 'transparent';
+                        }}
+                    >
+                        <ArrowLeft className="size-4 transition-transform duration-150 group-hover:-translate-x-0.5" />
+                        <span className="text-xs font-bold uppercase tracking-widest">Back</span>
                     </button>
                 </div>
             </header>

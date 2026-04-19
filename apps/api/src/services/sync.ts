@@ -550,6 +550,10 @@ async function upsertShowFromTrakt(
                             translatedOverview: null,
                             stillPath: ep.still_path || null,
                         });
+                        // Debug: log episodes without still_path
+                        if (!ep.still_path) {
+                            console.log(`[sync] No still_path for ${show.title} S${s.number}E${ep.episode_number}`);
+                        }
                     }
                 } catch (e) {
                     console.warn(
@@ -593,6 +597,11 @@ async function upsertShowFromTrakt(
                             ? tmdbEp.translatedOverview
                             : null;
                     const stillPath = tmdbEp?.stillPath ?? null;
+                    
+                    // Debug: log when saving episode with stillPath
+                    if (stillPath) {
+                        console.log(`[sync] Saving stillPath for ${show.title} S${s.number}E${ep.number}: ${stillPath}`);
+                    }
 
                     await db
                         .insert(episodes)
