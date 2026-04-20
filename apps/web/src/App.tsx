@@ -2,7 +2,9 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./hooks";
 import Layout from "./components/Layout";
-import ProgressPage from "./pages/ProgressPage";
+import TVShowsPage from "./pages/TVShowsPage";
+import MoviesPage from "./pages/MoviesPage";
+import MovieDetailPage from "./pages/MovieDetailPage";
 import ShowDetailPage from "./pages/ShowDetailPage";
 import EpisodeDetailPage from "./pages/EpisodeDetailPage";
 import StatsPage from "./pages/StatsPage";
@@ -227,16 +229,19 @@ export default function App() {
                             <Routes>
                                 <Route
                                     path="/"
-                                    element={<Navigate to="/progress" replace />}
+                                    element={<Navigate to="/tv-shows" replace />}
                                 />
-                                <Route path="/progress" element={<ProgressPage />} />
+                                <Route path="/tv-shows" element={<TVShowsPage />} />
+                                <Route path="/progress" element={<Navigate to="/tv-shows" replace />} />
+                                <Route path="/movies" element={<MoviesPage />} />
+                                <Route path="/movies/:id" element={<MovieDetailPage />} />
                                 <Route path="/shows/:id" element={<ShowDetailPage />} />
                                 <Route path="/stats" element={<StatsPage />} />
                                 <Route path="/sync" element={<SyncPage />} />
                                 <Route path="/settings" element={<SettingsPage />} />
                                 <Route
                                     path="*"
-                                    element={<Navigate to="/progress" replace />}
+                                    element={<Navigate to="/tv-shows" replace />}
                                 />
                                 <Route
                                     path="/shows/:showId/seasons/:season/episodes/:episode"

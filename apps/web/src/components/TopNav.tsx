@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { BarChart3, Tv2, RefreshCw, Settings, LogOut } from 'lucide-react'
+import { BarChart3, Tv2, Film, RefreshCw, Settings, LogOut } from 'lucide-react'
 import { useNowPlaying } from '../hooks/index'
 import { NowPlayingPopup } from './NowPlayingPopup'
 import { t } from '../lib/i18n'
@@ -12,10 +12,11 @@ interface TopNavProps {
 }
 
 const NAV = [
-  { to: '/progress',  icon: Tv2,       labelKey: 'nav.progress' },
-  { to: '/stats',     icon: BarChart3,  labelKey: 'nav.statistics' },
-  { to: '/sync',      icon: RefreshCw,  labelKey: 'nav.sync' },
-  { to: '/settings',  icon: Settings,   labelKey: 'nav.settings' },
+  { to: '/tv-shows', icon: Tv2,       labelKey: 'nav.tvShows' },
+  { to: '/movies',   icon: Film,      labelKey: 'nav.movies' },
+  { to: '/stats',    icon: BarChart3, labelKey: 'nav.statistics' },
+  { to: '/sync',     icon: RefreshCw, labelKey: 'nav.sync' },
+  { to: '/settings', icon: Settings,  labelKey: 'nav.settings' },
 ]
 
 export default function TopNav({ username, onLogout }: TopNavProps) {
@@ -41,7 +42,7 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
         }}
       >
         {/* Logo */}
-        <Link to="/progress" style={{ textDecoration: 'none', flexShrink: 0, marginRight: '8px' }}>
+        <Link to="/tv-shows" style={{ textDecoration: 'none', flexShrink: 0, marginRight: '8px' }}>
           <span style={{
             fontFamily: 'var(--font-display)',
             fontSize: '20px',

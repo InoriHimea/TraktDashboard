@@ -291,3 +291,35 @@ export interface WatchResetCursor {
     showId: number;
     resetAt: string; // ISO 8601
 }
+
+// ─── Movie ────────────────────────────────────────────────────────────────────
+
+export interface Movie {
+  id: number
+  tmdbId: number
+  imdbId: string | null
+  traktId: number | null
+  traktSlug: string | null
+  title: string
+  overview: string | null
+  releaseDate: string | null   // YYYY-MM-DD
+  runtime: number | null       // minutes
+  posterPath: string | null
+  backdropPath: string | null
+  genres: string[]
+  lastSyncedAt: string
+  createdAt: string
+}
+
+export interface MovieProgress {
+  movie: Movie
+  watchCount: number
+  lastWatchedAt: string | null
+}
+
+export interface MovieWatchHistoryEntry {
+  id: number
+  movieId: number
+  watchedAt: string | null
+  source: string
+}

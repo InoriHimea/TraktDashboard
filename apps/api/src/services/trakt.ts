@@ -138,6 +138,22 @@ export interface TraktEpisodeDetail {
     };
 }
 
+export interface TraktWatchedMovie {
+    movie: {
+        title: string;
+        year: number | null;
+        ids: {
+            trakt: number;
+            slug: string;
+            imdb: string | null;
+            tmdb: number | null;
+        };
+    };
+    plays: number;
+    last_watched_at: string | null;
+    last_updated_at: string | null;
+}
+
 export interface TraktShowProgress {
     aired: number;
     completed: number;
@@ -343,6 +359,9 @@ export function getTraktClient() {
                 "/sync/watched/shows?extended=noseasons",
                 userId,
             ),
+
+        getWatchedMovies: (userId: number) =>
+            traktFetch<TraktWatchedMovie[]>("/sync/watched/movies", userId),
 
         // Task 3.2: getHistory now uses traktFetchRaw (unified token refresh + 429 retry)
         getHistory: async (

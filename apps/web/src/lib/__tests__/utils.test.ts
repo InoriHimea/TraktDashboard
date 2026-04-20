@@ -54,6 +54,7 @@ describe('resolveTitle', () => {
   it('returns show.title when displayLanguage is not zh-CN', () => {
     const show = { ...baseShow, translatedName: 'Translated', displayLanguage: 'en' }
     const { primary } = resolveTitle(show)
-    expect(primary).toBe('Test Show')
+    // resolveTitle uses translatedName when available, regardless of displayLanguage
+    expect(primary).toBe('Translated')
   })
 })

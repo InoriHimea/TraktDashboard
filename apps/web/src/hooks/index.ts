@@ -10,6 +10,8 @@ import type {
     NowPlayingEpisode,
     EpisodeDetailData,
     WatchHistoryEntry,
+    MovieProgress,
+    MovieWatchHistoryEntry,
 } from "@trakt-dashboard/types";
 import { api } from "../lib/api";
 
@@ -245,6 +247,66 @@ export function useResetProgress(showId: number) {
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ["show-detail", showId] });
             qc.invalidateQueries({ queryKey: ["shows-progress"] });
+        },
+    });
+}
+
+// ─── Movie Hooks ──────────────────────────────────────────────────────────────
+
+export function useMoviesProgress(
+    filter: string,
+    search: string,
+    limit = 50,
+    offset = 0,
+) {
+    return useQuery<MovieProgress[]>({
+        queryKey: ["movies-progress", filter, search, limit, offset],
+        queryFn: () =>
+            api.movies
+                .progress(filter, search, limit, offset)
+                .then((r) => r.data),
+        staleTime: 1000 * 60,
+    });
+}
+
+export function useMovieDetail(id: number) {
+    return useQuery<MovieProgress>({
+        queryKey: ["movie-detail", id],
+        queryFn: () => api.movies.detail(id).then((r) => r.data),
+        enabled: id > 0,
+    });
+}
+
+export function useMovieHistory(id: number) {
+    return useQuery<MovieWatchHistoryEntry[]>({
+        queryKey: ["movie-history", id],
+        queryFn: () => api.movies.history(id).then((r) => r.data),
+        enabled: id > 0,
+    });
+}
+
+export function useMarkMovieWatched(id: number) {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (watchedAt: string | null) =>
+            api.movies.watch(id, watchedAt),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["movie-detail", id] });
+            qc.invalidateQueries({ queryKey: ["movie-history", id] });
+            qc.invalidateQueries({ queryKey: ["movies-progress"] });
+        },
+    });
+}
+
+export function useDeleteMovieHistory(id: number) {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (historyId: number) =>
+            api.movies.deleteHistory(id, historyId),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["movie-history", id] });
+            qc.invalidateQueries({ queryKey: ["movie-detail", id] });
+            qc.invalidateQueries({ queryKey: ["movies-progress"] });
         },
     });
 }

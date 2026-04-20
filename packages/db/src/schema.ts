@@ -122,6 +122,36 @@ export const episodes = pgTable(
     ],
 );
 
+// ─── Movies ───────────────────────────────────────────────────────────────────
+
+export const movies = pgTable(
+    "movies",
+    {
+        id: serial("id").primaryKey(),
+        tmdbId: integer("tmdb_id").notNull().unique(),
+        imdbId: text("imdb_id"),
+        traktId: integer("trakt_id"),
+        traktSlug: text("trakt_slug"),
+        title: text("title").notNull(),
+        overview: text("overview"),
+        releaseDate: text("release_date"),
+        runtime: integer("runtime"),
+        posterPath: text("poster_path"),
+        backdropPath: text("backdrop_path"),
+        genres: jsonb("genres").$type<string[]>().notNull().default([]),
+        lastSyncedAt: timestamp("last_synced_at", { withTimezone: true })
+            .defaultNow()
+            .notNull(),
+        createdAt: timestamp("created_at", { withTimezone: true })
+            .defaultNow()
+            .notNull(),
+    },
+    (t) => [
+        index("movies_trakt_id_idx").on(t.traktId),
+        index("movies_imdb_id_idx").on(t.imdbId),
+    ],
+);
+
 // ─── Watch History ─────────────────────────────────────────────────────────────
 
 export const watchHistory = pgTable(
@@ -131,9 +161,13 @@ export const watchHistory = pgTable(
         userId: integer("user_id")
             .notNull()
             .references(() => users.id, { onDelete: "cascade" }),
-        episodeId: integer("episode_id")
-            .notNull()
-            .references(() => episodes.id, { onDelete: "cascade" }),
+        episodeId: integer("episode_id").references(() => episodes.id, {
+            onDelete: "cascade",
+        }),
+        movieId: integer("movie_id").references(() => movies.id, {
+            onDelete: "cascade",
+        }),
+        mediaType: text("media_type").notNull().default("episode"),
         watchedAt: timestamp("watched_at", { withTimezone: true }),
         source: text("source").notNull().default("manual"),
         traktPlayId: text("trakt_play_id").unique(),
@@ -142,6 +176,7 @@ export const watchHistory = pgTable(
         index("watch_history_user_idx").on(t.userId),
         index("watch_history_episode_idx").on(t.episodeId),
         index("watch_history_watched_at_idx").on(t.watchedAt),
+        index("watch_history_movie_idx").on(t.movieId),
     ],
 );
 
@@ -172,6 +207,30 @@ export const userShowProgress = pgTable(
     (t) => [
         uniqueIndex("usp_user_show_idx").on(t.userId, t.showId),
         index("usp_user_idx").on(t.userId),
+    ],
+);
+
+// ─── User Movie Progress (materialized cache) ─────────────────────────────────
+
+export const userMovieProgress = pgTable(
+    "user_movie_progress",
+    {
+        id: serial("id").primaryKey(),
+        userId: integer("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
+        movieId: integer("movie_id")
+            .notNull()
+            .references(() => movies.id, { onDelete: "cascade" }),
+        watchCount: integer("watch_count").notNull().default(0),
+        lastWatchedAt: timestamp("last_watched_at", { withTimezone: true }),
+        updatedAt: timestamp("updated_at", { withTimezone: true })
+            .defaultNow()
+            .notNull(),
+    },
+    (t) => [
+        uniqueIndex("ump_user_movie_idx").on(t.userId, t.movieId),
+        index("ump_user_idx").on(t.userId),
     ],
 );
 

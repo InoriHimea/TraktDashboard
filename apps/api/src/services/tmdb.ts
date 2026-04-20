@@ -141,6 +141,19 @@ export interface TmdbShow {
     }>;
 }
 
+export interface TmdbMovie {
+    id: number;
+    title: string;
+    original_title: string;
+    overview: string | null;
+    release_date: string | null;
+    runtime: number | null;
+    genres: Array<{ id: number; name: string }>;
+    poster_path: string | null;
+    backdrop_path: string | null;
+    imdb_id: string | null;
+}
+
 export interface TmdbSeason {
     id: number;
     season_number: number;
@@ -194,6 +207,51 @@ export async function getTmdbShow(
         .insert(metadataCache)
         .values({
             source: "tmdb_show",
+            externalId: cacheKey,
+            data,
+            cachedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+            target: [metadataCache.source, metadataCache.externalId],
+            set: { data, cachedAt: new Date() },
+        });
+
+    return data;
+}
+
+export async function getTmdbMovie(
+    tmdbId: number,
+    userId?: number,
+    language?: string,
+): Promise<TmdbMovie> {
+    const db = getDb();
+    const cacheKey = `tmdb_movie_${tmdbId}_${language || "base"}`;
+
+    const [cached] = await db
+        .select()
+        .from(metadataCache)
+        .where(
+            and(
+                eq(metadataCache.source, "tmdb_movie"),
+                eq(metadataCache.externalId, cacheKey),
+            ),
+        );
+
+    if (cached) {
+        const age = Date.now() - new Date(cached.cachedAt).getTime();
+        if (age < CACHE_TTL_HOURS * 60 * 60 * 1000)
+            return cached.data as TmdbMovie;
+    }
+
+    const params: Record<string, string> = {};
+    if (language) params.language = language;
+
+    const data = await tmdbFetch<TmdbMovie>(`/movie/${tmdbId}`, params, userId);
+
+    await db
+        .insert(metadataCache)
+        .values({
+            source: "tmdb_movie",
             externalId: cacheKey,
             data,
             cachedAt: new Date(),

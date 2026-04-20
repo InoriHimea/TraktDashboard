@@ -11,6 +11,8 @@ import type {
     NowPlayingEpisode,
     EpisodeDetailData,
     WatchHistoryEntry,
+    MovieProgress,
+    MovieWatchHistoryEntry,
 } from "@trakt-dashboard/types";
 
 const API_BASE = "/api";
@@ -124,5 +126,33 @@ export const api = {
     trakt: {
         watching: () =>
             request<ApiResponse<NowPlayingEpisode | null>>("/trakt/watching"),
+    },
+    movies: {
+        progress: (filter = "watched", q = "", limit = 50, offset = 0) => {
+            const params = new URLSearchParams({
+                filter,
+                q,
+                limit: String(limit),
+                offset: String(offset),
+            });
+            return request<PaginatedResponse<MovieProgress>>(
+                `/movies/progress?${params}`,
+            );
+        },
+        detail: (id: number) =>
+            request<ApiResponse<MovieProgress>>(`/movies/${id}`),
+        history: (id: number) =>
+            request<ApiResponse<MovieWatchHistoryEntry[]>>(
+                `/movies/${id}/history`,
+            ),
+        watch: (id: number, watchedAt: string | null) =>
+            request<{ ok: boolean; historyId: number }>(`/movies/${id}/watch`, {
+                method: "POST",
+                body: JSON.stringify({ watchedAt }),
+            }),
+        deleteHistory: (id: number, historyId: number) =>
+            request<{ ok: boolean }>(`/movies/${id}/history/${historyId}`, {
+                method: "DELETE",
+            }),
     },
 };

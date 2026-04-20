@@ -2,30 +2,30 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Search,
-    Tv2,
-    CheckCircle2,
+    Eye,
+    EyeOff,
     LayoutGrid,
     Loader2,
     X,
     RefreshCw,
 } from "lucide-react";
-import { useShowsProgress } from "../hooks";
-import { ShowCard } from "../components/ShowCard";
+import { useMoviesProgress } from "../hooks";
+import { MovieCard } from "../components/MovieCard";
 import { t } from "../lib/i18n";
 
 const FILTERS = [
-    { key: "watching", labelKey: "progress.watching", icon: Tv2, color: "#7c6af7" },
+    { key: "watched", labelKey: "movies.watched", icon: Eye, color: "#10b981" },
     {
-        key: "completed",
-        labelKey: "progress.completed",
-        icon: CheckCircle2,
-        color: "#10b981",
+        key: "unwatched",
+        labelKey: "movies.unwatched",
+        icon: EyeOff,
+        color: "#f59e0b",
     },
     { key: "all", labelKey: "common.all", icon: LayoutGrid, color: "#0ea5e9" },
 ];
 
-export default function ProgressPage() {
-    const [filter, setFilter] = useState("watching");
+export default function MoviesPage() {
+    const [filter, setFilter] = useState("watched");
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -38,12 +38,12 @@ export default function ProgressPage() {
     }, [search]);
 
     const {
-        data: shows,
+        data: movies,
         isLoading,
         error,
         refetch,
         isFetching,
-    } = useShowsProgress(filter, debouncedSearch);
+    } = useMoviesProgress(filter, debouncedSearch);
 
     return (
         <div style={{ minHeight: "100vh", background: "var(--color-bg)" }}>
@@ -145,7 +145,7 @@ export default function ProgressPage() {
                         />
                         <input
                             type="text"
-                            placeholder="Search shows…"
+                            placeholder="Search movies…"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             style={{
@@ -188,7 +188,7 @@ export default function ProgressPage() {
                             marginLeft: "auto",
                         }}
                     >
-                        {shows ? `${shows.length} 部剧集` : ""}
+                        {movies ? `${movies.length} 部电影` : ""}
                     </span>
                 </div>
             </div>
@@ -222,7 +222,7 @@ export default function ProgressPage() {
                                 fontSize: "14px",
                             }}
                         >
-                            Loading shows…
+                            Loading movies…
                         </p>
                     </div>
                 ) : error ? (
@@ -241,7 +241,7 @@ export default function ProgressPage() {
                                 fontSize: "14px",
                             }}
                         >
-                            Failed to load shows.
+                            Failed to load movies.
                         </p>
                         <button
                             onClick={() => refetch()}
@@ -261,7 +261,7 @@ export default function ProgressPage() {
                             <RefreshCw size={13} /> Retry
                         </button>
                     </div>
-                ) : shows?.length === 0 ? (
+                ) : movies?.length === 0 ? (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -276,7 +276,7 @@ export default function ProgressPage() {
                         >
                             {debouncedSearch
                                 ? `No results for "${debouncedSearch}"`
-                                : "No shows here yet."}
+                                : "No movies here yet."}
                         </p>
                         {!debouncedSearch && (
                             <p
@@ -299,10 +299,10 @@ export default function ProgressPage() {
                         }}
                     >
                         <AnimatePresence mode="popLayout">
-                            {shows?.map((progress, i) => (
-                                <ShowCard
-                                    key={progress.show.id}
-                                    progress={progress}
+                            {movies?.map((progress, i) => (
+                                <MovieCard
+                                    key={progress.movie.id}
+                                    movie={progress}
                                     index={i}
                                 />
                             ))}

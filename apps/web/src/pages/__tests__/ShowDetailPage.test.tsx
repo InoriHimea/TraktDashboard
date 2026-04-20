@@ -12,9 +12,17 @@ vi.mock('react-router-dom', () => ({
 
 // Mock hooks
 const mockUseShowDetail = vi.fn()
-vi.mock('../../hooks', () => ({
-  useShowDetail: (...args: unknown[]) => mockUseShowDetail(...args),
-}))
+vi.mock('../../hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../hooks')>()
+  return {
+    ...actual,
+    useShowDetail: (...args: unknown[]) => mockUseShowDetail(...args),
+    useResetProgress: () => ({ mutateAsync: vi.fn(), isPending: false }),
+    useEpisodeHistory: () => ({ data: [], isLoading: false }),
+    useShowHistory: () => ({ data: [], isLoading: false }),
+    useDeleteHistory: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  }
+})
 
 // Import after mocks
 const { default: ShowDetailPage } = await import('../ShowDetailPage')
@@ -62,13 +70,13 @@ describe('ShowDetailPage', () => {
   it('shows loading spinner when isLoading=true', () => {
     mockUseShowDetail.mockReturnValue({ data: undefined, isLoading: true })
     const { container } = render(<ShowDetailPage />)
-    expect(container.querySelector('.animate-spin')).toBeTruthy()
+    expect(container.querySelector('.animate-pulse')).toBeTruthy()
   })
 
   it('shows empty state when data is undefined', () => {
     mockUseShowDetail.mockReturnValue({ data: undefined, isLoading: false })
     render(<ShowDetailPage />)
-    expect(screen.getByText('未找到该剧集。')).toBeTruthy()
+    expect(screen.getByText('未找到该剧集')).toBeTruthy()
   })
 
   it('renders season tabs for each season', () => {
@@ -78,16 +86,19 @@ describe('ShowDetailPage', () => {
     const buttons = container.querySelectorAll('button')
     // Back button + 2 season tabs = at least 3 buttons
     expect(buttons.length).toBeGreaterThanOrEqual(3)
-    expect(screen.getByText('第 1 季')).toBeTruthy()
-    expect(screen.getByText('第 2 季')).toBeTruthy()
+    expect(screen.getAllByText('Season 1').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Season 2').length).toBeGreaterThan(0)
   })
 
   it('clicking a SeasonTab updates active season', () => {
     const seasons = [makeSeason(1), makeSeason(2)]
     mockUseShowDetail.mockReturnValue({ data: makeProgress(seasons), isLoading: false })
     render(<ShowDetailPage />)
-    // Click season 2 tab
-    fireEvent.click(screen.getByText('第 2 季'))
+    // Click season 2 tab (use the SeasonTab button which has role="tab")
+    const season2Tabs = screen.getAllByText('Season 2')
+    // The SeasonTab button has role="tab", click the one inside a button
+    const tabButton = season2Tabs.find(el => el.closest('[role="tab"]'))
+    fireEvent.click(tabButton ?? season2Tabs[0])
     // Season 2 episodes should now be visible (S02E01)
     expect(screen.getByText('S02E01')).toBeTruthy()
   })
@@ -106,7 +117,7 @@ describe('ShowDetailPage', () => {
           // Count season tab buttons (exclude back button by checking for season label text)
           const seasonLabels = container.querySelectorAll('button span')
           const seasonTabCount = Array.from(seasonLabels).filter(el =>
-            el.textContent?.match(/^第 \d+ 季$/)
+            el.textContent?.match(/^Season \d+$/) && el.closest('[role="tab"]')
           ).length
           expect(seasonTabCount).toBe(unique.length)
           unmount()

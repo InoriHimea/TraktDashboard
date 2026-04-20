@@ -3,15 +3,17 @@ import {
     shows,
     seasons,
     episodes,
+    movies,
     watchHistory,
     userShowProgress,
+    userMovieProgress,
     syncState,
     userSettings,
     watchResetCursors,
 } from "@trakt-dashboard/db";
 import { eq, and, sql, or, gt, isNull, desc } from "drizzle-orm";
 import { getTraktClient } from "./trakt.js";
-import { getTmdbShow, getTmdbSeason } from "./tmdb.js";
+import { getTmdbShow, getTmdbSeason, getTmdbMovie } from "./tmdb.js";
 import pLimit from "p-limit";
 import dayjs from "dayjs";
 
@@ -198,6 +200,13 @@ export async function triggerFullSync(userId: number): Promise<void> {
                 ),
             );
         }
+
+        // Sync movies after shows
+        await db
+            .update(syncState)
+            .set({ currentShow: "Syncing movies…", updatedAt: new Date() })
+            .where(eq(syncState.userId, userId));
+        await syncMovies(userId);
 
         await db
             .update(syncState)
@@ -1206,4 +1215,121 @@ export async function recalcShowProgress(
                 updatedAt: new Date(),
             },
         });
+}
+
+// ─── Movie sync ───────────────────────────────────────────────────────────────
+
+export async function syncMovies(userId: number): Promise<void> {
+  const db = getDb()
+  const trakt = getTraktClient()
+
+  console.log(`[sync:movies] Starting movie sync for user ${userId}`)
+
+  let watchedMovies: import('./trakt.js').TraktWatchedMovie[]
+  try {
+    watchedMovies = await trakt.getWatchedMovies(userId)
+  } catch (e) {
+    console.error(`[sync:movies] Failed to fetch watched movies:`, toErrorMessage(e))
+    return
+  }
+
+  console.log(`[sync:movies] Found ${watchedMovies.length} watched movies`)
+
+  const limit = pLimit(SHOW_CONCURRENCY)
+
+  await Promise.all(watchedMovies.map(wm => limit(async () => {
+    const tmdbId = wm.movie.ids.tmdb
+    const title = wm.movie.title
+
+    if (!tmdbId) {
+      console.warn(`[sync:movies] Skipping "${title}" — missing TMDB id`)
+      return
+    }
+
+    try {
+      // Fetch TMDB images (degrade gracefully on failure)
+      let posterPath: string | null = null
+      let backdropPath: string | null = null
+      let overview: string | null = null
+      let releaseDate: string | null = null
+      let runtime: number | null = null
+      let genres: string[] = []
+
+      try {
+        const tmdbMovie = await getTmdbMovie(tmdbId, userId)
+        posterPath = tmdbMovie.poster_path || null
+        backdropPath = tmdbMovie.backdrop_path || null
+        overview = tmdbMovie.overview || null
+        releaseDate = tmdbMovie.release_date || null
+        runtime = tmdbMovie.runtime || null
+        genres = tmdbMovie.genres?.map(g => g.name) || []
+      } catch (e) {
+        console.warn(`[sync:movies] TMDB fetch failed for "${title}" (tmdb:${tmdbId}): ${toErrorMessage(e)}`)
+      }
+
+      // Upsert movie record
+      const [movie] = await db.insert(movies).values({
+        tmdbId,
+        traktId: wm.movie.ids.trakt,
+        traktSlug: wm.movie.ids.slug,
+        imdbId: wm.movie.ids.imdb || null,
+        title,
+        overview,
+        releaseDate,
+        runtime,
+        posterPath,
+        backdropPath,
+        genres,
+        lastSyncedAt: new Date(),
+      }).onConflictDoUpdate({
+        target: [movies.tmdbId],
+        set: {
+          traktId: wm.movie.ids.trakt,
+          traktSlug: wm.movie.ids.slug,
+          imdbId: wm.movie.ids.imdb || null,
+          title,
+          overview,
+          releaseDate,
+          runtime,
+          posterPath,
+          backdropPath,
+          genres,
+          lastSyncedAt: new Date(),
+        },
+      }).returning({ id: movies.id })
+
+      // Upsert progress summary
+      await db.insert(userMovieProgress).values({
+        userId,
+        movieId: movie.id,
+        watchCount: wm.plays,
+        lastWatchedAt: wm.last_watched_at ? new Date(wm.last_watched_at) : null,
+      }).onConflictDoUpdate({
+        target: [userMovieProgress.userId, userMovieProgress.movieId],
+        set: {
+          watchCount: wm.plays,
+          lastWatchedAt: wm.last_watched_at ? new Date(wm.last_watched_at) : null,
+          updatedAt: new Date(),
+        },
+      })
+
+      // Insert last_watched_at as a watch history entry (dedup by userId+movieId+watchedAt)
+      if (wm.last_watched_at) {
+        await db.insert(watchHistory).values({
+          userId,
+          movieId: movie.id,
+          episodeId: null,
+          mediaType: 'movie',
+          watchedAt: new Date(wm.last_watched_at),
+          source: 'trakt',
+        }).onConflictDoNothing()
+      }
+
+      console.log(`[sync:movies] Synced "${title}"`)
+    } catch (e) {
+      console.error(`[sync:movies] Error syncing "${title}":`, toErrorMessage(e))
+    }
+  })))
+
+  console.log(`[sync:movies] Movie sync complete`)
 }
