@@ -1333,3 +1333,29 @@ export async function syncMovies(userId: number): Promise<void> {
 
   console.log(`[sync:movies] Movie sync complete`)
 }
+
+// ─── Startup cleanup ──────────────────────────────────────────────────────────
+
+/**
+ * Reset any sync states stuck in "running" from a previous crashed/killed process.
+ * Called once at server startup before any sync jobs are registered.
+ */
+export async function resetStaleRunningSyncs(): Promise<void> {
+    const db = getDb();
+    const result = await db
+        .update(syncState)
+        .set({
+            status: "error",
+            error: "Sync was interrupted by a server restart",
+            currentShow: null,
+            updatedAt: new Date(),
+        })
+        .where(eq(syncState.status, "running"))
+        .returning({ userId: syncState.userId });
+
+    if (result.length > 0) {
+        console.log(
+            `[sync] Reset ${result.length} stale "running" sync state(s) on startup (userIds: ${result.map((r) => r.userId).join(", ")})`,
+        );
+    }
+}

@@ -2,7 +2,7 @@ import { Queue, Worker } from "bullmq";
 import IORedis from "ioredis";
 import { getDb, users, userSettings } from "@trakt-dashboard/db";
 import { eq } from "drizzle-orm";
-import { triggerIncrementalSync } from "../services/sync.js";
+import { triggerIncrementalSync, resetStaleRunningSyncs } from "../services/sync.js";
 
 let connection: IORedis | null = null;
 let syncQueue: Queue | null = null;
@@ -83,6 +83,9 @@ export async function registerUserSyncJob(userId: number) {
 export async function startScheduler() {
     const redis = getRedis();
     const queue = getSyncQueue();
+
+    // Reset any sync states left in "running" from a previous crashed/killed process
+    await resetStaleRunningSyncs();
 
     // Worker processes sync jobs
     const worker = new Worker(
