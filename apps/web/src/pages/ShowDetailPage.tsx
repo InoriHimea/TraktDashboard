@@ -209,6 +209,7 @@ export default function ShowDetailPage() {
                                 marginBottom: "40px",
                                 overflowX: "auto",
                                 paddingBottom: "8px",
+                                paddingLeft: "10px",
                                 scrollbarWidth: "none",
                             }}
                             role="tablist"
