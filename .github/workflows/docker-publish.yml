@@ -2,7 +2,7 @@ name: Build & Push Docker Images
 
 on:
   push:
-    branches: [main]
+    branches: [github]
     tags: ["v*"]
 
 env:
