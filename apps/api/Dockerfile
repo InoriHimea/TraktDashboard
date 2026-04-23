@@ -1,8 +1,7 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
 
-# Install pnpm via npm using internal Nexus registry (avoids corepack network issues)
-RUN npm install -g pnpm@10.19.0 --registry=https://nexus.mellivora.com.cn:18082/repository/npm-group/
+RUN npm install -g pnpm@10.19.0
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml bunfig.toml ./
 COPY packages/types/package.json ./packages/types/
@@ -17,8 +16,7 @@ FROM oven/bun:1.1-alpine AS runner
 WORKDIR /app
 
 # Switch to internal Nexus apk mirror
-RUN sed -i 's|https://dl-cdn.alpinelinux.org/alpine|https://artifact.mellivora.com.cn/alpine/apk-group|g' /etc/apk/repositories \
-    && apk add --no-cache curl
+RUN apk add --no-cache curl
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
