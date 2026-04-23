@@ -123,7 +123,6 @@ export function EpisodeCard({
                                     episode.watched ? (episode.runtime ?? 0) : 0
                                 }
                                 totalMinutes={episode.runtime ?? 0}
-                                size="xs"
                             />
                         </div>
                     )}
