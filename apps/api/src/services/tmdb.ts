@@ -269,6 +269,7 @@ export async function getTmdbSeason(
     seasonNumber: number,
     language?: string,
     userId?: number,
+    forceRefresh?: boolean,
 ): Promise<TmdbSeason> {
     const db = getDb();
     // Language-aware cache key — prevents stale English cache being reused for localized requests
@@ -276,20 +277,22 @@ export async function getTmdbSeason(
         ? `${tmdbId}_s${seasonNumber}_${language}`
         : `${tmdbId}_s${seasonNumber}`;
 
-    const [cached] = await db
-        .select()
-        .from(metadataCache)
-        .where(
-            and(
-                eq(metadataCache.source, "tmdb_season"),
-                eq(metadataCache.externalId, cacheKey),
-            ),
-        );
+    if (!forceRefresh) {
+        const [cached] = await db
+            .select()
+            .from(metadataCache)
+            .where(
+                and(
+                    eq(metadataCache.source, "tmdb_season"),
+                    eq(metadataCache.externalId, cacheKey),
+                ),
+            );
 
-    if (cached) {
-        const age = Date.now() - new Date(cached.cachedAt).getTime();
-        if (age < CACHE_TTL_HOURS * 60 * 60 * 1000)
-            return cached.data as TmdbSeason;
+        if (cached) {
+            const age = Date.now() - new Date(cached.cachedAt).getTime();
+            if (age < CACHE_TTL_HOURS * 60 * 60 * 1000)
+                return cached.data as TmdbSeason;
+        }
     }
 
     const params: Record<string, string> = {};
