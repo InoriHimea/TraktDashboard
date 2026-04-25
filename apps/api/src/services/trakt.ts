@@ -397,7 +397,7 @@ export function getTraktClient() {
 
         getShowProgress: (userId: number, traktId: number) =>
             traktFetch<TraktShowProgress>(
-                `/shows/${traktId}/progress/watched`,
+                `/shows/${traktId}/progress/watched?specials=true`,
                 userId,
             ),
 
