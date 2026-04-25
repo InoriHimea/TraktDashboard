@@ -274,6 +274,10 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
 
         const totalShows = showMap.size;
         let processed = 0;
+        // Track the earliest watched_at among failed entries so we can roll back
+        // the cursor to before the first failure — ensuring gaps are re-fetched
+        // on the next incremental sync rather than silently dropped.
+        let failedEntryMinWatchedAt: Date | null = null;
         await db
             .update(syncState)
             .set({ total: totalShows, updatedAt: new Date() })
@@ -324,6 +328,14 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
                             `[sync:incr] Error on tmdb ${tmdbId}:`,
                             toErrorMessage(e),
                         );
+                        // Record the earliest watched_at of this failed show's entries
+                        // so we can roll back the cursor to before this failure.
+                        for (const entry of entries) {
+                            const t = new Date(entry.watched_at);
+                            if (!failedEntryMinWatchedAt || t < failedEntryMinWatchedAt) {
+                                failedEntryMinWatchedAt = t;
+                            }
+                        }
                     } finally {
                         processed++;
                         await db
@@ -339,11 +351,25 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
             ),
         );
 
+        // Conservative cursor advance: if any show failed, roll back the cursor
+        // to 1 second before the earliest failed entry so the next incremental
+        // sync re-fetches that window and fills the gap automatically.
+        // If everything succeeded, advance to now as usual.
+        const newLastSyncAt = failedEntryMinWatchedAt
+            ? new Date(failedEntryMinWatchedAt.getTime() - 1000)
+            : new Date();
+
+        if (failedEntryMinWatchedAt) {
+            console.log(
+                `[sync:incr] ${processed - (totalShows - (failedEntryMinWatchedAt ? 1 : 0))} show(s) failed — rolling cursor back to ${newLastSyncAt.toISOString()} to re-fetch gaps next run`,
+            );
+        }
+
         await db
             .update(syncState)
             .set({
                 status: "completed",
-                lastSyncAt: new Date(),
+                lastSyncAt: newLastSyncAt,
                 currentShow: null,
                 updatedAt: new Date(),
             })
