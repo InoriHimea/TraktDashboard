@@ -9,6 +9,7 @@ interface NowPlayingPopupProps {
     isLoading: boolean;
     isOpen: boolean;
     onClose: () => void;
+    triggerRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
 // ─── Pure helpers (exported for property tests) ───────────────────────────────
@@ -102,6 +103,7 @@ export function NowPlayingPopup({
     isLoading,
     isOpen,
     onClose,
+    triggerRef,
 }: NowPlayingPopupProps) {
     const cardRef = useRef<HTMLDivElement>(null);
     const [posterError, setPosterError] = useState(false);
@@ -111,20 +113,19 @@ export function NowPlayingPopup({
         setPosterError(false);
     }, [data?.show.posterPath]);
 
-    // Click-outside handler
+    // Click-outside handler — excludes the trigger button to prevent immediate close
     useEffect(() => {
         if (!isOpen) return;
         function handleClick(e: MouseEvent) {
-            if (
-                cardRef.current &&
-                !cardRef.current.contains(e.target as Node)
-            ) {
+            const target = e.target as Node;
+            if (triggerRef?.current?.contains(target)) return;
+            if (cardRef.current && !cardRef.current.contains(target)) {
                 onClose();
             }
         }
         document.addEventListener("mousedown", handleClick);
         return () => document.removeEventListener("mousedown", handleClick);
-    }, [isOpen, onClose]);
+    }, [isOpen, onClose, triggerRef]);
 
     // Escape key handler
     useEffect(() => {

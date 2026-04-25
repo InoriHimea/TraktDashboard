@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { BarChart3, Tv2, Film, RefreshCw, Settings, LogOut } from 'lucide-react'
@@ -23,6 +23,7 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
   const location = useLocation()
   const { data: nowPlayingData, isWatching, isLoading: nowPlayingLoading } = useNowPlaying()
   const [isPopupOpen, setIsPopupOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
 
   return (
     <>
@@ -115,6 +116,7 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
           {/* Now Playing trigger button — only when watching */}
           {isWatching && (
             <button
+              ref={triggerRef}
               data-testid="now-playing-trigger"
               onClick={() => setIsPopupOpen(prev => !prev)}
               title={t("common.nowPlaying")}
@@ -181,6 +183,7 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
         isLoading={nowPlayingLoading}
         isOpen={isPopupOpen && isWatching}
         onClose={() => setIsPopupOpen(false)}
+        triggerRef={triggerRef}
       />
     </>
   )
