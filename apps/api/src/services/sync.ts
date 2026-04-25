@@ -705,6 +705,53 @@ async function upsertShowFromTrakt(
                     });
                 }
 
+                // If any episode still has no title after the cache pass, force-refresh
+                // the translation languages and retry. This handles the case where TMDB
+                // had no translation when the cache was first populated (e.g. new episodes)
+                // but has since added one — without waiting for the 7-day cache TTL.
+                const missingTitleEpNums = Array.from(allEpisodeNumbers).filter(
+                    epNum => !tmdbEpisodeMap.get(epNum)?.translatedTitle,
+                );
+                if (missingTitleEpNums.length > 0 && uniqueLanguages.length > 0) {
+                    console.log(
+                        `[sync] ${missingTitleEpNums.length} episode(s) missing translated title in tmdb ${tmdbId} s${s.number} — force-refreshing translation cache`,
+                    );
+                    for (const lang of uniqueLanguages) {
+                        try {
+                            const fresh = await getTmdbSeason(tmdbId, s.number, lang, userId, true);
+                            fetchedSeasons.set(lang, fresh);
+                        } catch (e) {
+                            console.warn(
+                                `[sync] Force-refresh failed for tmdb ${tmdbId} s${s.number} lang ${lang}: ${toErrorMessage(e)}`,
+                            );
+                        }
+                    }
+                    // Re-run title resolution for only the missing episodes
+                    for (const epNum of missingTitleEpNums) {
+                        const existing = tmdbEpisodeMap.get(epNum) ?? {
+                            translatedTitle: null,
+                            translatedOverview: null,
+                            stillPath: null,
+                        };
+                        let bestTitle: string | null = null;
+                        let bestOverview: string | null = null;
+                        for (const lang of uniqueLanguages) {
+                            const season = fetchedSeasons.get(lang);
+                            if (!season) continue;
+                            const ep = season.episodes?.find(e => e.episode_number === epNum);
+                            if (!ep) continue;
+                            if (!bestTitle && ep.name?.trim()) bestTitle = ep.name.trim();
+                            if (!bestOverview && ep.overview?.trim()) bestOverview = ep.overview.trim();
+                            if (bestTitle && bestOverview) break;
+                        }
+                        tmdbEpisodeMap.set(epNum, {
+                            translatedTitle: bestTitle,
+                            translatedOverview: bestOverview,
+                            stillPath: existing.stillPath,
+                        });
+                    }
+                }
+
                 for (const ep of traktEpisodes) {
                     const tmdbEp = tmdbEpisodeMap.get(ep.number);
                     // Store TMDB title as translatedTitle regardless of whether it matches
