@@ -30,6 +30,7 @@ export interface Show {
     createdAt: string;
     // Multilingual fields
     originalName: string | null;
+    originalLanguage: string | null; // TMDB original_language, e.g. "ja", "en", "ko"
     translatedName: string | null;
     translatedOverview: string | null;
     displayLanguage: string | null;

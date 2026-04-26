@@ -72,6 +72,7 @@ showRoutes.get('/progress', async (c) => {
       createdAt: row.show.createdAt.toISOString(),
       // Task 7.2: multilingual fields
       originalName: row.show.originalName ?? null,
+      originalLanguage: (row.show as any).originalLanguage ?? null,
       translatedName: row.show.translatedName ?? null,
       translatedOverview: (row.show as any).translatedOverview ?? null,
       displayLanguage: row.show.displayLanguage ?? null,
@@ -199,6 +200,7 @@ showRoutes.get('/:id', async (c) => {
         lastSyncedAt: show.lastSyncedAt.toISOString(),
         createdAt: show.createdAt.toISOString(),
         originalName: show.originalName ?? null,
+        originalLanguage: (show as any).originalLanguage ?? null,
         translatedName: show.translatedName ?? null,
         translatedOverview: (show as any).translatedOverview ?? null,
         displayLanguage: show.displayLanguage ?? null,
@@ -529,6 +531,7 @@ showRoutes.post('/:showId/reset', async (c) => {
         lastSyncedAt: show.lastSyncedAt.toISOString(),
         createdAt: show.createdAt.toISOString(),
         originalName: show.originalName ?? null,
+        originalLanguage: (show as any).originalLanguage ?? null,
         translatedName: show.translatedName ?? null,
         translatedOverview: (show as any).translatedOverview ?? null,
         displayLanguage: show.displayLanguage ?? null,

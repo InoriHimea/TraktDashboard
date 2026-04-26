@@ -24,6 +24,91 @@ const FAILED_RETRY_MAX = 2;
 // Per-show hard timeout (ms) — prevents one stuck show from blocking a slot forever
 const SHOW_TIMEOUT_MS = 90_000;
 
+// ─── Language fallback chain builder ─────────────────────────────────────────
+//
+// Fallback order:
+//   1. All variants of the user's locale language family
+//      e.g. zh-TW → [zh-TW, zh-HK, zh-SG, zh-CN]
+//           en-US → [en-US, en-GB, en]
+//   2. The show's original language (e.g. "ja" for anime → [ja-JP, ja])
+//   3. English fallback [en-US, en-GB, en]
+//   4. (UI fallback: "第 X 集" — handled in resolveEpisodeTitle, not here)
+//
+// All known variants per language family:
+const LANGUAGE_FAMILY_VARIANTS: Record<string, string[]> = {
+    zh: ['zh-TW', 'zh-HK', 'zh-SG', 'zh-CN', 'zh'],
+    en: ['en-US', 'en-GB', 'en'],
+    ja: ['ja-JP', 'ja'],
+    ko: ['ko-KR', 'ko'],
+    fr: ['fr-FR', 'fr-BE', 'fr-CA', 'fr'],
+    de: ['de-DE', 'de-AT', 'de-CH', 'de'],
+    es: ['es-ES', 'es-MX', 'es-419', 'es'],
+    pt: ['pt-BR', 'pt-PT', 'pt'],
+    it: ['it-IT', 'it'],
+    ru: ['ru-RU', 'ru'],
+    ar: ['ar-SA', 'ar'],
+    th: ['th-TH', 'th'],
+    vi: ['vi-VN', 'vi'],
+    id: ['id-ID', 'id'],
+    tr: ['tr-TR', 'tr'],
+    pl: ['pl-PL', 'pl'],
+    nl: ['nl-NL', 'nl-BE', 'nl'],
+    sv: ['sv-SE', 'sv'],
+    da: ['da-DK', 'da'],
+    fi: ['fi-FI', 'fi'],
+    nb: ['nb-NO', 'nb'],
+    cs: ['cs-CZ', 'cs'],
+    hu: ['hu-HU', 'hu'],
+    ro: ['ro-RO', 'ro'],
+    uk: ['uk-UA', 'uk'],
+    he: ['he-IL', 'he'],
+};
+
+/**
+ * Extract the base language code from a locale string.
+ * "zh-TW" → "zh", "en-US" → "en", "ja" → "ja"
+ */
+function getLanguageFamily(locale: string): string {
+    return locale.split('-')[0].toLowerCase();
+}
+
+/**
+ * Build the TMDB language query list for a given user locale + show original language.
+ * Returns deduplicated list in priority order.
+ */
+export function buildLanguageFallbackChain(
+    userLocale: string | null,
+    originalLanguage: string | null, // TMDB original_language, e.g. "ja", "ko", "en"
+): string[] {
+    const chain: string[] = [];
+
+    // 1. User locale family variants
+    if (userLocale) {
+        const family = getLanguageFamily(userLocale);
+        const variants = LANGUAGE_FAMILY_VARIANTS[family] ?? [userLocale];
+        // Put the exact locale first, then the rest of the family
+        const ordered = [userLocale, ...variants.filter(v => v !== userLocale)];
+        chain.push(...ordered);
+    }
+
+    // 2. Show's original language family (skip if same family as user locale)
+    if (originalLanguage) {
+        const origFamily = originalLanguage.toLowerCase();
+        const userFamily = userLocale ? getLanguageFamily(userLocale) : null;
+        if (origFamily !== userFamily) {
+            const variants = LANGUAGE_FAMILY_VARIANTS[origFamily] ?? [`${origFamily}-${origFamily.toUpperCase()}`, origFamily];
+            chain.push(...variants);
+        }
+    }
+
+    // 3. English fallback (skip if already covered)
+    const enVariants = LANGUAGE_FAMILY_VARIANTS['en']!;
+    chain.push(...enVariants);
+
+    // Deduplicate while preserving order
+    return [...new Set(chain)];
+}
+
 type FailedShow = {
     tmdbId: number;
     title: string;
@@ -458,20 +543,14 @@ async function upsertShowFromTrakt(
         console.warn(`[sync] TMDB base show fetch failed for tmdb ${tmdbId}: ${toErrorMessage(e)}`);
     }
 
-    // Multi-language fallback chain: user locale → zh-TW → zh-HK → zh-SG → zh-CN → ja-JP → en-US
+    // Multi-language fallback chain: user locale family → show original language → English
     if (displayLanguage) {
-        const languageFallbackChain = [
+        const languageFallbackChain = buildLanguageFallbackChain(
             displayLanguage,
-            'zh-TW',
-            'zh-HK',
-            'zh-SG',
-            'zh-CN',
-            'ja-JP',
-            'en-US'
-        ];
-        const uniqueLanguages = [...new Set(languageFallbackChain)];
-        
-        for (const lang of uniqueLanguages) {
+            baseTmdbShow?.original_language ?? null,
+        );
+
+        for (const lang of languageFallbackChain) {
             try {
                 const tmdbShow = await getTmdbShow(tmdbId, lang, userId);
                 // Poster/backdrop: prefer base (language-neutral), fall back to localized
@@ -522,6 +601,7 @@ async function upsertShowFromTrakt(
             totalSeasons,
             totalEpisodes,
             originalName: traktDetail.title,
+            originalLanguage: baseTmdbShow?.original_language ?? null,
             translatedName,
             translatedOverview,
             displayLanguage,
@@ -544,6 +624,7 @@ async function upsertShowFromTrakt(
                 totalSeasons,
                 totalEpisodes,
                 originalName: traktDetail.title,
+                originalLanguage: baseTmdbShow?.original_language ?? null,
                 translatedName,
                 translatedOverview,
                 displayLanguage,
@@ -647,15 +728,15 @@ async function upsertShowFromTrakt(
 
                 // Step 2: Fill translations per-episode via fallback chain.
                 // Each episode independently walks the chain until it finds a non-empty title.
-                // This means ep3 can get en-US while ep1 gets zh-TW — no premature break.
-                const languageFallbackChain = displayLanguage
-                    ? [displayLanguage, 'zh-TW', 'zh-HK', 'zh-SG', 'zh-CN', 'ja-JP', 'en-US']
-                    : ['en-US'];
-                const uniqueLanguages = [...new Set(languageFallbackChain)];
+                // Chain: user locale family → show original language → English
+                const languageFallbackChain = buildLanguageFallbackChain(
+                    displayLanguage,
+                    baseTmdbShow?.original_language ?? null,
+                );
 
                 // Cache fetched seasons to avoid duplicate requests
                 const fetchedSeasons = new Map<string, import("./tmdb.js").TmdbSeason>();
-                for (const lang of uniqueLanguages) {
+                for (const lang of languageFallbackChain) {
                     try {
                         const tmdbSeason = await getTmdbSeason(tmdbId, s.number, lang, userId);
                         fetchedSeasons.set(lang, tmdbSeason);
@@ -682,7 +763,7 @@ async function upsertShowFromTrakt(
                     let bestTitle: string | null = null;
                     let bestOverview: string | null = null;
 
-                    for (const lang of uniqueLanguages) {
+                    for (const lang of languageFallbackChain) {
                         const season = fetchedSeasons.get(lang);
                         if (!season) continue;
                         const ep = season.episodes?.find(e => e.episode_number === epNum);
@@ -712,11 +793,11 @@ async function upsertShowFromTrakt(
                 const missingTitleEpNums = Array.from(allEpisodeNumbers).filter(
                     epNum => !tmdbEpisodeMap.get(epNum)?.translatedTitle,
                 );
-                if (missingTitleEpNums.length > 0 && uniqueLanguages.length > 0) {
+                if (missingTitleEpNums.length > 0 && languageFallbackChain.length > 0) {
                     console.log(
                         `[sync] ${missingTitleEpNums.length} episode(s) missing translated title in tmdb ${tmdbId} s${s.number} — force-refreshing translation cache`,
                     );
-                    for (const lang of uniqueLanguages) {
+                    for (const lang of languageFallbackChain) {
                         try {
                             const fresh = await getTmdbSeason(tmdbId, s.number, lang, userId, true);
                             fetchedSeasons.set(lang, fresh);
@@ -735,7 +816,7 @@ async function upsertShowFromTrakt(
                         };
                         let bestTitle: string | null = null;
                         let bestOverview: string | null = null;
-                        for (const lang of uniqueLanguages) {
+                        for (const lang of languageFallbackChain) {
                             const season = fetchedSeasons.get(lang);
                             if (!season) continue;
                             const ep = season.episodes?.find(e => e.episode_number === epNum);
