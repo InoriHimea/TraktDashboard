@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { BarChart3, Tv2, Film, RefreshCw, Settings, LogOut } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useNowPlaying } from '../hooks/index'
 import { NowPlayingPopup } from './NowPlayingPopup'
 import { t } from '../lib/i18n'
@@ -21,9 +22,23 @@ const NAV = [
 
 export default function TopNav({ username, onLogout }: TopNavProps) {
   const location = useLocation()
+  const qc = useQueryClient()
   const { data: nowPlayingData, isWatching, isLoading: nowPlayingLoading } = useNowPlaying()
   const [isPopupOpen, setIsPopupOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
+  const prevIsWatching = useRef(isWatching)
+
+  // When a watching session ends (isWatching flips true → false), the user just
+  // finished an episode. Invalidate stats and show/movie progress so the
+  // "最近动态" section and progress lists refresh automatically.
+  useEffect(() => {
+    if (prevIsWatching.current && !isWatching) {
+      qc.invalidateQueries({ queryKey: ['stats'] })
+      qc.invalidateQueries({ queryKey: ['shows-progress'] })
+      qc.invalidateQueries({ queryKey: ['movies-progress'] })
+    }
+    prevIsWatching.current = isWatching
+  }, [isWatching, qc])
 
   return (
     <>
