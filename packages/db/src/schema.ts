@@ -51,6 +51,7 @@ export const shows = pgTable(
         totalSeasons: integer("total_seasons").notNull().default(0),
         // Task 1.2: Multilingual fields
         originalName: text("original_name"),
+        originalLanguage: text("original_language"), // e.g. "ja", "en", "ko"
         translatedName: text("translated_name"),
         translatedOverview: text("translated_overview"),
         displayLanguage: text("display_language"),

@@ -121,6 +121,7 @@ export interface TmdbShow {
     id: number;
     name: string;
     original_name: string;
+    original_language: string; // e.g. "ja", "en", "ko", "zh"
     overview: string;
     status: string;
     first_air_date: string;
