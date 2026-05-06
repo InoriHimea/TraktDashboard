@@ -106,7 +106,7 @@ export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetCli
 
                         {/* Watched badge — inside poster, bottom-center, double-groove border */}
                         {isAllWatched && (
-                            <div className="absolute bottom-0 left-0 right-0 flex justify-center pb-8 pointer-events-none">
+                            <div className="absolute bottom-0 left-0 right-0 flex justify-center pb-10 pointer-events-none">
                                 <div style={{
                                     display: "inline-flex",
                                     alignItems: "center",
@@ -116,12 +116,13 @@ export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetCli
                                     background: "rgba(0,0,0,0.55)",
                                     backdropFilter: "blur(12px)",
                                     WebkitBackdropFilter: "blur(12px)",
-                                    // 双沟: outer glow ring + border + inner highlight
                                     boxShadow: "0 0 0 1px rgba(52,211,153,0.55), 0 0 0 3px rgba(52,211,153,0.12), inset 0 1px 0 rgba(255,255,255,0.15), 0 4px 12px rgba(0,0,0,0.4)",
                                     border: "1px solid rgba(52,211,153,0.7)",
                                 }}>
-                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" style={{ color: "#34d399", flexShrink: 0 }}>
-                                        <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                    {/* Double checkmark */}
+                                    <svg width="15" height="11" viewBox="0 0 30 22" fill="none" style={{ color: "#34d399", flexShrink: 0 }}>
+                                        <path d="M2 11L8 17L18 6" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                        <path d="M11 11L17 17L27 6" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/>
                                     </svg>
                                     <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.12em", color: "#34d399", textTransform: "uppercase" }}>
                                         Watched
