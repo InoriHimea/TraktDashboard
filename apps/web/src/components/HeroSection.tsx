@@ -785,138 +785,149 @@ function ProgressBar({
         { length: Math.max(totalTicks - 1, 0) },
         (_, i) => i + 1,
     );
-    const r = Math.round(height / 2); // border-radius = half height for full pill
+    const r = Math.round(height / 2);
+
+    // If fill is too narrow to fit the label comfortably, render it outside
+    // the bar to the right of the fill tip instead of inside.
+    const INLINE_THRESHOLD = 22; // percent — below this, label goes outside
+    const labelInside = validPct >= INLINE_THRESHOLD;
 
     return (
-        <div
-            style={{
-                position: "relative",
-                width: "100%",
-                height,
-                borderRadius: r,
-                // Track: faint colored tint + subtle inset depth
-                backgroundColor: `rgba(${trackRgb}, 0.08)`,
-                border: `1px solid rgba(${trackRgb}, 0.18)`,
-                boxShadow: `inset 0 2px 6px rgba(0,0,0,0.10), inset 0 1px 0 rgba(0,0,0,0.05)`,
-                overflow: "hidden",
-                transform: "translateZ(0)",
-            }}
-        >
-            {/* Track ghost tick lines */}
-            {ticks.map((i) => {
-                const tickPos = (i / totalTicks) * 100;
-                return (
+        // Outer wrapper: position:relative so the outside label can be placed
+        // relative to the bar without being clipped by overflow:hidden.
+        <div style={{ position: "relative", width: "100%" }}>
+            <div
+                style={{
+                    position: "relative",
+                    width: "100%",
+                    height,
+                    borderRadius: r,
+                    backgroundColor: `rgba(${trackRgb}, 0.08)`,
+                    border: `1px solid rgba(${trackRgb}, 0.18)`,
+                    boxShadow: `inset 0 2px 6px rgba(0,0,0,0.10), inset 0 1px 0 rgba(0,0,0,0.05)`,
+                    overflow: "hidden",
+                    transform: "translateZ(0)",
+                }}
+            >
+                {/* Track ghost tick lines */}
+                {ticks.map((i) => {
+                    const tickPos = (i / totalTicks) * 100;
+                    return (
+                        <div
+                            key={i}
+                            style={{
+                                position: "absolute",
+                                top: "20%",
+                                bottom: "20%",
+                                left: `${tickPos}%`,
+                                width: "1px",
+                                background: `rgba(${trackRgb}, 0.25)`,
+                                pointerEvents: "none",
+                            }}
+                        />
+                    );
+                })}
+
+                {/* Filled gel capsule */}
+                {validPct > 0 && (
                     <div
-                        key={i}
                         style={{
                             position: "absolute",
-                            top: "20%",
-                            bottom: "20%",
-                            left: `${tickPos}%`,
-                            width: "1px",
-                            background: `rgba(${trackRgb}, 0.25)`,
-                            pointerEvents: "none",
+                            top: 0, bottom: 0, left: 0,
+                            width: `${validPct}%`,
+                            borderRadius: r,
+                            background: `linear-gradient(90deg, ${colorFrom} 0%, ${colorTo} 100%)`,
+                            overflow: "hidden",
+                            boxShadow: `0 0 10px rgba(${trackRgb}, 0.45), 0 2px 6px rgba(${trackRgb}, 0.3), inset 0 1px 0 rgba(255,255,255,0.5)`,
+                            zIndex: 1,
                         }}
-                    />
-                );
-            })}
+                    >
+                        {/* Layer 2: top specular highlight */}
+                        <div style={{
+                            position: "absolute",
+                            top: 0, left: 0, right: 0,
+                            height: "55%",
+                            borderRadius: `${r}px ${r}px 40% 40% / ${r}px ${r}px 24px 24px`,
+                            background: "linear-gradient(180deg, rgba(255,255,255,0.70) 0%, rgba(255,255,255,0.15) 60%, transparent 100%)",
+                            pointerEvents: "none",
+                        }} />
 
-            {/* Track ghost label */}
-            {labelLeft && (
+                        {/* Layer 3: bottom depth shadow */}
+                        <div style={{
+                            position: "absolute",
+                            bottom: 0, left: 0, right: 0,
+                            height: "35%",
+                            background: "linear-gradient(0deg, rgba(0,0,0,0.18) 0%, transparent 100%)",
+                            pointerEvents: "none",
+                        }} />
+
+                        {/* Layer 4: inner side vignette */}
+                        <div style={{
+                            position: "absolute",
+                            inset: 0,
+                            background: "radial-gradient(ellipse at 50% 0%, transparent 40%, rgba(0,0,0,0.12) 100%)",
+                            pointerEvents: "none",
+                        }} />
+
+                        {/* Tick dividers inside fill */}
+                        {ticks.map((i) => {
+                            const tickPos = (i / totalTicks) * 100;
+                            if (tickPos >= validPct) return null;
+                            return (
+                                <div
+                                    key={i}
+                                    style={{
+                                        position: "absolute",
+                                        top: "15%", bottom: "15%",
+                                        left: `${(tickPos / validPct) * 100}%`,
+                                        width: "1px",
+                                        background: "rgba(255,255,255,0.35)",
+                                        pointerEvents: "none",
+                                    }}
+                                />
+                            );
+                        })}
+
+                        {/* Label inside fill — only when fill is wide enough */}
+                        {labelLeft && labelInside && (
+                            <div style={{
+                                position: "absolute", top: 0, bottom: 0, left: "12px",
+                                display: "flex", alignItems: "center", zIndex: 10, pointerEvents: "none",
+                            }}>
+                                <span style={{
+                                    fontSize: "12px", fontWeight: 800,
+                                    color: "rgba(255,255,255,0.95)",
+                                    textShadow: `0 1px 3px rgba(0,0,0,0.3)`,
+                                    whiteSpace: "nowrap",
+                                    letterSpacing: "0.01em",
+                                }}>
+                                    {labelLeft}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Label outside — floats just after the fill tip when fill is too narrow */}
+            {labelLeft && !labelInside && (
                 <div style={{
-                    position: "absolute", top: 0, bottom: 0, left: "12px",
-                    display: "flex", alignItems: "center", zIndex: 0, pointerEvents: "none",
+                    position: "absolute",
+                    top: 0, bottom: 0,
+                    // Sit 8px to the right of the fill edge
+                    left: `calc(${validPct}% + 8px)`,
+                    display: "flex", alignItems: "center",
+                    pointerEvents: "none",
+                    zIndex: 2,
                 }}>
                     <span style={{
                         fontSize: "12px", fontWeight: 700,
-                        color: "rgba(255,255,255,0.90)",
-                        textShadow: `0 1px 4px rgba(${trackRgb}, 0.6), 0 1px 2px rgba(0,0,0,0.3)`,
+                        color: `rgba(${trackRgb}, 1)`,
                         whiteSpace: "nowrap",
+                        letterSpacing: "0.01em",
                     }}>
                         {labelLeft}
                     </span>
-                </div>
-            )}
-
-            {/* Filled gel capsule */}
-            {validPct > 0 && (
-                <div
-                    style={{
-                        position: "absolute",
-                        top: 0, bottom: 0, left: 0,
-                        width: `${validPct}%`,
-                        borderRadius: r,
-                        // Layer 1: base gradient (left-to-right color shift)
-                        background: `linear-gradient(90deg, ${colorFrom} 0%, ${colorTo} 100%)`,
-                        overflow: "hidden",
-                        // Outer glow for the gel effect
-                        boxShadow: `0 0 10px rgba(${trackRgb}, 0.45), 0 2px 6px rgba(${trackRgb}, 0.3), inset 0 1px 0 rgba(255,255,255,0.5)`,
-                        zIndex: 1,
-                    }}
-                >
-                    {/* Layer 2: top specular highlight — the key to the gel "bubble" illusion */}
-                    <div style={{
-                        position: "absolute",
-                        top: 0, left: 0, right: 0,
-                        height: "55%",
-                        borderRadius: `${r}px ${r}px 40% 40% / ${r}px ${r}px 24px 24px`,
-                        background: "linear-gradient(180deg, rgba(255,255,255,0.70) 0%, rgba(255,255,255,0.15) 60%, transparent 100%)",
-                        pointerEvents: "none",
-                    }} />
-
-                    {/* Layer 3: bottom depth shadow */}
-                    <div style={{
-                        position: "absolute",
-                        bottom: 0, left: 0, right: 0,
-                        height: "35%",
-                        background: "linear-gradient(0deg, rgba(0,0,0,0.18) 0%, transparent 100%)",
-                        pointerEvents: "none",
-                    }} />
-
-                    {/* Layer 4: inner side vignette for roundness */}
-                    <div style={{
-                        position: "absolute",
-                        inset: 0,
-                        background: "radial-gradient(ellipse at 50% 0%, transparent 40%, rgba(0,0,0,0.12) 100%)",
-                        pointerEvents: "none",
-                    }} />
-
-                    {/* Tick dividers inside fill */}
-                    {ticks.map((i) => {
-                        const tickPos = (i / totalTicks) * 100;
-                        if (tickPos >= validPct) return null;
-                        return (
-                            <div
-                                key={i}
-                                style={{
-                                    position: "absolute",
-                                    top: "15%", bottom: "15%",
-                                    left: `${(tickPos / validPct) * 100}%`,
-                                    width: "1px",
-                                    background: "rgba(255,255,255,0.35)",
-                                    pointerEvents: "none",
-                                }}
-                            />
-                        );
-                    })}
-
-                    {/* Label inside fill */}
-                    {labelLeft && (
-                        <div style={{
-                            position: "absolute", top: 0, bottom: 0, left: "12px",
-                            display: "flex", alignItems: "center", zIndex: 10, pointerEvents: "none",
-                        }}>
-                            <span style={{
-                                fontSize: "12px", fontWeight: 800,
-                                color: "rgba(255,255,255,0.95)",
-                                textShadow: `0 1px 3px rgba(0,0,0,0.3)`,
-                                whiteSpace: "nowrap",
-                                letterSpacing: "0.01em",
-                            }}>
-                                {labelLeft}
-                            </span>
-                        </div>
-                    )}
                 </div>
             )}
         </div>
