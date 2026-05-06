@@ -829,7 +829,8 @@ function ProgressBar({
                 }}>
                     <span style={{
                         fontSize: "12px", fontWeight: 700,
-                        color: `rgba(${trackRgb}, 0.45)`,
+                        color: "rgba(255,255,255,0.90)",
+                        textShadow: `0 1px 4px rgba(${trackRgb}, 0.6), 0 1px 2px rgba(0,0,0,0.3)`,
                         whiteSpace: "nowrap",
                     }}>
                         {labelLeft}
