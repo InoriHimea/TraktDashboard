@@ -65,6 +65,8 @@ html, body, #root {
   --font-display: var(--font-family-display);
   --color-border: var(--color-border-base);
   --color-text: var(--color-text-base);
+  --shadow-login-card: 0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(124,106,247,0.08);
+  --shadow-login-cta-hover: 0 8px 24px var(--color-accent-glow);
 }
 
 *, *::before, *::after {
@@ -142,6 +144,7 @@ button, a { transition: opacity 0.15s, background 0.15s, color 0.15s; }
   --color-text:           #0e0d1a;
   --color-text-secondary: #4a4668;
   --color-text-muted:     #8884a8;
+  --shadow-login-card: 0 20px 48px rgba(37,37,53,0.12), 0 0 0 1px rgba(124,106,247,0.06);
 }
 
 /* Poster hover shimmer */
