@@ -38,7 +38,7 @@ export default function LoginPage() {
 
     return (
         <div
-            className="min-h-screen flex items-center justify-center relative overflow-hidden"
+            className="min-h-screen min-h-svh flex items-center justify-center relative overflow-x-hidden"
             style={{ background: "var(--color-bg)" }}
         >
             {/* Ambient glow */}
@@ -57,19 +57,19 @@ export default function LoginPage() {
                 }}
             />
 
-            <div className="relative w-full max-w-4xl mx-auto px-6 py-16 flex flex-col lg:flex-row items-center gap-16">
+            <div className="relative w-full max-w-4xl mx-auto px-6 py-8 sm:py-10 lg:py-16 flex flex-col lg:flex-row items-center gap-8 sm:gap-10 lg:gap-16">
                 {/* Left — branding */}
                 <motion.div
                     initial={{ opacity: 0, x: -24 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                    className="flex-1 flex flex-col gap-8"
+                    className="flex-1 flex flex-col items-center lg:items-start gap-6 sm:gap-8 text-center lg:text-left"
                 >
                     <div>
                         <h1
                             style={{
                                 fontFamily: "var(--font-display)",
-                                fontSize: "64px",
+                                fontSize: "clamp(40px, 12vw, 64px)",
                                 color: "var(--color-text)",
                                 letterSpacing: "-0.04em",
                                 lineHeight: 0.95,
@@ -82,6 +82,7 @@ export default function LoginPage() {
                             dash
                         </h1>
                         <p
+                            className="mx-auto lg:mx-0"
                             style={{
                                 color: "var(--color-text-secondary)",
                                 fontSize: "17px",
@@ -106,7 +107,7 @@ export default function LoginPage() {
                                     duration: 0.4,
                                     delay: 0.15 + i * 0.07,
                                 }}
-                                className="flex items-start gap-3"
+                                className="flex items-start gap-3 text-left"
                             >
                                 <div
                                     className="shrink-0 flex items-center justify-center rounded-lg mt-0.5"
@@ -156,12 +157,11 @@ export default function LoginPage() {
                         delay: 0.1,
                         ease: [0.16, 1, 0.3, 1],
                     }}
-                    className="w-full max-w-sm flex flex-col gap-6 rounded-2xl p-8"
+                    className="w-full max-w-sm flex flex-col gap-6 rounded-2xl p-6 sm:p-8"
                     style={{
                         background: "var(--color-surface)",
                         border: "1px solid var(--color-border)",
-                        boxShadow:
-                            "0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(124,106,247,0.08)",
+                        boxShadow: "var(--shadow-login-card)",
                     }}
                 >
                     <div>
@@ -189,16 +189,13 @@ export default function LoginPage() {
 
                     <motion.a
                         href="/auth/trakt"
+                        className="w-full flex items-center justify-center gap-2.5"
                         whileHover={{
                             scale: 1.02,
-                            boxShadow: "0 8px 24px var(--color-accent-glow)",
+                            boxShadow: "var(--shadow-login-cta-hover)",
                         }}
                         whileTap={{ scale: 0.98 }}
                         style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "10px",
                             padding: "13px 20px",
                             borderRadius: "var(--radius-lg)",
                             background: "var(--color-accent)",
