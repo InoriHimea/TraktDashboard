@@ -175,8 +175,9 @@ export default function LoginPage() {
                     }}
                 >
                     <div
-                        className="flex flex-col gap-6 rounded-[24px] p-6 sm:p-8"
+                        className="flex flex-col rounded-[24px] p-8 sm:p-10"
                         style={{
+                            gap: "clamp(28px, 5vw, 38px)",
                             background:
                                 "linear-gradient(180deg, rgba(255,255,255,0.055), transparent 45%), var(--color-surface)",
                             border: "1px solid var(--color-border-subtle)",
@@ -216,27 +217,35 @@ export default function LoginPage() {
                             </p>
                         </div>
 
-                        <motion.a
-                            href="/auth/trakt"
-                            className="w-full flex items-center justify-center gap-3 rounded-2xl"
-                            whileHover={{
-                                scale: 1.015,
-                                boxShadow: "var(--shadow-login-cta-hover)",
-                            }}
-                            whileTap={{ scale: 0.985 }}
+                        <div
+                            className="rounded-[28px] p-3 sm:p-4"
                             style={{
-                                minHeight: "60px",
-                                padding: "18px 28px",
                                 background:
-                                    "linear-gradient(135deg, var(--color-accent), var(--color-accent-light))",
-                                color: "#fff",
-                                fontSize: "15px",
-                                fontWeight: 700,
-                                textDecoration: "none",
-                                letterSpacing: "-0.01em",
-                                boxShadow: "0 14px 34px rgba(124, 106, 247, 0.28)",
+                                    "linear-gradient(180deg, rgba(124,106,247,0.12), rgba(255,255,255,0.035))",
+                                border: "1px solid rgba(124, 106, 247, 0.16)",
                             }}
                         >
+                            <motion.a
+                                href="/auth/trakt"
+                                className="w-full flex items-center justify-center gap-3 rounded-2xl"
+                                whileHover={{
+                                    scale: 1.015,
+                                    boxShadow: "var(--shadow-login-cta-hover)",
+                                }}
+                                whileTap={{ scale: 0.985 }}
+                                style={{
+                                    minHeight: "68px",
+                                    padding: "22px 32px",
+                                    background:
+                                        "linear-gradient(135deg, var(--color-accent), var(--color-accent-light))",
+                                    color: "#fff",
+                                    fontSize: "15px",
+                                    fontWeight: 700,
+                                    textDecoration: "none",
+                                    letterSpacing: "-0.01em",
+                                    boxShadow: "0 14px 34px rgba(124, 106, 247, 0.28)",
+                                }}
+                            >
                             <span
                                 className="flex h-8 w-8 items-center justify-center rounded-xl"
                                 style={{ background: "rgba(255,255,255,0.18)" }}
@@ -254,11 +263,12 @@ export default function LoginPage() {
                                     <polygon points="5 3 19 12 5 21 5 3" />
                                 </svg>
                             </span>
-                            Connect with Trakt
-                        </motion.a>
+                                Connect with Trakt
+                            </motion.a>
+                        </div>
 
                         <div
-                            className="rounded-2xl p-4 sm:p-5 flex flex-col gap-3"
+                            className="rounded-2xl p-5 sm:p-6 flex flex-col gap-3"
                             style={{
                                 background: "rgba(255, 255, 255, 0.035)",
                                 border: "1px solid var(--color-border-subtle)",
