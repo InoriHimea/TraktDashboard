@@ -39,7 +39,10 @@ export default function LoginPage() {
     return (
         <div
             className="min-h-screen min-h-svh flex items-center justify-center relative overflow-x-hidden"
-            style={{ background: "var(--color-bg)" }}
+            style={{
+                background: "var(--color-bg)",
+                padding: "clamp(24px, 7vw, 64px) clamp(16px, 5vw, 32px)",
+            }}
         >
             {/* Ambient glow */}
             <div
@@ -57,19 +60,19 @@ export default function LoginPage() {
                 }}
             />
 
-            <div className="relative w-full max-w-4xl mx-auto px-6 py-8 sm:py-10 lg:py-16 flex flex-col lg:flex-row items-center gap-8 sm:gap-10 lg:gap-16">
+            <div className="relative w-full max-w-4xl mx-auto flex flex-col lg:flex-row items-center gap-7 sm:gap-10 lg:gap-16">
                 {/* Left — branding */}
                 <motion.div
                     initial={{ opacity: 0, x: -24 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                    className="flex-1 flex flex-col items-center lg:items-start gap-6 sm:gap-8 text-center lg:text-left"
+                    className="w-full flex-1 flex flex-col items-center lg:items-start gap-5 sm:gap-8 text-center lg:text-left"
                 >
                     <div>
                         <h1
                             style={{
                                 fontFamily: "var(--font-display)",
-                                fontSize: "clamp(40px, 12vw, 64px)",
+                                fontSize: "clamp(36px, 10vw, 64px)",
                                 color: "var(--color-text)",
                                 letterSpacing: "-0.04em",
                                 lineHeight: 0.95,
@@ -85,9 +88,9 @@ export default function LoginPage() {
                             className="mx-auto lg:mx-0"
                             style={{
                                 color: "var(--color-text-secondary)",
-                                fontSize: "17px",
-                                marginTop: "16px",
-                                lineHeight: 1.65,
+                                fontSize: "clamp(14px, 4vw, 17px)",
+                                marginTop: "12px",
+                                lineHeight: 1.55,
                                 maxWidth: "380px",
                             }}
                         >
@@ -97,7 +100,7 @@ export default function LoginPage() {
                     </div>
 
                     {/* Feature list */}
-                    <div className="flex flex-col gap-3">
+                    <div className="w-full max-w-sm lg:max-w-none flex flex-col gap-2.5 sm:gap-3">
                         {FEATURES.map(({ icon: Icon, label, desc }, i) => (
                             <motion.div
                                 key={label}
@@ -112,8 +115,8 @@ export default function LoginPage() {
                                 <div
                                     className="shrink-0 flex items-center justify-center rounded-lg mt-0.5"
                                     style={{
-                                        width: "32px",
-                                        height: "32px",
+                                        width: "30px",
+                                        height: "30px",
                                         background: "var(--color-accent-dim)",
                                         border: "1px solid var(--color-accent-glow)",
                                     }}
@@ -157,7 +160,7 @@ export default function LoginPage() {
                         delay: 0.1,
                         ease: [0.16, 1, 0.3, 1],
                     }}
-                    className="w-full max-w-sm flex flex-col gap-6 rounded-2xl p-6 sm:p-8"
+                    className="w-full max-w-sm flex flex-col gap-5 sm:gap-6 rounded-2xl p-5 sm:p-8"
                     style={{
                         background: "var(--color-surface)",
                         border: "1px solid var(--color-border)",
@@ -196,7 +199,7 @@ export default function LoginPage() {
                         }}
                         whileTap={{ scale: 0.98 }}
                         style={{
-                            padding: "13px 20px",
+                            padding: "12px 18px",
                             borderRadius: "var(--radius-lg)",
                             background: "var(--color-accent)",
                             color: "#fff",
@@ -208,8 +211,8 @@ export default function LoginPage() {
                     >
                         {/* Trakt logo mark */}
                         <svg
-                            width="18"
-                            height="18"
+                            width="17"
+                            height="17"
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
@@ -223,7 +226,7 @@ export default function LoginPage() {
                     </motion.a>
 
                     <div
-                        className="rounded-xl p-4 flex flex-col gap-2"
+                        className="rounded-xl p-3.5 sm:p-4 flex flex-col gap-2"
                         style={{
                             background: "var(--color-surface-3)",
                             border: "1px solid var(--color-border-subtle)",
