@@ -440,13 +440,14 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
         // to 1 second before the earliest failed entry so the next incremental
         // sync re-fetches that window and fills the gap automatically.
         // If everything succeeded, advance to now as usual.
-        const newLastSyncAt = failedEntryMinWatchedAt
-            ? new Date(failedEntryMinWatchedAt.getTime() - 1000)
+        const earliestFailedWatchedAt = failedEntryMinWatchedAt as Date | null;
+        const newLastSyncAt = earliestFailedWatchedAt
+            ? new Date(earliestFailedWatchedAt.getTime() - 1000)
             : new Date();
 
-        if (failedEntryMinWatchedAt) {
+        if (earliestFailedWatchedAt) {
             console.log(
-                `[sync:incr] ${processed - (totalShows - (failedEntryMinWatchedAt ? 1 : 0))} show(s) failed — rolling cursor back to ${newLastSyncAt.toISOString()} to re-fetch gaps next run`,
+                `[sync:incr] ${processed - (totalShows - 1)} show(s) failed — rolling cursor back to ${newLastSyncAt.toISOString()} to re-fetch gaps next run`,
             );
         }
 

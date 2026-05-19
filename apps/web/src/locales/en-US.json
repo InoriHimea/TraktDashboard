@@ -10,7 +10,14 @@
     "unknown": "Unknown",
     "all": "All",
     "signOut": "Sign out",
-    "nowPlaying": "Now Playing"
+    "nowPlaying": "Now Playing",
+    "retry": "Retry",
+    "reload": "Reload",
+    "back": "Back",
+    "clearSearch": "Clear search",
+    "noSearchResults": "No results for \"{{query}}\"",
+    "importHint": "Go to Sync to import your Trakt history.",
+    "notFound": "Content not found"
   },
   "nav": {
     "progress": "Progress",
@@ -53,7 +60,12 @@
   },
   "progress": {
     "watching": "Watching",
-    "completed": "Completed"
+    "completed": "Completed",
+    "searchPlaceholder": "Search shows…",
+    "count": "{{count}} shows",
+    "loading": "Loading shows…",
+    "loadFailed": "Failed to load shows.",
+    "empty": "No shows here yet."
   },
   "movies": {
     "watched": "Watched",
@@ -61,6 +73,17 @@
     "watchCount": "Watch Count",
     "watchedNTimes": "Watched {{count}} times",
     "notWatched": "Not watched",
-    "lastWatched": "Last watched"
+    "lastWatched": "Last watched",
+    "searchPlaceholder": "Search movies…",
+    "count": "{{count}} movies",
+    "loading": "Loading movies…",
+    "loadFailed": "Failed to load movies.",
+    "empty": "No movies here yet."
+  },
+  "episodeDetail": {
+    "loading": "Loading episode details…",
+    "loadFailed": "Failed to load episode details.",
+    "notFound": "Episode not found.",
+    "invalidParams": "Invalid episode link."
   }
 }

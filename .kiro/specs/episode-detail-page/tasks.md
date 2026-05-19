@@ -28,7 +28,7 @@
   - [x] 4.6 Apply `ring-2 ring-[#ff8aa8] ring-offset-4 ring-offset-[#050505]` to current episode card
   - [x] 4.7 Apply `bg-[#ff8aa8]/10 mix-blend-overlay` overlay to current episode thumbnail
 
-- [-] 5. Write property-based tests
+- [x] 5. Write property-based tests
   - [x] 5.1 `EpisodeInfoCard.property.test.tsx` — Property 1 (action buttons by watch status), Property 4 (rating display), Property 7 (title fallback chain)
   - [x] 5.2 `EpisodeSeasonStrip.property.test.tsx` — Property 2 (layout mode by watch status), Property 3 (current episode highlight)
-  - [ ] 5.3 `EpisodeDetailPage.property.test.tsx` — Property 5 (invalid route params redirect), Property 6 (external link URLs)
+  - [x] 5.3 `EpisodeDetailPage.property.test.tsx` — Property 5 (invalid route params redirect), Property 6 (external link URLs)

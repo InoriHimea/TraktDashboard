@@ -134,6 +134,7 @@ showRoutes.get('/:id', async (c) => {
 
   const watchedMap = new Map<number, string>()
   for (const w of watched) {
+    if (w.episodeId == null) continue
     if (!watchedMap.has(w.episodeId) && w.watchedAt) {
       watchedMap.set(w.episodeId, w.watchedAt.toISOString())
     } else if (!watchedMap.has(w.episodeId)) {
@@ -290,10 +291,16 @@ showRoutes.get('/:showId/episodes/:season/:episode', async (c) => {
     ))
     .orderBy(asc(episodes.episodeNumber))
 
-  const watchedEpisodeIds = (await db.select({ episodeId: watchHistory.episodeId })
+  const watchedEpisodeIds = new Set((await db.select({ episodeId: watchHistory.episodeId })
     .from(watchHistory)
-    .where(eq(watchHistory.userId, userId)))
+    .innerJoin(episodes, eq(watchHistory.episodeId, episodes.id))
+    .where(and(
+      eq(watchHistory.userId, userId),
+      eq(episodes.showId, showId),
+      eq(episodes.seasonNumber, season)
+    )))
     .map(r => r.episodeId)
+    .filter((id): id is number => id != null))
 
   const today = new Date().toISOString().split('T')[0]
   const seasonEpisodesProgress = seasonEpisodes.map(e => ({
@@ -305,7 +312,7 @@ showRoutes.get('/:showId/episodes/:season/:episode', async (c) => {
     overview: e.overview,
     translatedOverview: (e as any).translatedOverview ?? null,
     airDate: e.airDate,
-    watched: watchedEpisodeIds.includes(e.id),
+    watched: watchedEpisodeIds.has(e.id),
     watchedAt: null,  // Not needed for strip
     aired: !!e.airDate && e.airDate <= today,
     stillPath: e.stillPath,
