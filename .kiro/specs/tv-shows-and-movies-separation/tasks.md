@@ -62,7 +62,7 @@ Separate TV shows and movies into distinct pages. Rename ProgressPage to TVShows
     - Call `await syncMovies(userId)` after the show sync loop completes
     - _Requirements: 9.1_
 
-- [ ] 7. Checkpoint — backend complete
+- [x] 7. Checkpoint — backend complete
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 8. Frontend API client
@@ -120,7 +120,7 @@ Separate TV shows and movies into distinct pages. Rename ProgressPage to TVShows
     - Use identical hover/transition styles as ShowCard
     - Staggered animation delay based on index
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 11.1_
-  - [ ]* 13.2 Write property test for MovieCard
+  - [x]* 13.2 Write property test for MovieCard
     - Create `apps/web/src/components/__tests__/MovieCard.property.test.tsx`
     - **Property 9: MovieCard renders all required fields for any movie**
     - Generate random `MovieProgress` objects with fast-check arbitraries

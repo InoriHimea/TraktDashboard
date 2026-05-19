@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
 import { cn } from "../lib/utils";
 import { resolveEpisodeStill } from "../lib/image";
 import { resolveEpisodeTitle } from "../lib/i18n";
@@ -11,7 +12,7 @@ interface EpisodeSeasonStripProps {
     seasonNumber: number;
     currentEpisodeNumber: number;
     showId?: number | string;
-    /** 当集没有 stillPath 时的替代图（节目 backdrop） */
+    watched: boolean;
     fallbackImageUrl?: string | null;
 }
 
@@ -20,106 +21,106 @@ export function EpisodeSeasonStrip({
     seasonNumber,
     currentEpisodeNumber,
     showId,
+    watched,
     fallbackImageUrl,
 }: EpisodeSeasonStripProps) {
     const currentRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (currentRef.current) {
+        if (watched && currentRef.current) {
             currentRef.current.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
         }
-    }, [currentEpisodeNumber]);
+    }, [currentEpisodeNumber, watched]);
 
     const seasonLabel = seasonNumber === 0 ? "Specials" : `Season ${seasonNumber}`;
 
     return (
-        <div className="flex flex-col w-full pb-12">
-            {/* 面包屑标题 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '24px' }}>
-                <span className="text-muted-foreground/50 hover:text-muted-foreground transition-colors cursor-pointer">
-                    Season
-                </span>
-                <span className="text-muted-foreground/30 font-black">/</span>
-                <span className="text-foreground">
-                    {seasonLabel}
-                </span>
+        <div className="flex w-full flex-col pb-12">
+            <div className="mb-8 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                        {seasonLabel}
+                    </h2>
+                    <div className="h-0.5 w-12 bg-foreground/10" />
+                </div>
+                {!watched && (
+                    <button className="flex cursor-pointer items-center gap-2 text-xs font-bold uppercase tracking-widest text-[var(--color-accent)] transition-transform hover:translate-x-1">
+                        View all
+                        <ArrowRight size={14} />
+                    </button>
+                )}
             </div>
 
-            {/* 横向滚动 — 负 margin-top + 正 padding-top 防止 ring 被 overflow 裁切 */}
             <div
-                className="flex overflow-x-auto pb-6 scroll-smooth"
-                style={{
-                    scrollbarWidth: 'thin',
-                    scrollbarColor: 'var(--border, #333) transparent',
-                    marginTop: '-8px',
-                    paddingTop: '8px',
-                }}
+                className={cn(
+                    watched
+                        ? "episode-scrollbar flex gap-6 overflow-x-auto pb-6 scroll-smooth"
+                        : "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4",
+                )}
             >
-                <div className="flex gap-6">
-                    {episodes.map((episode) => {
-                        const isCurrent = Number(episode.episodeNumber) === Number(currentEpisodeNumber);
-                        const stillUrl = resolveEpisodeStill(episode.stillPath);
-                        // 无 still 时用节目 backdrop 作为替代
-                        const thumbUrl = stillUrl ?? fallbackImageUrl ?? null;
+                {episodes.map((episode) => {
+                    const isCurrent = Number(episode.episodeNumber) === Number(currentEpisodeNumber);
+                    const stillUrl = resolveEpisodeStill(episode.stillPath);
+                    const thumbUrl = stillUrl ?? fallbackImageUrl ?? null;
 
-                        return (
+                    return (
+                        <div
+                            key={episode.episodeNumber}
+                            ref={isCurrent ? currentRef : null}
+                            onClick={() => navigate(`/shows/${showId}/seasons/${seasonNumber}/episodes/${episode.episodeNumber}`)}
+                            className={cn(
+                                "group cursor-pointer",
+                                watched && "flex-none w-[280px]",
+                                !episode.aired && "opacity-60",
+                            )}
+                        >
                             <div
-                                key={episode.episodeNumber}
-                                ref={isCurrent ? currentRef : null}
-                                onClick={() => navigate(`/shows/${showId}/seasons/${seasonNumber}/episodes/${episode.episodeNumber}`)}
-                                className="group flex-none w-[280px] md:w-[320px] flex flex-col gap-4 cursor-pointer"
-                            >
-                                <div className={cn(
-                                    "relative w-full aspect-video rounded-2xl overflow-hidden shadow-lg transition-all",
+                                className={cn(
+                                    "relative mb-3 aspect-video overflow-hidden rounded-xl bg-zinc-900 shadow-xl",
                                     isCurrent
-                                        ? "border-2 border-purple-500 ring-4 ring-purple-500/20"
-                                        : "border border-border/30 hover:border-foreground/30"
-                                )}>
-                                    {thumbUrl ? (
-                                        <img
-                                            src={thumbUrl}
-                                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                            alt=""
-                                        />
-                                    ) : (
-                                        <EpisodePlaceholder
-                                            seasonNumber={seasonNumber}
-                                            episodeNumber={episode.episodeNumber}
-                                        />
-                                    )}
-                                    
-                                    {/* 底部渐变 - 与 EpisodeGrid 一致 */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none" />
-                                    
-                                    {/* 底部左: 时长标签 - 与 EpisodeGrid 一致 */}
-                                    {episode.runtime && (
-                                        <div className="absolute bottom-2 left-2">
-                                            <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-sm leading-none">
-                                                {episode.runtime}分钟
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="px-2 mt-1 flex flex-col gap-1">
-                                    {/* 剧集标题（i18n） */}
-                                    <h3 className={cn(
-                                        "font-black text-base truncate",
-                                        isCurrent
-                                            ? "text-purple-500"
-                                            : "text-foreground group-hover:text-purple-500 transition-colors"
-                                    )}>
-                                        {resolveEpisodeTitle(episode)}
-                                    </h3>
-                                    {/* 集数标识单独一行 */}
-                                    <span className="text-xs font-bold text-muted-foreground/60 uppercase tracking-wider">
-                                        S{String(seasonNumber).padStart(2, '0')}·E{String(episode.episodeNumber).padStart(2, '0')}
-                                    </span>
-                                </div>
+                                        ? "ring-2 ring-[var(--color-accent)] ring-offset-4 ring-offset-[var(--color-bg)]"
+                                        : "border border-white/5",
+                                )}
+                            >
+                                {thumbUrl ? (
+                                    <img
+                                        src={thumbUrl}
+                                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                        alt=""
+                                    />
+                                ) : (
+                                    <EpisodePlaceholder
+                                        seasonNumber={seasonNumber}
+                                        episodeNumber={episode.episodeNumber}
+                                    />
+                                )}
+                                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                                {isCurrent && <div className="absolute inset-0 bg-[var(--color-accent)]/10 mix-blend-overlay" />}
+                                {episode.runtime && (
+                                    <div className="absolute bottom-2 right-2 rounded bg-black/80 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-md">
+                                        {episode.runtime}分钟
+                                    </div>
+                                )}
                             </div>
-                        );
-                    })}
-                </div>
+                            <div className="px-1">
+                                <h3
+                                    className={cn(
+                                        "truncate text-sm font-bold transition-colors",
+                                        isCurrent
+                                            ? "text-[var(--color-accent)]"
+                                            : "text-foreground group-hover:text-[var(--color-accent)]",
+                                    )}
+                                >
+                                    {resolveEpisodeTitle(episode)}
+                                </h3>
+                                <span className="mt-1 block text-xs tracking-wider text-muted-foreground/60">
+                                    S{String(seasonNumber).padStart(2, "0")} · E{String(episode.episodeNumber).padStart(2, "0")}
+                                </span>
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );

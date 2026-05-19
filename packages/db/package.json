@@ -5,14 +5,17 @@
     "main": "./src/index.ts",
     "types": "./src/index.ts",
     "scripts": {
-        "build": "true",
+        "build": "tsc -p tsconfig.json --noEmit",
+        "typecheck": "tsc -p tsconfig.json --noEmit",
+        "test": "tsc -p tsconfig.json --noEmit",
+        "lint": "tsc -p tsconfig.json --noEmit",
         "db:generate": "drizzle-kit generate",
         "db:migrate": "drizzle-kit migrate",
         "db:studio": "drizzle-kit studio"
     },
     "dependencies": {
-        "drizzle-orm": "^0.38.3",
-        "postgres": "^3.4.5"
+        "drizzle-orm": "^0.45.2",
+        "postgres": "^3.4.9"
     },
     "devDependencies": {
         "drizzle-kit": "^0.30.1",

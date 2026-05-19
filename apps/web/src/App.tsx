@@ -1,5 +1,6 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+import { AlertTriangle, WifiOff } from "lucide-react";
 import { useAuth } from "./hooks";
 import Layout from "./components/Layout";
 import TVShowsPage from "./pages/TVShowsPage";
@@ -59,7 +60,7 @@ class ErrorBoundary extends React.Component<
                                 fontSize: "24px",
                             }}
                         >
-                            ⚠️
+                            <AlertTriangle size={24} color="var(--color-error)" />
                         </div>
                         <div>
                             <p
@@ -167,7 +168,7 @@ export default function App() {
                             fontSize: "24px",
                         }}
                     >
-                        🔌
+                        <WifiOff size={24} color="var(--color-error)" />
                     </div>
                     <div>
                         <p

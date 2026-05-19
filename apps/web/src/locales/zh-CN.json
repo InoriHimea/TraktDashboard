@@ -10,7 +10,14 @@
     "unknown": "未知",
     "all": "全部",
     "signOut": "退出登录",
-    "nowPlaying": "正在播放"
+    "nowPlaying": "正在播放",
+    "retry": "重试",
+    "reload": "重新加载",
+    "back": "返回",
+    "clearSearch": "清除搜索",
+    "noSearchResults": "没有找到“{{query}}”的结果",
+    "importHint": "前往同步页面导入你的 Trakt 历史。",
+    "notFound": "未找到内容"
   },
   "nav": {
     "progress": "进度",
@@ -53,7 +60,12 @@
   },
   "progress": {
     "watching": "追剧中",
-    "completed": "已完成"
+    "completed": "已完成",
+    "searchPlaceholder": "搜索剧集…",
+    "count": "{{count}} 部剧集",
+    "loading": "正在加载剧集…",
+    "loadFailed": "加载剧集失败。",
+    "empty": "这里还没有剧集。"
   },
   "movies": {
     "watched": "已观看",
@@ -61,6 +73,17 @@
     "watchCount": "观看次数",
     "watchedNTimes": "已观看 {{count}} 次",
     "notWatched": "未观看",
-    "lastWatched": "最后观看"
+    "lastWatched": "最后观看",
+    "searchPlaceholder": "搜索电影…",
+    "count": "{{count}} 部电影",
+    "loading": "正在加载电影…",
+    "loadFailed": "加载电影失败。",
+    "empty": "这里还没有电影。"
+  },
+  "episodeDetail": {
+    "loading": "正在加载剧集详情…",
+    "loadFailed": "加载剧集详情失败。",
+    "notFound": "未找到该剧集。",
+    "invalidParams": "剧集链接无效。"
   }
 }
