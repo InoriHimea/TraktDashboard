@@ -6,6 +6,10 @@ REGISTRY="${REGISTRY:-ghcr.io/inorihimea}"
 PUSH="${PUSH:-false}"
 TARGET="${TARGET:-all}"   # all | api | web
 
+# Registry mirrors (use internal Nexus for local builds, upstream for CI)
+NPM_REGISTRY="${NPM_REGISTRY:-https://nexus.mellivora.com.cn:18082/repository/npm-group/}"
+APK_MIRROR="${APK_MIRROR:-https://artifact.mellivora.com.cn/alpine/apk-group}"
+
 # Resolve repo root regardless of where the script is called from
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -37,6 +41,8 @@ build_api() {
     --file "${REPO_ROOT}/apps/api/Dockerfile" \
     --tag "${API_IMAGE_VERSIONED}" \
     --tag "${API_IMAGE_LATEST}" \
+    --build-arg NPM_REGISTRY="${NPM_REGISTRY}" \
+    --build-arg APK_MIRROR="${APK_MIRROR}" \
     --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     --label "org.opencontainers.image.version=${VERSION}" \
     --label "org.opencontainers.image.revision=$(git -C "${REPO_ROOT}" rev-parse --short HEAD 2>/dev/null || echo unknown)" \
@@ -51,6 +57,8 @@ build_web() {
     --file "${REPO_ROOT}/apps/web/Dockerfile" \
     --tag "${WEB_IMAGE_VERSIONED}" \
     --tag "${WEB_IMAGE_LATEST}" \
+    --build-arg NPM_REGISTRY="${NPM_REGISTRY}" \
+    --build-arg APK_MIRROR="${APK_MIRROR}" \
     --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     --label "org.opencontainers.image.version=${VERSION}" \
     --label "org.opencontainers.image.revision=$(git -C "${REPO_ROOT}" rev-parse --short HEAD 2>/dev/null || echo unknown)" \

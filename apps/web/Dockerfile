@@ -1,18 +1,26 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 
-# Switch to internal Nexus apk mirror
-RUN sed -i 's|https://dl-cdn.alpinelinux.org/alpine|https://artifact.mellivora.com.cn/alpine/apk-group|g' /etc/apk/repositories
+# Build args for registry configuration
+ARG NPM_REGISTRY=https://registry.npmjs.org/
+ARG APK_MIRROR=https://dl-cdn.alpinelinux.org/alpine
 
-# Install pnpm via npm using internal Nexus registry (avoids corepack network issues)
-RUN npm install -g pnpm@10.19.0 --registry=https://nexus.mellivora.com.cn:18082/repository/npm-group/
+# Switch apk mirror if specified
+RUN if [ "${APK_MIRROR}" != "https://dl-cdn.alpinelinux.org/alpine" ]; then \
+      sed -i "s|https://dl-cdn.alpinelinux.org/alpine|${APK_MIRROR}|g" /etc/apk/repositories; \
+    fi
+
+# Install pnpm via npm
+RUN npm install -g pnpm@10.19.0 --registry=${NPM_REGISTRY}
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/types/package.json ./packages/types/
 COPY packages/db/package.json ./packages/db/
 COPY apps/web/package.json ./apps/web/
 
-RUN pnpm config set registry https://nexus.mellivora.com.cn:18082/repository/npm-group/ \
+RUN if [ "${NPM_REGISTRY}" != "https://registry.npmjs.org/" ]; then \
+      pnpm config set registry ${NPM_REGISTRY}; \
+    fi \
     && pnpm install --frozen-lockfile
 
 COPY packages/ ./packages/
@@ -27,8 +35,13 @@ RUN pnpm build
 # ─── Nginx ────────────────────────────────────────────────────────────────────
 FROM nginx:1.27-alpine AS runner
 
-# Switch to internal Nexus apk mirror
-RUN sed -i 's|https://dl-cdn.alpinelinux.org/alpine|https://artifact.mellivora.com.cn/alpine/apk-group|g' /etc/apk/repositories
+# Build args for registry configuration
+ARG APK_MIRROR=https://dl-cdn.alpinelinux.org/alpine
+
+# Switch apk mirror if specified
+RUN if [ "${APK_MIRROR}" != "https://dl-cdn.alpinelinux.org/alpine" ]; then \
+      sed -i "s|https://dl-cdn.alpinelinux.org/alpine|${APK_MIRROR}|g" /etc/apk/repositories; \
+    fi
 
 COPY --from=builder /app/apps/web/dist /usr/share/nginx/html
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf

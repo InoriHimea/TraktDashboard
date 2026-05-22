@@ -1,8 +1,12 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
 
-# Install pnpm via npm using internal Nexus registry (avoids corepack network issues)
-RUN npm install -g pnpm@10.19.0 --registry=https://nexus.mellivora.com.cn:18082/repository/npm-group/
+# Build args for registry configuration
+ARG NPM_REGISTRY=https://registry.npmjs.org/
+ARG APK_MIRROR=https://dl-cdn.alpinelinux.org/alpine
+
+# Install pnpm via npm
+RUN npm install -g pnpm@10.19.0 --registry=${NPM_REGISTRY}
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml bunfig.toml ./
 COPY packages/types/package.json ./packages/types/
@@ -16,8 +20,13 @@ RUN pnpm install --frozen-lockfile
 FROM oven/bun:1.1-alpine AS runner
 WORKDIR /app
 
-# Switch to internal Nexus apk mirror
-RUN sed -i 's|https://dl-cdn.alpinelinux.org/alpine|https://artifact.mellivora.com.cn/alpine/apk-group|g' /etc/apk/repositories \
+# Build args for registry configuration
+ARG APK_MIRROR=https://dl-cdn.alpinelinux.org/alpine
+
+# Switch apk mirror if specified
+RUN if [ "${APK_MIRROR}" != "https://dl-cdn.alpinelinux.org/alpine" ]; then \
+      sed -i "s|https://dl-cdn.alpinelinux.org/alpine|${APK_MIRROR}|g" /etc/apk/repositories; \
+    fi \
     && apk add --no-cache curl
 
 COPY --from=deps /app/node_modules ./node_modules
