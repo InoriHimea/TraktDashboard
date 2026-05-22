@@ -39,7 +39,7 @@ export function MovieCard({ movie, index }: MovieCardProps) {
         >
             <Link
                 to={`/movies/${movieData.id}`}
-                style={{ textDecoration: "none", display: "block" }}
+                className="no-underline block"
             >
                 <motion.div
                     whileHover={{
@@ -47,50 +47,23 @@ export function MovieCard({ movie, index }: MovieCardProps) {
                         boxShadow: "0 12px 40px rgba(0,0,0,0.5)",
                     }}
                     transition={{ duration: 0.15 }}
-                    className="rounded-xl overflow-hidden"
-                    style={{
-                        background: "var(--color-surface)",
-                        border: "1px solid var(--color-border-subtle)",
-                        cursor: "pointer",
-                    }}
+                    className="rounded-xl overflow-hidden bg-[var(--color-surface)] border border-[var(--color-border-subtle)] cursor-pointer"
                 >
                     {/* Poster — 2:3 aspect ratio */}
-                    <div
-                        style={{
-                            position: "relative",
-                            aspectRatio: "2/3",
-                            background: "var(--color-surface-3)",
-                        }}
-                    >
+                    <div className="relative aspect-[2/3] bg-[var(--color-surface-3)]">
                         {poster && !imgError ? (
                             <img
                                 src={poster}
                                 alt={movieData.title}
                                 onError={() => setImgError(true)}
-                                style={{
-                                    width: "100%",
-                                    height: "100%",
-                                    objectFit: "cover",
-                                    display: "block",
-                                }}
+                                className="w-full h-full object-cover block"
                                 loading="lazy"
                             />
                         ) : (
-                            <div
-                                style={{
-                                    width: "100%",
-                                    height: "100%",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                }}
-                            >
+                            <div className="w-full h-full flex items-center justify-center">
                                 <Film
                                     size={32}
-                                    style={{
-                                        color: "var(--color-text-muted)",
-                                        opacity: 0.3,
-                                    }}
+                                    className="text-[var(--color-text-muted)] opacity-30"
                                 />
                             </div>
                         )}
@@ -122,18 +95,10 @@ export function MovieCard({ movie, index }: MovieCardProps) {
                     </div>
 
                     {/* Info section */}
-                    <div style={{ padding: "10px 12px 12px" }}>
+                    <div className="p-[10px_12px_12px]">
                         {/* Title */}
                         <h3
-                            className="truncate"
-                            style={{
-                                fontSize: "13px",
-                                fontWeight: 600,
-                                color: "var(--color-text)",
-                                letterSpacing: "-0.01em",
-                                lineHeight: 1.3,
-                                marginBottom: "4px",
-                            }}
+                            className="truncate text-[13px] font-semibold text-[var(--color-text)] tracking-tight leading-tight mb-1"
                             title={movieData.title}
                         >
                             {movieData.title}
@@ -142,12 +107,7 @@ export function MovieCard({ movie, index }: MovieCardProps) {
                         {/* Release date */}
                         {movieData.releaseDate && (
                             <div className="flex items-center gap-1.5 mb-3">
-                                <span
-                                    style={{
-                                        fontSize: "11px",
-                                        color: "var(--color-text-muted)",
-                                    }}
-                                >
+                                <span className="text-[11px] text-[var(--color-text-muted)]">
                                     {new Date(
                                         movieData.releaseDate,
                                     ).getFullYear()}
@@ -158,21 +118,10 @@ export function MovieCard({ movie, index }: MovieCardProps) {
                         {/* Last watched date */}
                         {lastWatchedAt && (
                             <div className="flex items-center justify-between mt-2">
-                                <span
-                                    style={{
-                                        fontSize: "11px",
-                                        color: "var(--color-text-muted)",
-                                    }}
-                                >
+                                <span className="text-[11px] text-[var(--color-text-muted)]">
                                     {t("movies.lastWatched")}
                                 </span>
-                                <span
-                                    style={{
-                                        fontSize: "11px",
-                                        color: "var(--color-text-muted)",
-                                        fontWeight: 500,
-                                    }}
-                                >
+                                <span className="text-[11px] text-[var(--color-text-muted)] font-medium">
                                     {formatDate(lastWatchedAt)}
                                 </span>
                             </div>

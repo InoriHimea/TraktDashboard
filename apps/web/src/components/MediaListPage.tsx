@@ -52,100 +52,35 @@ export function MediaListPage<T>({
     renderItem,
 }: MediaListPageProps<T>) {
     return (
-        <div style={{ minHeight: "100vh", background: "var(--color-bg)" }}>
-            <div
-                style={{
-                    position: "sticky",
-                    top: "56px",
-                    zIndex: 30,
-                    background: "var(--color-bg)",
-                    borderBottom: "1px solid var(--color-border-subtle)",
-                    backdropFilter: "blur(12px)",
-                }}
-            >
-                <div
-                    style={{
-                        maxWidth: "1920px",
-                        margin: "0 auto",
-                        padding: "12px 32px",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                        flexWrap: "wrap",
-                    }}
-                >
-                    <div
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "2px",
-                            background: "var(--color-surface)",
-                            border: "1px solid var(--color-border)",
-                            borderRadius: "var(--radius-md)",
-                            padding: "3px",
-                        }}
-                    >
+        <div className="min-h-screen bg-[var(--color-bg)]">
+            <div className="sticky top-[56px] z-30 bg-[var(--color-bg)] border-b border-[var(--color-border-subtle)] backdrop-blur-xl">
+                <div className="max-w-[1920px] mx-auto px-8 py-3 flex items-center gap-3 flex-wrap">
+                    <div className="flex items-center gap-0.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-md)] p-[3px]">
                         {filters.map(({ key, labelKey, icon: Icon, color }) => (
-                            <button
+                            <motion.button
                                 key={key}
                                 onClick={() => onFilterChange(key)}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                className="flex items-center gap-1.5 px-3 py-1 rounded-[var(--radius-sm)] text-[13px] cursor-pointer transition-all duration-150"
                                 style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "6px",
-                                    padding: "5px 12px",
-                                    borderRadius: "var(--radius-sm)",
-                                    fontSize: "13px",
                                     fontWeight: filter === key ? 600 : 400,
-                                    color:
-                                        filter === key
-                                            ? color
-                                            : "var(--color-text-secondary)",
-                                    background:
-                                        filter === key
-                                            ? `${color}18`
-                                            : "transparent",
-                                    border:
-                                        filter === key
-                                            ? `1px solid ${color}40`
-                                            : "1px solid transparent",
-                                    cursor: "pointer",
-                                    transition: "all 0.15s",
+                                    color: filter === key ? color : "var(--color-text-secondary)",
+                                    background: filter === key ? `${color}18` : "transparent",
+                                    border: filter === key ? `1px solid ${color}40` : "1px solid transparent",
                                 }}
                             >
                                 <Icon
                                     size={13}
-                                    color={
-                                        filter === key
-                                            ? color
-                                            : "var(--color-text-muted)"
-                                    }
+                                    color={filter === key ? color : "var(--color-text-muted)"}
                                 />
                                 {t(labelKey)}
-                            </button>
+                            </motion.button>
                         ))}
                     </div>
 
-                    <div
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                            flex: 1,
-                            maxWidth: "320px",
-                            background: "var(--color-surface)",
-                            border: "1px solid var(--color-border)",
-                            borderRadius: "var(--radius-md)",
-                            padding: "6px 12px",
-                        }}
-                    >
-                        <Search
-                            size={13}
-                            style={{
-                                color: "var(--color-text-muted)",
-                                flexShrink: 0,
-                            }}
-                        />
+                    <div className="flex items-center gap-2 flex-1 max-w-[320px] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-md)] px-3 py-1.5">
+                        <Search size={13} className="text-[var(--color-text-muted)] shrink-0" />
                         <input
                             type="text"
                             placeholder={searchPlaceholder}
@@ -197,112 +132,66 @@ export function MediaListPage<T>({
                 </div>
             </div>
 
-            <div
-                style={{
-                    maxWidth: "1920px",
-                    margin: "0 auto",
-                    padding: "24px 32px",
-                }}
-            >
+            <div className="max-w-[1920px] mx-auto px-8 py-6">
                 {isLoading ? (
-                    <div
-                        style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            gap: "12px",
-                            paddingTop: "80px",
-                        }}
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="flex flex-col items-center gap-3 pt-20"
                     >
                         <Loader2
                             size={24}
-                            className="animate-spin"
-                            style={{ color: "var(--color-accent)" }}
+                            className="animate-spin text-[var(--color-accent)]"
                         />
-                        <p
-                            style={{
-                                color: "var(--color-text-muted)",
-                                fontSize: "14px",
-                            }}
-                        >
+                        <p className="text-[var(--color-text-muted)] text-sm">
                             {loadingLabel}
                         </p>
-                    </div>
+                    </motion.div>
                 ) : error ? (
-                    <div
-                        style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            gap: "12px",
-                            paddingTop: "80px",
-                        }}
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex flex-col items-center gap-3 pt-20"
                     >
-                        <p
-                            style={{
-                                color: "var(--color-error)",
-                                fontSize: "14px",
-                            }}
-                        >
+                        <p className="text-[var(--color-error)] text-sm">
                             {errorLabel}
                         </p>
                         <button
                             onClick={onRetry}
-                            style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "6px",
-                                padding: "8px 14px",
-                                borderRadius: "var(--radius-md)",
-                                background: "var(--color-surface)",
-                                border: "1px solid var(--color-border)",
-                                color: "var(--color-text-secondary)",
-                                fontSize: "13px",
-                                cursor: "pointer",
-                            }}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[var(--radius-md)] bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-secondary)] text-[13px] cursor-pointer hover:bg-[var(--color-surface-2)] transition-colors"
                         >
                             <RefreshCw size={13} /> {t("common.retry")}
                         </button>
-                    </div>
+                    </motion.div>
                 ) : items?.length === 0 ? (
                     <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        style={{ textAlign: "center", paddingTop: "80px" }}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-center pt-20"
                     >
-                        <p
-                            style={{
-                                color: "var(--color-text-muted)",
-                                fontSize: "14px",
-                                marginBottom: "6px",
-                            }}
-                        >
+                        <p className="text-[var(--color-text-muted)] text-sm mb-1.5">
                             {search ? searchEmptyLabel : emptyLabel}
                         </p>
                         {!search && (
-                            <p
-                                style={{
-                                    color: "var(--color-text-muted)",
-                                    fontSize: "12px",
-                                }}
-                            >
+                            <p className="text-[var(--color-text-muted)] text-xs">
                                 {importHint}
                             </p>
                         )}
                     </motion.div>
                 ) : (
-                    <div
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.3 }}
+                        className="grid gap-4"
                         style={{
-                            display: "grid",
-                            gridTemplateColumns:
-                                "repeat(auto-fill, minmax(150px, 1fr))",
-                            gap: "16px",
+                            gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
                         }}
                     >
                         <AnimatePresence mode="popLayout">
                             {items?.map((item, i) => renderItem(item, i))}
                         </AnimatePresence>
-                    </div>
+                    </motion.div>
                 )}
             </div>
         </div>

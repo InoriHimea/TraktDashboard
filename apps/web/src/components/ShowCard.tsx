@@ -49,7 +49,7 @@ export function ShowCard({ progress, index }: ShowCardProps) {
         >
             <Link
                 to={`/shows/${show.id}`}
-                style={{ textDecoration: "none", display: "block" }}
+                className="no-underline block"
             >
                 <motion.div
                     whileHover={{
@@ -57,74 +57,32 @@ export function ShowCard({ progress, index }: ShowCardProps) {
                         boxShadow: "0 12px 40px rgba(0,0,0,0.5)",
                     }}
                     transition={{ duration: 0.15 }}
-                    className="rounded-xl overflow-hidden"
-                    style={{
-                        background: "var(--color-surface)",
-                        border: "1px solid var(--color-border-subtle)",
-                        cursor: "pointer",
-                    }}
+                    className="rounded-xl overflow-hidden bg-[var(--color-surface)] border border-[var(--color-border-subtle)] cursor-pointer"
                 >
                     {/* Poster — 2:3 aspect ratio */}
-                    <div
-                        style={{
-                            position: "relative",
-                            aspectRatio: "2/3",
-                            background: "var(--color-surface-3)",
-                        }}
-                    >
+                    <div className="relative aspect-[2/3] bg-[var(--color-surface-3)]">
                         {poster && !imgError ? (
                             <img
                                 src={poster}
                                 alt={show.title}
                                 onError={() => setImgError(true)}
-                                style={{
-                                    width: "100%",
-                                    height: "100%",
-                                    objectFit: "cover",
-                                    display: "block",
-                                }}
+                                className="w-full h-full object-cover block"
                                 loading="lazy"
                             />
                         ) : (
-                            <div
-                                style={{
-                                    width: "100%",
-                                    height: "100%",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                }}
-                            >
+                            <div className="w-full h-full flex items-center justify-center">
                                 <Tv2
                                     size={32}
-                                    style={{
-                                        color: "var(--color-text-muted)",
-                                        opacity: 0.3,
-                                    }}
+                                    className="text-[var(--color-text-muted)] opacity-30"
                                 />
                             </div>
                         )}
 
                         {/* Completion badge */}
                         {completed && (
-                            <div
-                                style={{
-                                    position: "absolute",
-                                    top: "8px",
-                                    right: "8px",
-                                    background: "rgba(0,0,0,0.7)",
-                                    borderRadius: "999px",
-                                    padding: "3px 8px",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "4px",
-                                    fontSize: "11px",
-                                    color: "var(--color-watched)",
-                                    backdropFilter: "blur(4px)",
-                                }}
-                            >
-                                <CheckCircle2 size={11} />
-                                完结
+                            <div className="absolute top-2 right-2 bg-black/70 rounded-full px-2 py-0.5 flex items-center gap-1 backdrop-blur-sm">
+                                <CheckCircle2 size={11} className="text-[var(--color-watched)]" />
+                                <span className="text-[11px] text-white font-semibold">完结</span>
                             </div>
                         )}
 
@@ -151,18 +109,11 @@ export function ShowCard({ progress, index }: ShowCardProps) {
                     </div>
 
                     {/* Info section */}
-                    <div style={{ padding: "10px 12px 12px" }}>
+                    <div className="p-[10px_12px_12px]">
                         {/* Primary title */}
                         <h3
-                            className="truncate"
-                            style={{
-                                fontSize: "13px",
-                                fontWeight: 600,
-                                color: "var(--color-text)",
-                                letterSpacing: "-0.01em",
-                                lineHeight: 1.3,
-                                marginBottom: secondaryTitle ? "2px" : "4px",
-                            }}
+                            className="truncate text-[13px] font-semibold text-[var(--color-text)] tracking-tight leading-tight"
+                            style={{ marginBottom: secondaryTitle ? "2px" : "4px" }}
                             title={primaryTitle}
                         >
                             {primaryTitle}
@@ -171,13 +122,7 @@ export function ShowCard({ progress, index }: ShowCardProps) {
                         {/* Original title (secondary) */}
                         {secondaryTitle && (
                             <p
-                                className="truncate"
-                                style={{
-                                    fontSize: "11px",
-                                    color: "var(--color-text-muted)",
-                                    marginBottom: "4px",
-                                    lineHeight: 1.3,
-                                }}
+                                className="truncate text-[11px] text-[var(--color-text-muted)] mb-1 leading-tight"
                                 title={secondaryTitle}
                             >
                                 {secondaryTitle}
@@ -187,52 +132,24 @@ export function ShowCard({ progress, index }: ShowCardProps) {
                         {/* Status + network */}
                         <div className="flex items-center gap-1.5 mb-3">
                             <span
-                                style={{
-                                    display: "inline-block",
-                                    width: "5px",
-                                    height: "5px",
-                                    borderRadius: "50%",
-                                    background: statusColor,
-                                    flexShrink: 0,
-                                }}
+                                className="inline-block w-[5px] h-[5px] rounded-full shrink-0"
+                                style={{ background: statusColor }}
                             />
-                            <span
-                                className="truncate"
-                                style={{
-                                    fontSize: "11px",
-                                    color: "var(--color-text-muted)",
-                                }}
-                            >
+                            <span className="truncate text-[11px] text-[var(--color-text-muted)]">
                                 {show.network || show.status}
                             </span>
                         </div>
 
                         {/* Episode count */}
                         <div className="flex items-center justify-between">
-                            <span
-                                style={{
-                                    fontSize: "11px",
-                                    color: "var(--color-text-muted)",
-                                }}
-                            >
-                                <span
-                                    style={{
-                                        color: "var(--color-watched)",
-                                        fontWeight: 500,
-                                    }}
-                                >
+                            <span className="text-[11px] text-[var(--color-text-muted)]">
+                                <span className="text-[var(--color-watched)] font-medium">
                                     {watchedEpisodes}
                                 </span>
                                 {" / "}
                                 {airedEpisodes}
                             </span>
-                            <span
-                                style={{
-                                    fontSize: "11px",
-                                    color: "var(--color-text-muted)",
-                                    fontWeight: 500,
-                                }}
-                            >
+                            <span className="text-[11px] text-[var(--color-text-muted)] font-medium">
                                 {percentage}%
                             </span>
                         </div>
@@ -240,13 +157,7 @@ export function ShowCard({ progress, index }: ShowCardProps) {
                         {/* Next episode */}
                         {nextEpisode && !completed && (
                             <div className="flex items-center justify-end mt-1.5">
-                                <span
-                                    className="flex items-center gap-1"
-                                    style={{
-                                        fontSize: "10px",
-                                        color: "var(--color-accent)",
-                                    }}
-                                >
+                                <span className="flex items-center gap-1 text-[10px] text-[var(--color-accent)]">
                                     <PlayCircle size={10} />
                                     {formatEpisode(
                                         nextEpisode.seasonNumber,

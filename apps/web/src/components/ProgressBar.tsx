@@ -21,19 +21,17 @@ export function ProgressBar({ watched, aired, total, compact = false, showLabel 
     <div className="w-full">
       {showLabel && (
         <div className="flex items-center justify-between mb-2">
-          <span style={{ fontSize: '12px', color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums' }}>
-            <span style={{ color: 'var(--color-accent)', fontWeight: 600 }}>{watched}</span>
+          <span className="text-[12px] text-[var(--color-text-muted)] tabular-nums">
+            <span className="text-[var(--color-accent)] font-semibold">{watched}</span>
             <span> / {aired} 已播出</span>
             {unairedPct > 0 && total > aired && (
-              <span style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}> · {total - aired} 未播</span>
+              <span className="text-[var(--color-text-muted)] opacity-60"> · {total - aired} 未播</span>
             )}
           </span>
-          <span style={{
-            fontSize: '12px',
-            fontWeight: 600,
-            color: watchedPct >= 100 ? 'var(--color-watched)' : 'var(--color-accent)',
-            fontVariantNumeric: 'tabular-nums',
-          }}>
+          <span className={cn(
+            "text-[12px] font-semibold tabular-nums",
+            watchedPct >= 100 ? "text-[var(--color-watched)]" : "text-[var(--color-accent)]"
+          )}>
             {Math.round(watchedPct)}%
           </span>
         </div>
@@ -41,37 +39,26 @@ export function ProgressBar({ watched, aired, total, compact = false, showLabel 
 
       {/* Track */}
       <div
-        className={cn('relative w-full overflow-hidden flex')}
-        style={{
-          height: trackH,
-          borderRadius: '999px',
-          background: 'var(--color-surface-3)',
-        }}
+        className={cn('relative w-full overflow-hidden flex rounded-full bg-[var(--color-surface-3)]')}
+        style={{ height: trackH }}
       >
         {/* Watched — accent purple */}
         <motion.div
-          style={{
-            height: '100%',
-            background: 'var(--color-accent)',
-            borderRadius: '999px 0 0 999px',
-            minWidth: watched > 0 ? '3px' : 0,
-          }}
+          className="h-full bg-[var(--color-accent)] rounded-l-full"
+          style={{ minWidth: watched > 0 ? '3px' : 0 }}
           initial={{ width: 0 }}
           animate={{ width: `${(watched / Math.max(total, 1)) * 100}%` }}
           transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
         />
         {/* Aired but unwatched — dim surface */}
         <motion.div
-          style={{
-            height: '100%',
-            background: 'var(--color-surface-4)',
-          }}
+          className="h-full bg-[var(--color-surface-4)]"
           initial={{ width: 0 }}
           animate={{ width: `${((aired - watched) / Math.max(total, 1)) * 100}%` }}
           transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.05 }}
         />
         {/* Not yet aired — transparent (track bg shows through) */}
-        <div style={{ flex: 1, height: '100%' }} />
+        <div className="flex-1 h-full" />
       </div>
     </div>
   )

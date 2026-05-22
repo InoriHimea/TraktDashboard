@@ -67,12 +67,9 @@ export function EpisodeCard({
             role="article"
             aria-label={`${contextLabel} ${title}`}
         >
-            <div className="flex" style={{ height: "116px" }}>
+            <div className="flex h-[116px]">
                 {/* ── Still image — 16:9, fixed 160px wide ── */}
-                <div
-                    className="relative shrink-0 overflow-hidden bg-[#0d0d1a]"
-                    style={{ width: "160px" }}
-                >
+                <div className="relative shrink-0 overflow-hidden bg-[#0d0d1a] w-[160px]">
                     {showStill ? (
                         <img
                             src={stillUrl}

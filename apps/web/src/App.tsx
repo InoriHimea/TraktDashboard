@@ -34,68 +34,22 @@ class ErrorBoundary extends React.Component<
     render() {
         if (this.state.hasError) {
             return (
-                <div
-                    className="min-h-screen flex items-center justify-center"
-                    style={{ background: "var(--color-bg)" }}
-                >
-                    <div
-                        style={{
-                            textAlign: "center",
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            gap: 16,
-                        }}
-                    >
-                        <div
-                            style={{
-                                width: "48px",
-                                height: "48px",
-                                borderRadius: "12px",
-                                background: "#7f1d1d",
-                                border: "1px solid #991b1b",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: "24px",
-                            }}
-                        >
+                <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)]">
+                    <div className="text-center flex flex-col items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-red-950 border border-red-900 flex items-center justify-center">
                             <AlertTriangle size={24} color="var(--color-error)" />
                         </div>
                         <div>
-                            <p
-                                style={{
-                                    color: "var(--color-error)",
-                                    fontSize: "16px",
-                                    fontWeight: 600,
-                                }}
-                            >
+                            <p className="text-[var(--color-error)] text-base font-semibold">
                                 应用出错
                             </p>
-                            <p
-                                style={{
-                                    color: "var(--color-text-muted)",
-                                    fontSize: "14px",
-                                    marginTop: "8px",
-                                    maxWidth: "400px",
-                                }}
-                            >
+                            <p className="text-[var(--color-text-muted)] text-sm mt-2 max-w-md">
                                 {this.state.error?.message ||
                                     "An unexpected error occurred"}
                             </p>
                             <button
                                 onClick={() => window.location.reload()}
-                                style={{
-                                    marginTop: "16px",
-                                    padding: "10px 20px",
-                                    borderRadius: "var(--radius-md)",
-                                    background: "var(--color-accent)",
-                                    color: "#fff",
-                                    fontSize: "14px",
-                                    fontWeight: 600,
-                                    border: "none",
-                                    cursor: "pointer",
-                                }}
+                                className="mt-4 px-5 py-2.5 rounded-[var(--radius-md)] bg-[var(--color-accent)] text-white text-sm font-semibold border-none cursor-pointer hover:opacity-90 transition-opacity"
                             >
                                 刷新页面
                             </button>
@@ -114,24 +68,10 @@ export default function App() {
 
     if (isLoading) {
         return (
-            <div
-                className="min-h-screen flex items-center justify-center"
-                style={{ background: "var(--color-bg)" }}
-            >
+            <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)]">
                 <div className="flex flex-col items-center gap-4">
-                    <div
-                        className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
-                        style={{
-                            borderColor: "var(--color-accent)",
-                            borderTopColor: "transparent",
-                        }}
-                    />
-                    <p
-                        style={{
-                            color: "var(--color-text-muted)",
-                            fontSize: "14px",
-                        }}
-                    >
+                    <div className="w-8 h-8 rounded-full border-2 border-[var(--color-accent)] border-t-transparent animate-spin" />
+                    <p className="text-[var(--color-text-muted)] text-sm">
                         Loading…
                     </p>
                 </div>
@@ -142,67 +82,21 @@ export default function App() {
     // Handle authentication error
     if (error && !auth?.authenticated) {
         return (
-            <div
-                className="min-h-screen flex items-center justify-center"
-                style={{ background: "var(--color-bg)" }}
-            >
-                <div
-                    style={{
-                        textAlign: "center",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: 16,
-                    }}
-                >
-                    <div
-                        style={{
-                            width: "48px",
-                            height: "48px",
-                            borderRadius: "12px",
-                            background: "#7f1d1d",
-                            border: "1px solid #991b1b",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: "24px",
-                        }}
-                    >
+            <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)]">
+                <div className="text-center flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-red-950 border border-red-900 flex items-center justify-center">
                         <WifiOff size={24} color="var(--color-error)" />
                     </div>
                     <div>
-                        <p
-                            style={{
-                                color: "var(--color-error)",
-                                fontSize: "16px",
-                                fontWeight: 600,
-                            }}
-                        >
+                        <p className="text-[var(--color-error)] text-base font-semibold">
                             连接失败
                         </p>
-                        <p
-                            style={{
-                                color: "var(--color-text-muted)",
-                                fontSize: "14px",
-                                marginTop: "8px",
-                                maxWidth: "400px",
-                            }}
-                        >
+                        <p className="text-[var(--color-text-muted)] text-sm mt-2 max-w-md">
                             认证服务暂时不可用。请检查您的网络连接，然后刷新页面重试。
                         </p>
                         <button
                             onClick={() => window.location.reload()}
-                            style={{
-                                marginTop: "16px",
-                                padding: "10px 20px",
-                                borderRadius: "var(--radius-md)",
-                                background: "var(--color-accent)",
-                                color: "#fff",
-                                fontSize: "14px",
-                                fontWeight: 600,
-                                border: "none",
-                                cursor: "pointer",
-                            }}
+                            className="mt-4 px-5 py-2.5 rounded-[var(--radius-md)] bg-[var(--color-accent)] text-white text-sm font-semibold border-none cursor-pointer hover:opacity-90 transition-opacity"
                         >
                             刷新页面
                         </button>
