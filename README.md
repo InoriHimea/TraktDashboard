@@ -1,98 +1,195 @@
-# Trakt Dashboard
+<div align="center">
+  <h1>Trakt Dashboard</h1>
+  <p>
+    <strong>A self-hosted TV show and movie progress tracker powered by Trakt</strong>
+  </p>
+  <p>
+    <a href="https://github.com/InoriHimea/TraktDashboard/actions"><img src="https://github.com/InoriHimea/TraktDashboard/workflows/Build%20%26%20Push%20Docker%20Images/badge.svg" alt="CI Status"></a>
+    <a href="https://github.com/InoriHimea/TraktDashboard/blob/github/LICENSE"><img src="https://img.shields.io/github/license/InoriHimea/TraktDashboard" alt="License"></a>
+    <a href="https://github.com/InoriHimea/TraktDashboard/releases"><img src="https://img.shields.io/github/v/release/InoriHimea/TraktDashboard" alt="Release"></a>
+  </p>
+  <p>
+    <a href="README_zh.md">简体中文</a> · <a href="#features">Features</a> · <a href="#quick-start">Quick Start</a> · <a href="#documentation">Documentation</a>
+  </p>
+  <img src="https://via.placeholder.com/800x450/08080e/7c6af7?text=Trakt+Dashboard+Screenshot" alt="Screenshot">
+</div>
 
-A self-hosted TV progress tracker that pulls your watch history from [Trakt](https://trakt.tv) and enriches it with metadata from TMDB and TVDB. Built as a fast, dark-themed dashboard showing episode progress, season breakdowns, and watch statistics.
+---
 
-## Stack
+## ✨ Features
+
+- 📺 **Episode Progress Tracking** — Visual progress bars for every show, season-by-season breakdown
+- 🎬 **Movie Library** — Track watched movies with rewatch counts and last watched dates
+- 🔄 **Auto-Sync** — Scheduled background sync from Trakt (configurable interval)
+- 📊 **Watch Statistics** — Monthly watch charts, top genres, total hours watched
+- 🎨 **Modern UI** — Dark-themed, responsive design built with React 19 and Tailwind CSS v4
+- 🚀 **Fast & Lightweight** — Powered by Bun runtime, optimized for performance
+- 🐳 **Easy Deployment** — One-command Docker Compose setup
+- 🔒 **Privacy-First** — Self-hosted, your data stays on your server
+
+## 🏗️ Tech Stack
 
 | Layer | Technology |
-|---|---|
-| Frontend | React 19 · Vite 8 · Tailwind v4 · Framer Motion · TanStack Query |
-| Backend | Bun · Hono · BullMQ |
-| Database | PostgreSQL 16 · Drizzle ORM |
-| Queue | Redis 7 |
-| Proxy | Nginx |
-| Container | Docker Compose |
+|-------|-----------|
+| **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · Framer Motion · TanStack Query |
+| **Backend** | Bun · Hono · BullMQ |
+| **Database** | PostgreSQL 16 · Drizzle ORM |
+| **Queue** | Redis 7 |
+| **Proxy** | Nginx |
+| **Container** | Docker Compose |
 
-## CI/CD
+## 🚀 Quick Start
 
-This project uses GitHub Actions for automated Docker image builds:
-
-- **Trigger**: Pushes to `github` branch or `v*` tags
-- **Registry**: GitHub Container Registry (ghcr.io)
-- **Images**: `trakt-dashboard-api` and `trakt-dashboard-web`
-- **Tags**: version from package.json, `latest`, semver, and commit SHA
-
-### Branch Strategy
-
-- **origin/main**: Primary development branch (internal Git server)
-- **github/github**: CI/CD branch (triggers GitHub Actions on push)
-- Local `main` pushes to both `origin/main` and `github/github`
-
-## Prerequisites
+### Prerequisites
 
 - Docker & Docker Compose v2
-- A [Trakt](https://trakt.tv) account (free)
-- A [TMDB](https://www.themoviedb.org/settings/api) API key (free)
-- Optionally a [TVDB](https://thetvdb.com/dashboard/account/apikey) API key
+- A free [Trakt](https://trakt.tv) account
+- A free [TMDB API key](https://www.themoviedb.org/settings/api)
 
-## Quick Start
+### Installation
 
-### 1. Clone and configure
+1. **Clone the repository**
 
 ```bash
-git clone <repo>
-cd trakt-dashboard
+git clone https://github.com/InoriHimea/TraktDashboard.git
+cd TraktDashboard
+```
+
+2. **Create environment file**
+
+```bash
 cp .env.example .env
 ```
 
-### 2. Create a Trakt OAuth application
+3. **Configure Trakt OAuth**
 
-1. Go to https://trakt.tv/oauth/applications/new
-2. Set **Redirect URI** to `http://localhost/auth/callback`  
-   (or your server's domain: `https://yourdomain.com/auth/callback`)
-3. Copy **Client ID** and **Client Secret** into `.env`
+- Go to https://trakt.tv/oauth/applications/new
+- Set **Redirect URI** to `http://localhost/auth/callback`
+- Copy **Client ID** and **Client Secret** to `.env`
 
-### 3. Get a TMDB API key
+4. **Get TMDB API key**
 
-1. Go to https://www.themoviedb.org/settings/api
-2. Create a free API key
-3. Copy it into `.env` as `TMDB_API_KEY`
+- Go to https://www.themoviedb.org/settings/api
+- Copy your API key to `.env` as `TMDB_API_KEY`
 
-### 4. Fill in `.env`
+5. **Edit `.env` file**
 
 ```env
-TRAKT_CLIENT_ID=your_client_id_here
-TRAKT_CLIENT_SECRET=your_client_secret_here
+TRAKT_CLIENT_ID=your_trakt_client_id
+TRAKT_CLIENT_SECRET=your_trakt_client_secret
 TRAKT_REDIRECT_URI=http://localhost/auth/callback
-TMDB_API_KEY=your_tmdb_key_here
-API_SECRET=a_random_32_char_string_for_jwt
+TMDB_API_KEY=your_tmdb_api_key
+API_SECRET=generate_a_random_32_char_string
 ```
 
-### 5. Launch
+6. **Launch with Docker**
 
 ```bash
 docker compose up -d
 ```
 
-Open http://localhost and connect your Trakt account. The first full sync will start automatically — expect 5–20 minutes depending on how many shows you've watched.
+7. **Access the dashboard**
 
-## Development
+Open http://localhost in your browser and connect your Trakt account. The first sync will start automatically.
+
+## 📖 Documentation
+
+### Project Structure
+
+```
+trakt-dashboard/
+├── apps/
+│   ├── api/                    # Backend API (Bun + Hono)
+│   │   ├── src/
+│   │   │   ├── routes/         # API routes (auth, shows, sync, stats)
+│   │   │   ├── services/       # Business logic (Trakt, TMDB, sync)
+│   │   │   ├── jobs/           # Background jobs (BullMQ)
+│   │   │   └── middleware/     # JWT authentication
+│   │   └── Dockerfile
+│   └── web/                    # Frontend (React 19)
+│       ├── src/
+│       │   ├── pages/          # Page components
+│       │   ├── components/     # Reusable UI components
+│       │   ├── hooks/          # React hooks (TanStack Query)
+│       │   └── lib/            # Utilities and API client
+│       └── Dockerfile
+└── packages/
+    ├── types/                  # Shared TypeScript types
+    └── db/                     # Database schema (Drizzle ORM)
+```
+
+### How Syncing Works
+
+**Initial Sync** (triggered on first login):
+1. Fetches all watched shows from Trakt API
+2. Retrieves detailed episode progress for each show
+3. Enriches metadata from TMDB (posters, backdrops, episode stills)
+4. Stores everything in PostgreSQL with 7-day cache
+5. Calculates progress summaries
+
+**Incremental Sync** (runs every 15 minutes by default):
+1. Fetches only new watch history since last sync
+2. Updates affected shows' progress
+3. Refreshes stale metadata if cache expired
+
+**Manual Sync**: Click "Sync now" in the UI or `POST /api/sync/trigger`
+
+### API Endpoints
+
+```
+GET  /health                   Health check
+GET  /auth/trakt               Start Trakt OAuth flow
+GET  /auth/callback            OAuth callback handler
+GET  /auth/me                  Current user authentication status
+POST /auth/logout              Clear session
+
+GET  /api/shows/progress       List all shows with progress
+                               Query params: ?filter=watching|completed|all&q=search
+GET  /api/shows/:id            Single show with full season/episode details
+GET  /api/shows/:id/seasons    Season list only
+
+GET  /api/sync/status          Current sync state
+POST /api/sync/trigger         Queue incremental sync
+POST /api/sync/full            Start full re-sync
+
+GET  /api/stats/overview       Watch statistics and charts
+```
+
+### Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `TRAKT_CLIENT_ID` | ✅ | — | Trakt OAuth app client ID |
+| `TRAKT_CLIENT_SECRET` | ✅ | — | Trakt OAuth app client secret |
+| `TRAKT_REDIRECT_URI` | ✅ | — | Must match Trakt app settings |
+| `TMDB_API_KEY` | ✅ | — | TMDB v3 API key |
+| `TVDB_API_KEY` | — | — | TVDB API key (optional) |
+| `API_SECRET` | ✅ | — | JWT signing secret (32+ chars) |
+| `POSTGRES_USER` | — | `trakt` | Database username |
+| `POSTGRES_PASSWORD` | — | `trakt` | Database password |
+| `POSTGRES_DB` | — | `trakt_dashboard` | Database name |
+| `SYNC_INTERVAL_MINUTES` | — | `15` | Auto-sync frequency |
+| `FRONTEND_URL` | — | `http://localhost` | Used for CORS and OAuth |
+
+## 🛠️ Development
+
+### Local Setup
 
 ```bash
 # Install dependencies
 pnpm install
 
-# Copy env
+# Copy environment file
 cp .env.example .env
-# (fill in real API keys)
+# Fill in real API keys
 
-# Start postgres + redis locally
+# Start PostgreSQL and Redis
 docker compose up postgres redis -d
 
-# Run DB migrations
+# Run database migrations
 cd packages/db && pnpm db:migrate
 
-# Start API + web in watch mode
+# Start development servers
 pnpm dev
 ```
 
@@ -100,84 +197,42 @@ pnpm dev
 - API: http://localhost:3001
 - Health check: http://localhost:3001/health
 
-## Project Structure
+### Building
 
-```
-trakt-dashboard/
-├── apps/
-│   ├── api/                    # Bun + Hono backend
-│   │   ├── src/
-│   │   │   ├── index.ts        # App entry point
-│   │   │   ├── routes/         # auth · shows · sync · stats
-│   │   │   ├── services/       # trakt · tmdb · sync engine
-│   │   │   ├── jobs/           # BullMQ scheduler
-│   │   │   └── middleware/     # JWT auth
-│   │   └── Dockerfile
-│   └── web/                    # React 19 frontend
-│       ├── src/
-│       │   ├── pages/          # Progress · ShowDetail · Stats · Login
-│       │   ├── components/     # Layout · ShowCard · ProgressBar
-│       │   ├── hooks/          # TanStack Query hooks
-│       │   └── lib/            # api client · utils
-│       └── Dockerfile
-└── packages/
-    ├── types/                  # Shared TypeScript types
-    └── db/                     # Drizzle schema + migrations
+```bash
+# Type check
+pnpm typecheck
+
+# Build all packages
+pnpm build
+
+# Run tests
+pnpm test
 ```
 
-## How Syncing Works
+## 🚢 Deployment
 
-**First login** — triggers a full sync:
-1. Fetches all watched shows from Trakt (`/sync/watched/shows`)
-2. For each show, pulls detailed progress (which episodes were watched)
-3. Fetches show/season/episode metadata from TMDB (with 7-day cache)
-4. Writes everything to PostgreSQL
-5. Calculates per-show progress summaries
+### Docker Compose (Recommended)
 
-**Incremental sync** — runs every 15 minutes (configurable via `SYNC_INTERVAL_MINUTES`):
-1. Fetches only new history entries since last sync
-2. Updates affected shows' progress summaries
-
-**Manual sync** — click "Sync now" in the sidebar or `POST /api/sync/trigger`.
-
-## API Reference
-
-```
-GET  /health                   → Health check
-GET  /auth/trakt               → Start Trakt OAuth
-GET  /auth/callback            → OAuth callback
-GET  /auth/me                  → Current auth status
-POST /auth/logout              → Clear session
-
-GET  /api/shows/progress       → All shows with progress (?filter=watching|completed|all&q=search)
-GET  /api/shows/:id            → Single show with full season/episode detail
-GET  /api/shows/:id/seasons    → Season list only
-
-GET  /api/sync/status          → Current sync state
-POST /api/sync/trigger         → Queue incremental sync
-POST /api/sync/full            → Start full re-sync
-
-GET  /api/stats/overview       → Watch stats, monthly chart, top genres
-```
-
-## Deployment (VPS / Self-hosted)
-
-Update `.env`:
+Update `.env` for production:
 
 ```env
 TRAKT_REDIRECT_URI=https://yourdomain.com/auth/callback
 FRONTEND_URL=https://yourdomain.com
-API_SECRET=<strong random string>
+API_SECRET=<strong-random-string>
+POSTGRES_PASSWORD=<strong-password>
 ```
 
-Then:
+Deploy:
 
 ```bash
 docker compose pull
 docker compose up -d
 ```
 
-For HTTPS, put Nginx or Caddy in front of port 80. Example Caddy:
+### Reverse Proxy (HTTPS)
+
+Example Caddy configuration:
 
 ```
 yourdomain.com {
@@ -185,18 +240,51 @@ yourdomain.com {
 }
 ```
 
-## Environment Variables
+Example Nginx configuration:
 
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `TRAKT_CLIENT_ID` | ✅ | — | Trakt OAuth app client ID |
-| `TRAKT_CLIENT_SECRET` | ✅ | — | Trakt OAuth app client secret |
-| `TRAKT_REDIRECT_URI` | ✅ | — | Must match Trakt app settings |
-| `TMDB_API_KEY` | ✅ | — | TMDB v3 API key |
-| `TVDB_API_KEY` | — | — | TVDB API key (optional) |
-| `API_SECRET` | ✅ | — | JWT signing secret (32+ chars) |
-| `POSTGRES_USER` | — | `trakt` | DB username |
-| `POSTGRES_PASSWORD` | — | `trakt` | DB password (change in prod!) |
-| `POSTGRES_DB` | — | `trakt_dashboard` | Database name |
-| `SYNC_INTERVAL_MINUTES` | — | `15` | Auto-sync frequency |
-| `FRONTEND_URL` | — | `http://localhost` | Used for CORS and OAuth redirect |
+```nginx
+server {
+  listen 443 ssl http2;
+  server_name yourdomain.com;
+
+  ssl_certificate /path/to/cert.pem;
+  ssl_certificate_key /path/to/key.pem;
+
+  location / {
+    proxy_pass http://localhost:80;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+  }
+}
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [Trakt](https://trakt.tv) for the amazing API
+- [TMDB](https://www.themoviedb.org) for rich metadata
+- [TVDB](https://thetvdb.com) for additional TV show data
+
+## 📧 Contact
+
+- GitHub: [@InoriHimea](https://github.com/InoriHimea)
+- Project Link: [https://github.com/InoriHimea/TraktDashboard](https://github.com/InoriHimea/TraktDashboard)
+
+---
+
+<div align="center">
+  <sub>Built with ❤️ by <a href="https://github.com/InoriHimea">InoriHimea</a></sub>
+</div>
