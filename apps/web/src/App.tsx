@@ -1,5 +1,6 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { AlertTriangle, WifiOff } from "lucide-react";
 import { useAuth } from "./hooks";
 import Layout from "./components/Layout";
@@ -34,26 +35,26 @@ class ErrorBoundary extends React.Component<
     render() {
         if (this.state.hasError) {
             return (
-                <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)]">
-                    <div className="text-center flex flex-col items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-red-950 border border-red-900 flex items-center justify-center">
-                            <AlertTriangle size={24} color="var(--color-error)" />
+                <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)] p-6">
+                    <div className="text-center flex flex-col items-center gap-6 max-w-md">
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-950 to-red-900 border border-red-800/50 flex items-center justify-center shadow-lg shadow-red-950/50">
+                            <AlertTriangle size={28} className="text-red-400" />
                         </div>
-                        <div>
-                            <p className="text-[var(--color-error)] text-base font-semibold">
+                        <div className="space-y-3">
+                            <h2 className="text-[var(--color-text-base)] text-xl font-semibold tracking-tight">
                                 应用出错
-                            </p>
-                            <p className="text-[var(--color-text-muted)] text-sm mt-2 max-w-md">
+                            </h2>
+                            <p className="text-[var(--color-text-secondary)] text-sm leading-relaxed">
                                 {this.state.error?.message ||
                                     "An unexpected error occurred"}
                             </p>
-                            <button
-                                onClick={() => window.location.reload()}
-                                className="mt-4 px-5 py-2.5 rounded-[var(--radius-md)] bg-[var(--color-accent)] text-white text-sm font-semibold border-none cursor-pointer hover:opacity-90 transition-opacity"
-                            >
-                                刷新页面
-                            </button>
                         </div>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="mt-2 px-6 py-3 rounded-xl bg-[var(--color-accent)] text-white text-sm font-semibold border-none cursor-pointer shadow-lg shadow-[var(--color-accent-glow)] hover:shadow-xl hover:shadow-[var(--color-accent-glow)] hover:scale-[1.02] active:scale-[0.98] transition-all"
+                        >
+                            刷新页面
+                        </button>
                     </div>
                 </div>
             );
@@ -82,26 +83,33 @@ export default function App() {
     // Handle authentication error
     if (error && !auth?.authenticated) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)]">
-                <div className="text-center flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-red-950 border border-red-900 flex items-center justify-center">
-                        <WifiOff size={24} color="var(--color-error)" />
+            <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)] p-6">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4 }}
+                    className="text-center flex flex-col items-center gap-6 max-w-md"
+                >
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-950 to-red-900 border border-red-800/50 flex items-center justify-center shadow-lg shadow-red-950/50">
+                        <WifiOff size={28} className="text-red-400" />
                     </div>
-                    <div>
-                        <p className="text-[var(--color-error)] text-base font-semibold">
+                    <div className="space-y-3">
+                        <h2 className="text-[var(--color-text-base)] text-xl font-semibold tracking-tight">
                             连接失败
-                        </p>
-                        <p className="text-[var(--color-text-muted)] text-sm mt-2 max-w-md">
+                        </h2>
+                        <p className="text-[var(--color-text-secondary)] text-sm leading-relaxed">
                             认证服务暂时不可用。请检查您的网络连接，然后刷新页面重试。
                         </p>
-                        <button
-                            onClick={() => window.location.reload()}
-                            className="mt-4 px-5 py-2.5 rounded-[var(--radius-md)] bg-[var(--color-accent)] text-white text-sm font-semibold border-none cursor-pointer hover:opacity-90 transition-opacity"
-                        >
-                            刷新页面
-                        </button>
                     </div>
-                </div>
+                    <motion.button
+                        onClick={() => window.location.reload()}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="mt-2 px-6 py-3 rounded-xl bg-[var(--color-accent)] text-white text-sm font-semibold border-none cursor-pointer shadow-lg shadow-[var(--color-accent-glow)] hover:shadow-xl hover:shadow-[var(--color-accent-glow)] transition-all"
+                    >
+                        刷新页面
+                    </motion.button>
+                </motion.div>
             </div>
         );
     }
