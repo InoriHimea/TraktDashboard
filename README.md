@@ -13,6 +13,21 @@ A self-hosted TV progress tracker that pulls your watch history from [Trakt](htt
 | Proxy | Nginx |
 | Container | Docker Compose |
 
+## CI/CD
+
+This project uses GitHub Actions for automated Docker image builds:
+
+- **Trigger**: Pushes to `github` branch or `v*` tags
+- **Registry**: GitHub Container Registry (ghcr.io)
+- **Images**: `trakt-dashboard-api` and `trakt-dashboard-web`
+- **Tags**: version from package.json, `latest`, semver, and commit SHA
+
+### Branch Strategy
+
+- **origin/main**: Primary development branch (internal Git server)
+- **github/github**: CI/CD branch (triggers GitHub Actions on push)
+- Local `main` pushes to both `origin/main` and `github/github`
+
 ## Prerequisites
 
 - Docker & Docker Compose v2
