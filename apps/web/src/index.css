@@ -69,10 +69,12 @@ html, body, #root {
   --shadow-login-cta-hover: 0 8px 24px var(--color-accent-glow);
 }
 
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 }
 
 html {
