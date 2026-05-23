@@ -85,7 +85,7 @@ export default function LoginPage() {
             />
 
             <main
-                className="relative mx-auto grid min-h-screen min-h-svh w-full items-center"
+                className="relative mx-auto grid min-h-screen min-h-svh w-full items-center justify-center"
                 style={{
                     maxWidth: "1180px",
                     gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 420px), 1fr))",
