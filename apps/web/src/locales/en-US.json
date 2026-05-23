@@ -87,6 +87,12 @@
     "notFound": "Episode not found.",
     "invalidParams": "Invalid episode link."
   },
+  "shows": {
+    "markSeasonWatched": "Mark Season Watched",
+    "seasonLabel": "Season {{number}}",
+    "specials": "Specials",
+    "episodeCount": "{{watched}}/{{total}} episodes"
+  },
   "watchlist": {
     "title": "Watchlist",
     "all": "All",

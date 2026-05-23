@@ -8,7 +8,7 @@ import { SeasonTab } from "../components/SeasonTab";
 import { EpisodeGrid } from "../components/EpisodeGrid";
 import { WatchHistoryPanel } from "../components/WatchHistoryPanel";
 import { Button } from "../components/ui/Button";
-import { resolveTitle } from "../lib/i18n";
+import { resolveTitle, t } from "../lib/i18n";
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -236,10 +236,13 @@ export default function ShowDetailPage() {
                         <div className="flex items-center justify-between mb-4">
                             <span className="text-sm text-[var(--color-text-muted)]">
                                 {currentSeason.seasonNumber === 0
-                                    ? "Specials"
-                                    : `Season ${currentSeason.seasonNumber}`}
+                                    ? t("shows.specials")
+                                    : t("shows.seasonLabel", { number: currentSeason.seasonNumber })}
                                 {" · "}
-                                {currentSeason.watchedCount}/{currentSeason.airedCount} 集
+                                {t("shows.episodeCount", {
+                                    watched: currentSeason.watchedCount,
+                                    total: currentSeason.airedCount,
+                                })}
                             </span>
                             {currentSeason.watchedCount < currentSeason.airedCount && (
                                 <button
@@ -257,7 +260,7 @@ export default function ShowDetailPage() {
                                     ) : (
                                         <CheckCheck className="w-3.5 h-3.5" />
                                     )}
-                                    标记整季已看
+                                    {t("shows.markSeasonWatched")}
                                 </button>
                             )}
                         </div>

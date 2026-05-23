@@ -87,6 +87,12 @@
     "notFound": "未找到该剧集。",
     "invalidParams": "剧集链接无效。"
   },
+  "shows": {
+    "markSeasonWatched": "标记整季已看",
+    "seasonLabel": "第 {{number}} 季",
+    "specials": "特别篇",
+    "episodeCount": "{{watched}}/{{total}} 集"
+  },
   "watchlist": {
     "title": "待看列表",
     "all": "全部",
