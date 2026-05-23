@@ -9,6 +9,7 @@ import { EpisodeGrid } from "../components/EpisodeGrid";
 import { WatchHistoryPanel } from "../components/WatchHistoryPanel";
 import { Button } from "../components/ui/Button";
 import { resolveTitle, t } from "../lib/i18n";
+import { useToast } from "../lib/toast";
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -97,6 +98,7 @@ export default function ShowDetailPage() {
 
     const resetProgress = useResetProgress(isValidId ? showId : 0);
     const markSeasonWatched = useMarkSeasonWatched(isValidId ? showId : 0);
+    const { toast } = useToast();
 
     if (isLoading) return <PageSkeleton />;
     if (error) return <PageError onRetry={() => refetch()} />;
@@ -247,10 +249,13 @@ export default function ShowDetailPage() {
                             {currentSeason.watchedCount < currentSeason.airedCount && (
                                 <button
                                     onClick={() =>
-                                        markSeasonWatched.mutate({
-                                            season: currentSeason.seasonNumber,
-                                            watchedAt: null,
-                                        })
+                                        markSeasonWatched.mutate(
+                                            { season: currentSeason.seasonNumber, watchedAt: null },
+                                            {
+                                                onSuccess: () => toast(t("shows.markSeasonWatchedSuccess"), "success"),
+                                                onError: () => toast(t("shows.markSeasonWatchedError"), "error"),
+                                            }
+                                        )
                                     }
                                     disabled={markSeasonWatched.isPending}
                                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--color-accent)] text-white hover:opacity-90 disabled:opacity-50 transition-opacity"

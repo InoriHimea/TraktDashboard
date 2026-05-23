@@ -89,6 +89,8 @@
   },
   "shows": {
     "markSeasonWatched": "Mark Season Watched",
+    "markSeasonWatchedSuccess": "Season marked as watched",
+    "markSeasonWatchedError": "Failed to mark season, please try again",
     "seasonLabel": "Season {{number}}",
     "specials": "Specials",
     "episodeCount": "{{watched}}/{{total}} episodes"
@@ -106,6 +108,8 @@
     "loadFailed": "Failed to load watchlist.",
     "addedOn": "Added {{date}}",
     "removeFromWatchlist": "Remove from Watchlist",
-    "addToWatchlist": "Add to Watchlist"
+    "addToWatchlist": "Add to Watchlist",
+    "removeSuccess": "Removed from watchlist",
+    "removeFailed": "Failed to remove, please try again"
   }
 }

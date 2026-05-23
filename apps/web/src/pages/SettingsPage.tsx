@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Save, CheckCircle2, AlertCircle } from "lucide-react";
+import { motion } from "framer-motion";
+import { Save } from "lucide-react";
 import { useSettings, useUpdateSettings } from "../hooks";
 import { loadTheme, applyTheme, persistTheme, Theme } from "../lib/theme";
 import { t, setLocale } from "../lib/i18n";
+import { useToast } from "../lib/toast";
 
 // Move styles outside component to avoid recreation on every render
 const inputStyle: React.CSSProperties = {
@@ -34,10 +35,7 @@ export default function SettingsPage() {
     const [displayLanguage, setDisplayLanguage] = useState("zh-CN");
     const [syncIntervalMinutes, setSyncIntervalMinutes] = useState(60);
     const [httpProxy, setHttpProxy] = useState("");
-    const [toast, setToast] = useState<{
-        type: "success" | "error";
-        message: string;
-    } | null>(null);
+    const { toast } = useToast();
     const [theme, setTheme] = useState<Theme>(loadTheme);
 
     useEffect(() => {
@@ -52,15 +50,11 @@ export default function SettingsPage() {
 
     async function handleSave(e: React.FormEvent) {
         e.preventDefault();
-        setToast(null);
 
         // Frontend validation
         const interval = Number(syncIntervalMinutes);
         if (!Number.isInteger(interval) || interval < 1 || interval > 10080) {
-            setToast({
-                type: "error",
-                message: t("settings.validationIntervalError"),
-            });
+            toast(t("settings.validationIntervalError"), "error");
             return;
         }
 
@@ -70,20 +64,14 @@ export default function SettingsPage() {
             langTrimmed &&
             !/^[a-zA-Z]{2,3}(-[a-zA-Z]{2,4})?$/.test(langTrimmed)
         ) {
-            setToast({
-                type: "error",
-                message: t("settings.validationLanguageError"),
-            });
+            toast(t("settings.validationLanguageError"), "error");
             return;
         }
 
         // Validate httpProxy (must be http:// or https:// if specified)
         const proxyValue = httpProxy.trim();
         if (proxyValue && !/^https?:\/\/.+/i.test(proxyValue)) {
-            setToast({
-                type: "error",
-                message: t("settings.validationProxyError"),
-            });
+            toast(t("settings.validationProxyError"), "error");
             return;
         }
 
@@ -93,17 +81,12 @@ export default function SettingsPage() {
                 syncIntervalMinutes: interval,
                 httpProxy: proxyValue || null,
             });
-            // Update UI locale after successful save
             setLocale(langTrimmed);
-            setToast({
-                type: "success",
-                message: t("settings.saveSuccess"),
-            });
-            setTimeout(() => setToast(null), 3000);
+            toast(t("settings.saveSuccess"), "success");
         } catch (err: unknown) {
             const message =
                 err instanceof Error ? err.message : t("settings.saveFailed");
-            setToast({ type: "error", message });
+            toast(message, "error");
         }
     }
 
@@ -304,41 +287,6 @@ export default function SettingsPage() {
                             </p>
                         </div>
                     </div>
-
-                    {/* Toast */}
-                    <AnimatePresence>
-                        {toast && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -6 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -6 }}
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "8px",
-                                    padding: "12px 16px",
-                                    borderRadius: "var(--radius-md)",
-                                    background:
-                                        toast.type === "success"
-                                            ? "#34d39912"
-                                            : "#ef444412",
-                                    border: `1px solid ${toast.type === "success" ? "#34d39928" : "#ef444428"}`,
-                                    color:
-                                        toast.type === "success"
-                                            ? "var(--color-watched)"
-                                            : "var(--color-error)",
-                                    fontSize: "13px",
-                                }}
-                            >
-                                {toast.type === "success" ? (
-                                    <CheckCircle2 size={14} />
-                                ) : (
-                                    <AlertCircle size={14} />
-                                )}
-                                {toast.message}
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
 
                     {/* Save button */}
                     <div

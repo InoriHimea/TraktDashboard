@@ -6,6 +6,7 @@ import { useWatchlist, useRemoveFromWatchlist } from "../hooks";
 import type { WatchlistShowItem, WatchlistMovieItem } from "@trakt-dashboard/types";
 import { tmdbImage } from "../lib/utils";
 import { t } from "../lib/i18n";
+import { useToast } from "../lib/toast";
 
 type FilterType = "all" | "shows" | "movies";
 
@@ -110,6 +111,7 @@ export default function WatchlistPage() {
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
     const [removingId, setRemovingId] = useState<number | null>(null);
+    const { toast } = useToast();
 
     useEffect(() => {
         const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 280);
@@ -131,6 +133,9 @@ export default function WatchlistPage() {
         setRemovingId(id);
         try {
             await removeFromWatchlist.mutateAsync(id);
+            toast(t("watchlist.removeSuccess"), "success");
+        } catch {
+            toast(t("watchlist.removeFailed"), "error");
         } finally {
             setRemovingId(null);
         }

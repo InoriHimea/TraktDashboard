@@ -89,6 +89,8 @@
   },
   "shows": {
     "markSeasonWatched": "标记整季已看",
+    "markSeasonWatchedSuccess": "已标记整季为已看",
+    "markSeasonWatchedError": "标记失败，请重试",
     "seasonLabel": "第 {{number}} 季",
     "specials": "特别篇",
     "episodeCount": "{{watched}}/{{total}} 集"
@@ -106,6 +108,8 @@
     "loadFailed": "加载待看列表失败。",
     "addedOn": "添加于 {{date}}",
     "removeFromWatchlist": "从待看列表移除",
-    "addToWatchlist": "添加到待看列表"
+    "addToWatchlist": "添加到待看列表",
+    "removeSuccess": "已从待看列表移除",
+    "removeFailed": "移除失败，请重试"
   }
 }

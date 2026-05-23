@@ -3,6 +3,8 @@ import { useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import TopNav from "./TopNav";
 import { useAuth, useLogout } from "../hooks";
+import { ToastProvider } from "../lib/toast";
+import { Toaster } from "./ui/Toaster";
 
 export default function Layout({ children }: { children: ReactNode }) {
     const location = useLocation();
@@ -10,6 +12,7 @@ export default function Layout({ children }: { children: ReactNode }) {
     const { mutate: logout } = useLogout();
 
     return (
+        <ToastProvider>
         // 1. 外层：加上 flex flex-col w-full 保证根节点满宽且向下排布
         <div
             className="flex flex-col w-full"
@@ -89,6 +92,8 @@ export default function Layout({ children }: { children: ReactNode }) {
                     </AnimatePresence>
                 </main>
             </div>
+            <Toaster />
         </div>
+        </ToastProvider>
     );
 }
