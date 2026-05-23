@@ -1,8 +1,8 @@
 import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, RefreshCw } from "lucide-react";
-import { useShowDetail, useResetProgress } from "../hooks";
+import { ArrowLeft, RefreshCw, CheckCheck, Loader2 } from "lucide-react";
+import { useShowDetail, useResetProgress, useMarkSeasonWatched } from "../hooks";
 import { HeroSection } from "../components/HeroSection";
 import { SeasonTab } from "../components/SeasonTab";
 import { EpisodeGrid } from "../components/EpisodeGrid";
@@ -96,6 +96,7 @@ export default function ShowDetailPage() {
     const episodesRef = useRef<HTMLDivElement>(null);
 
     const resetProgress = useResetProgress(isValidId ? showId : 0);
+    const markSeasonWatched = useMarkSeasonWatched(isValidId ? showId : 0);
 
     if (isLoading) return <PageSkeleton />;
     if (error) return <PageError onRetry={() => refetch()} />;
@@ -227,6 +228,38 @@ export default function ShowDetailPage() {
                                     }
                                 />
                             ))}
+                        </div>
+                    )}
+
+                    {/* 当前季操作栏 */}
+                    {currentSeason && (
+                        <div className="flex items-center justify-between mb-4">
+                            <span className="text-sm text-[var(--color-text-muted)]">
+                                {currentSeason.seasonNumber === 0
+                                    ? "Specials"
+                                    : `Season ${currentSeason.seasonNumber}`}
+                                {" · "}
+                                {currentSeason.watchedCount}/{currentSeason.airedCount} 集
+                            </span>
+                            {currentSeason.watchedCount < currentSeason.airedCount && (
+                                <button
+                                    onClick={() =>
+                                        markSeasonWatched.mutate({
+                                            season: currentSeason.seasonNumber,
+                                            watchedAt: null,
+                                        })
+                                    }
+                                    disabled={markSeasonWatched.isPending}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--color-accent)] text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
+                                >
+                                    {markSeasonWatched.isPending ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                        <CheckCheck className="w-3.5 h-3.5" />
+                                    )}
+                                    标记整季已看
+                                </button>
+                            )}
                         </div>
                     )}
 

@@ -84,6 +84,14 @@ export const api = {
             request<ApiResponse<ShowProgress>>(`/shows/${showId}/reset`, {
                 method: "POST",
             }),
+        markSeasonWatched: (showId: number, season: number, watchedAt?: string | null) =>
+            request<{ ok: boolean; marked: number; alreadyWatched: number }>(
+                `/shows/${showId}/seasons/${season}/mark-watched`,
+                {
+                    method: "POST",
+                    body: JSON.stringify({ watchedAt: watchedAt ?? null }),
+                },
+            ),
     },
     episodes: {
         detail: (showId: number, season: number, episode: number) =>

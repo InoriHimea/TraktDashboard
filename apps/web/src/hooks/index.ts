@@ -311,8 +311,19 @@ export function useDeleteMovieHistory(id: number) {
     });
 }
 
-// ─── Watchlist Hooks ─────────────────────────────────────────────────────────
+export function useMarkSeasonWatched(showId: number) {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ season, watchedAt }: { season: number; watchedAt?: string | null }) =>
+            api.shows.markSeasonWatched(showId, season, watchedAt),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["show-detail", showId] });
+            qc.invalidateQueries({ queryKey: ["shows-progress"] });
+        },
+    });
+}
 
+// ─── Watchlist Hooks ─────────────────────────────────────────────────────────
 export function useWatchlist(type?: "shows" | "movies") {
     return useQuery({
         queryKey: ["watchlist", type],

@@ -553,3 +553,62 @@ showRoutes.post('/:showId/reset', async (c) => {
     },
   })
 })
+
+// POST /api/shows/:showId/seasons/:season/mark-watched
+showRoutes.post('/:showId/seasons/:season/mark-watched', async (c) => {
+  const userId = c.get('userId')
+  const showId = parseBoundedInt(c.req.param('showId'), -1, 1, Number.MAX_SAFE_INTEGER)
+  const season = parseBoundedInt(c.req.param('season'), -1, 0, 1000)
+
+  if (showId < 1 || season < 0) {
+    return c.json({ error: 'Invalid parameters' }, 400)
+  }
+
+  const body = await c.req.json().catch(() => ({}))
+  const watchedAt: Date | null = body.watchedAt ? new Date(body.watchedAt) : null
+
+  const db = getDb()
+
+  // Get all episodes in the season
+  const seasonEpisodes = await db
+    .select({ id: episodes.id })
+    .from(episodes)
+    .where(and(eq(episodes.showId, showId), eq(episodes.seasonNumber, season)))
+
+  if (!seasonEpisodes.length) {
+    return c.json({ error: 'Season not found or has no episodes' }, 404)
+  }
+
+  // Find already-watched episode IDs
+  const alreadyWatched = await db
+    .select({ episodeId: watchHistory.episodeId })
+    .from(watchHistory)
+    .where(and(
+      eq(watchHistory.userId, userId),
+      eq(watchHistory.mediaType, 'episode'),
+    ))
+
+  const watchedSet = new Set(
+    alreadyWatched
+      .map(r => r.episodeId)
+      .filter((id): id is number => id != null)
+  )
+
+  // Only insert for unwatched episodes
+  const unwatched = seasonEpisodes.filter(e => !watchedSet.has(e.id))
+
+  if (unwatched.length > 0) {
+    await db.insert(watchHistory).values(
+      unwatched.map(e => ({
+        userId,
+        episodeId: e.id,
+        watchedAt,
+        source: 'manual' as const,
+      }))
+    )
+  }
+
+  await recalcShowProgress(userId, showId)
+
+  return c.json({ ok: true, marked: unwatched.length, alreadyWatched: watchedSet.size })
+})
