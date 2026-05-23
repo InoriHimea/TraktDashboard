@@ -23,6 +23,7 @@
     "progress": "Progress",
     "tvShows": "TV Shows",
     "movies": "Movies",
+    "watchlist": "Watchlist",
     "statistics": "Statistics",
     "sync": "Sync",
     "settings": "Settings"
@@ -85,5 +86,20 @@
     "loadFailed": "Failed to load episode details.",
     "notFound": "Episode not found.",
     "invalidParams": "Invalid episode link."
+  },
+  "watchlist": {
+    "title": "Watchlist",
+    "all": "All",
+    "shows": "Shows",
+    "movies": "Movies",
+    "empty": "Your watchlist is empty.",
+    "emptyHint": "Add shows and movies you want to watch.",
+    "searchPlaceholder": "Search watchlist…",
+    "count": "{{count}} items",
+    "loading": "Loading watchlist…",
+    "loadFailed": "Failed to load watchlist.",
+    "addedOn": "Added {{date}}",
+    "removeFromWatchlist": "Remove from Watchlist",
+    "addToWatchlist": "Add to Watchlist"
   }
 }

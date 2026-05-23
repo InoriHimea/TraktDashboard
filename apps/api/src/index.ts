@@ -10,6 +10,7 @@ import { statsRoutes } from "./routes/stats.js";
 import { settingsRoutes } from "./routes/settings.js";
 import { imgRoutes } from "./routes/img.js";
 import { traktRoutes } from "./routes/trakt.js";
+import { watchlistRoutes } from "./routes/watchlist.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { startScheduler } from "./jobs/scheduler.js";
 
@@ -40,6 +41,7 @@ api.route("/stats", statsRoutes);
 api.route("/settings", settingsRoutes);
 api.route("/img", imgRoutes);
 api.route("/trakt", traktRoutes);
+api.route("/watchlist", watchlistRoutes);
 
 app.route("/api", api);
 

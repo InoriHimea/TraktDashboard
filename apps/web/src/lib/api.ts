@@ -155,4 +155,21 @@ export const api = {
                 method: "DELETE",
             }),
     },
+    watchlist: {
+        list: (type?: "shows" | "movies") => {
+            const params = type ? `?type=${type}` : "";
+            return request<ApiResponse<(import("@trakt-dashboard/types").WatchlistShowItem | import("@trakt-dashboard/types").WatchlistMovieItem)[]>>(
+                `/watchlist${params}`,
+            );
+        },
+        add: (type: "show" | "movie", id: number, notes?: string) =>
+            request<ApiResponse<any>>("/watchlist", {
+                method: "POST",
+                body: JSON.stringify({ type, id, notes }),
+            }),
+        remove: (id: number) =>
+            request<{ ok: boolean }>(`/watchlist/${id}`, {
+                method: "DELETE",
+            }),
+    },
 };

@@ -326,3 +326,32 @@ export const watchResetCursors = pgTable(
         index("wrc_reset_at_idx").on(t.resetAt),
     ],
 );
+
+// ─── Watchlist ────────────────────────────────────────────────────────────────
+
+export const watchlist = pgTable(
+    "watchlist",
+    {
+        id: serial("id").primaryKey(),
+        userId: integer("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
+        showId: integer("show_id").references(() => shows.id, {
+            onDelete: "cascade",
+        }),
+        movieId: integer("movie_id").references(() => movies.id, {
+            onDelete: "cascade",
+        }),
+        addedAt: timestamp("added_at", { withTimezone: true })
+            .notNull()
+            .defaultNow(),
+        listedAt: timestamp("listed_at", { withTimezone: true }).notNull(),
+        notes: text("notes"),
+    },
+    (t) => [
+        uniqueIndex("watchlist_user_show_idx").on(t.userId, t.showId),
+        uniqueIndex("watchlist_user_movie_idx").on(t.userId, t.movieId),
+        index("watchlist_user_id_idx").on(t.userId),
+        index("watchlist_added_at_idx").on(t.addedAt),
+    ],
+);

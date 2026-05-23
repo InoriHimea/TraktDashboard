@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { BarChart3, Tv2, Film, RefreshCw, Settings, LogOut } from 'lucide-react'
+import { BarChart3, Tv2, Film, RefreshCw, Settings, LogOut, Bookmark } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNowPlaying } from '../hooks/index'
 import { NowPlayingPopup } from './NowPlayingPopup'
@@ -13,11 +13,12 @@ interface TopNavProps {
 }
 
 const NAV = [
-  { to: '/tv-shows', icon: Tv2,       labelKey: 'nav.tvShows' },
-  { to: '/movies',   icon: Film,      labelKey: 'nav.movies' },
-  { to: '/stats',    icon: BarChart3, labelKey: 'nav.statistics' },
-  { to: '/sync',     icon: RefreshCw, labelKey: 'nav.sync' },
-  { to: '/settings', icon: Settings,  labelKey: 'nav.settings' },
+  { to: '/tv-shows',   icon: Tv2,       labelKey: 'nav.tvShows' },
+  { to: '/movies',     icon: Film,      labelKey: 'nav.movies' },
+  { to: '/watchlist',  icon: Bookmark,  labelKey: 'nav.watchlist' },
+  { to: '/stats',      icon: BarChart3, labelKey: 'nav.statistics' },
+  { to: '/sync',       icon: RefreshCw, labelKey: 'nav.sync' },
+  { to: '/settings',   icon: Settings,  labelKey: 'nav.settings' },
 ]
 
 export default function TopNav({ username, onLogout }: TopNavProps) {

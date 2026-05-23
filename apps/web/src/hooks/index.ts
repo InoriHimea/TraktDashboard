@@ -310,3 +310,34 @@ export function useDeleteMovieHistory(id: number) {
         },
     });
 }
+
+// ─── Watchlist Hooks ─────────────────────────────────────────────────────────
+
+export function useWatchlist(type?: "shows" | "movies") {
+    return useQuery({
+        queryKey: ["watchlist", type],
+        queryFn: () => api.watchlist.list(type).then((r) => r.data),
+        staleTime: 1000 * 60,
+    });
+}
+
+export function useAddToWatchlist() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ type, id, notes }: { type: "show" | "movie"; id: number; notes?: string }) =>
+            api.watchlist.add(type, id, notes),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["watchlist"] });
+        },
+    });
+}
+
+export function useRemoveFromWatchlist() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => api.watchlist.remove(id),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["watchlist"] });
+        },
+    });
+}

@@ -50,6 +50,13 @@
       "when": 1777221833217,
       "tag": "0006_add_original_language",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1779513617653,
+      "tag": "0007_glamorous_molten_man",
+      "breakpoints": true
     }
   ]
 }

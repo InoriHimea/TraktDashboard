@@ -293,6 +293,13 @@ export async function triggerFullSync(userId: number): Promise<void> {
             .where(eq(syncState.userId, userId));
         await syncMovies(userId);
 
+        // Sync watchlist after movies
+        await db
+            .update(syncState)
+            .set({ currentShow: "Syncing watchlist…", updatedAt: new Date() })
+            .where(eq(syncState.userId, userId));
+        await syncWatchlist(userId);
+
         await db
             .update(syncState)
             .set({
@@ -1487,6 +1494,117 @@ export async function syncMovies(userId: number): Promise<void> {
   })))
 
   console.log(`[sync:movies] Movie sync complete`)
+}
+
+// ─── Watchlist sync ───────────────────────────────────────────────────────────
+
+export async function syncWatchlist(userId: number): Promise<void> {
+    const db = getDb();
+    const trakt = getTraktClient();
+
+    console.log(`[sync:watchlist] Starting watchlist sync for user ${userId}`);
+
+    try {
+        // Fetch watchlist from Trakt
+        const [watchlistShows, watchlistMovies] = await Promise.all([
+            trakt.getWatchlistShows(userId),
+            trakt.getWatchlistMovies(userId),
+        ]);
+
+        console.log(
+            `[sync:watchlist] Found ${watchlistShows.length} shows, ${watchlistMovies.length} movies`,
+        );
+
+        // Import watchlist module
+        const { watchlist } = await import("@trakt-dashboard/db");
+
+        // Sync shows
+        for (const item of watchlistShows) {
+            const tmdbId = item.show.ids.tmdb;
+            if (!tmdbId) {
+                console.warn(
+                    `[sync:watchlist] Skipping show "${item.show.title}" — missing TMDB id`,
+                );
+                continue;
+            }
+
+            // Find show in database
+            const [show] = await db
+                .select({ id: shows.id })
+                .from(shows)
+                .where(eq(shows.tmdbId, tmdbId));
+
+            if (!show) {
+                console.warn(
+                    `[sync:watchlist] Show "${item.show.title}" not in database, skipping`,
+                );
+                continue;
+            }
+
+            // Insert or update watchlist entry
+            await db
+                .insert(watchlist)
+                .values({
+                    userId,
+                    showId: show.id,
+                    movieId: null,
+                    listedAt: new Date(item.listed_at),
+                })
+                .onConflictDoUpdate({
+                    target: [watchlist.userId, watchlist.showId],
+                    set: {
+                        listedAt: new Date(item.listed_at),
+                    },
+                });
+        }
+
+        // Sync movies
+        for (const item of watchlistMovies) {
+            const tmdbId = item.movie.ids.tmdb;
+            if (!tmdbId) {
+                console.warn(
+                    `[sync:watchlist] Skipping movie "${item.movie.title}" — missing TMDB id`,
+                );
+                continue;
+            }
+
+            // Find movie in database
+            const [movie] = await db
+                .select({ id: movies.id })
+                .from(movies)
+                .where(eq(movies.tmdbId, tmdbId));
+
+            if (!movie) {
+                console.warn(
+                    `[sync:watchlist] Movie "${item.movie.title}" not in database, skipping`,
+                );
+                continue;
+            }
+
+            // Insert or update watchlist entry
+            await db
+                .insert(watchlist)
+                .values({
+                    userId,
+                    showId: null,
+                    movieId: movie.id,
+                    listedAt: new Date(item.listed_at),
+                })
+                .onConflictDoUpdate({
+                    target: [watchlist.userId, watchlist.movieId],
+                    set: {
+                        listedAt: new Date(item.listed_at),
+                    },
+                });
+        }
+
+        console.log(`[sync:watchlist] Watchlist sync complete`);
+    } catch (e) {
+        console.error(
+            `[sync:watchlist] Failed to sync watchlist:`,
+            toErrorMessage(e),
+        );
+    }
 }
 
 // ─── Startup cleanup ──────────────────────────────────────────────────────────

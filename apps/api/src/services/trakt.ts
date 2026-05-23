@@ -154,6 +154,25 @@ export interface TraktWatchedMovie {
     last_updated_at: string | null;
 }
 
+export interface TraktWatchlistShow {
+    listed_at: string;
+    show: TraktShow;
+}
+
+export interface TraktWatchlistMovie {
+    listed_at: string;
+    movie: {
+        title: string;
+        year: number | null;
+        ids: {
+            trakt: number;
+            slug: string;
+            imdb: string | null;
+            tmdb: number | null;
+        };
+    };
+}
+
 export interface TraktShowProgress {
     aired: number;
     completed: number;
@@ -303,6 +322,7 @@ export function getTraktClient() {
         path: string,
         userId: number,
         params?: Record<string, string>,
+        init?: RequestInit,
     ): Promise<{ data: any; headers: Headers }> {
         const db = getDb();
         const [user] = await db
@@ -326,11 +346,13 @@ export function getTraktClient() {
 
         // Task 8.2: Use fetchWithRetry
         const res = await fetchWithRetry(url.toString(), {
+            ...init,
             headers: {
                 Authorization: `Bearer ${token}`,
                 "trakt-api-version": "2",
                 "trakt-api-key": clientId,
                 "Content-Type": "application/json",
+                ...(init?.headers as Record<string, string> | undefined),
             },
         });
 
@@ -557,6 +579,51 @@ export function getTraktClient() {
                 );
                 return null; // Degradation
             }
+        },
+
+        // Watchlist methods
+        getWatchlistShows: (userId: number) =>
+            traktFetch<TraktWatchlistShow[]>("/sync/watchlist/shows", userId),
+
+        getWatchlistMovies: (userId: number) =>
+            traktFetch<TraktWatchlistMovie[]>("/sync/watchlist/movies", userId),
+
+        addToWatchlist: async (
+            userId: number,
+            type: "shows" | "movies",
+            ids: { trakt?: number; tmdb?: number; imdb?: string },
+        ): Promise<void> => {
+            await traktFetchRaw(
+                "/sync/watchlist",
+                userId,
+                undefined,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        [type]: [{ ids }],
+                    }),
+                },
+            );
+        },
+
+        removeFromWatchlist: async (
+            userId: number,
+            type: "shows" | "movies",
+            ids: { trakt?: number; tmdb?: number; imdb?: string },
+        ): Promise<void> => {
+            await traktFetchRaw(
+                "/sync/watchlist/remove",
+                userId,
+                undefined,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        [type]: [{ ids }],
+                    }),
+                },
+            );
         },
     };
 }

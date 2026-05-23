@@ -324,3 +324,33 @@ export interface MovieWatchHistoryEntry {
   watchedAt: string | null
   source: string
 }
+
+// ─── Watchlist ────────────────────────────────────────────────────────────────
+
+export interface WatchlistItem {
+  id: number
+  userId: number
+  showId: number | null
+  movieId: number | null
+  addedAt: string
+  listedAt: string
+  notes: string | null
+}
+
+export interface WatchlistShowItem {
+  id: number
+  show: Show
+  addedAt: string
+  listedAt: string
+  notes: string | null
+}
+
+export interface WatchlistMovieItem {
+  id: number
+  movie: Movie
+  addedAt: string
+  listedAt: string
+  notes: string | null
+}
+
+export type WatchlistItemWithMedia = WatchlistShowItem | WatchlistMovieItem

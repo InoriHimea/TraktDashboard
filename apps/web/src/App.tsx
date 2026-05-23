@@ -13,6 +13,7 @@ import StatsPage from "./pages/StatsPage";
 import SyncPage from "./pages/SyncPage";
 import SettingsPage from "./pages/SettingsPage";
 import LoginPage from "./pages/LoginPage";
+import WatchlistPage from "./pages/WatchlistPage";
 
 // Error Boundary component
 class ErrorBoundary extends React.Component<
@@ -139,6 +140,7 @@ export default function App() {
                                 <Route path="/movies" element={<MoviesPage />} />
                                 <Route path="/movies/:id" element={<MovieDetailPage />} />
                                 <Route path="/shows/:id" element={<ShowDetailPage />} />
+                                <Route path="/watchlist" element={<WatchlistPage />} />
                                 <Route path="/stats" element={<StatsPage />} />
                                 <Route path="/sync" element={<SyncPage />} />
                                 <Route path="/settings" element={<SettingsPage />} />
