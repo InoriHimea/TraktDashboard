@@ -1,3 +1,4 @@
+import { useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Loader2, RefreshCw, Search, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -51,6 +52,23 @@ export function MediaListPage<T>({
     importHint,
     renderItem,
 }: MediaListPageProps<T>) {
+    const searchRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => {
+            if (e.key === "/" && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
+                e.preventDefault();
+                searchRef.current?.focus();
+            }
+            if (e.key === "Escape" && document.activeElement === searchRef.current) {
+                onSearchChange("");
+                searchRef.current?.blur();
+            }
+        };
+        window.addEventListener("keydown", handler);
+        return () => window.removeEventListener("keydown", handler);
+    }, [onSearchChange]);
+
     return (
         <div className="min-h-screen bg-[var(--color-bg)]">
             <div className="sticky top-[56px] z-30 bg-[var(--color-bg)] border-b border-[var(--color-border-subtle)] backdrop-blur-xl">
@@ -82,6 +100,7 @@ export function MediaListPage<T>({
                     <div className="flex items-center gap-2 flex-1 max-w-[320px] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-md)] px-3 py-1.5">
                         <Search size={13} className="text-[var(--color-text-muted)] shrink-0" />
                         <input
+                            ref={searchRef}
                             type="text"
                             placeholder={searchPlaceholder}
                             value={search}
