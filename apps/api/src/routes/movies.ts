@@ -2,6 +2,12 @@ import { Hono } from 'hono'
 import { getDb, movies, watchHistory, userMovieProgress } from '@trakt-dashboard/db'
 import { eq, and, desc, sql, gt, like } from 'drizzle-orm'
 import type { MovieProgress, MovieWatchHistoryEntry } from '@trakt-dashboard/types'
+import { z } from 'zod'
+import { validateBody } from '../lib/validate.js'
+
+const watchedAtSchema = z.object({
+    watchedAt: z.string().datetime({ offset: true }).nullable().optional(),
+})
 
 export const movieRoutes = new Hono<{ Variables: { userId: number } }>()
 
@@ -172,8 +178,9 @@ movieRoutes.post('/:id/watch', async (c) => {
   const [movie] = await db.select().from(movies).where(eq(movies.id, movieId))
   if (!movie) return c.json({ error: 'Movie not found' }, 404)
 
-  const body = await c.req.json()
-  const watchedAt: string | null = body.watchedAt ?? null
+  const validated = await validateBody(c, watchedAtSchema)
+  if (validated instanceof Response) return validated
+  const watchedAt: string | null = validated.data.watchedAt ?? null
 
   const [result] = await db.insert(watchHistory).values({
     userId,

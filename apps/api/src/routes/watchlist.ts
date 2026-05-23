@@ -1,6 +1,14 @@
 import { Hono } from "hono";
 import { getDb, watchlist, shows, movies } from "@trakt-dashboard/db";
 import { eq, and, desc, isNotNull } from "drizzle-orm";
+import { z } from "zod";
+import { validateBody } from "../lib/validate";
+
+const addSchema = z.object({
+    type: z.enum(["show", "movie"]),
+    id: z.number().int().positive(),
+    notes: z.string().max(500).optional(),
+});
 
 export const watchlistRoutes = new Hono<{ Variables: { userId: number } }>();
 
@@ -58,10 +66,9 @@ watchlistRoutes.get("/", async (c) => {
 // POST /api/watchlist
 watchlistRoutes.post("/", async (c) => {
     const userId = c.get("userId");
-    const body = await c.req.json();
-    const { type, id, notes } = body as { type: "show" | "movie"; id: number; notes?: string };
-
-    if (!type || !id) return c.json({ error: "Missing type or id" }, 400);
+    const validated = await validateBody(c, addSchema);
+    if (validated instanceof Response) return validated;
+    const { type, id, notes } = validated.data;
 
     const db = getDb();
     try {

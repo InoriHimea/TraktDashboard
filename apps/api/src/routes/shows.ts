@@ -3,6 +3,12 @@ import { getDb, shows, seasons, episodes, watchHistory, userShowProgress, watchR
 import { eq, and, desc, asc, sql, like, or, gt, isNull } from 'drizzle-orm'
 import type { ShowProgress, SeasonProgress, EpisodeProgress, ShowStatus } from '@trakt-dashboard/types'
 import { getTmdbEpisodeDetail } from '../services/tmdb.js'
+import { z } from 'zod'
+import { validateBody } from '../lib/validate.js'
+
+const watchedAtSchema = z.object({
+    watchedAt: z.string().datetime({ offset: true }).nullable().optional(),
+})
 import { getTraktClient } from '../services/trakt.js'
 import { recalcShowProgress, computeWatchedEpisodes } from '../services/sync.js'
 
@@ -365,8 +371,9 @@ showRoutes.post('/:showId/episodes/:season/:episode/watch', async (c) => {
     return c.json({ error: 'Invalid parameters' }, 400)
   }
 
-  const body = await c.req.json()
-  const watchedAt = body.watchedAt  // string | null
+  const validated = await validateBody(c, watchedAtSchema)
+  if (validated instanceof Response) return validated
+  const watchedAt = validated.data.watchedAt ?? null
 
   const db = getDb()
   
@@ -564,8 +571,9 @@ showRoutes.post('/:showId/seasons/:season/mark-watched', async (c) => {
     return c.json({ error: 'Invalid parameters' }, 400)
   }
 
-  const body = await c.req.json().catch(() => ({}))
-  const watchedAt: Date | null = body.watchedAt ? new Date(body.watchedAt) : null
+  const validated = await validateBody(c, watchedAtSchema)
+  if (validated instanceof Response) return validated
+  const watchedAt: Date | null = validated.data.watchedAt ? new Date(validated.data.watchedAt) : null
 
   const db = getDb()
 
