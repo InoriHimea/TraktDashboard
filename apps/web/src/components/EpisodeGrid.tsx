@@ -89,7 +89,7 @@ function EpisodeThumbnail({ episode, index, seasonNumber, showId, backdropPath }
         'shrink-0 snap-start flex flex-col gap-2 group',
         isUnaired ? 'opacity-40 cursor-default' : 'cursor-pointer',
       ].join(' ')}
-      style={{ width: '260px' }}
+      style={{ width: '260px', height: '198px' }}
       onClick={handleClick}
     >
       {/* 缩略图 */}
@@ -158,9 +158,9 @@ function EpisodeThumbnail({ episode, index, seasonNumber, showId, backdropPath }
       </div>
 
       {/* 标题 */}
-      <div className="flex flex-col gap-0.5 px-0.5">
+      <div className="flex flex-col gap-0.5 px-0.5 h-[42px]">
         <p className={[
-          'text-[12px] font-medium leading-snug line-clamp-2 transition-colors',
+          'text-[12px] font-medium leading-snug line-clamp-2 min-h-[32px] transition-colors',
           isWatched
             ? 'text-[var(--color-text-muted)]'
             : 'text-[var(--color-text-secondary)] group-hover:text-[var(--color-text)]',

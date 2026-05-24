@@ -26,17 +26,11 @@ const SHOW_TIMEOUT_MS = 90_000;
 
 // ─── Language fallback chain builder ─────────────────────────────────────────
 //
-// Fallback order:
-//   1. All variants of the user's locale language family
-//      e.g. zh-TW → [zh-TW, zh-HK, zh-SG, zh-CN]
-//           en-US → [en-US, en-GB, en]
-//   2. The show's original language (e.g. "ja" for anime → [ja-JP, ja])
-//   3. English fallback [en-US, en-GB, en]
-//   4. (UI fallback: "第 X 集" — handled in resolveEpisodeTitle, not here)
+// Fallback order: user locale → zh-TW → zh-SG → zh-HK → zh-CN → en-US → original language.
 //
 // All known variants per language family:
 const LANGUAGE_FAMILY_VARIANTS: Record<string, string[]> = {
-    zh: ['zh-TW', 'zh-HK', 'zh-SG', 'zh-CN', 'zh'],
+    zh: ['zh-TW', 'zh-SG', 'zh-HK', 'zh-CN', 'zh'],
     en: ['en-US', 'en-GB', 'en'],
     ja: ['ja-JP', 'ja'],
     ko: ['ko-KR', 'ko'],
@@ -82,30 +76,15 @@ export function buildLanguageFallbackChain(
 ): string[] {
     const chain: string[] = [];
 
-    // 1. User locale family variants
-    if (userLocale) {
-        const family = getLanguageFamily(userLocale);
-        const variants = LANGUAGE_FAMILY_VARIANTS[family] ?? [userLocale];
-        // Put the exact locale first, then the rest of the family
-        const ordered = [userLocale, ...variants.filter(v => v !== userLocale)];
-        chain.push(...ordered);
-    }
+    if (userLocale) chain.push(userLocale);
+    chain.push('zh-TW', 'zh-SG', 'zh-HK', 'zh-CN', 'en-US');
 
-    // 2. Show's original language family (skip if same family as user locale)
     if (originalLanguage) {
         const origFamily = originalLanguage.toLowerCase();
-        const userFamily = userLocale ? getLanguageFamily(userLocale) : null;
-        if (origFamily !== userFamily) {
-            const variants = LANGUAGE_FAMILY_VARIANTS[origFamily] ?? [`${origFamily}-${origFamily.toUpperCase()}`, origFamily];
-            chain.push(...variants);
-        }
+        const variants = LANGUAGE_FAMILY_VARIANTS[origFamily] ?? [`${origFamily}-${origFamily.toUpperCase()}`, origFamily];
+        chain.push(...variants);
     }
 
-    // 3. English fallback (skip if already covered)
-    const enVariants = LANGUAGE_FAMILY_VARIANTS['en']!;
-    chain.push(...enVariants);
-
-    // Deduplicate while preserving order
     return [...new Set(chain)];
 }
 
@@ -1387,6 +1366,17 @@ export async function syncMovies(userId: number): Promise<void> {
 
   console.log(`[sync:movies] Starting movie sync for user ${userId}`)
 
+  let displayLanguage: string | null = null
+  try {
+    const [settings] = await db
+      .select({ displayLanguage: userSettings.displayLanguage })
+      .from(userSettings)
+      .where(eq(userSettings.userId, userId))
+    displayLanguage = settings?.displayLanguage ?? null
+  } catch {
+    displayLanguage = null
+  }
+
   let watchedMovies: import('./trakt.js').TraktWatchedMovie[]
   try {
     watchedMovies = await trakt.getWatchedMovies(userId)
@@ -1401,7 +1391,7 @@ export async function syncMovies(userId: number): Promise<void> {
 
   await Promise.all(watchedMovies.map(wm => limit(async () => {
     const tmdbId = wm.movie.ids.tmdb
-    const title = wm.movie.title
+    let title = wm.movie.title
 
     if (!tmdbId) {
       console.warn(`[sync:movies] Skipping "${title}" — missing TMDB id`)
@@ -1418,13 +1408,36 @@ export async function syncMovies(userId: number): Promise<void> {
       let genres: string[] = []
 
       try {
-        const tmdbMovie = await getTmdbMovie(tmdbId, userId)
-        posterPath = tmdbMovie.poster_path || null
-        backdropPath = tmdbMovie.backdrop_path || null
-        overview = tmdbMovie.overview || null
-        releaseDate = tmdbMovie.release_date || null
-        runtime = tmdbMovie.runtime || null
-        genres = tmdbMovie.genres?.map(g => g.name) || []
+        const baseMovie = await getTmdbMovie(tmdbId, userId)
+        let selectedMovie = baseMovie
+        let localizedTitle: string | null = null
+        let localizedOverview: string | null = null
+
+        if (displayLanguage) {
+          for (const language of buildLanguageFallbackChain(displayLanguage, baseMovie.original_language)) {
+            try {
+              const candidate = await getTmdbMovie(tmdbId, userId, language)
+              if (!localizedTitle && candidate.title?.trim() && candidate.title !== baseMovie.original_title) {
+                localizedTitle = candidate.title.trim()
+              }
+              if (!localizedOverview && candidate.overview?.trim()) {
+                localizedOverview = candidate.overview.trim()
+                selectedMovie = candidate
+              }
+              if (localizedTitle && localizedOverview) break
+            } catch {
+              continue
+            }
+          }
+        }
+
+        title = localizedTitle || baseMovie.title || title
+        posterPath = selectedMovie.poster_path || baseMovie.poster_path || null
+        backdropPath = selectedMovie.backdrop_path || baseMovie.backdrop_path || null
+        overview = localizedOverview || baseMovie.overview || null
+        releaseDate = selectedMovie.release_date || baseMovie.release_date || null
+        runtime = selectedMovie.runtime ?? baseMovie.runtime ?? null
+        genres = (selectedMovie.genres?.length ? selectedMovie.genres : baseMovie.genres)?.map(g => g.name) || []
       } catch (e) {
         console.warn(`[sync:movies] TMDB fetch failed for "${title}" (tmdb:${tmdbId}): ${toErrorMessage(e)}`)
       }
@@ -1475,16 +1488,28 @@ export async function syncMovies(userId: number): Promise<void> {
         },
       })
 
-      // Insert last_watched_at as a watch history entry (dedup by userId+movieId+watchedAt)
       if (wm.last_watched_at) {
-        await db.insert(watchHistory).values({
-          userId,
-          movieId: movie.id,
-          episodeId: null,
-          mediaType: 'movie',
-          watchedAt: new Date(wm.last_watched_at),
-          source: 'trakt',
-        }).onConflictDoNothing()
+        const watchedAt = new Date(wm.last_watched_at)
+        const [existing] = await db.select({ id: watchHistory.id })
+          .from(watchHistory)
+          .where(and(
+            eq(watchHistory.userId, userId),
+            eq(watchHistory.movieId, movie.id),
+            eq(watchHistory.mediaType, 'movie'),
+            eq(watchHistory.watchedAt, watchedAt),
+            eq(watchHistory.source, 'trakt'),
+          ))
+
+        if (!existing) {
+          await db.insert(watchHistory).values({
+            userId,
+            movieId: movie.id,
+            episodeId: null,
+            mediaType: 'movie',
+            watchedAt,
+            source: 'trakt',
+          })
+        }
       }
 
       console.log(`[sync:movies] Synced "${title}"`)

@@ -1,15 +1,24 @@
 import type { ReactNode } from "react";
+import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import TopNav from "./TopNav";
-import { useAuth, useLogout } from "../hooks";
+import { useAuth, useLogout, useSettings } from "../hooks";
 import { ToastProvider } from "../lib/toast";
 import { Toaster } from "./ui/Toaster";
+import { setLocale } from "../lib/i18n";
 
 export default function Layout({ children }: { children: ReactNode }) {
     const location = useLocation();
     const { data: auth } = useAuth();
     const { mutate: logout } = useLogout();
+    const { data: settings } = useSettings();
+
+    useEffect(() => {
+        if (settings?.displayLanguage) {
+            setLocale(settings.displayLanguage);
+        }
+    }, [settings?.displayLanguage]);
 
     return (
         <ToastProvider>

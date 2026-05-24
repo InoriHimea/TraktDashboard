@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { getDb, movies, watchHistory, userMovieProgress } from '@trakt-dashboard/db'
-import { eq, and, desc, sql, gt, like } from 'drizzle-orm'
+import { eq, and, desc, sql, gt, like, isNull } from 'drizzle-orm'
 import type { MovieProgress, MovieWatchHistoryEntry } from '@trakt-dashboard/types'
 import { z } from 'zod'
 import { validateBody } from '../lib/validate.js'
@@ -22,7 +22,7 @@ async function recalcMovieProgress(userId: number, movieId: number): Promise<voi
   const db = getDb()
   const [{ count, lastWatched }] = await db
     .select({
-      count: sql<number>`count(*)`,
+      count: sql<number>`count(distinct (${watchHistory.movieId}, ${watchHistory.watchedAt}, ${watchHistory.source}))`,
       lastWatched: sql<Date | null>`max(watched_at)`,
     })
     .from(watchHistory)
@@ -145,7 +145,7 @@ movieRoutes.get('/:id/history', async (c) => {
   const db = getDb()
 
   const history = await db.select({
-    id: watchHistory.id,
+    id: sql<number>`min(${watchHistory.id})`,
     movieId: watchHistory.movieId,
     watchedAt: watchHistory.watchedAt,
     source: watchHistory.source,
@@ -156,7 +156,8 @@ movieRoutes.get('/:id/history', async (c) => {
       eq(watchHistory.movieId, movieId),
       eq(watchHistory.mediaType, 'movie'),
     ))
-    .orderBy(sql`watched_at DESC NULLS LAST`)
+    .groupBy(watchHistory.movieId, watchHistory.watchedAt, watchHistory.source)
+    .orderBy(sql`${watchHistory.watchedAt} DESC NULLS LAST`)
 
   const data: MovieWatchHistoryEntry[] = history.map(h => ({
     id: h.id,
@@ -181,13 +182,24 @@ movieRoutes.post('/:id/watch', async (c) => {
   const validated = await validateBody(c, watchedAtSchema)
   if (validated instanceof Response) return validated
   const watchedAt: string | null = validated.data.watchedAt ?? null
+  const watchedAtDate = watchedAt ? new Date(watchedAt) : null
 
-  const [result] = await db.insert(watchHistory).values({
+  const [existing] = await db.select({ id: watchHistory.id })
+    .from(watchHistory)
+    .where(and(
+      eq(watchHistory.userId, userId),
+      eq(watchHistory.movieId, movieId),
+      eq(watchHistory.mediaType, 'movie'),
+      watchedAtDate ? eq(watchHistory.watchedAt, watchedAtDate) : isNull(watchHistory.watchedAt),
+      eq(watchHistory.source, 'manual'),
+    ))
+
+  const [result] = existing ? [existing] : await db.insert(watchHistory).values({
     userId,
     episodeId: null,
     movieId,
     mediaType: 'movie',
-    watchedAt: watchedAt ? new Date(watchedAt) : null,
+    watchedAt: watchedAtDate,
     source: 'manual',
   }).returning({ id: watchHistory.id })
 
@@ -217,7 +229,13 @@ movieRoutes.delete('/:id/history/:historyId', async (c) => {
 
   if (!record) return c.json({ error: 'History record not found' }, 404)
 
-  await db.delete(watchHistory).where(eq(watchHistory.id, historyId))
+  await db.delete(watchHistory).where(and(
+    eq(watchHistory.userId, userId),
+    eq(watchHistory.movieId, movieId),
+    eq(watchHistory.mediaType, 'movie'),
+    record.watchedAt ? eq(watchHistory.watchedAt, record.watchedAt) : isNull(watchHistory.watchedAt),
+    eq(watchHistory.source, record.source),
+  ))
 
   await recalcMovieProgress(userId, movieId)
 

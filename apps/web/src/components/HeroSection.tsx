@@ -62,7 +62,7 @@ export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetCli
     }, []);
 
     return (
-        <div className="w-full max-w-[1200px] mx-auto px-6 lg:px-10 pt-8 pb-4">
+        <div className="w-full max-w-none px-0 pt-8 pb-4">
             <div
                 className="flex flex-col lg:flex-row items-start relative"
                 style={{ gap: "40px" }}

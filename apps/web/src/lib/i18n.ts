@@ -18,10 +18,16 @@ type Translations = typeof zhCN;
 
 const translations: Record<string, Translations> = {
     "zh-CN": zhCN,
-    "zh-TW": zhCN, // Fallback to zh-CN for Traditional Chinese
+    "zh-HK": zhCN,
+    "zh-SG": zhCN,
+    "zh-TW": zhCN,
     "en-US": enUS,
     "en": enUS,
 };
+
+function localeFallbacks(locale: string): string[] {
+    return [locale, "zh-TW", "zh-SG", "zh-HK", "zh-CN", "en-US"];
+}
 
 let currentLocale = "zh-CN";
 
@@ -38,10 +44,15 @@ function getNestedValue(obj: any, path: string): string | undefined {
 }
 
 export function t(key: TranslationKey, params?: Record<string, string | number>): string {
-    const localeData = translations[currentLocale] || translations["zh-CN"];
-    let text = getNestedValue(localeData, key) || key;
+    let text = key;
+    for (const locale of localeFallbacks(currentLocale)) {
+        const value = getNestedValue(translations[locale], key);
+        if (value) {
+            text = value;
+            break;
+        }
+    }
 
-    // Replace {{param}} with actual values
     if (params) {
         Object.entries(params).forEach(([k, v]) => {
             text = text.replace(new RegExp(`{{${k}}}`, "g"), String(v));

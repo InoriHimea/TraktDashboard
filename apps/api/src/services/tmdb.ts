@@ -146,6 +146,7 @@ export interface TmdbMovie {
     id: number;
     title: string;
     original_title: string;
+    original_language: string;
     overview: string | null;
     release_date: string | null;
     runtime: number | null;
