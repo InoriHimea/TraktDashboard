@@ -59,6 +59,7 @@ export default function MoviesPage() {
             renderItem={(progress, i) => (
                 <MovieCard key={progress.movie.id} movie={progress} index={i} />
             )}
+            hideFilters
         />
     );
 }

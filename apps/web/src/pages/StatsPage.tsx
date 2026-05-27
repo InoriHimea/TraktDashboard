@@ -17,6 +17,8 @@ import {
     TrendingUp,
     Star,
     Loader2,
+    Film,
+    PieChart,
 } from "lucide-react";
 import { useStats } from "../hooks";
 import { tmdbImage } from "../lib/utils";
@@ -92,10 +94,10 @@ function StatCard({
                 border: CARD_BDR,
                 borderRadius: "16px",
                 boxShadow: CARD_SHD,
-                padding: "24px",
+                padding: "16px",
                 display: "flex",
                 flexDirection: "column",
-                gap: "16px",
+                gap: "12px",
                 borderLeft: `3px solid ${color.base}`,
             }}
         >
@@ -130,7 +132,7 @@ function StatCard({
             <div>
                 <div
                     style={{
-                        fontSize: "38px",
+                        fontSize: "30px",
                         fontWeight: 800,
                         color: color.light,
                         letterSpacing: "-0.05em",
@@ -253,6 +255,17 @@ export default function StatsPage() {
 
     const totalHours = Math.floor(stats.totalRuntimeMinutes / 60);
     const totalDays = (stats.totalRuntimeMinutes / (60 * 24)).toFixed(1);
+    const episodeHours = Math.floor((stats.totalEpisodeRuntimeMinutes ?? stats.totalRuntimeMinutes) / 60);
+    const movieHours = Math.floor((stats.totalMovieRuntimeMinutes ?? 0) / 60);
+    const totalEntries = stats.totalEpisodesWatched + (stats.totalMovieWatches ?? 0);
+    const completionRate = stats.totalShowsWatched > 0
+        ? Math.round((stats.totalShowsCompleted / stats.totalShowsWatched) * 100)
+        : 0;
+    const mediaBreakdown = [
+        { label: "剧集", value: stats.totalEpisodesWatched, color: COLORS.violet },
+        { label: "电影", value: stats.totalMovieWatches ?? 0, color: COLORS.rose },
+    ];
+    const maxMedia = Math.max(...mediaBreakdown.map((d) => d.value), 1);
 
     const chartData = (() => {
         const months: { month: string; count: number }[] = [];
@@ -372,7 +385,7 @@ export default function StatsPage() {
                 <div
                     style={{
                         display: "grid",
-                        gridTemplateColumns: "320px 1fr",
+                        gridTemplateColumns: "360px minmax(0, 1fr)",
                         gap: "24px",
                         alignItems: "start",
                     }}
@@ -386,42 +399,120 @@ export default function StatsPage() {
                         }}
                     >
                         {/* KPI cards */}
-                        <StatCard
-                            label="观看集数"
-                            value={stats.totalEpisodesWatched.toLocaleString(
-                                "zh-CN",
-                            )}
-                            icon={Tv2}
-                            delay={0}
-                            color={COLORS.violet}
-                        />
-                        <StatCard
-                            label="已看剧集"
-                            value={stats.totalShowsWatched.toLocaleString(
-                                "zh-CN",
-                            )}
-                            icon={Star}
-                            sub={`其中 ${stats.totalShowsCompleted} 部已完结`}
-                            delay={0.07}
-                            color={COLORS.sky}
-                        />
-                        <StatCard
-                            label="观看时长"
-                            value={`${totalHours.toLocaleString("zh-CN")}h`}
-                            icon={Clock}
-                            sub={`相当于 ${totalDays} 天`}
-                            delay={0.14}
-                            color={COLORS.amber}
-                        />
-                        <StatCard
-                            label="完成剧集"
-                            value={stats.totalShowsCompleted.toLocaleString(
-                                "zh-CN",
-                            )}
-                            icon={CheckCircle2}
-                            delay={0.21}
-                            color={COLORS.emerald}
-                        />
+                        <div
+                            style={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                                gap: "12px",
+                            }}
+                        >
+                            <StatCard
+                                label="剧集"
+                                value={stats.totalEpisodesWatched.toLocaleString("zh-CN")}
+                                icon={Tv2}
+                                sub={`${episodeHours.toLocaleString("zh-CN")}h`}
+                                delay={0}
+                                color={COLORS.violet}
+                            />
+                            <StatCard
+                                label="电影"
+                                value={(stats.totalMoviesWatched ?? 0).toLocaleString("zh-CN")}
+                                icon={Film}
+                                sub={`${(stats.totalMovieWatches ?? 0).toLocaleString("zh-CN")} 次 · ${movieHours.toLocaleString("zh-CN")}h`}
+                                delay={0.05}
+                                color={COLORS.rose}
+                            />
+                            <StatCard
+                                label="时长"
+                                value={`${totalHours.toLocaleString("zh-CN")}h`}
+                                icon={Clock}
+                                sub={`${totalDays} 天`}
+                                delay={0.1}
+                                color={COLORS.amber}
+                            />
+                            <StatCard
+                                label="完成率"
+                                value={`${completionRate}%`}
+                                icon={CheckCircle2}
+                                sub={`${stats.totalShowsCompleted}/${stats.totalShowsWatched} 部剧`}
+                                delay={0.15}
+                                color={COLORS.emerald}
+                            />
+                        </div>
+
+                        {/* Media composition */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.4, delay: 0.38 }}
+                            style={{
+                                background: CARD_BG,
+                                border: CARD_BDR,
+                                borderRadius: "16px",
+                                boxShadow: CARD_SHD,
+                                padding: "18px",
+                            }}
+                        >
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    marginBottom: "16px",
+                                }}
+                            >
+                                <h3
+                                    style={{
+                                        fontSize: "15px",
+                                        fontWeight: 600,
+                                        color: T1,
+                                    }}
+                                >
+                                    媒体构成
+                                </h3>
+                                <span style={{ fontSize: "12px", color: T3 }}>
+                                    共 {totalEntries.toLocaleString("zh-CN")} 条
+                                </span>
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                                {mediaBreakdown.map((item) => (
+                                    <div key={item.label}>
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "space-between",
+                                                marginBottom: "8px",
+                                            }}
+                                        >
+                                            <span style={{ fontSize: "13px", color: T2 }}>{item.label}</span>
+                                            <span style={{ fontSize: "13px", color: T1, fontWeight: 600 }}>
+                                                {item.value.toLocaleString("zh-CN")}
+                                            </span>
+                                        </div>
+                                        <div
+                                            style={{
+                                                height: "8px",
+                                                borderRadius: "999px",
+                                                background: "var(--color-surface-3)",
+                                                overflow: "hidden",
+                                            }}
+                                        >
+                                            <motion.div
+                                                style={{
+                                                    height: "100%",
+                                                    borderRadius: "999px",
+                                                    background: `linear-gradient(90deg, ${item.color.base}, ${item.color.light})`,
+                                                }}
+                                                initial={{ width: 0 }}
+                                                animate={{ width: `${Math.round((item.value / maxMedia) * 100)}%` }}
+                                                transition={{ duration: 0.8, delay: 0.45 }}
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </motion.div>
 
                         {/* Top genres */}
                         {stats.topGenres?.length > 0 && (
@@ -695,7 +786,7 @@ export default function StatsPage() {
                                     style={{
                                         display: "flex",
                                         flexDirection: "column",
-                                        gap: "20px",
+                                        gap: "14px",
                                     }}
                                 >
                                     {stats.recentlyWatched
@@ -730,13 +821,13 @@ export default function StatsPage() {
                                                         style={{
                                                             position:
                                                                 "relative",
-                                                            width: "320px",
-                                                            height: "180px",
+                                                            width: "min(34vw, 240px)",
+                                                            aspectRatio: "16 / 9",
                                                             borderRadius: "12px",
                                                             overflow: "hidden",
                                                             background:
                                                                 "var(--color-surface-3)",
-                                                            flexShrink: 0,
+                                                            flexShrink: 1,
                                                             outline:
                                                                 "1px solid var(--color-border)",
                                                         }}
@@ -932,6 +1023,82 @@ export default function StatsPage() {
                                                 </motion.div>
                                             ),
                                         )}
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {stats.recentlyWatchedMovies?.length > 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 16 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.4, delay: 0.36 }}
+                                style={{
+                                    background: CARD_BG,
+                                    border: CARD_BDR,
+                                    borderRadius: "16px",
+                                    boxShadow: CARD_SHD,
+                                    padding: "24px",
+                                }}
+                            >
+                                <h3
+                                    style={{
+                                        fontSize: "15px",
+                                        fontWeight: 600,
+                                        color: T1,
+                                        marginBottom: "20px",
+                                    }}
+                                >
+                                    最近电影
+                                </h3>
+                                <div
+                                    style={{
+                                        display: "grid",
+                                        gridTemplateColumns: "repeat(auto-fill, minmax(96px, 1fr))",
+                                        gap: "12px",
+                                    }}
+                                >
+                                    {stats.recentlyWatchedMovies.slice(0, 8).map((movie) => (
+                                        <div key={`${movie.movieId}-${movie.watchedAt}`} style={{ minWidth: 0 }}>
+                                            <div
+                                                style={{
+                                                    aspectRatio: "2 / 3",
+                                                    borderRadius: "12px",
+                                                    overflow: "hidden",
+                                                    background: "var(--color-surface-3)",
+                                                    border: "1px solid var(--color-border-subtle)",
+                                                    marginBottom: "8px",
+                                                }}
+                                            >
+                                                {movie.posterPath ? (
+                                                    <img
+                                                        src={tmdbImage(movie.posterPath, "w342")!}
+                                                        alt=""
+                                                        loading="lazy"
+                                                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                                    />
+                                                ) : (
+                                                    <div style={{ display: "grid", placeItems: "center", height: "100%" }}>
+                                                        <Film size={22} color="var(--color-text-muted)" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <p
+                                                style={{
+                                                    fontSize: "12px",
+                                                    color: T1,
+                                                    fontWeight: 600,
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    whiteSpace: "nowrap",
+                                                }}
+                                            >
+                                                {movie.movieTitle}
+                                            </p>
+                                            <span style={{ fontSize: "11px", color: T3 }}>
+                                                {fmtDateZh(movie.watchedAt)}
+                                            </span>
+                                        </div>
+                                    ))}
                                 </div>
                             </motion.div>
                         )}

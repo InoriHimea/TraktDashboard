@@ -13,7 +13,7 @@ interface MovieCardProps {
 
 export function MovieCard({ movie, index }: MovieCardProps) {
     const { movie: movieData, watchCount, lastWatchedAt } = movie;
-    const poster = tmdbImage(movieData.posterPath, "w300");
+    const poster = tmdbImage(movieData.posterPath, "w500");
     const [imgError, setImgError] = useState(false);
 
     // Format last watched date
@@ -47,7 +47,7 @@ export function MovieCard({ movie, index }: MovieCardProps) {
                         boxShadow: "0 12px 40px rgba(0,0,0,0.5)",
                     }}
                     transition={{ duration: 0.15 }}
-                    className="rounded-xl overflow-hidden bg-[var(--color-surface)] border border-[var(--color-border-subtle)] cursor-pointer"
+                    className="overflow-hidden rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] shadow-lg shadow-black/10 cursor-pointer"
                 >
                     {/* Poster — 2:3 aspect ratio */}
                     <div className="relative aspect-[2/3] bg-[var(--color-surface-3)]">
@@ -95,7 +95,7 @@ export function MovieCard({ movie, index }: MovieCardProps) {
                     </div>
 
                     {/* Info section */}
-                    <div className="p-[10px_12px_12px]">
+                    <div className="p-[12px_14px_14px]">
                         {/* Title */}
                         <h3
                             className="truncate text-[13px] font-semibold text-[var(--color-text)] tracking-tight leading-tight mb-1"
@@ -117,7 +117,7 @@ export function MovieCard({ movie, index }: MovieCardProps) {
 
                         {/* Last watched date */}
                         {lastWatchedAt && (
-                            <div className="flex items-center justify-between mt-2">
+                            <div className="mt-2 flex flex-wrap items-center justify-between gap-1">
                                 <span className="text-[11px] text-[var(--color-text-muted)]">
                                     {t("movies.lastWatched")}
                                 </span>

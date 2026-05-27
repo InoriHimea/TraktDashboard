@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Tv2, Film, LayoutGrid, Trash2, Loader2 } from "lucide-react";
+import { Tv2, Film, LayoutGrid, Trash2, Loader2, Search } from "lucide-react";
 import { useWatchlist, useRemoveFromWatchlist } from "../hooks";
 import type { WatchlistShowItem, WatchlistMovieItem } from "@trakt-dashboard/types";
 import { tmdbImage } from "../lib/utils";
@@ -34,8 +34,8 @@ function WatchlistCard({
     const [imgError, setImgError] = useState(false);
     const isShow = isShowItem(item);
     const media = isShow ? item.show : item.movie;
-    const poster = tmdbImage(media.posterPath, "w300");
-    const href = isShow ? `/tv-shows/${media.id}` : `/movies/${media.id}`;
+    const poster = tmdbImage(media.posterPath, "w500");
+    const href = isShow ? `/shows/${media.id}` : `/movies/${media.id}`;
     const addedDate = new Date(item.addedAt).toLocaleDateString(undefined, {
         year: "numeric",
         month: "short",
@@ -47,10 +47,10 @@ function WatchlistCard({
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.04, duration: 0.25 }}
-            className="group relative rounded-xl overflow-hidden bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-accent)] transition-colors"
+            className="group relative overflow-hidden rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] shadow-lg shadow-black/10 transition-all hover:-translate-y-0.5 hover:border-[var(--color-accent)] hover:shadow-xl hover:shadow-black/20"
         >
             <Link to={href} className="block">
-                <div className="aspect-[2/3] relative overflow-hidden bg-[var(--color-surface-alt)]">
+                <div className="aspect-[2/3] relative overflow-hidden bg-[var(--color-surface-3)]">
                     {poster && !imgError ? (
                         <img
                             src={poster}
@@ -68,21 +68,23 @@ function WatchlistCard({
                         </div>
                     )}
                     <div className="absolute top-2 left-2">
-                        <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+                        <span
+                            className="inline-flex items-center gap-1 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white shadow-lg backdrop-blur-md"
                             style={{
-                                background: isShow ? "rgba(124,106,247,0.85)" : "rgba(16,185,129,0.85)",
-                                color: "#fff",
+                                background: isShow
+                                    ? "linear-gradient(135deg, rgba(124,106,247,0.9), rgba(124,106,247,0.45))"
+                                    : "linear-gradient(135deg, rgba(16,185,129,0.9), rgba(16,185,129,0.45))",
                             }}
                         >
                             {isShow ? t("watchlist.shows") : t("watchlist.movies")}
                         </span>
                     </div>
                 </div>
-                <div className="p-3">
-                    <h3 className="text-sm font-semibold text-[var(--color-text)] line-clamp-2 leading-snug">
+                <div className="min-h-[86px] p-3.5">
+                    <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-[var(--color-text)]">
                         {media.title}
                     </h3>
-                    <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                    <p className="mt-2 text-xs text-[var(--color-text-muted)]">
                         {t("watchlist.addedOn", { date: addedDate })}
                     </p>
                 </div>
@@ -93,7 +95,7 @@ function WatchlistCard({
                     onRemove(item.id);
                 }}
                 disabled={removing}
-                className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 disabled:opacity-50"
+                className="absolute right-2 top-2 rounded-full border border-white/10 bg-black/60 p-2 text-white opacity-0 shadow-lg backdrop-blur-md transition-opacity hover:bg-red-600 group-hover:opacity-100 disabled:opacity-50"
                 title={t("watchlist.removeFromWatchlist")}
             >
                 {removing ? (
@@ -143,44 +145,47 @@ export default function WatchlistPage() {
 
     return (
         <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
-            <div className="max-w-7xl mx-auto px-4 py-8">
+            <div className="mx-auto w-full max-w-none px-[3vw] py-8">
                 {/* Header */}
-                <div className="mb-6">
-                    <h1 className="text-2xl font-bold text-[var(--color-text)]">
+                <div className="mb-7 flex flex-col gap-2">
+                    <h1 className="text-[clamp(28px,4vw,52px)] font-bold leading-none tracking-[-0.045em] text-[var(--color-text)]">
                         {t("watchlist.title")}
                     </h1>
                     {filtered && (
-                        <p className="text-sm text-[var(--color-text-muted)] mt-1">
+                        <p className="text-sm text-[var(--color-text-muted)]">
                             {t("watchlist.count", { count: filtered.length })}
                         </p>
                     )}
                 </div>
 
                 {/* Filters + Search */}
-                <div className="flex flex-col sm:flex-row gap-3 mb-6">
-                    <div className="flex gap-2">
+                <div className="mb-7 flex flex-col gap-3 rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-2 shadow-lg shadow-black/10 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-wrap gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] p-1">
                         {FILTERS.map(({ key, labelKey, icon: Icon }) => (
                             <button
                                 key={key}
                                 onClick={() => setFilter(key)}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                                className={`inline-flex h-9 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors ${
                                     filter === key
-                                        ? "bg-[var(--color-accent)] text-white"
-                                        : "bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                                        ? "border-[var(--color-border-focus)] bg-[var(--color-accent-dim)] text-[var(--color-accent-light)]"
+                                        : "border-transparent text-[var(--color-text-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
                                 }`}
                             >
-                                <Icon className="w-4 h-4" />
+                                <Icon className="h-4 w-4" />
                                 {t(labelKey)}
                             </button>
                         ))}
                     </div>
-                    <input
-                        type="text"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder={t("watchlist.searchPlaceholder")}
-                        className="flex-1 px-3 py-1.5 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] text-sm text-[var(--color-text)] placeholder-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)]"
-                    />
+                    <label className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-surface-2)] px-3 py-2 text-sm text-[var(--color-text-muted)] sm:max-w-md">
+                        <Search className="h-4 w-4 shrink-0" />
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder={t("watchlist.searchPlaceholder")}
+                            className="min-w-0 flex-1 bg-transparent text-[var(--color-text)] placeholder-[var(--color-text-muted)] outline-none"
+                        />
+                    </label>
                 </div>
 
                 {/* Content */}
@@ -206,7 +211,7 @@ export default function WatchlistPage() {
                         <p className="text-sm">{t("watchlist.emptyHint")}</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-5">
                         {filtered.map((item, index) => (
                             <WatchlistCard
                                 key={item.id}

@@ -55,7 +55,7 @@ export function EpisodeSeasonStrip({
             <div
                 className={cn(
                     watched
-                        ? "episode-scrollbar flex gap-6 overflow-x-auto pb-6 scroll-smooth"
+                        ? "episode-scrollbar -mx-4 flex gap-6 overflow-x-auto px-4 pb-8 pt-3 scroll-smooth"
                         : "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4",
                 )}
             >
@@ -70,17 +70,16 @@ export function EpisodeSeasonStrip({
                             ref={isCurrent ? currentRef : null}
                             onClick={() => navigate(`/shows/${showId}/seasons/${seasonNumber}/episodes/${episode.episodeNumber}`)}
                             className={cn(
-                                "group cursor-pointer",
-                                watched && "flex-none w-[280px]",
+                                "group cursor-pointer rounded-2xl p-1",
+                                watched && "flex-none w-[300px]",
+                                isCurrent && "bg-[var(--color-accent)]/15 ring-2 ring-[var(--color-accent)]",
                                 !episode.aired && "opacity-60",
                             )}
                         >
                             <div
                                 className={cn(
                                     "relative mb-3 aspect-video overflow-hidden rounded-xl bg-zinc-900 shadow-xl",
-                                    isCurrent
-                                        ? "ring-2 ring-[var(--color-accent)] ring-offset-4 ring-offset-[var(--color-bg)]"
-                                        : "border border-white/5",
+                                    !isCurrent && "border border-white/5",
                                 )}
                             >
                                 {thumbUrl ? (
@@ -106,7 +105,7 @@ export function EpisodeSeasonStrip({
                             <div className="px-1">
                                 <h3
                                     className={cn(
-                                        "truncate text-sm font-bold transition-colors",
+                                        "line-clamp-2 min-h-[40px] text-sm font-bold leading-snug transition-colors",
                                         isCurrent
                                             ? "text-[var(--color-accent)]"
                                             : "text-foreground group-hover:text-[var(--color-accent)]",

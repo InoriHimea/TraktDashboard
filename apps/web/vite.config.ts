@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => {
         },
         server: {
             host: "0.0.0.0", // allow external access
-            port: 5173,
+            port: 5178,
             proxy: {
                 "/api": { target: apiBase, changeOrigin: true },
                 "/auth": { target: apiBase, changeOrigin: true },

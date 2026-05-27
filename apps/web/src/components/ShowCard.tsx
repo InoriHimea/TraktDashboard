@@ -27,7 +27,7 @@ export function ShowCard({ progress, index }: ShowCardProps) {
         completed,
         percentage,
     } = progress;
-    const poster = tmdbImage(show.posterPath, "w300");
+    const poster = tmdbImage(show.posterPath, "w500");
     const statusColor = STATUS_COLOR[show.status] || "var(--color-text-muted)";
     const [imgError, setImgError] = useState(false);
 
@@ -57,7 +57,7 @@ export function ShowCard({ progress, index }: ShowCardProps) {
                         boxShadow: "0 12px 40px rgba(0,0,0,0.5)",
                     }}
                     transition={{ duration: 0.15 }}
-                    className="rounded-xl overflow-hidden bg-[var(--color-surface)] border border-[var(--color-border-subtle)] cursor-pointer"
+                    className="overflow-hidden rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] shadow-lg shadow-black/10 cursor-pointer"
                 >
                     {/* Poster — 2:3 aspect ratio */}
                     <div className="relative aspect-[2/3] bg-[var(--color-surface-3)]">
@@ -109,7 +109,7 @@ export function ShowCard({ progress, index }: ShowCardProps) {
                     </div>
 
                     {/* Info section */}
-                    <div className="p-[10px_12px_12px]">
+                    <div className="p-[12px_14px_14px]">
                         {/* Primary title */}
                         <h3
                             className="truncate text-[13px] font-semibold text-[var(--color-text)] tracking-tight leading-tight"
@@ -155,17 +155,17 @@ export function ShowCard({ progress, index }: ShowCardProps) {
                         </div>
 
                         {/* Next episode */}
-                        {nextEpisode && !completed && (
-                            <div className="flex items-center justify-end mt-1.5">
-                                <span className="flex items-center gap-1 text-[10px] text-[var(--color-accent)]">
-                                    <PlayCircle size={10} />
+                        <div className="mt-1.5 flex min-h-4 items-center justify-end">
+                            {nextEpisode && !completed && (
+                                <span className="flex items-center gap-1 truncate text-[10px] leading-4 text-[var(--color-accent)]">
+                                    <PlayCircle size={10} className="shrink-0" />
                                     {formatEpisode(
                                         nextEpisode.seasonNumber,
                                         nextEpisode.episodeNumber,
                                     )}
                                 </span>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 </motion.div>
             </Link>

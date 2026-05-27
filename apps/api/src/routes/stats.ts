@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { getDb, watchHistory, episodes, shows, userShowProgress } from '@trakt-dashboard/db'
+import { getDb, watchHistory, episodes, shows, userShowProgress, movies, userMovieProgress } from '@trakt-dashboard/db'
 import { eq, and, sql, desc, gte } from 'drizzle-orm'
 
 export const statsRoutes = new Hono<{ Variables: { userId: number } }>()
@@ -22,10 +22,19 @@ statsRoutes.get('/overview', async (c) => {
     .where(and(eq(userShowProgress.userId, userId), eq(userShowProgress.completed, true)))
 
   // Total runtime in minutes
-  const [runtime] = await db.select({ total: sql<number>`sum(${episodes.runtime})` })
+  const [episodeRuntime] = await db.select({ total: sql<number>`sum(${episodes.runtime})` })
     .from(watchHistory)
     .innerJoin(episodes, eq(watchHistory.episodeId, episodes.id))
-    .where(eq(watchHistory.userId, userId))
+    .where(and(eq(watchHistory.userId, userId), eq(watchHistory.mediaType, 'episode')))
+
+  const [movieTotals] = await db.select({
+    totalMoviesWatched: sql<number>`count(distinct ${userMovieProgress.movieId})`,
+    totalMovieWatches: sql<number>`coalesce(sum(${userMovieProgress.watchCount}), 0)`,
+    totalMovieRuntimeMinutes: sql<number>`coalesce(sum(${movies.runtime} * ${userMovieProgress.watchCount}), 0)`,
+  })
+    .from(userMovieProgress)
+    .innerJoin(movies, eq(userMovieProgress.movieId, movies.id))
+    .where(and(eq(userMovieProgress.userId, userId), sql`${userMovieProgress.watchCount} > 0`))
 
   // Watch activity per month (last 12 months)
   const monthlyActivity = await db.select({
@@ -41,13 +50,18 @@ statsRoutes.get('/overview', async (c) => {
     .orderBy(sql`to_char(watched_at, 'YYYY-MM')`)
 
   // Top genres
-  const allProgress = await db.select({ genres: shows.genres })
+  const allShowProgress = await db.select({ genres: shows.genres })
     .from(userShowProgress)
     .innerJoin(shows, eq(userShowProgress.showId, shows.id))
     .where(eq(userShowProgress.userId, userId))
 
+  const allMovieProgress = await db.select({ genres: movies.genres })
+    .from(userMovieProgress)
+    .innerJoin(movies, eq(userMovieProgress.movieId, movies.id))
+    .where(and(eq(userMovieProgress.userId, userId), sql`${userMovieProgress.watchCount} > 0`))
+
   const genreCount: Record<string, number> = {}
-  for (const row of allProgress) {
+  for (const row of [...allShowProgress, ...allMovieProgress]) {
     for (const g of (row.genres as string[]) || []) {
       genreCount[g] = (genreCount[g] || 0) + 1
     }
@@ -71,19 +85,36 @@ statsRoutes.get('/overview', async (c) => {
     .from(watchHistory)
     .innerJoin(episodes, eq(watchHistory.episodeId, episodes.id))
     .innerJoin(shows, eq(episodes.showId, shows.id))
-    .where(eq(watchHistory.userId, userId))
+    .where(and(eq(watchHistory.userId, userId), eq(watchHistory.mediaType, 'episode')))
     .orderBy(desc(watchHistory.watchedAt))
     .limit(15)
+
+  const recentlyWatchedMovies = await db.select({
+    movieTitle: movies.title,
+    movieId: movies.id,
+    posterPath: movies.posterPath,
+    watchedAt: watchHistory.watchedAt,
+  })
+    .from(watchHistory)
+    .innerJoin(movies, eq(watchHistory.movieId, movies.id))
+    .where(and(eq(watchHistory.userId, userId), eq(watchHistory.mediaType, 'movie')))
+    .orderBy(desc(watchHistory.watchedAt))
+    .limit(10)
 
   return c.json({
     data: {
       totalEpisodesWatched: Number(totals?.totalWatched || 0),
       totalShowsWatched: Number(totals?.totalShows || 0),
       totalShowsCompleted: Number(completedCount?.count || 0),
-      totalRuntimeMinutes: Number(runtime?.total || 0),
+      totalMoviesWatched: Number(movieTotals?.totalMoviesWatched || 0),
+      totalMovieWatches: Number(movieTotals?.totalMovieWatches || 0),
+      totalRuntimeMinutes: Number(episodeRuntime?.total || 0) + Number(movieTotals?.totalMovieRuntimeMinutes || 0),
+      totalEpisodeRuntimeMinutes: Number(episodeRuntime?.total || 0),
+      totalMovieRuntimeMinutes: Number(movieTotals?.totalMovieRuntimeMinutes || 0),
       monthlyActivity: monthlyActivity.map(r => ({ month: r.month, count: Number(r.count) })),
       topGenres,
       recentlyWatched,
+      recentlyWatchedMovies,
     },
   })
 })

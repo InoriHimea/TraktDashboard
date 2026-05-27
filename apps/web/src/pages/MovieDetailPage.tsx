@@ -5,6 +5,25 @@ import { ArrowLeft, Film, Clock, Calendar, Eye, Trash2, RefreshCw, Loader2, Hist
 import { useMovieDetail, useMovieHistory, useMarkMovieWatched, useDeleteMovieHistory } from "../hooks";
 import { tmdbImage } from "../lib/utils";
 import { t } from "../lib/i18n";
+import { Button } from "../components/ui/Button";
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="flex items-start justify-between gap-4 border-b border-white/[0.04] pb-2 last:border-0 last:pb-0">
+            <span className="shrink-0 text-[var(--color-text-muted)]">{label}</span>
+            <span className="min-w-0 text-right font-medium text-[var(--color-text-secondary)] break-words">{value}</span>
+        </div>
+    );
+}
+
+function MetricTile({ label, value, tone = "text-[var(--color-text)]", wide = false }: { label: string; value: string; tone?: string; wide?: boolean }) {
+    return (
+        <div className={`rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-surface-2)] px-3 py-3 ${wide ? "col-span-2" : ""}`}>
+            <div className="mb-1 text-[11px] text-[var(--color-text-muted)]">{label}</div>
+            <div className={`truncate text-base font-bold ${tone}`}>{value}</div>
+        </div>
+    );
+}
 
 function PageSkeleton() {
     return (
@@ -35,7 +54,7 @@ export default function MovieDetailPage() {
     const markWatched = useMarkMovieWatched(isValidId ? movieId : 0);
     const deleteHistory = useDeleteMovieHistory(isValidId ? movieId : 0);
 
-    const [activeTab, setActiveTab] = useState<"overview" | "history">("overview");
+    const [activeTab, setActiveTab] = useState<"details" | "history">("details");
     const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
     const [imgError, setImgError] = useState(false);
     const [backdropError, setBackdropError] = useState(false);
@@ -91,6 +110,22 @@ export default function MovieDetailPage() {
         });
     };
 
+    const formatDateOnly = (dateStr: string | null) => {
+        if (!dateStr) return null;
+        return new Date(dateStr).toLocaleDateString(undefined, {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+        });
+    };
+
+    const totalWatchMinutes = movie.runtime && watchCount > 0 ? movie.runtime * watchCount : null;
+    const formatMinutes = (minutes: number | null) => {
+        if (!minutes) return "—";
+        if (minutes < 60) return `${minutes} 分钟`;
+        return `${(minutes / 60).toFixed(minutes >= 600 ? 0 : 1)}h`;
+    };
+
     const handleMarkWatched = () => {
         markWatched.mutate(new Date().toISOString());
     };
@@ -116,12 +151,16 @@ export default function MovieDetailPage() {
             )}
 
             <div className="relative flex w-full max-w-none flex-col gap-8 px-[3vw] py-8">
-                <button
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="md"
+                    icon={<ArrowLeft size={14} />}
                     onClick={() => navigate(-1)}
-                    className="inline-flex w-fit items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-black/35 px-3 py-2 text-sm text-[var(--color-text-muted)] backdrop-blur transition-colors hover:text-[var(--color-text)]"
+                    className="w-fit"
                 >
-                    <ArrowLeft size={14} /> {t("common.back")}
-                </button>
+                    {t("common.back")}
+                </Button>
 
                 <section className="flex flex-col items-start gap-10 lg:flex-row">
                     <motion.div
@@ -194,40 +233,30 @@ export default function MovieDetailPage() {
                             </p>
                         )}
 
-                        <div className="grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-2">
-                            <div className="rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-4 py-3">
-                                <div className="mb-1 text-xs text-[var(--color-text-muted)]">{t("movies.watchCount")}</div>
-                                <div className="text-2xl font-bold text-[var(--color-watched)]">{watchCount}</div>
-                            </div>
-                            <div className="rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-4 py-3">
-                                <div className="mb-1 text-xs text-[var(--color-text-muted)]">{t("movies.lastWatched")}</div>
-                                <div className="text-sm font-medium text-[var(--color-text-secondary)]">
-                                    {formatDate(lastWatchedAt) ?? t("common.unknown")}
-                                </div>
-                            </div>
-                        </div>
 
-                        <button
+                        <Button
+                            type="button"
+                            variant="primary"
+                            size="md"
+                            loading={markWatched.isPending}
+                            icon={<Eye size={15} />}
                             onClick={handleMarkWatched}
-                            disabled={markWatched.isPending}
-                            className="inline-flex items-center gap-2 rounded-full border border-violet-400/40 bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-950/30 transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
                         >
-                            {markWatched.isPending ? <Loader2 size={15} className="animate-spin" /> : <Eye size={15} />}
                             标记为已观看
-                        </button>
+                        </Button>
                     </motion.div>
                 </section>
 
                 <section className="border-t border-[var(--color-border-subtle)] pt-7">
-                    <div className="mb-5 inline-flex rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-1">
+                    <div className="mb-5 inline-flex rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] p-1 shadow-lg shadow-black/10">
                         {[
-                            ["overview", "概览", Film],
+                            ["details", "资料", Film],
                             ["history", t("watchHistory.showTitle"), History],
                         ].map(([key, label, Icon]) => (
                             <button
                                 key={key as string}
-                                onClick={() => setActiveTab(key as "overview" | "history")}
-                                className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] px-4 py-2 text-sm transition-colors"
+                                onClick={() => setActiveTab(key as "details" | "history")}
+                                className="inline-flex h-8 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors"
                                 style={{
                                     color: activeTab === key ? "var(--color-accent-light)" : "var(--color-text-secondary)",
                                     background: activeTab === key ? "var(--color-accent-dim)" : "transparent",
@@ -240,15 +269,39 @@ export default function MovieDetailPage() {
                     </div>
 
                     <AnimatePresence mode="wait">
-                        {activeTab === "overview" ? (
+                        {activeTab === "details" ? (
                             <motion.div
-                                key="overview"
+                                key="details"
                                 initial={{ opacity: 0, y: 6 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -4 }}
-                                className="max-w-4xl rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-5 text-sm leading-7 text-[var(--color-text-secondary)]"
+                                className="grid max-w-6xl grid-cols-1 gap-4 xl:grid-cols-[1.2fr_1fr_1fr]"
                             >
-                                {movie.overview || "暂无简介"}
+                                <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-5 shadow-lg shadow-black/10">
+                                    <div className="mb-4 text-xs uppercase tracking-[0.18em] text-[var(--color-text-muted)]">影片档案</div>
+                                    <div className="grid gap-3 text-sm">
+                                        <DetailRow label="上映日期" value={formatDateOnly(movie.releaseDate) ?? t("common.unknown")} />
+                                        <DetailRow label="片长" value={movie.runtime ? `${movie.runtime} 分钟` : t("common.unknown")} />
+                                        <DetailRow label="类型" value={movie.genres.length ? movie.genres.join(" / ") : t("common.unknown")} />
+                                        <DetailRow label="同步时间" value={formatDate(movie.lastSyncedAt) ?? t("common.unknown")} />
+                                    </div>
+                                </div>
+                                <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-5 shadow-lg shadow-black/10">
+                                    <div className="mb-4 text-xs uppercase tracking-[0.18em] text-[var(--color-text-muted)]">观看档案</div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <MetricTile label="观看次数" value={String(watchCount)} tone="text-[var(--color-watched)]" />
+                                        <MetricTile label="累计时长" value={formatMinutes(totalWatchMinutes)} />
+                                        <MetricTile label="最近观看" value={formatDate(lastWatchedAt) ?? "未观看"} wide />
+                                    </div>
+                                </div>
+                                <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-5 shadow-lg shadow-black/10">
+                                    <div className="mb-4 text-xs uppercase tracking-[0.18em] text-[var(--color-text-muted)]">外部数据</div>
+                                    <div className="grid gap-3 text-sm">
+                                        <DetailRow label="TMDB" value={`#${movie.tmdbId}`} />
+                                        <DetailRow label="IMDb" value={movie.imdbId || t("common.unknown")} />
+                                        <DetailRow label="Trakt" value={String(movie.traktSlug || movie.traktId || t("common.unknown"))} />
+                                    </div>
+                                </div>
                             </motion.div>
                         ) : (
                             <motion.div

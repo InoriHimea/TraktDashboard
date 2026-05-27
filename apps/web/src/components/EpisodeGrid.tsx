@@ -86,14 +86,13 @@ function EpisodeThumbnail({ episode, index, seasonNumber, showId, backdropPath }
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, delay: Math.min(index * 0.03, 0.35), ease: [0.16, 1, 0.3, 1] }}
       className={[
-        'shrink-0 snap-start flex flex-col gap-2 group',
+        'shrink-0 snap-start flex w-[292px] flex-col gap-2 group',
         isUnaired ? 'opacity-40 cursor-default' : 'cursor-pointer',
       ].join(' ')}
-      style={{ width: '260px', height: '198px' }}
       onClick={handleClick}
     >
       {/* 缩略图 */}
-      <div className="relative w-full aspect-video rounded-md overflow-hidden bg-[var(--color-surface-3)]">
+      <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-lg bg-[var(--color-surface-3)]">
         {showImg ? (
           <img
             src={imageUrl}
@@ -158,16 +157,16 @@ function EpisodeThumbnail({ episode, index, seasonNumber, showId, backdropPath }
       </div>
 
       {/* 标题 */}
-      <div className="flex flex-col gap-0.5 px-0.5 h-[42px]">
+      <div className="flex min-h-[54px] shrink-0 flex-col gap-1 px-0.5">
         <p className={[
-          'text-[12px] font-medium leading-snug line-clamp-2 min-h-[32px] transition-colors',
+          'text-[12px] font-medium leading-snug line-clamp-2 transition-colors',
           isWatched
             ? 'text-[var(--color-text-muted)]'
             : 'text-[var(--color-text-secondary)] group-hover:text-[var(--color-text)]',
         ].join(' ')}>
           {title}
         </p>
-        <span className="text-[10px] text-[var(--color-text-muted)]">{epCode}</span>
+        <span className="h-3 shrink-0 truncate text-[10px] leading-3 text-[var(--color-text-muted)]">{epCode}</span>
       </div>
     </motion.div>
   )

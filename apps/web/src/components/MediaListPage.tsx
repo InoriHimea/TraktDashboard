@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Loader2, RefreshCw, Search, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { t } from "../lib/i18n";
+import { Button } from "./ui/Button";
 
 export interface MediaFilterOption {
     key: string;
@@ -30,6 +31,7 @@ interface MediaListPageProps<T> {
     searchEmptyLabel: string;
     importHint: string;
     renderItem: (item: T, index: number) => React.ReactNode;
+    hideFilters?: boolean;
 }
 
 export function MediaListPage<T>({
@@ -51,6 +53,7 @@ export function MediaListPage<T>({
     searchEmptyLabel,
     importHint,
     renderItem,
+    hideFilters = false,
 }: MediaListPageProps<T>) {
     const searchRef = useRef<HTMLInputElement>(null);
 
@@ -73,31 +76,33 @@ export function MediaListPage<T>({
         <div className="min-h-screen bg-[var(--color-bg)]">
             <div className="sticky top-[56px] z-30 bg-[var(--color-bg)] border-b border-[var(--color-border-subtle)] backdrop-blur-xl">
                 <div className="max-w-[1920px] mx-auto px-8 py-3 flex items-center gap-3 flex-wrap">
-                    <div className="flex items-center gap-0.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-md)] p-[3px]">
-                        {filters.map(({ key, labelKey, icon: Icon, color }) => (
-                            <motion.button
-                                key={key}
-                                onClick={() => onFilterChange(key)}
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                className="flex items-center gap-1.5 px-3 py-1 rounded-[var(--radius-sm)] text-[13px] cursor-pointer transition-all duration-150"
-                                style={{
-                                    fontWeight: filter === key ? 600 : 400,
-                                    color: filter === key ? color : "var(--color-text-secondary)",
-                                    background: filter === key ? `${color}18` : "transparent",
-                                    border: filter === key ? `1px solid ${color}40` : "1px solid transparent",
-                                }}
-                            >
-                                <Icon
-                                    size={13}
-                                    color={filter === key ? color : "var(--color-text-muted)"}
-                                />
-                                {t(labelKey)}
-                            </motion.button>
-                        ))}
-                    </div>
+                    {!hideFilters && (
+                        <div className="flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] p-1 shadow-lg shadow-black/10">
+                            {filters.map(({ key, labelKey, icon: Icon, color }) => {
+                                const active = filter === key;
+                                return (
+                                    <button
+                                        key={key}
+                                        onClick={() => onFilterChange(key)}
+                                        className="inline-flex h-8 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-semibold transition-colors"
+                                        style={{
+                                            color: active ? color : "var(--color-text-secondary)",
+                                            background: active ? `${color}18` : "transparent",
+                                            borderColor: active ? `${color}40` : "transparent",
+                                        }}
+                                    >
+                                        <Icon
+                                            size={13}
+                                            color={active ? color : "var(--color-text-muted)"}
+                                        />
+                                        {t(labelKey)}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
 
-                    <div className="flex items-center gap-2 flex-1 max-w-[320px] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-md)] px-3 py-1.5">
+                    <div className="flex h-10 min-w-[240px] flex-1 items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 shadow-lg shadow-black/10 sm:max-w-[380px]">
                         <Search size={13} className="text-[var(--color-text-muted)] shrink-0" />
                         <input
                             ref={searchRef}
@@ -175,12 +180,15 @@ export function MediaListPage<T>({
                         <p className="text-[var(--color-error)] text-sm">
                             {errorLabel}
                         </p>
-                        <button
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            icon={<RefreshCw size={13} />}
                             onClick={onRetry}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[var(--radius-md)] bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-secondary)] text-[13px] cursor-pointer hover:bg-[var(--color-surface-2)] transition-colors"
                         >
-                            <RefreshCw size={13} /> {t("common.retry")}
-                        </button>
+                            {t("common.retry")}
+                        </Button>
                     </motion.div>
                 ) : items?.length === 0 ? (
                     <motion.div
@@ -202,9 +210,9 @@ export function MediaListPage<T>({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.3 }}
-                        className="grid gap-4"
+                        className="grid gap-5"
                         style={{
-                            gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+                            gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
                         }}
                     >
                         <AnimatePresence mode="popLayout">

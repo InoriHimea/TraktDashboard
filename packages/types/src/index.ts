@@ -185,7 +185,11 @@ export interface StatsOverview {
     totalEpisodesWatched: number;
     totalShowsWatched: number;
     totalShowsCompleted: number;
+    totalMoviesWatched: number;
+    totalMovieWatches: number;
     totalRuntimeMinutes: number;
+    totalEpisodeRuntimeMinutes: number;
+    totalMovieRuntimeMinutes: number;
     monthlyActivity: Array<{ month: string; count: number }>;
     topGenres: Array<{ name: string; count: number }>;
     recentlyWatched: Array<{
@@ -196,6 +200,12 @@ export interface StatsOverview {
         episodeTitle: string | null;
         seasonNumber: number;
         episodeNumber: number;
+        watchedAt: string;
+    }>;
+    recentlyWatchedMovies: Array<{
+        movieId: number;
+        movieTitle: string;
+        posterPath: string | null;
         watchedAt: string;
     }>;
 }
