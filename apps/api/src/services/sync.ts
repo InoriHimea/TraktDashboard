@@ -11,7 +11,7 @@ import {
     userSettings,
     watchResetCursors,
 } from "@trakt-dashboard/db";
-import { eq, and, sql, or, gt, isNull, desc } from "drizzle-orm";
+import { eq, and, sql, or, gt, isNull, desc, inArray, notInArray } from "drizzle-orm";
 import { getTraktClient } from "./trakt.js";
 import { getTmdbShow, getTmdbSeason, getTmdbMovie } from "./tmdb.js";
 import pLimit from "p-limit";
@@ -179,12 +179,16 @@ export async function triggerFullSync(userId: number): Promise<void> {
 
                     try {
                         await withTimeout(
-                            syncSingleShow(userId, {
-                                tmdbId,
-                                traktId: ws.show.ids.trakt || null,
-                                title,
-                                traktShow: ws.show,
-                            }),
+                            syncSingleShow(
+                                userId,
+                                {
+                                    tmdbId,
+                                    traktId: ws.show.ids.trakt || null,
+                                    title,
+                                    traktShow: ws.show,
+                                },
+                                true,
+                            ),
                             SHOW_TIMEOUT_MS,
                             title,
                         );
@@ -234,17 +238,21 @@ export async function triggerFullSync(userId: number): Promise<void> {
                     retryLimit(async () => {
                         try {
                             await withTimeout(
-                                syncSingleShow(userId, {
-                                    tmdbId: f.tmdbId,
-                                    traktId:
-                                        watchedShows.find(
+                                syncSingleShow(
+                                    userId,
+                                    {
+                                        tmdbId: f.tmdbId,
+                                        traktId:
+                                            watchedShows.find(
+                                                (s) => s.show.ids.tmdb === f.tmdbId,
+                                            )?.show.ids.trakt || null,
+                                        title: f.title,
+                                        traktShow: watchedShows.find(
                                             (s) => s.show.ids.tmdb === f.tmdbId,
-                                        )?.show.ids.trakt || null,
-                                    title: f.title,
-                                    traktShow: watchedShows.find(
-                                        (s) => s.show.ids.tmdb === f.tmdbId,
-                                    )?.show || { ids: {} },
-                                }),
+                                        )?.show || { ids: {} },
+                                    },
+                                    true,
+                                ),
                                 SHOW_TIMEOUT_MS,
                                 f.title,
                             );
@@ -370,6 +378,7 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
                             traktId,
                             entries[0].show,
                             userId,
+                            true,
                         );
                         for (const entry of entries) {
                             const ep = await findOrCreateEpisode(
@@ -389,8 +398,12 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
                                     watchedAt: new Date(entry.watched_at),
                                     traktPlayId,
                                 })
-                                .onConflictDoNothing({
+                                .onConflictDoUpdate({
                                     target: watchHistory.traktPlayId,
+                                    set: {
+                                        episodeId: ep.id,
+                                        watchedAt: new Date(entry.watched_at),
+                                    },
                                 });
                         }
                         await recalcShowProgress(userId, showId);
@@ -464,6 +477,7 @@ async function syncSingleShow(
         title: string;
         traktShow: any;
     },
+    forceRefreshMetadata = false,
 ) {
     if (!input.traktId) throw new Error("Missing Trakt id");
     const trakt = getTraktClient();
@@ -472,6 +486,7 @@ async function syncSingleShow(
         input.traktId,
         input.traktShow,
         userId,
+        forceRefreshMetadata,
     );
     await getDb()
         .insert(userShowProgress)
@@ -489,6 +504,7 @@ async function upsertShowFromTrakt(
     traktId: number,
     traktShow: any,
     userId: number,
+    forceRefreshMetadata = false,
 ): Promise<number> {
     const db = getDb();
     const trakt = getTraktClient();
@@ -506,7 +522,11 @@ async function upsertShowFromTrakt(
     }
 
     // Fetch Trakt show detail
-    const traktDetail = await trakt.getShowDetail(traktId, userId);
+    const traktDetail = await trakt.getShowDetail(
+        traktId,
+        userId,
+        forceRefreshMetadata,
+    );
 
     if (!traktDetail.ids.tmdb) {
         throw new Error("Missing TMDB id (required for poster/image support)");
@@ -561,7 +581,11 @@ async function upsertShowFromTrakt(
     }
 
     // Fetch seasons from Trakt
-    const traktSeasons = await trakt.getSeasons(traktId, userId);
+    const traktSeasons = await trakt.getSeasons(
+        traktId,
+        userId,
+        forceRefreshMetadata,
+    );
     const totalSeasons = traktSeasons.length;
     const totalEpisodes = traktSeasons.reduce(
         (sum, s) => sum + (s.episode_count || 0),
@@ -638,6 +662,10 @@ async function upsertShowFromTrakt(
         }
     }
 
+    const sourceSeasonNumbers = traktSeasons.map((s) => s.number);
+    const sourceEpisodeKeys = new Set<string>();
+    let hasIncompleteEpisodeSource = false;
+
     // Upsert seasons + episodes concurrently
     const seasonLimit = pLimit(SEASON_CONCURRENCY);
     await Promise.all(
@@ -672,8 +700,10 @@ async function upsertShowFromTrakt(
                         traktId,
                         s.number,
                         userId,
+                        forceRefreshMetadata,
                     );
                 } catch (e) {
+                    hasIncompleteEpisodeSource = true;
                     console.warn(
                         `[sync] Failed to fetch Trakt episodes for show ${traktId} season ${s.number}: ${toErrorMessage(e)}`,
                     );
@@ -821,6 +851,7 @@ async function upsertShowFromTrakt(
                 }
 
                 for (const ep of traktEpisodes) {
+                    sourceEpisodeKeys.add(`${ep.season}:${ep.number}`);
                     const tmdbEp = tmdbEpisodeMap.get(ep.number);
                     // Store TMDB title as translatedTitle regardless of whether it matches
                     // the Trakt title — resolveEpisodeTitle handles display priority.
@@ -870,7 +901,85 @@ async function upsertShowFromTrakt(
         ),
     );
 
+    if (hasIncompleteEpisodeSource) {
+        console.warn(
+            `[sync] Skipping stale episode cleanup for show ${show.id} because at least one season failed to fetch`,
+        );
+    } else {
+        await removeStaleShowMetadata(show.id, sourceSeasonNumbers, sourceEpisodeKeys);
+    }
+
     return show.id;
+}
+
+async function removeStaleShowMetadata(
+    showId: number,
+    sourceSeasonNumbers: number[],
+    sourceEpisodeKeys: Set<string>,
+) {
+    const db = getDb();
+
+    if (sourceSeasonNumbers.length > 0) {
+        await db
+            .delete(seasons)
+            .where(
+                and(
+                    eq(seasons.showId, showId),
+                    notInArray(seasons.seasonNumber, sourceSeasonNumbers),
+                ),
+            );
+    }
+
+    if (sourceEpisodeKeys.size === 0) return;
+
+    const currentEpisodes = await db
+        .select({
+            id: episodes.id,
+            seasonNumber: episodes.seasonNumber,
+            episodeNumber: episodes.episodeNumber,
+            traktId: episodes.traktId,
+            tmdbId: episodes.tmdbId,
+        })
+        .from(episodes)
+        .where(eq(episodes.showId, showId));
+
+    const activeEpisodes = currentEpisodes.filter((ep) =>
+        sourceEpisodeKeys.has(`${ep.seasonNumber}:${ep.episodeNumber}`),
+    );
+    const staleEpisodes = currentEpisodes.filter(
+        (ep) => !sourceEpisodeKeys.has(`${ep.seasonNumber}:${ep.episodeNumber}`),
+    );
+
+    if (staleEpisodes.length === 0) return;
+
+    for (const stale of staleEpisodes) {
+        const replacement = activeEpisodes.find(
+            (ep) =>
+                (stale.traktId != null && ep.traktId === stale.traktId) ||
+                (stale.tmdbId != null && ep.tmdbId === stale.tmdbId),
+        );
+        if (!replacement) continue;
+        await db
+            .update(watchHistory)
+            .set({ episodeId: replacement.id })
+            .where(eq(watchHistory.episodeId, stale.id));
+    }
+
+    const staleEpisodeIds = staleEpisodes.map((ep) => ep.id);
+    const referencedRows = await db
+        .select({ episodeId: watchHistory.episodeId })
+        .from(watchHistory)
+        .where(inArray(watchHistory.episodeId, staleEpisodeIds));
+    const referencedIds = new Set(
+        referencedRows
+            .map((row) => row.episodeId)
+            .filter((id): id is number => id != null),
+    );
+    const deletableIds = staleEpisodeIds.filter((id) => !referencedIds.has(id));
+
+    if (deletableIds.length === 0) return;
+
+    await db.delete(episodes).where(inArray(episodes.id, deletableIds));
 }
 
 // ─── TMDB upsert (kept for reference) ────────────────────────────────────────

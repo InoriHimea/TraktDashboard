@@ -438,6 +438,7 @@ export function getTraktClient() {
         getShowDetail: async (
             traktId: number,
             userId: number,
+            forceRefresh = false,
         ): Promise<TraktShowDetail> => {
             const db = getDb();
             const externalId = `trakt_show_${traktId}`;
@@ -451,6 +452,7 @@ export function getTraktClient() {
                     ),
                 );
             if (
+                !forceRefresh &&
                 cached &&
                 Date.now() - new Date(cached.cachedAt).getTime() < CACHE_TTL_7D
             ) {
@@ -478,6 +480,7 @@ export function getTraktClient() {
         getSeasons: async (
             traktId: number,
             userId: number,
+            forceRefresh = false,
         ): Promise<TraktSeasonDetail[]> => {
             const db = getDb();
             const externalId = `trakt_seasons_${traktId}`;
@@ -491,6 +494,7 @@ export function getTraktClient() {
                     ),
                 );
             if (
+                !forceRefresh &&
                 cached &&
                 Date.now() - new Date(cached.cachedAt).getTime() < CACHE_TTL_7D
             ) {
@@ -519,6 +523,7 @@ export function getTraktClient() {
             traktId: number,
             seasonNumber: number,
             userId: number,
+            forceRefresh = false,
         ): Promise<TraktEpisodeDetail[]> => {
             const db = getDb();
             const externalId = `trakt_episodes_${traktId}_s${seasonNumber}`;
@@ -532,6 +537,7 @@ export function getTraktClient() {
                     ),
                 );
             if (
+                !forceRefresh &&
                 cached &&
                 Date.now() - new Date(cached.cachedAt).getTime() < CACHE_TTL_24H
             ) {
