@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Clock, ExternalLink } from 'lucide-react';
 import type { EpisodeDetailData, WatchHistoryEntry } from '@trakt-dashboard/types';
 import { DateTimePickerModal } from './DateTimePickerModal';
+import { Button } from './ui/Button';
+import { ConfirmDialog } from './ui/ConfirmDialog';
 import { useMarkWatched, useEpisodeHistory, useDeleteHistory } from '../hooks';
 
 interface EpisodeInfoCardProps {
@@ -39,15 +41,15 @@ function DeleteHistoryModal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div
-        className="relative z-10 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl w-[420px] max-w-[90vw] p-6"
+        className="relative z-10 w-[420px] max-w-[90vw] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-base font-bold text-foreground mb-1">删除观看记录</h3>
-        <p className="text-sm text-muted-foreground mb-4">请选择要删除的观看记录：</p>
-        <div className="space-y-2 max-h-64 overflow-y-auto">
+        <h3 className="mb-1 text-base font-bold text-foreground">删除观看记录</h3>
+        <p className="mb-4 text-sm text-muted-foreground">请选择要删除的观看记录：</p>
+        <div className="max-h-64 space-y-2 overflow-y-auto">
           {entries.map((entry) => {
             const label = entry.watchedAt
               ? new Date(entry.watchedAt).toLocaleString('zh-CN', {
@@ -56,69 +58,33 @@ function DeleteHistoryModal({
                 })
               : '未知时间';
             return (
-              <button
+              <Button
                 key={entry.id}
-                onClick={() => onConfirm(entry.id)}
-                className="w-full text-left px-4 py-3 rounded-xl bg-muted hover:bg-red-500/10 hover:border-red-500/30 border border-border/40 transition-colors text-sm text-foreground"
+                type="button"
+                variant="secondary"
+                color="rose"
+                size="md"
+                onClick={() => {
+                  onConfirm(entry.id);
+                  onClose();
+                }}
+                className="w-full justify-start"
               >
                 {label}
-              </button>
+              </Button>
             );
           })}
         </div>
-        <button
+        <Button
+          type="button"
+          variant="ghost"
+          color="slate"
+          size="md"
           onClick={onClose}
-          className="mt-4 w-full py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="mt-4 w-full"
         >
           取消
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/** 通用二次确认弹框 */
-function ConfirmModal({
-  title,
-  description,
-  confirmLabel,
-  confirmClassName,
-  onConfirm,
-  onClose,
-}: {
-  title: string;
-  description: string;
-  confirmLabel: string;
-  confirmClassName?: string;
-  onConfirm: () => void;
-  onClose: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div
-        className="relative z-10 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl w-[380px] max-w-[90vw] p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-base font-bold text-foreground mb-2">{title}</h3>
-        <p className="text-sm text-muted-foreground mb-6">{description}</p>
-        <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 h-10 rounded-lg text-sm font-bold text-muted-foreground hover:text-foreground bg-muted hover:bg-muted/70 transition-colors"
-          >
-            取消
-          </button>
-          <button
-            onClick={onConfirm}
-            className={[
-              'flex-1 h-10 rounded-lg text-sm font-bold transition-colors',
-              confirmClassName ?? 'bg-indigo-500 hover:bg-indigo-600 text-white',
-            ].join(' ')}
-          >
-            {confirmLabel}
-          </button>
-        </div>
+        </Button>
       </div>
     </div>
   );
@@ -127,6 +93,7 @@ function ConfirmModal({
 export function EpisodeInfoCard({ data, onHistoryClick, isWatched, onRefetch }: EpisodeInfoCardProps) {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const [confirmWatchOpen, setConfirmWatchOpen] = useState(false);
   const [confirmUnwatchOpen, setConfirmUnwatchOpen] = useState(false);
 
@@ -159,9 +126,14 @@ export function EpisodeInfoCard({ data, onHistoryClick, isWatched, onRefetch }: 
   };
 
   const handleDeleteEntry = async (id: number) => {
-    await deleteHistory.mutateAsync(id);
-    setDeleteModalOpen(false);
-    onRefetch();
+    try {
+      await deleteHistory.mutateAsync(id);
+      setPendingDeleteId(null);
+      setDeleteModalOpen(false);
+      onRefetch();
+    } catch (err) {
+      console.error('Failed to delete history entry:', err);
+    }
   };
 
   const traktUrl = show.traktSlug
@@ -358,65 +330,34 @@ export function EpisodeInfoCard({ data, onHistoryClick, isWatched, onRefetch }: 
           gap: '10px',
         }}
       >
-        {/* ── 已观看 / 标记已观看 按钮 ── */}
-        <button
+        <Button
+          type="button"
+          variant={isWatched ? "secondary" : "primary"}
+          color={isWatched ? "emerald" : "violet"}
+          size="md"
+          loading={markWatched.isPending || deleteHistory.isPending}
+          icon={isWatched ? <DoubleCheckIcon /> : <SingleCheckIcon />}
           onClick={isWatched ? () => setConfirmUnwatchOpen(true) : () => setConfirmWatchOpen(true)}
-          disabled={markWatched.isPending || deleteHistory.isPending}
           aria-label={isWatched ? '取消观看' : '标记为已观看'}
           title={isWatched ? '点击删除观看记录' : '标记为已观看'}
-          className="group relative h-11 flex items-center justify-center gap-2 rounded-lg transition-all duration-150 active:scale-[0.97] active:translate-y-px text-sm font-bold tracking-wide disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
-          style={{
-            width: '152px',
-            background: 'linear-gradient(180deg, #8b5cf6 0%, #6d28d9 100%)',
-            color: '#fff',
-            /* 立体感：顶部高光 + 底部暗边 + 外发光 */
-            boxShadow: '0 1px 0 rgba(0,0,0,0.35), 0 4px 18px color-mix(in srgb, #7c3aed 38%, transparent), inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.18)',
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLElement).style.background = 'linear-gradient(180deg, #7c3aed 0%, #5b21b6 100%)';
-            (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 0 rgba(0,0,0,0.4), 0 6px 24px color-mix(in srgb, #7c3aed 52%, transparent), inset 0 1px 0 rgba(255,255,255,0.24), inset 0 -1px 0 rgba(0,0,0,0.22)';
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.background = 'linear-gradient(180deg, #8b5cf6 0%, #6d28d9 100%)';
-            (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 0 rgba(0,0,0,0.35), 0 4px 18px color-mix(in srgb, #7c3aed 38%, transparent), inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.18)';
-          }}
+          className="w-[152px]"
         >
-          {/* 悬停时的高光层 */}
-          <span className="absolute inset-0 bg-white/0 group-hover:bg-white/5 transition-colors duration-150 rounded-lg" />
-          <span className="relative flex items-center gap-2">
-            {isWatched ? <DoubleCheckIcon /> : <SingleCheckIcon />}
-            <span>{isWatched ? '已观看' : '标记已观看'}</span>
-          </span>
-        </button>
+          {isWatched ? '已观看' : '标记已观看'}
+        </Button>
 
-        {/* ── 观看历史 按钮（毛玻璃/边框风格，浅深色均适配）── */}
-        <button
+        <Button
+          type="button"
+          variant="secondary"
+          color="slate"
+          size="md"
+          icon={<Clock size={16} />}
           onClick={onHistoryClick}
           aria-label="观看历史"
           title="观看历史"
-          className="group h-11 flex items-center justify-center gap-2 rounded-lg border transition-all duration-150 active:scale-[0.97] active:translate-y-px text-sm font-bold tracking-wide text-muted-foreground hover:text-foreground"
-          style={{
-            width: '152px',
-            /* rgba 中性色在浅/深色背景下均清晰可见 */
-            background: 'rgba(128,128,128,0.10)',
-            borderColor: 'rgba(128,128,128,0.28)',
-            /* 立体感：顶部高光 + 底部暗边 */
-            boxShadow: '0 1px 0 rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -1px 0 rgba(0,0,0,0.08)',
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLElement).style.background = 'rgba(128,128,128,0.20)';
-            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(128,128,128,0.46)';
-            (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 0 rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.10)';
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.background = 'rgba(128,128,128,0.10)';
-            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(128,128,128,0.28)';
-            (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 0 rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -1px 0 rgba(0,0,0,0.08)';
-          }}
+          className="w-[152px]"
         >
-          <Clock size={16} className="shrink-0 opacity-70 group-hover:opacity-100 transition-opacity" />
-          <span>观看历史</span>
-        </button>
+          观看历史
+        </Button>
       </div>
 
       {/* ── 日期时间选择弹框 ── */}
@@ -430,39 +371,59 @@ export function EpisodeInfoCard({ data, onHistoryClick, isWatched, onRefetch }: 
       {deleteModalOpen && (
         <DeleteHistoryModal
           entries={historyEntries}
-          onConfirm={handleDeleteEntry}
+          onConfirm={setPendingDeleteId}
           onClose={() => setDeleteModalOpen(false)}
         />
       )}
 
-      {/* ── 标记已观看二次确认 ── */}
-      {confirmWatchOpen && (
-        <ConfirmModal
-          title="标记为已观看"
-          description="确认将此集标记为已观看？你可以在下一步选择观看时间。"
-          confirmLabel="继续"
-          onConfirm={() => {
-            setConfirmWatchOpen(false);
-            setDatePickerOpen(true);
-          }}
-          onClose={() => setConfirmWatchOpen(false)}
-        />
-      )}
+      <ConfirmDialog
+        isOpen={confirmWatchOpen}
+        title="标记为已观看"
+        description="确认将此集标记为已观看？你可以在下一步选择观看时间。"
+        confirmText="继续"
+        confirmColor="violet"
+        cancelText="取消"
+        onConfirm={() => {
+          setConfirmWatchOpen(false);
+          setDatePickerOpen(true);
+        }}
+        onCancel={() => setConfirmWatchOpen(false)}
+      />
 
-      {/* ── 取消观看二次确认 ── */}
-      {confirmUnwatchOpen && (
-        <ConfirmModal
-          title="取消观看记录"
-          description="确认删除此集的观看记录？此操作不可撤销。"
-          confirmLabel="删除"
-          confirmClassName="bg-red-500 hover:bg-red-600 text-white"
-          onConfirm={() => {
+      <ConfirmDialog
+        isOpen={pendingDeleteId !== null}
+        title="删除观看记录"
+        description="确认删除这条观看记录？此操作不可撤销。"
+        confirmText="删除"
+        confirmColor="rose"
+        cancelText="取消"
+        isLoading={deleteHistory.isPending}
+        onConfirm={async () => {
+          if (pendingDeleteId !== null) {
+            await handleDeleteEntry(pendingDeleteId);
+          }
+        }}
+        onCancel={() => setPendingDeleteId(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={confirmUnwatchOpen}
+        title="取消观看记录"
+        description="确认删除此集的观看记录？此操作不可撤销。"
+        confirmText="删除"
+        confirmColor="rose"
+        cancelText="取消"
+        isLoading={deleteHistory.isPending}
+        onConfirm={async () => {
+          try {
+            await handleUnwatch();
             setConfirmUnwatchOpen(false);
-            handleUnwatch();
-          }}
-          onClose={() => setConfirmUnwatchOpen(false)}
-        />
-      )}
+          } catch (err) {
+            console.error('Failed to unwatch:', err);
+          }
+        }}
+        onCancel={() => setConfirmUnwatchOpen(false)}
+      />
     </div>
   );
 }

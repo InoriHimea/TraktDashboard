@@ -5,6 +5,8 @@ import { cn } from "../lib/utils";
 import { resolveEpisodeStill } from "../lib/image";
 import { resolveEpisodeTitle } from "../lib/i18n";
 import { EpisodePlaceholder } from "./ui/EpisodePlaceholder";
+import { Button } from "./ui/Button";
+import { Tag } from "./ui/Tag";
 import type { EpisodeProgress } from "@trakt-dashboard/types";
 
 interface EpisodeSeasonStripProps {
@@ -45,10 +47,15 @@ export function EpisodeSeasonStrip({
                     <div className="h-0.5 w-12 bg-foreground/10" />
                 </div>
                 {!watched && (
-                    <button className="flex cursor-pointer items-center gap-2 text-xs font-bold uppercase tracking-widest text-[var(--color-accent)] transition-transform hover:translate-x-1">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        color="violet"
+                        size="sm"
+                        icon={<ArrowRight size={14} />}
+                    >
                         View all
-                        <ArrowRight size={14} />
-                    </button>
+                    </Button>
                 )}
             </div>
 
@@ -96,6 +103,11 @@ export function EpisodeSeasonStrip({
                                 )}
                                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                                 {isCurrent && <div className="absolute inset-0 bg-[var(--color-accent)]/10 mix-blend-overlay" />}
+                                {episode.watched && (
+                                    <Tag color="emerald" variant="3d" size="sm" className="absolute right-2 top-2 z-10 shadow-lg shadow-emerald-500/30">
+                                        已看
+                                    </Tag>
+                                )}
                                 {episode.runtime && (
                                     <div className="absolute bottom-2 right-2 rounded bg-black/80 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-md">
                                         {episode.runtime}分钟

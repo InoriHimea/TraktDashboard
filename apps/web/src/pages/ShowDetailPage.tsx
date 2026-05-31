@@ -1,13 +1,14 @@
 import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, RefreshCw, CheckCheck, Loader2 } from "lucide-react";
+import { ArrowLeft, RefreshCw, CheckCheck } from "lucide-react";
 import { useShowDetail, useResetProgress, useMarkSeasonWatched } from "../hooks";
 import { HeroSection } from "../components/HeroSection";
 import { SeasonTab } from "../components/SeasonTab";
 import { EpisodeGrid } from "../components/EpisodeGrid";
 import { WatchHistoryPanel } from "../components/WatchHistoryPanel";
 import { Button } from "../components/ui/Button";
+import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { resolveTitle, t } from "../lib/i18n";
 import { useToast } from "../lib/toast";
 
@@ -247,7 +248,13 @@ export default function ShowDetailPage() {
                                 })}
                             </span>
                             {currentSeason.watchedCount < currentSeason.airedCount && (
-                                <button
+                                <Button
+                                    type="button"
+                                    variant="primary"
+                                    color="emerald"
+                                    size="sm"
+                                    loading={markSeasonWatched.isPending}
+                                    icon={<CheckCheck className="h-3.5 w-3.5" />}
                                     onClick={() =>
                                         markSeasonWatched.mutate(
                                             { season: currentSeason.seasonNumber, watchedAt: null },
@@ -257,16 +264,9 @@ export default function ShowDetailPage() {
                                             }
                                         )
                                     }
-                                    disabled={markSeasonWatched.isPending}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--color-accent)] text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
                                 >
-                                    {markSeasonWatched.isPending ? (
-                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                    ) : (
-                                        <CheckCheck className="w-3.5 h-3.5" />
-                                    )}
                                     {t("shows.markSeasonWatched")}
-                                </button>
+                                </Button>
                             )}
                         </div>
                     )}
@@ -301,70 +301,25 @@ export default function ShowDetailPage() {
                 </div>
             </div>
 
-            {/* Reset Confirm Dialog */}
-            <AnimatePresence>
-                {resetConfirmOpen && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
-                            onClick={() => {
-                                setResetConfirmOpen(false);
-                                setResetError(null);
-                            }}
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                            className="fixed z-50 bg-[var(--color-surface)] rounded-2xl shadow-2xl border border-[var(--color-border)] w-[420px] max-w-[90vw] p-6"
-                            style={{
-                                top: "50%",
-                                left: "50%",
-                                transform: "translate(-50%, -50%)",
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <h3 className="text-lg font-semibold text-[var(--color-text)] mb-2">
-                                再看一遍？
-                            </h3>
-                            <p className="text-sm text-[var(--color-text-muted)] mb-4">
-                                这将重置观看进度，但所有历史记录会完整保留。你可以随时在观看历史中查看之前的记录。
-                            </p>
-                            {resetError && (
-                                <div className="mb-4 p-3 rounded-lg bg-red-950/40 border border-red-500/20 text-sm text-red-400">
-                                    {resetError}
-                                </div>
-                            )}
-                            <div className="flex gap-3 justify-end">
-                                <Button
-                                    variant="ghost"
-                                    size="md"
-                                    onClick={() => {
-                                        setResetConfirmOpen(false);
-                                        setResetError(null);
-                                    }}
-                                    disabled={resetProgress.isPending}
-                                >
-                                    取消
-                                </Button>
-                                <Button
-                                    variant="primary"
-                                    size="md"
-                                    onClick={handleResetConfirm}
-                                    disabled={resetProgress.isPending}
-                                >
-                                    {resetProgress.isPending
-                                        ? "重置中..."
-                                        : "确认重置"}
-                                </Button>
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
+            {resetError && (
+                <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-lg border border-red-500/20 bg-red-950/80 px-4 py-3 text-sm text-red-400 shadow-xl">
+                    {resetError}
+                </div>
+            )}
+            <ConfirmDialog
+                isOpen={resetConfirmOpen}
+                title="再看一遍？"
+                description="这将重置观看进度，但所有历史记录会完整保留。你可以随时在观看历史中查看之前的记录。"
+                confirmText="确认重置"
+                confirmColor="amber"
+                cancelText="取消"
+                isLoading={resetProgress.isPending}
+                onConfirm={handleResetConfirm}
+                onCancel={() => {
+                    setResetConfirmOpen(false);
+                    setResetError(null);
+                }}
+            />
 
             {/* Watch History Panel */}
             <WatchHistoryPanel

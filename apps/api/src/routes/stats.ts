@@ -4,6 +4,24 @@ import { eq, and, sql, desc, gte } from 'drizzle-orm'
 
 export const statsRoutes = new Hono<{ Variables: { userId: number } }>()
 
+function watchedAtKey(value: Date | string | null): string {
+  if (value instanceof Date) return value.toISOString()
+  return value ?? 'unknown'
+}
+
+function uniqueRecentItems<T>(items: T[], keyOf: (item: T) => string, limit: number): T[] {
+  const seen = new Set<string>()
+  const unique: T[] = []
+  for (const item of items) {
+    const key = keyOf(item)
+    if (seen.has(key)) continue
+    seen.add(key)
+    unique.push(item)
+    if (unique.length >= limit) break
+  }
+  return unique
+}
+
 // GET /api/stats/overview
 statsRoutes.get('/overview', async (c) => {
   const userId = c.get('userId')
@@ -72,7 +90,8 @@ statsRoutes.get('/overview', async (c) => {
     .map(([name, count]) => ({ name, count }))
 
   // Recently watched
-  const recentlyWatched = await db.select({
+  const recentEpisodeRows = await db.select({
+    episodeId: watchHistory.episodeId,
     showTitle: shows.title,
     showId: shows.id,
     posterPath: shows.posterPath,
@@ -87,9 +106,15 @@ statsRoutes.get('/overview', async (c) => {
     .innerJoin(shows, eq(episodes.showId, shows.id))
     .where(and(eq(watchHistory.userId, userId), eq(watchHistory.mediaType, 'episode')))
     .orderBy(desc(watchHistory.watchedAt))
-    .limit(15)
+    .limit(45)
 
-  const recentlyWatchedMovies = await db.select({
+  const recentlyWatched = uniqueRecentItems(
+    recentEpisodeRows,
+    (row) => `${row.episodeId}:${watchedAtKey(row.watchedAt)}`,
+    15,
+  ).map(({ episodeId: _episodeId, ...row }) => row)
+
+  const recentMovieRows = await db.select({
     movieTitle: movies.title,
     movieId: movies.id,
     posterPath: movies.posterPath,
@@ -99,7 +124,13 @@ statsRoutes.get('/overview', async (c) => {
     .innerJoin(movies, eq(watchHistory.movieId, movies.id))
     .where(and(eq(watchHistory.userId, userId), eq(watchHistory.mediaType, 'movie')))
     .orderBy(desc(watchHistory.watchedAt))
-    .limit(10)
+    .limit(30)
+
+  const recentlyWatchedMovies = uniqueRecentItems(
+    recentMovieRows,
+    (row) => `${row.movieId}:${watchedAtKey(row.watchedAt)}`,
+    10,
+  )
 
   return c.json({
     data: {

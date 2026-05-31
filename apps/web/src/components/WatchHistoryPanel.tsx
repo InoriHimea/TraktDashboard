@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { Trash2, AlertCircle, Clock, Eye } from "lucide-react";
+import { Trash2, Clock, Eye } from "lucide-react";
 import { SlidingPanel } from "./SlidingPanel";
+import { Button } from "./ui/Button";
+import { ConfirmDialog } from "./ui/ConfirmDialog";
 import { useEpisodeHistory, useShowHistory, useDeleteHistory } from "../hooks";
 import { t } from "../lib/i18n";
 import dayjs from "dayjs";
@@ -103,7 +105,6 @@ export function WatchHistoryPanel({
                     {/* History entries */}
                     {!isLoading && history && history.length > 0 && history.map((entry, index) => {
                         const time = formatWatchedAt(entry.watchedAt);
-                        const isConfirming = confirmingDelete === entry.id;
                         const isDeleting = deletingId === entry.id;
                         // Alternate soft accent colors for the index badge
                         const badgeColors = [
@@ -127,7 +128,7 @@ export function WatchHistoryPanel({
                                     boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                                 }}
                                 onMouseEnter={e => {
-                                    if (!isConfirming) (e.currentTarget as HTMLElement).style.boxShadow = '0 3px 10px rgba(0,0,0,0.09)';
+                                    (e.currentTarget as HTMLElement).style.boxShadow = '0 3px 10px rgba(0,0,0,0.09)';
                                 }}
                                 onMouseLeave={e => {
                                     (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
@@ -200,75 +201,18 @@ export function WatchHistoryPanel({
                                     </div>
 
                                     {/* Delete button */}
-                                    {!isConfirming && (
-                                        <button
-                                            onClick={() => setConfirmingDelete(entry.id)}
-                                            style={{
-                                                width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0,
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                color: 'var(--color-text-muted)',
-                                                transition: 'background 0.15s, color 0.15s',
-                                                background: 'transparent', border: 'none', cursor: 'pointer',
-                                            }}
-                                            onMouseEnter={e => {
-                                                (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.10)';
-                                                (e.currentTarget as HTMLElement).style.color = '#ef4444';
-                                            }}
-                                            onMouseLeave={e => {
-                                                (e.currentTarget as HTMLElement).style.background = 'transparent';
-                                                (e.currentTarget as HTMLElement).style.color = 'var(--color-text-muted)';
-                                            }}
-                                            aria-label={t("watchHistory.deleteLabel")}
-                                        >
-                                            <Trash2 size={13} />
-                                        </button>
-                                    )}
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        color="rose"
+                                        size="sm"
+                                        disabled={isDeleting}
+                                        icon={<Trash2 size={13} />}
+                                        onClick={() => setConfirmingDelete(entry.id)}
+                                        aria-label={t("watchHistory.deleteLabel")}
+                                        className="h-7 w-7 flex-shrink-0 rounded-lg px-0"
+                                    />
                                 </div>
-
-                                {/* Confirm strip */}
-                                {isConfirming && (
-                                    <div style={{
-                                        borderTop: '1px solid rgba(239,68,68,0.15)',
-                                        background: 'rgba(254,242,242,0.8)',
-                                        padding: '10px 14px',
-                                        display: 'flex', alignItems: 'center', gap: '8px',
-                                    }}>
-                                        <AlertCircle size={13} style={{ color: '#ef4444', flexShrink: 0 }} />
-                                        <p style={{ flex: 1, fontSize: '12px', color: '#dc2626', fontWeight: 500, margin: 0 }}>
-                                            {t("watchHistory.deleteConfirm")}
-                                        </p>
-                                        <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-                                            <button
-                                                onClick={() => setConfirmingDelete(null)}
-                                                style={{
-                                                    height: '28px', padding: '0 12px', borderRadius: '7px',
-                                                    fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-                                                    border: '1px solid var(--color-border)',
-                                                    background: 'var(--color-surface-2)',
-                                                    color: 'var(--color-text)',
-                                                }}
-                                            >
-                                                {t("common.cancel")}
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(entry.id)}
-                                                disabled={isDeleting}
-                                                style={{
-                                                    height: '28px', padding: '0 12px', borderRadius: '7px',
-                                                    fontSize: '12px', fontWeight: 700,
-                                                    cursor: isDeleting ? 'default' : 'pointer',
-                                                    border: 'none',
-                                                    background: 'linear-gradient(160deg, #f87171 0%, #ef4444 100%)',
-                                                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2), 0 2px 6px rgba(239,68,68,0.3)',
-                                                    color: '#fff',
-                                                    opacity: isDeleting ? 0.6 : 1,
-                                                }}
-                                            >
-                                                {isDeleting ? t("common.deleting") : t("common.delete")}
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                         );
                     })}
@@ -285,6 +229,21 @@ export function WatchHistoryPanel({
                     )}
                 </div>
             </SlidingPanel>
+            <ConfirmDialog
+                isOpen={confirmingDelete !== null}
+                title={t("common.delete")}
+                description={t("watchHistory.deleteConfirm")}
+                confirmText={t("common.delete")}
+                confirmColor="rose"
+                cancelText={t("common.cancel")}
+                isLoading={deletingId !== null}
+                onConfirm={() => {
+                    if (confirmingDelete !== null) {
+                        handleDelete(confirmingDelete);
+                    }
+                }}
+                onCancel={() => setConfirmingDelete(null)}
+            />
         </>
     );
 }

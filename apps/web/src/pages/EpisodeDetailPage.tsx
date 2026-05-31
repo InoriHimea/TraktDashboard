@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
-import { ArrowLeft, Check, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Check, RefreshCw } from "lucide-react";
 import { useEpisodeDetail } from "../hooks";
 import { EpisodeInfoCard } from "../components/EpisodeInfoCard";
 import { EpisodeSeasonStrip } from "../components/EpisodeSeasonStrip";
 import { WatchHistoryPanel } from "../components/WatchHistoryPanel";
+import { Button } from "../components/ui/Button";
 import { EpisodePlaceholder } from "../components/ui/EpisodePlaceholder";
+import { Tag } from "../components/ui/Tag";
 import { resolveEpisodeStillLarge, resolveBackdropFallback } from "../lib/image";
 import { t } from "../lib/i18n";
 
@@ -77,13 +79,16 @@ export default function EpisodeDetailPage() {
             <EpisodeDetailState
                 message={t("episodeDetail.loadFailed")}
                 action={
-                    <button
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        color="slate"
+                        size="sm"
+                        icon={<RefreshCw size={14} />}
                         onClick={() => refetch()}
-                        className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border bg-surface px-4 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
                     >
-                        <RefreshCw size={14} />
                         {t("common.retry")}
-                    </button>
+                    </Button>
                 }
             />
         );
@@ -94,13 +99,16 @@ export default function EpisodeDetailPage() {
             <EpisodeDetailState
                 message={t("episodeDetail.notFound")}
                 action={
-                    <button
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        color="slate"
+                        size="sm"
+                        icon={<ArrowLeft size={14} />}
                         onClick={() => navigate(-1)}
-                        className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border bg-transparent px-4 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
                     >
-                        <ArrowLeft size={14} />
                         {t("common.back")}
-                    </button>
+                    </Button>
                 }
             />
         );
@@ -117,32 +125,17 @@ export default function EpisodeDetailPage() {
         <div className="min-h-screen w-full bg-background text-foreground pb-32 md:pb-20 flex flex-col gap-8 md:gap-12 overflow-x-hidden">
             <header className="sticky top-0 z-10 bg-background/90 backdrop-blur-md border-b border-border/40 h-16 flex items-center shrink-0 w-full">
                 <div style={containerStyle}>
-                    <button
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        color="slate"
+                        size="sm"
+                        icon={<ArrowLeft className="size-4" />}
                         onClick={() => navigate(-1)}
-                        className="group inline-flex items-center gap-2.5 rounded-lg transition-all duration-150 cursor-pointer"
-                        style={{
-                            padding: "6px 10px 6px 6px",
-                            marginLeft: "-6px",
-                            color: "rgba(128,128,128,0.85)",
-                            background: "transparent",
-                            border: "1px solid transparent",
-                        }}
-                        onMouseEnter={e => {
-                            const el = e.currentTarget as HTMLElement;
-                            el.style.color = "var(--foreground)";
-                            el.style.background = "rgba(128,128,128,0.10)";
-                            el.style.borderColor = "rgba(128,128,128,0.20)";
-                        }}
-                        onMouseLeave={e => {
-                            const el = e.currentTarget as HTMLElement;
-                            el.style.color = "rgba(128,128,128,0.85)";
-                            el.style.background = "transparent";
-                            el.style.borderColor = "transparent";
-                        }}
+                        className="-ml-1"
                     >
-                        <ArrowLeft className="size-4 transition-transform duration-150 group-hover:-translate-x-0.5" />
-                        <span className="text-xs font-bold uppercase tracking-widest">Back</span>
-                    </button>
+                        Back
+                    </Button>
                 </div>
             </header>
 
@@ -163,10 +156,15 @@ export default function EpisodeDetailPage() {
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none" />
 
                         {isWatched && (
-                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-md border border-white/20 rounded-full flex items-center gap-2 px-4 py-1.5 z-10 shadow-xl">
-                                <Check className="size-4 text-purple-400" strokeWidth={4} />
-                                <span className="text-[10px] font-black uppercase tracking-[0.15em] text-white">Watched</span>
-                            </div>
+                            <Tag
+                                color="emerald"
+                                variant="3d"
+                                size="sm"
+                                icon={<Check className="size-3.5" strokeWidth={4} />}
+                                className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2 rounded-full bg-black/60 px-4 py-1.5 text-white shadow-xl backdrop-blur-md"
+                            >
+                                Watched
+                            </Tag>
                         )}
                     </div>
                 </div>

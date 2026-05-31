@@ -4,7 +4,7 @@
  */
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Info, Tv2 } from "lucide-react";
+import { History, Info, RotateCcw, Tv2 } from "lucide-react";
 import {
     resolveTitle,
     resolveOverview,
@@ -13,6 +13,8 @@ import {
     fmtDateZh,
 } from "../lib/i18n";
 import { resolveShowPoster } from "../lib/image";
+import { Button } from "./ui/Button";
+import { Tag } from "./ui/Tag";
 import type { ShowProgress } from "@trakt-dashboard/types";
 
 interface HeroSectionProps {
@@ -181,32 +183,17 @@ export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetCli
                         </div>
                     </div>
 
-                    <span
-                        className="inline-flex items-center backdrop-blur-md"
-                        style={{
-                            width: "fit-content",
-                            gap: "8px",
-                            fontSize: "13px",
-                            fontWeight: "bold",
-                            padding: "6px 16px",
-                            color: sColor,
-                            background: `linear-gradient(180deg, ${sColor}15 0%, ${sColor}05 100%)`,
-                            border: `1px solid ${sColor}30`,
-                            borderTopColor: `${sColor}70`,
-                            borderRadius: "99px",
-                            boxShadow: `inset 0 1px 2px rgba(255,255,255,0.2), inset 0 -1px 2px rgba(0,0,0,0.1), 0 4px 12px ${sColor}25`,
-                            textShadow: "0 1px 1px rgba(0,0,0,0.1)",
-                        }}
+                    <Tag
+                        color={isAiring ? "emerald" : "slate"}
+                        variant="3d"
+                        className="w-fit rounded-full px-4 py-1.5"
                     >
                         <span
-                            className={`w-2 h-2 rounded-full ${isAiring ? "animate-pulse" : ""}`}
-                            style={{
-                                background: sColor,
-                                boxShadow: `0 0 10px 1px ${sColor}`,
-                            }}
+                            className={`h-2 w-2 rounded-full ${isAiring ? "animate-pulse" : ""}`}
+                            style={{ background: sColor, boxShadow: `0 0 10px 1px ${sColor}` }}
                         />
                         {sLabel}
-                    </span>
+                    </Tag>
 
                     <div className="flex flex-wrap items-center gap-3">
                         {show.imdbId && (
@@ -332,85 +319,30 @@ export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetCli
                     {/* Action buttons — inline with middle column content */}
                     <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
                         {isComplete && onResetClick && (
-                            <button
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                color="violet"
+                                size="sm"
+                                icon={<RotateCcw size={14} />}
                                 onClick={onResetClick}
-                                style={{
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: "8px",
-                                    padding: "8px 22px",
-                                    borderRadius: "99px",
-                                    fontSize: "13px",
-                                    fontWeight: 700,
-                                    letterSpacing: "0.02em",
-                                    cursor: "pointer",
-                                    // Cyber violet — gradient fill + glowing border
-                                    background: "linear-gradient(160deg, rgba(139,92,246,0.18) 0%, rgba(109,40,217,0.08) 100%)",
-                                    border: "1px solid rgba(139,92,246,0.5)",
-                                    borderTopColor: "rgba(167,139,250,0.7)",
-                                    color: "#8b5cf6",
-                                    // 3D: inner top highlight + colored outer glow + hard drop
-                                    boxShadow: "inset 0 1px 0 rgba(167,139,250,0.3), inset 0 -1px 0 rgba(0,0,0,0.15), 0 0 0 1px rgba(109,40,217,0.1), 0 2px 8px rgba(109,40,217,0.2), 0 1px 2px rgba(0,0,0,0.15)",
-                                    transition: "all 0.15s ease",
-                                }}
-                                onMouseEnter={e => {
-                                    (e.currentTarget as HTMLButtonElement).style.boxShadow = "inset 0 1px 0 rgba(167,139,250,0.4), inset 0 -1px 0 rgba(0,0,0,0.2), 0 0 0 1px rgba(109,40,217,0.2), 0 4px 16px rgba(109,40,217,0.35), 0 2px 4px rgba(0,0,0,0.2)";
-                                    (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)";
-                                    (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(139,92,246,0.7)";
-                                }}
-                                onMouseLeave={e => {
-                                    (e.currentTarget as HTMLButtonElement).style.boxShadow = "inset 0 1px 0 rgba(167,139,250,0.3), inset 0 -1px 0 rgba(0,0,0,0.15), 0 0 0 1px rgba(109,40,217,0.1), 0 2px 8px rgba(109,40,217,0.2), 0 1px 2px rgba(0,0,0,0.15)";
-                                    (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
-                                    (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(139,92,246,0.5)";
-                                }}
-                                onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(1px)"; }}
-                                onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)"; }}
+                                className="rounded-full"
                             >
                                 再看一遍...
-                            </button>
+                            </Button>
                         )}
                         {onHistoryClick && (
-                            <button
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                color="slate"
+                                size="sm"
+                                icon={<History size={14} />}
                                 onClick={onHistoryClick}
-                                style={{
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: "8px",
-                                    padding: "8px 22px",
-                                    borderRadius: "99px",
-                                    fontSize: "13px",
-                                    fontWeight: 700,
-                                    letterSpacing: "0.02em",
-                                    cursor: "pointer",
-                                    // Neutral glass — surface gradient + inset depth
-                                    background: "linear-gradient(160deg, var(--color-surface-2) 0%, var(--color-surface) 100%)",
-                                    border: "1px solid var(--color-border)",
-                                    borderTopColor: "rgba(255,255,255,0.25)",
-                                    color: "var(--color-text-secondary)",
-                                    // 3D: inner top light + bottom press shadow + lift
-                                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.08), 0 1px 0 rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.08)",
-                                    transition: "all 0.15s ease",
-                                }}
-                                onMouseEnter={e => {
-                                    (e.currentTarget as HTMLButtonElement).style.boxShadow = "inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.12), 0 2px 0 rgba(0,0,0,0.05), 0 5px 16px rgba(0,0,0,0.12)";
-                                    (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)";
-                                    (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text)";
-                                }}
-                                onMouseLeave={e => {
-                                    (e.currentTarget as HTMLButtonElement).style.boxShadow = "inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.08), 0 1px 0 rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.08)";
-                                    (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
-                                    (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text-secondary)";
-                                }}
-                                onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(1px)"; }}
-                                onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)"; }}
+                                className="rounded-full"
                             >
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                                    <path d="M3 3v5h5"/>
-                                    <path d="M12 7v5l4 2"/>
-                                </svg>
                                 观看历史
-                            </button>
+                            </Button>
                         )}
                     </div>
                 </motion.div>
@@ -437,31 +369,18 @@ export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetCli
                     }}
                 >
                     <div className="flex items-center justify-between w-full shrink-0">
-                        <span
-                            className="inline-flex items-center backdrop-blur-sm"
-                            style={{
-                                gap: "8px",
-                                fontSize: "12px",
-                                fontWeight: "bold",
-                                padding: "6px 12px",
-                                color: sColor,
-                                background: `linear-gradient(180deg, ${sColor}15 0%, ${sColor}05 100%)`,
-                                border: `1px solid ${sColor}20`,
-                                borderTopColor: `${sColor}50`,
-                                borderRadius: "99px",
-                                boxShadow: `inset 0 1px 2px rgba(255,255,255,0.15), 0 2px 6px ${sColor}15`,
-                            }}
+                        <Tag
+                            color={isAiring ? "emerald" : "slate"}
+                            variant="3d"
+                            size="sm"
+                            className="rounded-full"
                         >
                             <span
-                                className={`w-1.5 h-1.5 shrink-0 ${isAiring ? "animate-pulse" : ""}`}
-                                style={{
-                                    background: sColor,
-                                    borderRadius: "50%",
-                                    boxShadow: `0 0 8px 1px ${sColor}`,
-                                }}
+                                className={`w-1.5 h-1.5 shrink-0 rounded-full ${isAiring ? "animate-pulse" : ""}`}
+                                style={{ background: sColor, boxShadow: `0 0 8px 1px ${sColor}` }}
                             />
                             {sLabel}
-                        </span>
+                        </Tag>
                         <span className="text-[12px] font-medium text-[var(--color-text-muted)]">
                             上次：{fmtDateZh(lastWatchedAt)}
                         </span>
@@ -533,43 +452,16 @@ export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetCli
                                 const style =
                                     GENRE_COLORS[i % GENRE_COLORS.length];
                                 return (
-                                    <span
-                                        key={g}
-                                        className="inline-flex items-center shadow-sm"
-                                        style={{
-                                            gap: "6px",
-                                            padding: "5px 10px",
-                                            borderRadius: "10px",
-                                            backgroundColor:
-                                                "var(--color-surface-2)",
-                                            borderLeft:
-                                                "1px solid var(--color-border-subtle)",
-                                            borderRight:
-                                                "1px solid var(--color-border-subtle)",
-                                            borderTop:
-                                                "1px solid rgba(255,255,255,0.08)",
-                                            borderBottom:
-                                                "1px solid rgba(0,0,0,0.08)",
-                                        }}
-                                    >
+                                    <Tag key={g} color="slate" variant="3d" size="sm">
                                         <span
+                                            className="h-1.5 w-1.5 rounded-full"
                                             style={{
-                                                width: "6px",
-                                                height: "6px",
-                                                borderRadius: "50%",
                                                 backgroundColor: style.color,
                                                 boxShadow: `0 0 8px ${style.color}`,
                                             }}
                                         />
-                                        <span
-                                            className="text-[11px] font-bold tracking-wide"
-                                            style={{
-                                                color: "var(--color-text-secondary)",
-                                            }}
-                                        >
-                                            {g}
-                                        </span>
-                                    </span>
+                                        {g}
+                                    </Tag>
                                 );
                             })}
                         </div>
@@ -970,12 +862,16 @@ function OverviewText({ text }: { text: string | null }) {
                 {text}
             </p>
             {clamped && (
-                <button
+                <Button
+                    type="button"
+                    variant="ghost"
+                    color="slate"
+                    size="sm"
                     onClick={() => setExpanded((v) => !v)}
-                    className="mt-2 text-[12px] text-[var(--color-text-muted)] hover:text-[var(--color-accent)] transition-colors font-medium border border-[var(--color-border-subtle)] hover:border-[var(--color-accent-dim)] bg-[var(--color-surface-2)] px-3 py-1 rounded-md"
+                    className="mt-2"
                 >
                     {expanded ? "收起" : "展开阅读更多"}
-                </button>
+                </Button>
             )}
         </div>
     );
