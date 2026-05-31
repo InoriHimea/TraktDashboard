@@ -137,7 +137,10 @@ export default function WatchlistPage() {
             await removeFromWatchlist.mutateAsync(id);
             toast(t("watchlist.removeSuccess"), "success");
         } catch {
-            toast(t("watchlist.removeFailed"), "error");
+            toast(t("watchlist.removeFailed"), "error", {
+                label: "重试",
+                onClick: () => handleRemove(id)
+            });
         } finally {
             setRemovingId(null);
         }

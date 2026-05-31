@@ -94,6 +94,26 @@ export interface EpisodeProgress {
     runtime: number | null;
 }
 
+export interface CalendarEpisode {
+    id: number;
+    seasonNumber: number;
+    episodeNumber: number;
+    title: string | null;
+    overview: string | null;
+    runtime: number | null;
+    stillPath: string | null;
+    airDate: string | null;
+    show: {
+        id: number;
+        title: string;
+        originalName: string | null;
+        translatedName: string | null;
+        posterPath: string | null;
+        network: string | null;
+        status: string;
+    };
+}
+
 export interface SeasonProgress {
     seasonNumber: number;
     episodeCount: number;

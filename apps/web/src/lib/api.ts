@@ -13,6 +13,7 @@ import type {
     WatchHistoryEntry,
     MovieProgress,
     MovieWatchHistoryEntry,
+    CalendarEpisode,
 } from "@trakt-dashboard/types";
 
 const API_BASE = "/api";
@@ -92,6 +93,10 @@ export const api = {
                     body: JSON.stringify({ watchedAt: watchedAt ?? null }),
                 },
             ),
+        forceSync: (showId: number) =>
+            request<{ ok: boolean }>(`/shows/${showId}/force-sync`, {
+                method: "POST",
+            }),
     },
     episodes: {
         detail: (showId: number, season: number, episode: number) =>
@@ -134,6 +139,15 @@ export const api = {
     trakt: {
         watching: () =>
             request<ApiResponse<NowPlayingEpisode | null>>("/trakt/watching"),
+    },
+    calendar: {
+        list: (before = 14, after = 30) => {
+            const params = new URLSearchParams({
+                before: String(before),
+                after: String(after),
+            });
+            return request<ApiResponse<Record<string, CalendarEpisode[]>>>(`/calendar?${params}`);
+        },
     },
     movies: {
         progress: (filter = "watched", q = "", limit = 50, offset = 0) => {

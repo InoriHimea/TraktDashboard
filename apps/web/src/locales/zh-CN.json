@@ -17,12 +17,15 @@
     "clearSearch": "清除搜索",
     "noSearchResults": "没有找到“{{query}}”的结果",
     "importHint": "前往同步页面导入你的 Trakt 历史。",
-    "notFound": "未找到内容"
+    "notFound": "未找到内容",
+    "readMore": "展开阅读更多",
+    "collapse": "收起"
   },
   "nav": {
     "progress": "进度",
     "tvShows": "电视节目",
     "movies": "电影",
+    "calendar": "播出日历",
     "watchlist": "待看列表",
     "statistics": "统计",
     "sync": "同步",

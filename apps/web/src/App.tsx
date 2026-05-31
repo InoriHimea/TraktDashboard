@@ -9,11 +9,12 @@ import MoviesPage from "./pages/MoviesPage";
 import MovieDetailPage from "./pages/MovieDetailPage";
 import ShowDetailPage from "./pages/ShowDetailPage";
 import EpisodeDetailPage from "./pages/EpisodeDetailPage";
-import StatsPage from "./pages/StatsPage";
+import StatsPage from "./pages/stats";
 import SyncPage from "./pages/SyncPage";
 import SettingsPage from "./pages/SettingsPage";
 import LoginPage from "./pages/LoginPage";
 import WatchlistPage from "./pages/WatchlistPage";
+import CalendarPage from "./pages/CalendarPage";
 
 // Error Boundary component
 class ErrorBoundary extends React.Component<
@@ -140,6 +141,7 @@ export default function App() {
                                 <Route path="/movies" element={<MoviesPage />} />
                                 <Route path="/movies/:id" element={<MovieDetailPage />} />
                                 <Route path="/shows/:id" element={<ShowDetailPage />} />
+                                <Route path="/calendar" element={<CalendarPage />} />
                                 <Route path="/watchlist" element={<WatchlistPage />} />
                                 <Route path="/stats" element={<StatsPage />} />
                                 <Route path="/sync" element={<SyncPage />} />

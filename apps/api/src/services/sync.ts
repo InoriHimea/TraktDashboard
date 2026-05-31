@@ -469,6 +469,23 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
 
 // ─── Single show sync ─────────────────────────────────────────────────────────
 
+export async function forceSyncShow(userId: number, showId: number): Promise<void> {
+    const db = getDb();
+    const [show] = await db.select().from(shows).where(eq(shows.id, showId));
+    if (!show || !show.traktId) throw new Error("Show not found or missing Trakt ID");
+
+    await syncSingleShow(
+        userId,
+        {
+            tmdbId: show.tmdbId,
+            traktId: show.traktId,
+            title: show.title,
+            traktShow: {}, // Not used in upsertShowFromTrakt
+        },
+        true, // forceRefreshMetadata
+    );
+}
+
 async function syncSingleShow(
     userId: number,
     input: {
@@ -551,31 +568,31 @@ async function upsertShowFromTrakt(
     }
 
     // Multi-language fallback chain: user locale family → show original language → English
-    if (displayLanguage) {
+    if (displayLanguage && baseTmdbShow) {
         const languageFallbackChain = buildLanguageFallbackChain(
             displayLanguage,
-            baseTmdbShow?.original_language ?? null,
+            baseTmdbShow.original_language ?? null,
         );
 
+        const translations = baseTmdbShow.translations?.translations || [];
+
         for (const lang of languageFallbackChain) {
-            try {
-                const tmdbShow = await getTmdbShow(tmdbId, lang, userId);
-                // Poster/backdrop: prefer base (language-neutral), fall back to localized
-                if (!posterPath) posterPath = tmdbShow.poster_path || null;
-                if (!backdropPath) backdropPath = tmdbShow.backdrop_path || null;
-                
-                if (!translatedName && tmdbShow.name && tmdbShow.name !== traktDetail.title) {
-                    translatedName = tmdbShow.name;
+            const [langCode, countryCode] = lang.split('-');
+            const match = translations.find(t =>
+                countryCode
+                    ? (t.iso_639_1 === langCode && t.iso_3166_1 === countryCode.toUpperCase())
+                    : t.iso_639_1 === langCode
+            );
+
+            if (match && match.data) {
+                if (!translatedName && match.data.name && match.data.name !== traktDetail.title) {
+                    translatedName = match.data.name;
                 }
-                if (!translatedOverview && tmdbShow.overview && tmdbShow.overview !== traktDetail.overview) {
-                    translatedOverview = tmdbShow.overview;
+                if (!translatedOverview && match.data.overview && match.data.overview !== traktDetail.overview) {
+                    translatedOverview = match.data.overview;
                 }
-                
+
                 if (translatedName && translatedOverview) break;
-            } catch (e) {
-                console.warn(
-                    `[sync] TMDB show fetch failed for tmdb ${tmdbId} lang ${lang}: ${toErrorMessage(e)}`,
-                );
             }
         }
     }
@@ -1518,35 +1535,40 @@ export async function syncMovies(userId: number): Promise<void> {
 
       try {
         const baseMovie = await getTmdbMovie(tmdbId, userId)
-        let selectedMovie = baseMovie
         let localizedTitle: string | null = null
         let localizedOverview: string | null = null
 
         if (displayLanguage) {
-          for (const language of buildLanguageFallbackChain(displayLanguage, baseMovie.original_language)) {
-            try {
-              const candidate = await getTmdbMovie(tmdbId, userId, language)
-              if (!localizedTitle && candidate.title?.trim() && candidate.title !== baseMovie.original_title) {
-                localizedTitle = candidate.title.trim()
-              }
-              if (!localizedOverview && candidate.overview?.trim()) {
-                localizedOverview = candidate.overview.trim()
-                selectedMovie = candidate
-              }
-              if (localizedTitle && localizedOverview) break
-            } catch {
-              continue
+          const languageFallbackChain = buildLanguageFallbackChain(displayLanguage, baseMovie.original_language)
+          const translations = baseMovie.translations?.translations || []
+
+          for (const language of languageFallbackChain) {
+            const [langCode, countryCode] = language.split('-')
+            const match = translations.find(t =>
+                countryCode
+                    ? (t.iso_639_1 === langCode && t.iso_3166_1 === countryCode.toUpperCase())
+                    : t.iso_639_1 === langCode
+            );
+
+            if (match && match.data) {
+                if (!localizedTitle && match.data.title && match.data.title !== baseMovie.original_title) {
+                    localizedTitle = match.data.title;
+                }
+                if (!localizedOverview && match.data.overview) {
+                    localizedOverview = match.data.overview;
+                }
+                if (localizedTitle && localizedOverview) break;
             }
           }
         }
 
         title = localizedTitle || baseMovie.title || title
-        posterPath = selectedMovie.poster_path || baseMovie.poster_path || null
-        backdropPath = selectedMovie.backdrop_path || baseMovie.backdrop_path || null
+        posterPath = baseMovie.poster_path || null
+        backdropPath = baseMovie.backdrop_path || null
         overview = localizedOverview || baseMovie.overview || null
-        releaseDate = selectedMovie.release_date || baseMovie.release_date || null
-        runtime = selectedMovie.runtime ?? baseMovie.runtime ?? null
-        genres = (selectedMovie.genres?.length ? selectedMovie.genres : baseMovie.genres)?.map(g => g.name) || []
+        releaseDate = baseMovie.release_date || null
+        runtime = baseMovie.runtime ?? null
+        genres = baseMovie.genres?.map(g => g.name) || []
       } catch (e) {
         console.warn(`[sync:movies] TMDB fetch failed for "${title}" (tmdb:${tmdbId}): ${toErrorMessage(e)}`)
       }

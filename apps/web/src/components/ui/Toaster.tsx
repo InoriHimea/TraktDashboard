@@ -43,9 +43,22 @@ export function Toaster() {
                             role="alert"
                         >
                             <Icon className="w-4 h-4 shrink-0" style={{ color: icon }} />
-                            <span className="flex-1 text-sm text-[var(--color-text)]">
-                                {t.message}
-                            </span>
+                            <div className="flex-1 flex items-center justify-between gap-3">
+                                <span className="text-sm text-[var(--color-text)]">
+                                    {t.message}
+                                </span>
+                                {t.action && (
+                                    <button
+                                        onClick={() => {
+                                            t.action!.onClick();
+                                            dismiss(t.id);
+                                        }}
+                                        className="shrink-0 text-xs font-medium px-2.5 py-1 rounded-md bg-[var(--color-surface-3)] hover:bg-[var(--color-border)] text-[var(--color-text)] transition-colors"
+                                    >
+                                        {t.action.label}
+                                    </button>
+                                )}
+                            </div>
                             <button
                                 onClick={() => dismiss(t.id)}
                                 className="shrink-0 text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"

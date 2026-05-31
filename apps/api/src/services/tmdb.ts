@@ -140,6 +140,20 @@ export interface TmdbShow {
         overview: string;
         poster_path: string | null;
     }>;
+    translations?: {
+        translations: Array<{
+            iso_3166_1: string;
+            iso_639_1: string;
+            name: string;
+            english_name: string;
+            data: {
+                name: string;
+                overview: string;
+                homepage: string;
+                tagline: string;
+            };
+        }>;
+    };
 }
 
 export interface TmdbMovie {
@@ -154,6 +168,20 @@ export interface TmdbMovie {
     poster_path: string | null;
     backdrop_path: string | null;
     imdb_id: string | null;
+    translations?: {
+        translations: Array<{
+            iso_3166_1: string;
+            iso_639_1: string;
+            name: string;
+            english_name: string;
+            data: {
+                title: string;
+                overview: string;
+                homepage: string;
+                tagline: string;
+            };
+        }>;
+    };
 }
 
 export interface TmdbSeason {
@@ -199,7 +227,7 @@ export async function getTmdbShow(
     }
 
     const params: Record<string, string> = {
-        append_to_response: "external_ids",
+        append_to_response: "external_ids,translations",
     };
     if (language) params.language = language;
 
@@ -245,7 +273,9 @@ export async function getTmdbMovie(
             return cached.data as TmdbMovie;
     }
 
-    const params: Record<string, string> = {};
+    const params: Record<string, string> = {
+        append_to_response: "translations",
+    };
     if (language) params.language = language;
 
     const data = await tmdbFetch<TmdbMovie>(`/movie/${tmdbId}`, params, userId);

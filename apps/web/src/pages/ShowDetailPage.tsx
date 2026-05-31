@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, RefreshCw, CheckCheck } from "lucide-react";
-import { useShowDetail, useResetProgress, useMarkSeasonWatched } from "../hooks";
+import { useShowDetail, useResetProgress, useMarkSeasonWatched, useForceSync, useWatchlist, useAddToWatchlist, useRemoveFromWatchlist } from "../hooks";
 import { HeroSection } from "../components/HeroSection";
 import { SeasonTab } from "../components/SeasonTab";
 import { EpisodeGrid } from "../components/EpisodeGrid";
@@ -99,6 +99,16 @@ export default function ShowDetailPage() {
 
     const resetProgress = useResetProgress(isValidId ? showId : 0);
     const markSeasonWatched = useMarkSeasonWatched(isValidId ? showId : 0);
+    const forceSync = useForceSync(isValidId ? showId : 0);
+
+    // Watchlist
+    const { data: watchlistItems } = useWatchlist("shows");
+    const watchlistItem = watchlistItems?.find((item) => "show" in item && item.show.id === showId);
+    const inWatchlist = !!watchlistItem;
+    const addToWatchlist = useAddToWatchlist();
+    const removeFromWatchlist = useRemoveFromWatchlist();
+    const isWatchlistPending = addToWatchlist.isPending || removeFromWatchlist.isPending;
+
     const { toast } = useToast();
 
     if (isLoading) return <PageSkeleton />;
@@ -157,13 +167,55 @@ export default function ShowDetailPage() {
 
     return (
         <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
-            <div style={{ width: "100%", padding: "24px 40px" }}>
+            <div className="relative flex w-full max-w-none flex-col gap-8 px-[3vw] py-8">
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="md"
+                    icon={<ArrowLeft size={14} />}
+                    onClick={() => navigate(-1)}
+                    className="w-fit"
+                >
+                    {t("common.back")}
+                </Button>
+
                 {/* Hero 三栏区 */}
                 <HeroSection
                     progress={progress}
                     onWatchClick={scrollToEpisodes}
                     onHistoryClick={() => setHistoryPanelOpen(true)}
                     onResetClick={isComplete ? () => setResetConfirmOpen(true) : undefined}
+                    onForceSyncClick={() => {
+                        forceSync.mutate(undefined, {
+                            onSuccess: () => toast("已触发元数据刷新", "success"),
+                            onError: (err) => toast(`刷新失败: ${err.message}`, "error", {
+                                label: "重试",
+                                onClick: () => forceSync.mutate(undefined)
+                            }),
+                        });
+                    }}
+                    onToggleWatchlist={() => {
+                        if (inWatchlist && watchlistItem) {
+                            removeFromWatchlist.mutate(watchlistItem.id, {
+                                onSuccess: () => toast(t("watchlist.removeSuccess"), "success"),
+                                onError: () => toast(t("watchlist.removeFailed"), "error", {
+                                    label: "重试",
+                                    onClick: () => removeFromWatchlist.mutate(watchlistItem.id)
+                                }),
+                            });
+                        } else {
+                            addToWatchlist.mutate({ type: "show", id: showId }, {
+                                onSuccess: () => toast("已添加到待看列表", "success"),
+                                onError: () => toast("添加失败", "error", {
+                                    label: "重试",
+                                    onClick: () => addToWatchlist.mutate({ type: "show", id: showId })
+                                }),
+                            });
+                        }
+                    }}
+                    isForceSyncing={forceSync.isPending}
+                    isWatchlistPending={isWatchlistPending}
+                    inWatchlist={inWatchlist}
                     isComplete={isComplete}
                 />
 
@@ -176,33 +228,44 @@ export default function ShowDetailPage() {
                         borderTop: "1px solid var(--color-border-subtle)",
                     }}
                 >
-                    {/* Breadcrumb */}
-                    <div
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            marginBottom: "24px",
-                            fontSize: "14px",
-                        }}
-                    >
-                        <span
-                            style={{
-                                fontWeight: 600,
-                                color: "var(--color-text)",
-                            }}
+                    {/* 季切换标签 */}
+                    {seasons.length > 0 && (
+                        <div
+                            className="mb-6 inline-flex max-w-full flex-wrap rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] p-1 shadow-lg shadow-black/10"
+                            role="tablist"
+                            aria-label="选择季度"
                         >
-                            Seasons
-                        </span>
-                        <span style={{ color: "var(--color-text-muted)" }}>
-                            /
-                        </span>
-                        <span style={{ color: "var(--color-text-muted)" }}>
-                            {currentSeasonNumber === 0
-                                ? "Specials"
-                                : `Season ${currentSeasonNumber}`}
-                        </span>
-                    </div>
+                            {seasons.map((s) => {
+                                const isActive = s.seasonNumber === currentSeasonNumber;
+
+                                return (
+                                    <button
+                                        key={s.seasonNumber}
+                                        type="button"
+                                        role="tab"
+                                        aria-selected={isActive}
+                                        onClick={() => setActiveSeason(s.seasonNumber)}
+                                        className="inline-flex h-8 items-center rounded-full border px-4 text-sm font-semibold transition-colors"
+                                        style={{
+                                            color: isActive
+                                                ? "var(--color-accent-light)"
+                                                : "var(--color-text-secondary)",
+                                            background: isActive
+                                                ? "var(--color-accent-dim)"
+                                                : "transparent",
+                                            border: isActive
+                                                ? "1px solid var(--color-border-focus)"
+                                                : "1px solid transparent",
+                                        }}
+                                    >
+                                        {s.seasonNumber === 0
+                                            ? t("shows.specials")
+                                            : `S${s.seasonNumber}`}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
 
                     {/* 季海报横排 — 靠左 */}
                     {seasons.length > 0 && (
@@ -260,7 +323,10 @@ export default function ShowDetailPage() {
                                             { season: currentSeason.seasonNumber, watchedAt: null },
                                             {
                                                 onSuccess: () => toast(t("shows.markSeasonWatchedSuccess"), "success"),
-                                                onError: () => toast(t("shows.markSeasonWatchedError"), "error"),
+                                                onError: () => toast(t("shows.markSeasonWatchedError"), "error", {
+                                                    label: "重试",
+                                                    onClick: () => markSeasonWatched.mutate({ season: currentSeason.seasonNumber, watchedAt: null })
+                                                }),
                                             }
                                         )
                                     }

@@ -238,7 +238,7 @@ export function EpisodeInfoCard({ data, onHistoryClick, isWatched, onRefetch }: 
       {overview && (
         <div style={{ marginBottom: '36px' }}>
           <p
-            className="text-muted-foreground/80 text-base md:text-lg font-medium max-w-3xl"
+            className="text-muted-foreground/80 text-base md:text-lg font-medium max-w-3xl whitespace-pre-line"
             style={{
               display: '-webkit-box',
               WebkitLineClamp: 6,

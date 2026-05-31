@@ -17,12 +17,15 @@
     "clearSearch": "Clear search",
     "noSearchResults": "No results for \"{{query}}\"",
     "importHint": "Go to Sync to import your Trakt history.",
-    "notFound": "Content not found"
+    "notFound": "Content not found",
+    "readMore": "Read more",
+    "collapse": "Collapse"
   },
   "nav": {
     "progress": "Progress",
     "tvShows": "TV Shows",
     "movies": "Movies",
+    "calendar": "Calendar",
     "watchlist": "Watchlist",
     "statistics": "Statistics",
     "sync": "Sync",

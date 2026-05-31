@@ -1,13 +1,15 @@
 import { useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Film, Clock, Calendar, Eye, Trash2, RefreshCw, Loader2, History } from "lucide-react";
-import { useMovieDetail, useMovieHistory, useMarkMovieWatched, useDeleteMovieHistory } from "../hooks";
+import { ArrowLeft, Film, Clock, Calendar, Eye, Trash2, RefreshCw, Loader2, History, Bookmark } from "lucide-react";
+import { useMovieDetail, useMovieHistory, useMarkMovieWatched, useDeleteMovieHistory, useWatchlist, useAddToWatchlist, useRemoveFromWatchlist } from "../hooks";
 import { tmdbImage } from "../lib/utils";
+import { useToast } from "../lib/toast";
 import { t } from "../lib/i18n";
 import { Button } from "../components/ui/Button";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { Tag } from "../components/ui/Tag";
+import { OverviewText } from "../components/ui/OverviewText";
 
 function DetailRow({ label, value }: { label: string; value: string }) {
     return (
@@ -55,6 +57,15 @@ export default function MovieDetailPage() {
     const { data: history, isLoading: historyLoading } = useMovieHistory(isValidId ? movieId : 0);
     const markWatched = useMarkMovieWatched(isValidId ? movieId : 0);
     const deleteHistory = useDeleteMovieHistory(isValidId ? movieId : 0);
+
+    const { data: watchlistItems } = useWatchlist("movies");
+    const watchlistItem = watchlistItems?.find((item) => "movie" in item && item.movie.id === movieId);
+    const inWatchlist = !!watchlistItem;
+    const addToWatchlist = useAddToWatchlist();
+    const removeFromWatchlist = useRemoveFromWatchlist();
+    const isWatchlistPending = addToWatchlist.isPending || removeFromWatchlist.isPending;
+
+    const { toast } = useToast();
 
     const [activeTab, setActiveTab] = useState<"details" | "history">("details");
     const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
@@ -241,22 +252,53 @@ export default function MovieDetailPage() {
                         )}
 
                         {movie.overview && (
-                            <p className="max-w-4xl text-left text-[15px] leading-7 text-[var(--color-text-secondary)]">
-                                {movie.overview}
-                            </p>
+                            <OverviewText
+                                text={movie.overview}
+                                className="max-w-4xl text-left text-[15px] leading-7"
+                            />
                         )}
 
-
-                        <Button
-                            type="button"
-                            variant="primary"
-                            size="md"
-                            loading={markWatched.isPending}
-                            icon={<Eye size={15} />}
-                            onClick={() => setMarkWatchedConfirmOpen(true)}
-                        >
-                            标记为已观看
-                        </Button>
+                        <div className="flex items-center gap-3">
+                            <Button
+                                type="button"
+                                variant="primary"
+                                size="md"
+                                loading={markWatched.isPending}
+                                icon={<Eye size={15} />}
+                                onClick={() => setMarkWatchedConfirmOpen(true)}
+                            >
+                                标记为已观看
+                            </Button>
+                            <Button
+                                type="button"
+                                variant={inWatchlist ? "primary" : "secondary"}
+                                color="amber"
+                                size="md"
+                                icon={<Bookmark size={15} fill={inWatchlist ? "currentColor" : "none"} />}
+                                onClick={() => {
+                                    if (inWatchlist && watchlistItem) {
+                                        removeFromWatchlist.mutate(watchlistItem.id, {
+                                            onSuccess: () => toast(t("watchlist.removeSuccess"), "success"),
+                                            onError: () => toast(t("watchlist.removeFailed"), "error", {
+                                                label: "重试",
+                                                onClick: () => removeFromWatchlist.mutate(watchlistItem.id)
+                                            }),
+                                        });
+                                    } else {
+                                        addToWatchlist.mutate({ type: "movie", id: movieId }, {
+                                            onSuccess: () => toast("已添加到待看列表", "success"),
+                                            onError: () => toast("添加失败", "error", {
+                                                label: "重试",
+                                                onClick: () => addToWatchlist.mutate({ type: "movie", id: movieId })
+                                            }),
+                                        });
+                                    }
+                                }}
+                                disabled={isWatchlistPending}
+                            >
+                                {inWatchlist ? "已在待看" : "加入待看"}
+                            </Button>
+                        </div>
                     </motion.div>
                 </section>
 

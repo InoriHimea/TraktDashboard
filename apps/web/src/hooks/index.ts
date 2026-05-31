@@ -12,6 +12,7 @@ import type {
     WatchHistoryEntry,
     MovieProgress,
     MovieWatchHistoryEntry,
+    CalendarEpisode,
 } from "@trakt-dashboard/types";
 import { api } from "../lib/api";
 
@@ -107,10 +108,30 @@ export function useShowDetail(id: number) {
     });
 }
 
+export function useForceSync(showId: number) {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: () => api.shows.forceSync(showId),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["show-detail", showId] });
+            qc.invalidateQueries({ queryKey: ["shows-progress"] });
+            qc.invalidateQueries({ queryKey: ["sync-status"] });
+        },
+    });
+}
+
 export function useStats() {
     return useQuery<StatsOverview>({
         queryKey: ["stats"],
         queryFn: () => api.stats.overview().then((r) => r.data),
+        staleTime: 1000 * 60 * 5,
+    });
+}
+
+export function useCalendar(before = 14, after = 30) {
+    return useQuery<Record<string, CalendarEpisode[]>>({
+        queryKey: ["calendar", before, after],
+        queryFn: () => api.calendar.list(before, after).then((r) => r.data),
         staleTime: 1000 * 60 * 5,
     });
 }

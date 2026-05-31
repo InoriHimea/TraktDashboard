@@ -10,7 +10,7 @@ const watchedAtSchema = z.object({
     watchedAt: z.string().datetime({ offset: true }).nullable().optional(),
 })
 import { getTraktClient } from '../services/trakt.js'
-import { recalcShowProgress, computeWatchedEpisodes } from '../services/sync.js'
+import { recalcShowProgress, computeWatchedEpisodes, forceSyncShow } from '../services/sync.js'
 
 export const showRoutes = new Hono<{ Variables: { userId: number } }>()
 
@@ -619,4 +619,22 @@ showRoutes.post('/:showId/seasons/:season/mark-watched', async (c) => {
   await recalcShowProgress(userId, showId)
 
   return c.json({ ok: true, marked: unwatched.length, alreadyWatched: watchedSet.size })
+})
+
+// POST /api/shows/:showId/force-sync
+showRoutes.post('/:showId/force-sync', async (c) => {
+  const userId = c.get('userId')
+  const showId = parseBoundedInt(c.req.param('showId'), -1, 1, Number.MAX_SAFE_INTEGER)
+
+  if (showId < 1) {
+    return c.json({ error: 'Invalid parameters' }, 400)
+  }
+
+  try {
+    await forceSyncShow(userId, showId)
+    return c.json({ ok: true })
+  } catch (e: any) {
+    console.error(`[shows] Force sync failed for show ${showId}:`, e)
+    return c.json({ error: e.message || 'Failed to force sync show' }, 500)
+  }
 })

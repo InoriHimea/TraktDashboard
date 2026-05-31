@@ -1,7 +1,7 @@
 import { Queue, Worker } from "bullmq";
 import IORedis from "ioredis";
-import { getDb, users, userSettings } from "@trakt-dashboard/db";
-import { eq } from "drizzle-orm";
+import { getDb, users, userSettings, metadataCache } from "@trakt-dashboard/db";
+import { eq, lt } from "drizzle-orm";
 import { triggerIncrementalSync, resetStaleRunningSyncs } from "../services/sync.js";
 
 let connection: IORedis | null = null;
@@ -97,6 +97,19 @@ export async function startScheduler() {
                     `[scheduler] Running incremental sync for user ${userId}`,
                 );
                 await triggerIncrementalSync(userId);
+            } else if (job.name === "cleanup-cache") {
+                console.log(`[scheduler] Running metadata cache cleanup`);
+                try {
+                    const db = getDb();
+                    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                    const result = await db
+                        .delete(metadataCache)
+                        .where(lt(metadataCache.cachedAt, sevenDaysAgo));
+                    // Drizzle Postgres.js returns { count } depending on driver, but logging completion is enough
+                    console.log(`[scheduler] Metadata cache cleanup completed`);
+                } catch (e) {
+                    console.error(`[scheduler] Metadata cache cleanup failed:`, e);
+                }
             }
         },
         { connection: redis, concurrency: 1 },
@@ -111,6 +124,29 @@ export async function startScheduler() {
     const allUsers = await db.select({ id: users.id }).from(users);
     for (const user of allUsers) {
         await registerUserSyncJob(user.id);
+    }
+
+    // Register daily metadata cache cleanup job
+    try {
+        const repeatableJobs = await queue.getRepeatableJobs();
+        const cleanupJobId = "cleanup-metadata-cache";
+        const existingCleanup = repeatableJobs.find((j) => j.id === cleanupJobId);
+        if (existingCleanup) {
+            await queue.removeRepeatableByKey(existingCleanup.key);
+        }
+        await queue.add(
+            "cleanup-cache",
+            {},
+            {
+                jobId: cleanupJobId,
+                repeat: { every: 24 * 60 * 60 * 1000 }, // Daily
+                removeOnComplete: 10,
+                removeOnFail: 5,
+            }
+        );
+        console.log(`[scheduler] Registered daily metadata cache cleanup job`);
+    } catch (e) {
+        console.error(`[scheduler] Failed to register cleanup job:`, e);
     }
 
     console.log(`[scheduler] Scheduler started`);

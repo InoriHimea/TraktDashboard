@@ -48,8 +48,8 @@ export default function SettingsPage() {
         }
     }, [settings]);
 
-    async function handleSave(e: React.FormEvent) {
-        e.preventDefault();
+    async function handleSave(e?: React.FormEvent) {
+        if (e) e.preventDefault();
 
         // Frontend validation
         const interval = Number(syncIntervalMinutes);
@@ -86,7 +86,10 @@ export default function SettingsPage() {
         } catch (err: unknown) {
             const message =
                 err instanceof Error ? err.message : t("settings.saveFailed");
-            toast(message, "error");
+            toast(message, "error", {
+                label: "重试",
+                onClick: () => handleSave()
+            });
         }
     }
 

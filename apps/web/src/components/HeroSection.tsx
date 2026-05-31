@@ -4,7 +4,7 @@
  */
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { History, Info, RotateCcw, Tv2 } from "lucide-react";
+import { History, Info, RotateCcw, Tv2, RefreshCw, Bookmark } from "lucide-react";
 import {
     resolveTitle,
     resolveOverview,
@@ -15,6 +15,7 @@ import {
 import { resolveShowPoster } from "../lib/image";
 import { Button } from "./ui/Button";
 import { Tag } from "./ui/Tag";
+import { OverviewText } from "./ui/OverviewText";
 import type { ShowProgress } from "@trakt-dashboard/types";
 
 interface HeroSectionProps {
@@ -22,10 +23,15 @@ interface HeroSectionProps {
     onWatchClick?: () => void;
     onHistoryClick?: () => void;
     onResetClick?: () => void;
+    onForceSyncClick?: () => void;
+    onToggleWatchlist?: () => void;
+    isForceSyncing?: boolean;
+    isWatchlistPending?: boolean;
+    inWatchlist?: boolean;
     isComplete?: boolean;
 }
 
-export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetClick, isComplete }: HeroSectionProps) {
+export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetClick, onForceSyncClick, onToggleWatchlist, isForceSyncing, isWatchlistPending, inWatchlist, isComplete }: HeroSectionProps) {
     const { show, lastWatchedAt, seasons } = progress;
     const [posterError, setPosterError] = useState(false);
 
@@ -314,7 +320,7 @@ export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetCli
                         )}
                     </div>
 
-                    <OverviewText text={overview} />
+                    <OverviewText text={overview} className="max-w-2xl mt-1" />
 
                     {/* Action buttons — inline with middle column content */}
                     <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
@@ -342,6 +348,34 @@ export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetCli
                                 className="rounded-full"
                             >
                                 观看历史
+                            </Button>
+                        )}
+                        {onForceSyncClick && (
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                color="slate"
+                                size="sm"
+                                icon={<RefreshCw size={14} className={isForceSyncing ? "animate-spin" : ""} />}
+                                onClick={onForceSyncClick}
+                                disabled={isForceSyncing}
+                                className="rounded-full"
+                            >
+                                刷新元数据
+                            </Button>
+                        )}
+                        {onToggleWatchlist && (
+                            <Button
+                                type="button"
+                                variant={inWatchlist ? "primary" : "secondary"}
+                                color="amber"
+                                size="sm"
+                                icon={<Bookmark size={14} fill={inWatchlist ? "currentColor" : "none"} />}
+                                onClick={onToggleWatchlist}
+                                disabled={isWatchlistPending}
+                                className="rounded-full"
+                            >
+                                {inWatchlist ? "已在待看" : "加入待看"}
                             </Button>
                         )}
                     </div>
@@ -830,49 +864,5 @@ function ProgressBar({
 function Dot() {
     return (
         <span className="w-1 h-1 rounded-full bg-[var(--color-text-muted)] opacity-50 inline-block" />
-    );
-}
-
-function OverviewText({ text }: { text: string | null }) {
-    const [expanded, setExpanded] = useState(false);
-    const [clamped, setClamped] = useState(false);
-
-    function handleRef(el: HTMLParagraphElement | null) {
-        if (el) setClamped(el.scrollHeight > el.clientHeight + 2);
-    }
-
-    if (!text) return null;
-
-    return (
-        <div className="max-w-2xl mt-1">
-            <p
-                ref={handleRef}
-                className="text-[14px] text-[var(--color-text-secondary)] leading-relaxed"
-                style={
-                    expanded
-                        ? undefined
-                        : {
-                              display: "-webkit-box",
-                              WebkitLineClamp: 4,
-                              WebkitBoxOrient: "vertical",
-                              overflow: "hidden",
-                          }
-                }
-            >
-                {text}
-            </p>
-            {clamped && (
-                <Button
-                    type="button"
-                    variant="ghost"
-                    color="slate"
-                    size="sm"
-                    onClick={() => setExpanded((v) => !v)}
-                    className="mt-2"
-                >
-                    {expanded ? "收起" : "展开阅读更多"}
-                </Button>
-            )}
-        </div>
     );
 }

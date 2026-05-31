@@ -11,6 +11,7 @@ import { settingsRoutes } from "./routes/settings.js";
 import { imgRoutes } from "./routes/img.js";
 import { traktRoutes } from "./routes/trakt.js";
 import { watchlistRoutes } from "./routes/watchlist.js";
+import { calendarRoutes } from "./routes/calendar.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { startScheduler } from "./jobs/scheduler.js";
 
@@ -42,6 +43,7 @@ api.route("/settings", settingsRoutes);
 api.route("/img", imgRoutes);
 api.route("/trakt", traktRoutes);
 api.route("/watchlist", watchlistRoutes);
+api.route("/calendar", calendarRoutes);
 
 app.route("/api", api);
 
