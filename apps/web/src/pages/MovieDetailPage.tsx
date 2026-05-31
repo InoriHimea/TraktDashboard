@@ -6,6 +6,8 @@ import { useMovieDetail, useMovieHistory, useMarkMovieWatched, useDeleteMovieHis
 import { tmdbImage } from "../lib/utils";
 import { t } from "../lib/i18n";
 import { Button } from "../components/ui/Button";
+import { ConfirmDialog } from "../components/ui/ConfirmDialog";
+import { Tag } from "../components/ui/Tag";
 
 function DetailRow({ label, value }: { label: string; value: string }) {
     return (
@@ -56,6 +58,7 @@ export default function MovieDetailPage() {
 
     const [activeTab, setActiveTab] = useState<"details" | "history">("details");
     const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+    const [markWatchedConfirmOpen, setMarkWatchedConfirmOpen] = useState(false);
     const [imgError, setImgError] = useState(false);
     const [backdropError, setBackdropError] = useState(false);
 
@@ -76,12 +79,16 @@ export default function MovieDetailPage() {
             <div className="flex min-h-screen items-center justify-center bg-[var(--color-bg)] px-6 text-[var(--color-text)]">
                 <div className="flex flex-col items-center gap-4 text-center">
                     <p className="text-sm text-[var(--color-error)]">加载失败，请重试</p>
-                    <button
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        color="slate"
+                        size="md"
+                        icon={<RefreshCw size={14} />}
                         onClick={() => refetch()}
-                        className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm text-[var(--color-text-secondary)]"
                     >
-                        <RefreshCw size={14} /> 重新加载
-                    </button>
+                        重新加载
+                    </Button>
                 </div>
             </div>
         );
@@ -126,13 +133,22 @@ export default function MovieDetailPage() {
         return `${(minutes / 60).toFixed(minutes >= 600 ? 0 : 1)}h`;
     };
 
-    const handleMarkWatched = () => {
-        markWatched.mutate(new Date().toISOString());
+    const handleMarkWatched = async () => {
+        try {
+            await markWatched.mutateAsync(new Date().toISOString());
+            setMarkWatchedConfirmOpen(false);
+        } catch {
+            // mutation error is surfaced via markWatched.isError; keep dialog open
+        }
     };
 
     const handleDeleteHistory = async (historyId: number) => {
-        await deleteHistory.mutateAsync(historyId);
-        setDeleteConfirmId(null);
+        try {
+            await deleteHistory.mutateAsync(historyId);
+            setDeleteConfirmId(null);
+        } catch {
+            // mutation error is surfaced via deleteHistory.isError; keep dialog open
+        }
     };
 
     return (
@@ -207,9 +223,9 @@ export default function MovieDetailPage() {
                                     </span>
                                 )}
                                 {watchCount > 0 && (
-                                    <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1 text-emerald-300">
-                                        <Eye size={14} /> {t("movies.watchCount")} {watchCount}
-                                    </span>
+                                    <Tag color="emerald" variant="outline" icon={<Eye size={14} />}>
+                                        {t("movies.watchCount")} {watchCount}
+                                    </Tag>
                                 )}
                             </div>
                         </div>
@@ -217,12 +233,9 @@ export default function MovieDetailPage() {
                         {movie.genres.length > 0 && (
                             <div className="flex flex-wrap gap-2">
                                 {movie.genres.map((genre) => (
-                                    <span
-                                        key={genre}
-                                        className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-xs text-[var(--color-text-muted)]"
-                                    >
+                                    <Tag key={genre} color="slate" variant="3d">
                                         {genre}
-                                    </span>
+                                    </Tag>
                                 ))}
                             </div>
                         )}
@@ -240,7 +253,7 @@ export default function MovieDetailPage() {
                             size="md"
                             loading={markWatched.isPending}
                             icon={<Eye size={15} />}
-                            onClick={handleMarkWatched}
+                            onClick={() => setMarkWatchedConfirmOpen(true)}
                         >
                             标记为已观看
                         </Button>
@@ -340,31 +353,16 @@ export default function MovieDetailPage() {
                                                     <span className="text-sm text-[var(--color-text-secondary)]">
                                                         {formatDate(entry.watchedAt) ?? t("watchHistory.unknownTime")}
                                                     </span>
-                                                    {deleteConfirmId === entry.id ? (
-                                                        <div className="flex gap-2">
-                                                            <button
-                                                                onClick={() => handleDeleteHistory(entry.id)}
-                                                                disabled={deleteHistory.isPending}
-                                                                className="rounded-[var(--radius-sm)] bg-[var(--color-error)] px-3 py-1 text-xs text-white"
-                                                            >
-                                                                {t("common.confirm")}
-                                                            </button>
-                                                            <button
-                                                                onClick={() => setDeleteConfirmId(null)}
-                                                                className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface-3)] px-3 py-1 text-xs text-[var(--color-text-muted)]"
-                                                            >
-                                                                {t("common.cancel")}
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => setDeleteConfirmId(entry.id)}
-                                                            title={t("watchHistory.deleteLabel")}
-                                                            className="rounded-[var(--radius-sm)] border border-transparent p-2 text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:text-[var(--color-error)]"
-                                                        >
-                                                            <Trash2 size={13} />
-                                                        </button>
-                                                    )}
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        color="rose"
+                                                        size="sm"
+                                                        icon={<Trash2 size={13} />}
+                                                        onClick={() => setDeleteConfirmId(entry.id)}
+                                                        title={t("watchHistory.deleteLabel")}
+                                                        aria-label={t("watchHistory.deleteLabel")}
+                                                    />
                                                 </motion.div>
                                             ))}
                                         </AnimatePresence>
@@ -375,6 +373,34 @@ export default function MovieDetailPage() {
                     </AnimatePresence>
                 </section>
             </div>
+            <ConfirmDialog
+                isOpen={markWatchedConfirmOpen}
+                title="标记为已观看"
+                description="确认将这部电影标记为已观看？观看时间将使用当前时间。"
+                confirmText="标记"
+                confirmColor="violet"
+                cancelText="取消"
+                isLoading={markWatched.isPending}
+                onConfirm={() => {
+                    handleMarkWatched();
+                }}
+                onCancel={() => setMarkWatchedConfirmOpen(false)}
+            />
+            <ConfirmDialog
+                isOpen={deleteConfirmId !== null}
+                title="删除观看记录"
+                description="确认删除这条观看记录？此操作不可撤销。"
+                confirmText="删除"
+                confirmColor="rose"
+                cancelText="取消"
+                isLoading={deleteHistory.isPending}
+                onConfirm={() => {
+                    if (deleteConfirmId !== null) {
+                        handleDeleteHistory(deleteConfirmId);
+                    }
+                }}
+                onCancel={() => setDeleteConfirmId(null)}
+            />
         </div>
     );
 }
