@@ -24,6 +24,8 @@ export const GENRE_COLORS = [
     COLORS.teal,
 ];
 
+export type ChartColor = (typeof COLORS)[keyof typeof COLORS];
+
 export function barColor(value: number, max: number): string {
     const ratio = value / max;
     if (ratio >= 0.85) return COLORS.violet.base;

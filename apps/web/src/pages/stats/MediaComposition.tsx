@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { CARD_BG, CARD_BDR, CARD_SHD, T1, T2, T3 } from "./tokens";
+import type { ChartColor } from "./tokens";
 
 export function MediaComposition({
     totalEntries,
@@ -7,7 +8,7 @@ export function MediaComposition({
     maxMedia,
 }: {
     totalEntries: number;
-    mediaBreakdown: { label: string; value: number; color: any }[];
+    mediaBreakdown: { label: string; value: number; color: ChartColor }[];
     maxMedia: number;
 }) {
     return (

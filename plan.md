@@ -27,7 +27,7 @@
 - [x] **T5: 配置与部署一致性**，`0.38.3`
   dev 端口统一为 `5173`；同步 README、`.env.example`、Vite config；Docker build arg 统一为 `VITE_API_BASE`；Nginx 阻止访问 `*.map`。提交：`fix(config): align dev ports and build env names`
 
-- [ ] **T6: 真正的 lint 与类型收束**，`0.38.4`
+- [x] **T6: 真正的 lint 与类型收束**，`0.38.4`
   添加 ESLint flat config，启用 TypeScript、React hooks、jsx-a11y；替换前端 watchlist `ApiResponse<any>` 和 stats 小组件中的明显 `any`。提交：`chore(lint): add eslint quality gates`
 
 - [ ] **T7: 路由级 code splitting**，`0.38.5`

@@ -12,6 +12,11 @@ import {
 import { TrendingUp } from "lucide-react";
 import { CARD_BG, CARD_BDR, CARD_SHD, T1, T2, T3, COLORS, barColor } from "./tokens";
 
+type ActivityDatum = {
+    month: string;
+    count: number;
+};
+
 const CustomTooltip = ({
     active,
     payload,
@@ -54,7 +59,13 @@ const CustomTooltip = ({
     );
 };
 
-export function ActivityChart({ chartData, maxBar }: { chartData: any[], maxBar: number }) {
+export function ActivityChart({
+    chartData,
+    maxBar,
+}: {
+    chartData: ActivityDatum[];
+    maxBar: number;
+}) {
     return (
         <motion.div
             initial={{ opacity: 0, y: 16 }}

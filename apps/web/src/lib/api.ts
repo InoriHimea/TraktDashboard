@@ -1,4 +1,3 @@
-// Task 9.2: Replace all `any` with concrete types from @trakt-dashboard/types
 import type {
     AuthStatus,
     ShowProgress,
@@ -14,6 +13,8 @@ import type {
     MovieProgress,
     MovieWatchHistoryEntry,
     CalendarEpisode,
+    WatchlistItem,
+    WatchlistItemWithMedia,
 } from "@trakt-dashboard/types";
 
 const API_BASE = "/api";
@@ -180,12 +181,12 @@ export const api = {
     watchlist: {
         list: (type?: "shows" | "movies") => {
             const params = type ? `?type=${type}` : "";
-            return request<ApiResponse<(import("@trakt-dashboard/types").WatchlistShowItem | import("@trakt-dashboard/types").WatchlistMovieItem)[]>>(
+            return request<ApiResponse<WatchlistItemWithMedia[]>>(
                 `/watchlist${params}`,
             );
         },
         add: (type: "show" | "movie", id: number, notes?: string) =>
-            request<ApiResponse<any>>("/watchlist", {
+            request<ApiResponse<WatchlistItem>>("/watchlist", {
                 method: "POST",
                 body: JSON.stringify({ type, id, notes }),
             }),
