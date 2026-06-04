@@ -30,7 +30,7 @@
 - [x] **T6: 真正的 lint 与类型收束**，`0.38.4`
   添加 ESLint flat config，启用 TypeScript、React hooks、jsx-a11y；替换前端 watchlist `ApiResponse<any>` 和 stats 小组件中的明显 `any`。提交：`chore(lint): add eslint quality gates`
 
-- [ ] **T7: 路由级 code splitting**，`0.38.5`
+- [x] **T7: 路由级 code splitting**，`0.38.5`
   `App` 路由页改为 `React.lazy` + `Suspense`；保持现有路由、页面结构和 loading 风格不变。目标：主 chunk 不再触发 500KB 警告。提交：`perf(web): split route bundles`
 
 - [ ] **T8: 测试补强**，`0.38.6`

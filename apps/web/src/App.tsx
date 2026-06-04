@@ -4,17 +4,18 @@ import { motion } from "framer-motion";
 import { AlertTriangle, WifiOff } from "lucide-react";
 import { useAuth } from "./hooks";
 import Layout from "./components/Layout";
-import TVShowsPage from "./pages/TVShowsPage";
-import MoviesPage from "./pages/MoviesPage";
-import MovieDetailPage from "./pages/MovieDetailPage";
-import ShowDetailPage from "./pages/ShowDetailPage";
-import EpisodeDetailPage from "./pages/EpisodeDetailPage";
-import StatsPage from "./pages/stats";
-import SyncPage from "./pages/SyncPage";
-import SettingsPage from "./pages/SettingsPage";
-import LoginPage from "./pages/LoginPage";
-import WatchlistPage from "./pages/WatchlistPage";
-import CalendarPage from "./pages/CalendarPage";
+
+const TVShowsPage = React.lazy(() => import("./pages/TVShowsPage"));
+const MoviesPage = React.lazy(() => import("./pages/MoviesPage"));
+const MovieDetailPage = React.lazy(() => import("./pages/MovieDetailPage"));
+const ShowDetailPage = React.lazy(() => import("./pages/ShowDetailPage"));
+const EpisodeDetailPage = React.lazy(() => import("./pages/EpisodeDetailPage"));
+const StatsPage = React.lazy(() => import("./pages/stats"));
+const SyncPage = React.lazy(() => import("./pages/SyncPage"));
+const SettingsPage = React.lazy(() => import("./pages/SettingsPage"));
+const LoginPage = React.lazy(() => import("./pages/LoginPage"));
+const WatchlistPage = React.lazy(() => import("./pages/WatchlistPage"));
+const CalendarPage = React.lazy(() => import("./pages/CalendarPage"));
 
 // Error Boundary component
 class ErrorBoundary extends React.Component<
@@ -64,6 +65,19 @@ class ErrorBoundary extends React.Component<
 
         return this.props.children;
     }
+}
+
+function RouteLoadingFallback() {
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)]">
+            <div className="flex flex-col items-center gap-4">
+                <div className="w-8 h-8 rounded-full border-2 border-[var(--color-accent)] border-t-transparent animate-spin" />
+                <p className="text-[var(--color-text-muted)] text-sm">
+                    Loading…
+                </p>
+            </div>
+        </div>
+    );
 }
 
 export default function App() {
@@ -118,9 +132,11 @@ export default function App() {
 
     if (!auth?.authenticated) {
         return (
-            <Routes>
-                <Route path="*" element={<LoginPage />} />
-            </Routes>
+            <React.Suspense fallback={<RouteLoadingFallback />}>
+                <Routes>
+                    <Route path="*" element={<LoginPage />} />
+                </Routes>
+            </React.Suspense>
         );
     }
 
@@ -131,30 +147,32 @@ export default function App() {
                     path="/*"
                     element={
                         <Layout>
-                            <Routes>
-                                <Route
-                                    path="/"
-                                    element={<Navigate to="/tv-shows" replace />}
-                                />
-                                <Route path="/tv-shows" element={<TVShowsPage />} />
-                                <Route path="/progress" element={<Navigate to="/tv-shows" replace />} />
-                                <Route path="/movies" element={<MoviesPage />} />
-                                <Route path="/movies/:id" element={<MovieDetailPage />} />
-                                <Route path="/shows/:id" element={<ShowDetailPage />} />
-                                <Route path="/calendar" element={<CalendarPage />} />
-                                <Route path="/watchlist" element={<WatchlistPage />} />
-                                <Route path="/stats" element={<StatsPage />} />
-                                <Route path="/sync" element={<SyncPage />} />
-                                <Route path="/settings" element={<SettingsPage />} />
-                                <Route
-                                    path="*"
-                                    element={<Navigate to="/tv-shows" replace />}
-                                />
-                                <Route
-                                    path="/shows/:showId/seasons/:season/episodes/:episode"
-                                    element={<EpisodeDetailPage />}
-                                />
-                            </Routes>
+                            <React.Suspense fallback={<RouteLoadingFallback />}>
+                                <Routes>
+                                    <Route
+                                        path="/"
+                                        element={<Navigate to="/tv-shows" replace />}
+                                    />
+                                    <Route path="/tv-shows" element={<TVShowsPage />} />
+                                    <Route path="/progress" element={<Navigate to="/tv-shows" replace />} />
+                                    <Route path="/movies" element={<MoviesPage />} />
+                                    <Route path="/movies/:id" element={<MovieDetailPage />} />
+                                    <Route path="/shows/:id" element={<ShowDetailPage />} />
+                                    <Route path="/calendar" element={<CalendarPage />} />
+                                    <Route path="/watchlist" element={<WatchlistPage />} />
+                                    <Route path="/stats" element={<StatsPage />} />
+                                    <Route path="/sync" element={<SyncPage />} />
+                                    <Route path="/settings" element={<SettingsPage />} />
+                                    <Route
+                                        path="*"
+                                        element={<Navigate to="/tv-shows" replace />}
+                                    />
+                                    <Route
+                                        path="/shows/:showId/seasons/:season/episodes/:episode"
+                                        element={<EpisodeDetailPage />}
+                                    />
+                                </Routes>
+                            </React.Suspense>
                         </Layout>
                     }
                 />
