@@ -18,7 +18,7 @@
 - [x] **T2: Watchlist 本地操作写入 Trakt**，`0.38.0`
   添加/移除待看时先调用 Trakt API，成功后写本地；删除对 Trakt 404/已不存在保持幂等。提交：`feat(watchlist): sync local changes to trakt`
 
-- [ ] **T3: Watchlist 周期对账**，`0.38.1`
+- [x] **T3: Watchlist 周期对账**，`0.38.1`
   周期同步以 Trakt 为权威，upsert 远端存在项，并清理本地已不在远端 watchlist 的项；本地不存在媒体仍跳过并记录日志。提交：`fix(watchlist): reconcile local state from trakt`
 
 - [ ] **T4: Show detail nextEpisode 一致性**，`0.38.2`

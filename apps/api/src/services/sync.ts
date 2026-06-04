@@ -10,8 +10,9 @@ import {
     syncState,
     userSettings,
     watchResetCursors,
+    watchlist,
 } from "@trakt-dashboard/db";
-import { eq, and, sql, or, gt, isNull, desc, inArray, notInArray } from "drizzle-orm";
+import { eq, and, sql, or, gt, isNull, isNotNull, desc, inArray, notInArray } from "drizzle-orm";
 import { getTraktClient } from "./trakt.js";
 import { getTmdbShow, getTmdbSeason, getTmdbMovie } from "./tmdb.js";
 import pLimit from "p-limit";
@@ -1671,8 +1672,8 @@ export async function syncWatchlist(userId: number): Promise<void> {
             `[sync:watchlist] Found ${watchlistShows.length} shows, ${watchlistMovies.length} movies`,
         );
 
-        // Import watchlist module
-        const { watchlist } = await import("@trakt-dashboard/db");
+        const syncedShowIds: number[] = [];
+        const syncedMovieIds: number[] = [];
 
         // Sync shows
         for (const item of watchlistShows) {
@@ -1712,6 +1713,7 @@ export async function syncWatchlist(userId: number): Promise<void> {
                         listedAt: new Date(item.listed_at),
                     },
                 });
+            syncedShowIds.push(show.id);
         }
 
         // Sync movies
@@ -1752,7 +1754,26 @@ export async function syncWatchlist(userId: number): Promise<void> {
                         listedAt: new Date(item.listed_at),
                     },
                 });
+            syncedMovieIds.push(movie.id);
         }
+
+        const showCleanupWhere = and(
+            eq(watchlist.userId, userId),
+            isNotNull(watchlist.showId),
+            syncedShowIds.length > 0
+                ? notInArray(watchlist.showId, syncedShowIds)
+                : undefined,
+        );
+        await db.delete(watchlist).where(showCleanupWhere);
+
+        const movieCleanupWhere = and(
+            eq(watchlist.userId, userId),
+            isNotNull(watchlist.movieId),
+            syncedMovieIds.length > 0
+                ? notInArray(watchlist.movieId, syncedMovieIds)
+                : undefined,
+        );
+        await db.delete(watchlist).where(movieCleanupWhere);
 
         console.log(`[sync:watchlist] Watchlist sync complete`);
     } catch (e) {
