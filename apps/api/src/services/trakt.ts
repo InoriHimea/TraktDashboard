@@ -335,6 +335,16 @@ interface TraktWatchingResponse {
     };
 }
 
+export class TraktApiError extends Error {
+    constructor(
+        public readonly status: number,
+        public readonly body: string,
+    ) {
+        super(`Trakt API error: ${status} ${body}`);
+        this.name = "TraktApiError";
+    }
+}
+
 export function getTraktClient() {
     const clientId = process.env.TRAKT_CLIENT_ID!;
 
@@ -377,11 +387,7 @@ export function getTraktClient() {
             },
         }, 3, userId);
 
-        if (!res.ok) {
-            throw new Error(
-                `Trakt API error: ${res.status} ${await res.text()}`,
-            );
-        }
+        if (!res.ok) throw new TraktApiError(res.status, await res.text());
 
         if (res.status === 204) return { data: null, headers: res.headers };
         return { data: await res.json(), headers: res.headers };

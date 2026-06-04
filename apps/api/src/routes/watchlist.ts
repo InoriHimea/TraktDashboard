@@ -3,6 +3,7 @@ import { getDb, watchlist, shows, movies } from "@trakt-dashboard/db";
 import { eq, and, desc, isNotNull } from "drizzle-orm";
 import { z } from "zod";
 import { validateBody } from "../lib/validate";
+import { getTraktClient, TraktApiError } from "../services/trakt.js";
 
 const addSchema = z.object({
     type: z.enum(["show", "movie"]),
@@ -11,6 +12,20 @@ const addSchema = z.object({
 });
 
 export const watchlistRoutes = new Hono<{ Variables: { userId: number } }>();
+
+type TraktIds = { trakt?: number; tmdb?: number; imdb?: string };
+
+function toTraktIds(media: {
+    traktId: number | null;
+    tmdbId: number;
+    imdbId: string | null;
+}): TraktIds {
+    return {
+        ...(media.traktId ? { trakt: media.traktId } : {}),
+        tmdb: media.tmdbId,
+        ...(media.imdbId ? { imdb: media.imdbId } : {}),
+    };
+}
 
 // GET /api/watchlist
 watchlistRoutes.get("/", async (c) => {
@@ -72,20 +87,49 @@ watchlistRoutes.post("/", async (c) => {
 
     const db = getDb();
     try {
-        const [item] = await db
-            .insert(watchlist)
-            .values({
-                userId,
-                showId: type === "show" ? id : null,
-                movieId: type === "movie" ? id : null,
-                listedAt: new Date(),
-                notes: notes || null,
-            })
-            .returning();
+        const [media] =
+            type === "show"
+                ? await db.select().from(shows).where(eq(shows.id, id))
+                : await db.select().from(movies).where(eq(movies.id, id));
+        if (!media) return c.json({ error: `${type} not found` }, 404);
+
+        const trakt = getTraktClient();
+        await trakt.addToWatchlist(
+            userId,
+            type === "show" ? "shows" : "movies",
+            toTraktIds(media),
+        );
+
+        const listedAt = new Date();
+        const values = {
+            userId,
+            showId: type === "show" ? id : null,
+            movieId: type === "movie" ? id : null,
+            listedAt,
+            notes: notes || null,
+        };
+        const [item] =
+            type === "show"
+                ? await db
+                      .insert(watchlist)
+                      .values(values)
+                      .onConflictDoUpdate({
+                          target: [watchlist.userId, watchlist.showId],
+                          set: { listedAt, notes: notes || null },
+                      })
+                      .returning()
+                : await db
+                      .insert(watchlist)
+                      .values(values)
+                      .onConflictDoUpdate({
+                          target: [watchlist.userId, watchlist.movieId],
+                          set: { listedAt, notes: notes || null },
+                      })
+                      .returning();
         return c.json({ data: item });
     } catch (error) {
         console.error("[watchlist] Add failed:", error);
-        return c.json({ error: "Failed to add to watchlist" }, 500);
+        return c.json({ error: "Failed to add to watchlist" }, 502);
     }
 });
 
@@ -97,6 +141,31 @@ watchlistRoutes.delete("/:id", async (c) => {
 
     const db = getDb();
     try {
+        const [item] = await db
+            .select()
+            .from(watchlist)
+            .leftJoin(shows, eq(watchlist.showId, shows.id))
+            .leftJoin(movies, eq(watchlist.movieId, movies.id))
+            .where(and(eq(watchlist.id, id), eq(watchlist.userId, userId)))
+            .limit(1);
+        if (!item) return c.json({ ok: true });
+
+        const mediaType = item.watchlist.showId ? "shows" : "movies";
+        const media = item.shows ?? item.movies;
+        if (media) {
+            try {
+                await getTraktClient().removeFromWatchlist(
+                    userId,
+                    mediaType,
+                    toTraktIds(media),
+                );
+            } catch (error) {
+                if (!(error instanceof TraktApiError && error.status === 404)) {
+                    throw error;
+                }
+            }
+        }
+
         await db.delete(watchlist).where(and(eq(watchlist.id, id), eq(watchlist.userId, userId)));
         return c.json({ ok: true });
     } catch (error) {

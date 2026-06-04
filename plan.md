@@ -15,7 +15,7 @@
 - [x] **T1: Settings 运行时生效**，`0.37.1`
   保存同步间隔后立即重新注册当前用户 BullMQ repeat job；Trakt/TMDB 请求统一按 user 读取 `httpProxy`，空值回退 env。提交：`fix(settings): apply runtime sync and proxy settings`
 
-- [ ] **T2: Watchlist 本地操作写入 Trakt**，`0.38.0`
+- [x] **T2: Watchlist 本地操作写入 Trakt**，`0.38.0`
   添加/移除待看时先调用 Trakt API，成功后写本地；删除对 Trakt 404/已不存在保持幂等。提交：`feat(watchlist): sync local changes to trakt`
 
 - [ ] **T3: Watchlist 周期对账**，`0.38.1`
