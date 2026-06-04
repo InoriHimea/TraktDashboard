@@ -1,21 +1,24 @@
 import { motion } from "framer-motion";
 import type { ComponentType } from "react";
-import { CARD_BG, CARD_BDR, CARD_BLR, CARD_SHD, T3, COLORS } from "./tokens";
+import { CARD_BG, CARD_BDR, CARD_BLR, CARD_SHD, T2, T3, COLORS } from "./tokens";
+import type { ChartColor } from "./tokens";
 
 export function StatCard({
     label,
     value,
     icon: Icon,
     sub,
+    signal,
     delay = 0,
-    color = COLORS.violet,
+    color = COLORS.cyan,
 }: {
     label: string;
     value: string | number;
-    icon: ComponentType<{ size?: number; color?: string }>;
+    icon: ComponentType<{ size?: number; color?: string; "aria-hidden"?: boolean }>;
     sub?: string;
+    signal?: string;
     delay?: number;
-    color?: typeof COLORS.violet;
+    color?: ChartColor;
 }) {
     return (
         <motion.div
@@ -35,8 +38,19 @@ export function StatCard({
                 flexDirection: "column",
                 gap: "12px",
                 borderLeft: `3px solid ${color.base}`,
+                position: "relative",
+                overflow: "hidden",
             }}
         >
+            <div
+                style={{
+                    position: "absolute",
+                    inset: "0 0 auto 0",
+                    height: "1px",
+                    background: `linear-gradient(90deg, transparent, ${color.light}, transparent)`,
+                    opacity: 0.45,
+                }}
+            />
             <div
                 style={{
                     display: "flex",
@@ -58,11 +72,13 @@ export function StatCard({
                 <div
                     style={{
                         background: color.bg,
-                        borderRadius: "8px",
+                        border: `1px solid ${color.base}33`,
+                        borderRadius: "10px",
                         padding: "6px",
+                        boxShadow: `0 0 18px ${color.base}22`,
                     }}
                 >
-                    <Icon size={14} color={color.light} />
+                    <Icon size={14} color={color.light} aria-hidden />
                 </div>
             </div>
             <div>
@@ -71,23 +87,48 @@ export function StatCard({
                         fontSize: "30px",
                         fontWeight: 800,
                         color: color.light,
-                        letterSpacing: "-0.05em",
                         lineHeight: 1,
+                        fontVariantNumeric: "tabular-nums",
                     }}
                 >
                     {value}
                 </div>
-                {sub && (
-                    <p
-                        style={{
-                            fontSize: "12px",
-                            color: T3,
-                            marginTop: "6px",
-                        }}
-                    >
-                        {sub}
-                    </p>
-                )}
+                <div
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "8px",
+                        marginTop: "8px",
+                    }}
+                >
+                    {sub && (
+                        <p
+                            style={{
+                                fontSize: "12px",
+                                color: T3,
+                            }}
+                        >
+                            {sub}
+                        </p>
+                    )}
+                    {signal && (
+                        <span
+                            style={{
+                                marginLeft: "auto",
+                                border: `1px solid ${color.base}33`,
+                                borderRadius: "999px",
+                                color: T2,
+                                background: color.bg,
+                                padding: "2px 7px",
+                                fontSize: "10px",
+                                fontWeight: 700,
+                            }}
+                        >
+                            {signal}
+                        </span>
+                    )}
+                </div>
             </div>
         </motion.div>
     );

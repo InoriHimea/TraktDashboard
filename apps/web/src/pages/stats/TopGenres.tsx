@@ -47,15 +47,35 @@ export function TopGenres({ topGenres }: { topGenres: { name: string; count: num
                                     marginBottom: "8px",
                                 }}
                             >
-                                <span
-                                    style={{
-                                        fontSize: "13px",
-                                        color: i === 0 ? T1 : T2,
-                                        fontWeight: i === 0 ? 600 : 400,
-                                    }}
-                                >
-                                    {g.name}
-                                </span>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                                    <span
+                                        style={{
+                                            border: `1px solid ${c.base}33`,
+                                            borderRadius: "999px",
+                                            background: c.bg,
+                                            color: c.light,
+                                            fontSize: "10px",
+                                            fontWeight: 800,
+                                            minWidth: "26px",
+                                            padding: "2px 6px",
+                                            textAlign: "center",
+                                        }}
+                                    >
+                                        #{i + 1}
+                                    </span>
+                                    <span
+                                        style={{
+                                            fontSize: "13px",
+                                            color: i === 0 ? T1 : T2,
+                                            fontWeight: i === 0 ? 600 : 400,
+                                            overflow: "hidden",
+                                            textOverflow: "ellipsis",
+                                            whiteSpace: "nowrap",
+                                        }}
+                                    >
+                                        {g.name}
+                                    </span>
+                                </div>
                                 <span
                                     style={{
                                         fontSize: "12px",
@@ -79,6 +99,7 @@ export function TopGenres({ topGenres }: { topGenres: { name: string; count: num
                                         height: "100%",
                                         borderRadius: "999px",
                                         background: `linear-gradient(90deg, ${c.base}, ${c.light})`,
+                                        boxShadow: `0 0 14px ${c.base}44`,
                                     }}
                                     initial={{ width: 0 }}
                                     animate={{ width: `${pct}%` }}

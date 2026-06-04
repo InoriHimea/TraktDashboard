@@ -33,7 +33,7 @@ const CustomTooltip = ({
                 background: "var(--color-surface-2)",
                 backdropFilter: "blur(16px)",
                 WebkitBackdropFilter: "blur(16px)",
-                border: `1px solid ${COLORS.violet.base}44`,
+                border: `1px solid ${COLORS.cyan.base}44`,
                 borderRadius: "12px",
                 padding: "10px 14px",
                 fontSize: "13px",
@@ -45,7 +45,7 @@ const CustomTooltip = ({
             </p>
             <p
                 style={{
-                    color: COLORS.violet.light,
+                    color: COLORS.cyan.light,
                     fontWeight: 700,
                     fontSize: "16px",
                 }}
@@ -105,7 +105,7 @@ export function ActivityChart({
                         color: T3,
                     }}
                 >
-                    <TrendingUp size={13} color={COLORS.sky.base} /> 过去 12 个月
+                    <TrendingUp size={13} color={COLORS.cyan.base} aria-hidden /> 过去 12 个月
                 </span>
             </div>
             <ResponsiveContainer width="100%" height={200}>
@@ -143,7 +143,7 @@ export function ActivityChart({
                     <Tooltip
                         content={<CustomTooltip />}
                         cursor={{
-                            fill: "rgba(124,106,247,0.07)",
+                            fill: "rgba(37,244,238,0.07)",
                             radius: 6,
                         }}
                     />

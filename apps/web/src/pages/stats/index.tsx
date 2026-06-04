@@ -4,7 +4,11 @@ import {
     CheckCircle2,
     Clock,
     Film,
+    Flame,
+    Gauge,
     Loader2,
+    Repeat2,
+    Target,
 } from "lucide-react";
 import { useStats } from "../../hooks";
 import { CARD_BG, CARD_BDR, T1, T2, T3, COLORS } from "./tokens";
@@ -13,6 +17,8 @@ import { ActivityChart } from "./ActivityChart";
 import { MediaComposition } from "./MediaComposition";
 import { TopGenres } from "./TopGenres";
 import { RecentActivity } from "./RecentActivity";
+import { SignalMetrics } from "./SignalMetrics";
+import type { SignalMetric } from "./SignalMetrics";
 
 export default function StatsPage() {
     const { data: stats, isLoading, error } = useStats();
@@ -72,8 +78,9 @@ export default function StatsPage() {
     const completionRate = stats.totalShowsWatched > 0
         ? Math.round((stats.totalShowsCompleted / stats.totalShowsWatched) * 100)
         : 0;
+    const movieWatches = stats.totalMovieWatches ?? 0;
     const mediaBreakdown = [
-        { label: "剧集", value: stats.totalEpisodesWatched, color: COLORS.violet },
+        { label: "剧集", value: stats.totalEpisodesWatched, color: COLORS.cyan },
         { label: "电影", value: stats.totalMovieWatches ?? 0, color: COLORS.rose },
     ];
     const maxMedia = Math.max(...mediaBreakdown.map((d) => d.value), 1);
@@ -94,6 +101,47 @@ export default function StatsPage() {
     })();
 
     const maxBar = Math.max(...chartData.map((d) => d.count), 1);
+    const activeMonths = chartData.filter((d) => d.count > 0);
+    const peakMonth = chartData.reduce(
+        (best, item) => (item.count > best.count ? item : best),
+        chartData[0] ?? { month: "暂无", count: 0 },
+    );
+    const monthlyAverage = Math.round(
+        totalEntries / Math.max(activeMonths.length, 1),
+    );
+    const movieRewatchRatio = stats.totalMoviesWatched > 0
+        ? (movieWatches / stats.totalMoviesWatched).toFixed(1)
+        : "0.0";
+    const signalMetrics: SignalMetric[] = [
+        {
+            label: "月峰值",
+            value: peakMonth.count.toLocaleString("zh-CN"),
+            detail: `${peakMonth.month} 触发最高观看量`,
+            icon: Flame,
+            color: COLORS.rose,
+        },
+        {
+            label: "月均",
+            value: monthlyAverage.toLocaleString("zh-CN"),
+            detail: `${activeMonths.length || 0} 个活跃月份`,
+            icon: Gauge,
+            color: COLORS.cyan,
+        },
+        {
+            label: "复看倍率",
+            value: `${movieRewatchRatio}x`,
+            detail: `${movieWatches.toLocaleString("zh-CN")} 次电影播放`,
+            icon: Repeat2,
+            color: COLORS.amber,
+        },
+        {
+            label: "完成剧库",
+            value: `${stats.totalShowsCompleted}`,
+            detail: `${completionRate}% 完成率`,
+            icon: Target,
+            color: COLORS.emerald,
+        },
+    ];
 
     return (
         <div
@@ -103,43 +151,6 @@ export default function StatsPage() {
                 overflow: "hidden",
             }}
         >
-            {/* Ambient glows */}
-            <div
-                style={{
-                    position: "absolute",
-                    inset: 0,
-                    pointerEvents: "none",
-                    zIndex: 0,
-                }}
-            >
-                <div
-                    style={{
-                        position: "absolute",
-                        width: "600px",
-                        height: "600px",
-                        top: "-150px",
-                        left: "5%",
-                        background:
-                            "radial-gradient(circle, rgba(124,106,247,0.08) 0%, transparent 60%)",
-                        filter: "blur(80px)",
-                        borderRadius: "50%",
-                    }}
-                />
-                <div
-                    style={{
-                        position: "absolute",
-                        width: "400px",
-                        height: "400px",
-                        bottom: "100px",
-                        right: "5%",
-                        background:
-                            "radial-gradient(circle, rgba(124,106,247,0.06) 0%, transparent 60%)",
-                        filter: "blur(60px)",
-                        borderRadius: "50%",
-                    }}
-                />
-            </div>
-
             {/* Content */}
             <div
                 id="stats-export-container"
@@ -171,9 +182,8 @@ export default function StatsPage() {
                                 fontSize: "36px",
                                 fontWeight: 400,
                                 color: T1,
-                                letterSpacing: "-0.02em",
-                                lineHeight: 1.1,
-                                marginBottom: "6px",
+                            lineHeight: 1.1,
+                            marginBottom: "6px",
                             }}
                         >
                             数据统计
@@ -215,7 +225,7 @@ export default function StatsPage() {
                             fontSize: "14px",
                             fontWeight: 500,
                             cursor: "pointer",
-                            transition: "all 0.2s",
+                            transition: "background-color 0.2s, border-color 0.2s, box-shadow 0.2s",
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-3)")}
                         onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-surface-2)")}
@@ -245,7 +255,7 @@ export default function StatsPage() {
                 <div
                     style={{
                         display: "grid",
-                        gridTemplateColumns: "360px minmax(0, 1fr)",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))",
                         gap: "24px",
                         alignItems: "start",
                     }}
@@ -272,7 +282,8 @@ export default function StatsPage() {
                                 icon={Tv2}
                                 sub={`${episodeHours.toLocaleString("zh-CN")}h`}
                                 delay={0}
-                                color={COLORS.violet}
+                                color={COLORS.cyan}
+                                signal="EP"
                             />
                             <StatCard
                                 label="电影"
@@ -281,6 +292,7 @@ export default function StatsPage() {
                                 sub={`${(stats.totalMovieWatches ?? 0).toLocaleString("zh-CN")} 次 · ${movieHours.toLocaleString("zh-CN")}h`}
                                 delay={0.05}
                                 color={COLORS.rose}
+                                signal={`${movieRewatchRatio}x`}
                             />
                             <StatCard
                                 label="时长"
@@ -289,6 +301,7 @@ export default function StatsPage() {
                                 sub={`${totalDays} 天`}
                                 delay={0.1}
                                 color={COLORS.amber}
+                                signal="TIME"
                             />
                             <StatCard
                                 label="完成率"
@@ -297,8 +310,11 @@ export default function StatsPage() {
                                 sub={`${stats.totalShowsCompleted}/${stats.totalShowsWatched} 部剧`}
                                 delay={0.15}
                                 color={COLORS.emerald}
+                                signal="DONE"
                             />
                         </div>
+
+                        <SignalMetrics metrics={signalMetrics} />
 
                         {/* Media composition */}
                         <MediaComposition

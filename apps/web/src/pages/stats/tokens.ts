@@ -1,21 +1,23 @@
-export const CARD_BG = "var(--color-surface)";
-export const CARD_BDR = "1px solid var(--color-border)";
+export const CARD_BG = "linear-gradient(180deg, rgba(141,252,255,0.045), transparent 42%), var(--color-panel-glass)";
+export const CARD_BDR = "1px solid var(--color-border-subtle)";
 export const CARD_BLR = "blur(24px)";
-export const CARD_SHD = "0 4px 24px rgba(0,0,0,0.15)";
+export const CARD_SHD = "var(--shadow-hud)";
 export const T1 = "var(--color-text)";
 export const T2 = "var(--color-text-secondary)";
 export const T3 = "var(--color-text-muted)";
 
 export const COLORS = {
-    violet: { base: "#7c6af7", light: "#9d8fff", bg: "rgba(124,106,247,0.15)" },
-    emerald: { base: "#10b981", light: "#34d399", bg: "rgba(16,185,129,0.15)" },
-    amber: { base: "#f59e0b", light: "#fbbf24", bg: "rgba(245,158,11,0.15)" },
-    sky: { base: "#0ea5e9", light: "#38bdf8", bg: "rgba(14,165,233,0.15)" },
-    rose: { base: "#f43f5e", light: "#fb7185", bg: "rgba(244,63,94,0.15)" },
-    teal: { base: "#14b8a6", light: "#2dd4bf", bg: "rgba(20,184,166,0.15)" },
+    cyan: { base: "var(--color-accent)", light: "var(--color-accent-light)", bg: "rgba(37,244,238,0.14)" },
+    violet: { base: "var(--color-accent-violet)", light: "#c4b5fd", bg: "rgba(139,92,246,0.15)" },
+    emerald: { base: "#06b981", light: "var(--color-watched)", bg: "rgba(49,245,168,0.13)" },
+    amber: { base: "#d97706", light: "var(--color-airing)", bg: "rgba(248,211,92,0.14)" },
+    sky: { base: "#38bdf8", light: "#7dd3fc", bg: "rgba(56,189,248,0.13)" },
+    rose: { base: "var(--color-accent-rose)", light: "#ff8fb4", bg: "rgba(255,61,129,0.14)" },
+    teal: { base: "#14b8a6", light: "#5eead4", bg: "rgba(20,184,166,0.13)" },
 };
 
 export const GENRE_COLORS = [
+    COLORS.cyan,
     COLORS.violet,
     COLORS.emerald,
     COLORS.amber,
