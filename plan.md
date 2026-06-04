@@ -21,7 +21,7 @@
 - [x] **T3: Watchlist 周期对账**，`0.38.1`
   周期同步以 Trakt 为权威，upsert 远端存在项，并清理本地已不在远端 watchlist 的项；本地不存在媒体仍跳过并记录日志。提交：`fix(watchlist): reconcile local state from trakt`
 
-- [ ] **T4: Show detail nextEpisode 一致性**，`0.38.2`
+- [x] **T4: Show detail nextEpisode 一致性**，`0.38.2`
   详情 API 返回真实 `nextEpisode`，与列表 API 的 progress cache 保持一致。提交：`fix(shows): return next episode in detail response`
 
 - [ ] **T5: 配置与部署一致性**，`0.38.3`

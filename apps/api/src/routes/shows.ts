@@ -21,6 +21,23 @@ function parseBoundedInt(value: string | undefined, fallback: number, min: numbe
   return Math.min(Math.max(parsed, min), max)
 }
 
+function toEpisodeDto(ep: typeof episodes.$inferSelect) {
+  return {
+    id: ep.id,
+    showId: ep.showId,
+    seasonId: ep.seasonId,
+    seasonNumber: ep.seasonNumber,
+    episodeNumber: ep.episodeNumber,
+    title: ep.title,
+    overview: ep.overview,
+    runtime: ep.runtime,
+    airDate: ep.airDate,
+    stillPath: ep.stillPath,
+    traktId: ep.traktId,
+    tmdbId: ep.tmdbId,
+  }
+}
+
 // GET /api/shows/progress — all shows with progress for the user
 showRoutes.get('/progress', async (c) => {
   const userId = c.get('userId')
@@ -85,20 +102,7 @@ showRoutes.get('/progress', async (c) => {
     },
     airedEpisodes: row.progress.airedEpisodes,
     watchedEpisodes: row.progress.watchedEpisodes,
-    nextEpisode: row.nextEp ? {
-      id: row.nextEp.id,
-      showId: row.nextEp.showId,
-      seasonId: row.nextEp.seasonId,
-      seasonNumber: row.nextEp.seasonNumber,
-      episodeNumber: row.nextEp.episodeNumber,
-      title: row.nextEp.title,
-      overview: row.nextEp.overview,
-      runtime: row.nextEp.runtime,
-      airDate: row.nextEp.airDate,
-      stillPath: row.nextEp.stillPath,
-      traktId: row.nextEp.traktId,
-      tmdbId: row.nextEp.tmdbId,
-    } : null,
+    nextEpisode: row.nextEp ? toEpisodeDto(row.nextEp) : null,
     lastWatchedAt: row.progress.lastWatchedAt?.toISOString() || null,
     completed: row.progress.completed,
     percentage: row.progress.airedEpisodes > 0
@@ -197,6 +201,9 @@ showRoutes.get('/:id', async (c) => {
 
   const airedEpisodes = progress?.airedEpisodes ?? 0
   const watchedEpisodes = progress?.watchedEpisodes ?? 0
+  const [nextEpisode] = progress?.nextEpisodeId
+    ? await db.select().from(episodes).where(eq(episodes.id, progress.nextEpisodeId)).limit(1)
+    : []
 
   return c.json({
     data: {
@@ -214,7 +221,7 @@ showRoutes.get('/:id', async (c) => {
       },
       airedEpisodes,
       watchedEpisodes,
-      nextEpisode: null,
+      nextEpisode: nextEpisode ? toEpisodeDto(nextEpisode) : null,
       lastWatchedAt: progress?.lastWatchedAt?.toISOString() || null,
       completed: progress?.completed ?? false,
       percentage: airedEpisodes > 0 ? Math.round((watchedEpisodes / airedEpisodes) * 100) : 0,
