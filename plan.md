@@ -12,7 +12,7 @@
 - [x] **T0: 写入计划与 skills 基线**，无版本 bump
   创建 `plan.md`；保留已安装的 Vercel skills 与 `skills-lock.json`。提交：`docs(plan): add tracked improvement plan`
 
-- [ ] **T1: Settings 运行时生效**，`0.37.1`
+- [x] **T1: Settings 运行时生效**，`0.37.1`
   保存同步间隔后立即重新注册当前用户 BullMQ repeat job；Trakt/TMDB 请求统一按 user 读取 `httpProxy`，空值回退 env。提交：`fix(settings): apply runtime sync and proxy settings`
 
 - [ ] **T2: Watchlist 本地操作写入 Trakt**，`0.38.0`

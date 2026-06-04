@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { getDb, userSettings } from '@trakt-dashboard/db'
 import { eq } from 'drizzle-orm'
+import { registerUserSyncJob } from '../jobs/scheduler.js'
 
 export const settingsRoutes = new Hono<{ Variables: { userId: number } }>()
 
@@ -54,6 +55,7 @@ settingsRoutes.put('/', async (c) => {
 
   const db = getDb()
   const [existing] = await db.select().from(userSettings).where(eq(userSettings.userId, userId))
+  const previousInterval = existing?.syncIntervalMinutes ?? DEFAULTS.syncIntervalMinutes
 
   const newValues = {
     userId,
@@ -72,6 +74,13 @@ settingsRoutes.put('/', async (c) => {
       updatedAt: newValues.updatedAt,
     },
   })
+
+  if (
+    syncIntervalMinutes !== undefined &&
+    newValues.syncIntervalMinutes !== previousInterval
+  ) {
+    await registerUserSyncJob(userId)
+  }
 
   return c.json({ data: { ...newValues } })
 })

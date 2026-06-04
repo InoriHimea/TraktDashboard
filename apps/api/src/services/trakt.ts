@@ -1,20 +1,36 @@
-import { getDb, users, metadataCache } from "@trakt-dashboard/db";
+import { getDb, users, metadataCache, userSettings } from "@trakt-dashboard/db";
 import { eq, and } from "drizzle-orm";
 import { getRedis } from "../jobs/scheduler.js";
 
 const FETCH_TIMEOUT_MS = 12000;
 
-// Proxy support — reads HTTP_PROXY / HTTPS_PROXY from environment
-function buildFetchOptions(): RequestInit {
-    const proxyUrl =
+// Proxy support — user setting first, then HTTP_PROXY / HTTPS_PROXY from environment
+async function getProxyUrl(userId?: number): Promise<string | undefined> {
+    if (userId) {
+        try {
+            const db = getDb();
+            const [row] = await db
+                .select({ httpProxy: userSettings.httpProxy })
+                .from(userSettings)
+                .where(eq(userSettings.userId, userId));
+            if (row?.httpProxy) return row.httpProxy;
+        } catch {
+            /* fall through to env */
+        }
+    }
+    return (
         process.env.HTTPS_PROXY ||
         process.env.HTTP_PROXY ||
         process.env.https_proxy ||
-        process.env.http_proxy;
+        process.env.http_proxy ||
+        undefined
+    );
+}
+
+function buildFetchOptions(proxyUrl?: string): RequestInit {
     if (!proxyUrl) return {};
     return { proxy: proxyUrl } as RequestInit & { proxy: string };
 }
-const BASE_FETCH_OPTIONS = buildFetchOptions();
 
 // Reliable timeout via Promise.race (AbortController unreliable in Bun for established connections)
 function withTimeout<T>(
@@ -38,9 +54,11 @@ function withTimeout<T>(
 async function fetchWithTimeout(
     url: string,
     options?: RequestInit,
+    userId?: number,
 ): Promise<Response> {
+    const proxyUrl = await getProxyUrl(userId);
     return withTimeout(
-        fetch(url, { ...BASE_FETCH_OPTIONS, ...options }),
+        fetch(url, { ...buildFetchOptions(proxyUrl), ...options }),
         FETCH_TIMEOUT_MS,
         url,
     );
@@ -202,9 +220,10 @@ async function fetchWithRetry(
     url: string,
     options: RequestInit,
     maxRetries = 3,
+    userId?: number,
 ): Promise<Response> {
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        const res = await fetchWithTimeout(url, options);
+        const res = await fetchWithTimeout(url, options, userId);
         if (res.status !== 429) return res;
         if (attempt === maxRetries) return res;
         const retryAfter = parseInt(res.headers.get("Retry-After") || "5");
@@ -247,6 +266,8 @@ async function refreshToken(userId: number): Promise<string> {
                             grant_type: "refresh_token",
                         }),
                     },
+                    3,
+                    userId,
                 );
 
                 if (!res.ok) throw new Error("Token refresh failed");
@@ -354,7 +375,7 @@ export function getTraktClient() {
                 "Content-Type": "application/json",
                 ...(init?.headers as Record<string, string> | undefined),
             },
-        });
+        }, 3, userId);
 
         if (!res.ok) {
             throw new Error(
