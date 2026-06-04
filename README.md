@@ -11,7 +11,7 @@
   <p>
     <a href="README_zh.md">简体中文</a> · <a href="#features">Features</a> · <a href="#quick-start">Quick Start</a> · <a href="#documentation">Documentation</a>
   </p>
-  <img src="https://via.placeholder.com/800x450/08080e/7c6af7?text=Trakt+Dashboard+Screenshot" alt="Screenshot">
+  <img src="docs/screenshots/dashboard-stats.png" alt="Trakt Dashboard statistics screen">
 </div>
 
 ---
@@ -22,7 +22,7 @@
 - 🎬 **Movie Library** — Track watched movies with rewatch counts and last watched dates
 - 🔄 **Auto-Sync** — Scheduled background sync from Trakt (configurable interval)
 - 📊 **Watch Statistics** — Monthly watch charts, top genres, total hours watched
-- 🎨 **Modern UI** — Dark-themed, responsive design built with React 19 and Tailwind CSS v4
+- 🎨 **Cyber HUD UI** — Dark, responsive dashboard with neon status tokens and focused metrics
 - 🚀 **Fast & Lightweight** — Powered by Bun runtime, optimized for performance
 - 🐳 **Easy Deployment** — One-command Docker Compose setup
 - 🔒 **Privacy-First** — Self-hosted, your data stays on your server
@@ -127,12 +127,25 @@ trakt-dashboard/
 4. Stores everything in PostgreSQL with 7-day cache
 5. Calculates progress summaries
 
-**Incremental Sync** (runs every 15 minutes by default):
+**Incremental Sync** (runs every 15 minutes by default, or the interval saved in Settings):
 1. Fetches only new watch history since last sync
 2. Updates affected shows' progress
 3. Refreshes stale metadata if cache expired
 
 **Manual Sync**: Click "Sync now" in the UI or `POST /api/sync/trigger`
+
+### Watchlist Sync
+
+- Adding or removing a local watchlist item writes to Trakt first, then updates the local database.
+- Removing an item is idempotent when Trakt already no longer has it.
+- Periodic sync treats Trakt as the source of truth: remote items are upserted locally, and local watchlist rows missing from Trakt are cleaned up.
+- If a remote watchlist item has no matching local movie/show metadata yet, sync skips it and records a server log entry instead of creating partial media rows.
+
+### Runtime Settings & Proxy
+
+- `GET/PUT /api/settings` keeps the `{ data: UserSettings }` response shape.
+- Saving `syncIntervalMinutes` re-registers the current user's repeat sync job without restarting the API.
+- Trakt and TMDB requests read the user's `httpProxy` setting first. Empty settings fall back to `HTTP_PROXY` / `HTTPS_PROXY` from the environment.
 
 ### API Endpoints
 
@@ -170,6 +183,8 @@ GET  /api/stats/overview       Watch statistics and charts
 | `POSTGRES_DB` | — | `trakt_dashboard` | Database name |
 | `SYNC_INTERVAL_MINUTES` | — | `15` | Auto-sync frequency |
 | `FRONTEND_URL` | — | `http://localhost` | Used for CORS and OAuth |
+| `VITE_API_BASE` | — | `http://localhost:3001` | Frontend dev/build API target |
+| `HTTP_PROXY` / `HTTPS_PROXY` | — | — | Optional fallback proxy for TMDB and Trakt requests |
 
 ## 🛠️ Development
 
@@ -197,6 +212,10 @@ pnpm dev
 - API: http://localhost:3001
 - Health check: http://localhost:3001/health
 - Set `VITE_API_BASE` if the API runs somewhere other than `http://localhost:3001`.
+
+### Version Cadence
+
+This monorepo uses the root `package.json` version as the release version. Private package versions under `apps/*` and `packages/*` are intentionally not bumped for each tracked task. Feature work follows SemVer: patch for fixes/config/tests, minor for user-visible features and visual system upgrades. Each tracked task updates the root version and checks off the matching `plan.md` task before commit.
 
 ### Building
 

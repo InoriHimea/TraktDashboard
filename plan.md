@@ -42,7 +42,7 @@
 - [x] **T10: 图标与统计增强**，`0.39.1`
   可增加或替换统计图标、状态徽标、统计卡片视觉信息；统计页可轻量增加指标，但不改变现有核心数据流。提交：`feat(stats): enhance icons and dashboard metrics`
 
-- [ ] **T11: 文档与截图收尾**，`0.39.2`
+- [x] **T11: 文档与截图收尾**，`0.39.2`
   README/README_zh 替换 placeholder 截图，记录端口、代理、watchlist 同步语义和版本节奏。提交：`docs: refresh setup notes and screenshots`
 
 ## Public Interfaces And Constraints

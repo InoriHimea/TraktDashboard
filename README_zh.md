@@ -11,7 +11,7 @@
   <p>
     <a href="README.md">English</a> · <a href="#特性">特性</a> · <a href="#快速开始">快速开始</a> · <a href="#文档">文档</a>
   </p>
-  <img src="https://via.placeholder.com/800x450/08080e/7c6af7?text=Trakt+Dashboard+Screenshot" alt="Screenshot">
+  <img src="docs/screenshots/dashboard-stats.png" alt="Trakt Dashboard 统计页面截图">
 </div>
 
 ---
@@ -22,7 +22,7 @@
 - 🎬 **电影库** — 追踪已观看电影，记录重看次数和最后观看日期
 - 🔄 **自动同步** — 定时从 Trakt 后台同步（可配置间隔）
 - 📊 **观看统计** — 月度观看图表、热门类型、总观看时长
-- 🎨 **现代化界面** — 基于 React 19 和 Tailwind CSS v4 的深色主题响应式设计
+- 🎨 **赛博 HUD 界面** — 深色响应式仪表板，内置霓虹状态 token 和聚焦指标
 - 🚀 **快速轻量** — 由 Bun 运行时驱动，性能优化
 - 🐳 **一键部署** — 使用 Docker Compose 一条命令启动
 - 🔒 **隐私优先** — 自托管，数据保存在你的服务器上
@@ -127,12 +127,25 @@ trakt-dashboard/
 4. 存储到 PostgreSQL，缓存 7 天
 5. 计算进度摘要
 
-**增量同步**（默认每 15 分钟运行一次）：
+**增量同步**（默认每 15 分钟运行一次，或使用设置页保存的间隔）：
 1. 仅获取自上次同步以来的新观看历史
 2. 更新受影响剧集的进度
 3. 如果缓存过期则刷新陈旧的元数据
 
 **手动同步**：在 UI 中点击"立即同步"或调用 `POST /api/sync/trigger`
+
+### Watchlist 同步
+
+- 添加或移除本地待看项时，会先写入 Trakt，成功后再更新本地数据库。
+- 当 Trakt 上已经不存在该待看项时，删除操作保持幂等。
+- 周期同步以 Trakt 为权威：远端存在的待看项会 upsert 到本地，远端已不存在的本地待看项会被清理。
+- 如果远端待看项还没有匹配到本地电影/剧集元数据，同步会跳过该项并写入服务端日志，不创建不完整媒体记录。
+
+### 运行时设置与代理
+
+- `GET/PUT /api/settings` 保持 `{ data: UserSettings }` 响应结构。
+- 保存 `syncIntervalMinutes` 后，会立即为当前用户重新注册重复同步任务，无需重启 API。
+- Trakt 和 TMDB 请求优先读取用户的 `httpProxy` 设置；为空时回退到环境变量 `HTTP_PROXY` / `HTTPS_PROXY`。
 
 ### API 端点
 
@@ -170,6 +183,8 @@ GET  /api/stats/overview       观看统计和图表
 | `POSTGRES_DB` | — | `trakt_dashboard` | 数据库名称 |
 | `SYNC_INTERVAL_MINUTES` | — | `15` | 自动同步频率 |
 | `FRONTEND_URL` | — | `http://localhost` | 用于 CORS 和 OAuth |
+| `VITE_API_BASE` | — | `http://localhost:3001` | 前端开发/构建时的 API 目标 |
+| `HTTP_PROXY` / `HTTPS_PROXY` | — | — | TMDB 和 Trakt 请求的可选回退代理 |
 
 ## 🛠️ 开发
 
@@ -197,6 +212,10 @@ pnpm dev
 - API: http://localhost:3001
 - 健康检查: http://localhost:3001/health
 - 如果 API 不在 `http://localhost:3001`，请设置 `VITE_API_BASE`。
+
+### 版本节奏
+
+本仓库使用根目录 `package.json` 的版本作为发布版本。`apps/*` 与 `packages/*` 下的私有包版本不会随着每个跟踪任务单独 bump。版本语义遵循 SemVer：修复、配置和测试类任务使用 patch，用户可见功能和视觉系统升级使用 minor。每个跟踪任务提交前都会更新 root version，并在 `plan.md` 中勾选对应任务。
 
 ### 构建
 
