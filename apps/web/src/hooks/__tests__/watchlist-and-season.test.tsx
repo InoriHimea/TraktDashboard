@@ -20,12 +20,17 @@ vi.mock("../../lib/api", () => ({
 import { api } from "../../lib/api";
 
 function makeWrapper() {
+    return makeClientWrapper().wrapper;
+}
+
+function makeClientWrapper() {
     const qc = new QueryClient({
         defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     });
-    return ({ children }: { children: ReactNode }) => (
+    const wrapper = ({ children }: { children: ReactNode }) => (
         <QueryClientProvider client={qc}>{children}</QueryClientProvider>
     );
+    return { queryClient: qc, wrapper };
 }
 
 describe("useWatchlist", () => {
@@ -65,6 +70,18 @@ describe("useAddToWatchlist", () => {
         await waitFor(() => expect(result.current.isSuccess).toBe(true));
         expect(api.watchlist.add).toHaveBeenCalledWith("show", 42, undefined);
     });
+
+    it("invalidates watchlist queries after successful add", async () => {
+        vi.mocked(api.watchlist.add).mockResolvedValue({ data: { id: 1 } } as never);
+        const { queryClient, wrapper } = makeClientWrapper();
+        const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+        const { result } = renderHook(() => useAddToWatchlist(), { wrapper });
+        result.current.mutate({ type: "movie", id: 84, notes: "later" });
+
+        await waitFor(() => expect(result.current.isSuccess).toBe(true));
+        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["watchlist"] });
+    });
 });
 
 describe("useRemoveFromWatchlist", () => {
@@ -76,6 +93,18 @@ describe("useRemoveFromWatchlist", () => {
         result.current.mutate(7);
         await waitFor(() => expect(result.current.isSuccess).toBe(true));
         expect(api.watchlist.remove).toHaveBeenCalledWith(7);
+    });
+
+    it("invalidates watchlist queries after successful removal", async () => {
+        vi.mocked(api.watchlist.remove).mockResolvedValue({ ok: true } as never);
+        const { queryClient, wrapper } = makeClientWrapper();
+        const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+        const { result } = renderHook(() => useRemoveFromWatchlist(), { wrapper });
+        result.current.mutate(7);
+
+        await waitFor(() => expect(result.current.isSuccess).toBe(true));
+        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["watchlist"] });
     });
 });
 

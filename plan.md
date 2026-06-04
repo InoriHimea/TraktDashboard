@@ -33,7 +33,7 @@
 - [x] **T7: 路由级 code splitting**，`0.38.5`
   `App` 路由页改为 `React.lazy` + `Suspense`；保持现有路由、页面结构和 loading 风格不变。目标：主 chunk 不再触发 500KB 警告。提交：`perf(web): split route bundles`
 
-- [ ] **T8: 测试补强**，`0.38.6`
+- [x] **T8: 测试补强**，`0.38.6`
   增加 settings、watchlist、show detail、路由 lazy loading 的单元/集成测试；保留现有 property tests。提交：`test: cover settings watchlist and show detail flows`
 
 - [ ] **T9: 赛博科技感设计系统基础**，`0.39.0`
