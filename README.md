@@ -196,6 +196,7 @@ pnpm dev
 - Frontend: http://localhost:5173
 - API: http://localhost:3001
 - Health check: http://localhost:3001/health
+- Set `VITE_API_BASE` if the API runs somewhere other than `http://localhost:3001`.
 
 ### Building
 

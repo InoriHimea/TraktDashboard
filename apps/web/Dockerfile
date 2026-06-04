@@ -26,8 +26,8 @@ RUN if [ "${NPM_REGISTRY}" != "https://registry.npmjs.org/" ]; then \
 COPY packages/ ./packages/
 COPY apps/web/ ./apps/web/
 
-ARG VITE_API_URL=""
-ENV VITE_API_URL=$VITE_API_URL
+ARG VITE_API_BASE=""
+ENV VITE_API_BASE=$VITE_API_BASE
 
 WORKDIR /app/apps/web
 RUN pnpm build

@@ -196,6 +196,7 @@ pnpm dev
 - 前端: http://localhost:5173
 - API: http://localhost:3001
 - 健康检查: http://localhost:3001/health
+- 如果 API 不在 `http://localhost:3001`，请设置 `VITE_API_BASE`。
 
 ### 构建
 

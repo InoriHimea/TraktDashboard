@@ -24,7 +24,7 @@
 - [x] **T4: Show detail nextEpisode 一致性**，`0.38.2`
   详情 API 返回真实 `nextEpisode`，与列表 API 的 progress cache 保持一致。提交：`fix(shows): return next episode in detail response`
 
-- [ ] **T5: 配置与部署一致性**，`0.38.3`
+- [x] **T5: 配置与部署一致性**，`0.38.3`
   dev 端口统一为 `5173`；同步 README、`.env.example`、Vite config；Docker build arg 统一为 `VITE_API_BASE`；Nginx 阻止访问 `*.map`。提交：`fix(config): align dev ports and build env names`
 
 - [ ] **T6: 真正的 lint 与类型收束**，`0.38.4`
