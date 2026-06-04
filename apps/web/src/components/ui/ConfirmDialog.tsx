@@ -15,6 +15,7 @@ export interface ConfirmDialogProps {
 }
 
 const ICON_BADGE: Record<Color, string> = {
+  cyan: "bg-cyan-300/15 text-cyan-200",
   violet: "bg-violet-500/20 text-violet-500",
   emerald: "bg-emerald-500/20 text-emerald-500",
   rose: "bg-rose-500/20 text-rose-500",
@@ -53,7 +54,7 @@ export function ConfirmDialog({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl"
+            className="hud-panel-strong relative w-full max-w-sm overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl"
           >
             <div className="p-6">
               <div className="mb-4 flex items-center gap-3">

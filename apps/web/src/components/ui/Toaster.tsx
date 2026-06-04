@@ -10,9 +10,9 @@ const ICONS: Record<ToastType, typeof CheckCircle2> = {
 };
 
 const COLORS: Record<ToastType, { border: string; icon: string }> = {
-    success: { border: "rgba(52,211,153,0.25)", icon: "#34d399" },
-    error: { border: "rgba(239,68,68,0.25)", icon: "#ef4444" },
-    info: { border: "rgba(124,106,247,0.25)", icon: "#7c6af7" },
+    success: { border: "rgba(49,245,168,0.28)", icon: "var(--color-watched)" },
+    error: { border: "rgba(255,93,115,0.3)", icon: "var(--color-error)" },
+    info: { border: "rgba(37,244,238,0.3)", icon: "var(--color-accent)" },
 };
 
 export function Toaster() {
@@ -37,8 +37,12 @@ export function Toaster() {
                             transition={{ duration: 0.2 }}
                             className="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg min-w-[260px] max-w-[360px]"
                             style={{
-                                background: "var(--color-surface)",
+                                background:
+                                    "linear-gradient(180deg, rgba(141,252,255,0.055), transparent 42%), var(--color-panel-glass-strong)",
                                 border: `1px solid ${border}`,
+                                boxShadow: "var(--shadow-hud-glow)",
+                                backdropFilter: "blur(14px)",
+                                WebkitBackdropFilter: "blur(14px)",
                             }}
                             role="alert"
                         >

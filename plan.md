@@ -36,7 +36,7 @@
 - [x] **T8: 测试补强**，`0.38.6`
   增加 settings、watchlist、show detail、路由 lazy loading 的单元/集成测试；保留现有 property tests。提交：`test: cover settings watchlist and show detail flows`
 
-- [ ] **T9: 赛博科技感设计系统基础**，`0.39.0`
+- [x] **T9: 赛博科技感设计系统基础**，`0.39.0`
   更新主题 tokens、边框、状态光效、HUD 式状态表达；不重排页面主结构，不改电视节目进度条功能。提交：`feat(theme): add cyber dashboard design tokens`
 
 - [ ] **T10: 图标与统计增强**，`0.39.1`

@@ -50,8 +50,11 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
           top: 0,
           zIndex: 40,
           height: '56px',
-          background: 'var(--color-surface)',
-          borderBottom: '1px solid var(--color-border)',
+          background: 'linear-gradient(180deg, var(--color-nav-glass), var(--color-surface))',
+          borderBottom: '1px solid var(--color-border-subtle)',
+          boxShadow: '0 1px 0 rgba(141,252,255,0.08), 0 12px 32px rgba(0,0,0,0.18)',
+          backdropFilter: 'blur(18px)',
+          WebkitBackdropFilter: 'blur(18px)',
           display: 'flex',
           alignItems: 'center',
           paddingLeft: '20px',
@@ -65,8 +68,8 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
             fontFamily: 'var(--font-display)',
             fontSize: '20px',
             color: 'var(--color-text)',
-            letterSpacing: '-0.02em',
             whiteSpace: 'nowrap',
+            textShadow: '0 0 18px var(--color-accent-glow)',
           }}>
             trakt<span style={{ color: 'var(--color-accent)' }}>·</span>dash
           </span>
@@ -91,22 +94,27 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
             return (
               <Link key={to} to={to} style={{ textDecoration: 'none' }}>
                 <motion.div
-                  whileHover={{ backgroundColor: 'var(--color-surface-3)' }}
+                  whileHover={{
+                    backgroundColor: 'var(--color-surface-3)',
+                    borderColor: 'var(--color-border-focus)',
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
                     padding: '6px 12px',
                     borderRadius: 'var(--radius-md)',
-                    color: active ? 'var(--color-text)' : 'var(--color-text-secondary)',
-                    background: active ? 'var(--color-surface-3)' : 'transparent',
+                    color: active ? 'var(--color-accent-light)' : 'var(--color-text-secondary)',
+                    background: active ? 'var(--color-accent-dim)' : 'transparent',
+                    border: active ? '1px solid var(--color-border-focus)' : '1px solid transparent',
+                    boxShadow: active ? 'inset 0 1px 0 rgba(255,255,255,0.08), 0 0 18px var(--color-accent-glow)' : 'none',
                     fontSize: '13px',
-                    fontWeight: active ? 500 : 400,
+                    fontWeight: active ? 600 : 400,
                     position: 'relative',
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  <Icon size={14} />
+                  <Icon size={14} aria-hidden="true" />
                   <span className="nav-label-full" style={{ display: 'inline' }}>{t(labelKey)}</span>
                   {active && (
                     <motion.div
@@ -118,7 +126,8 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
                         right: '8px',
                         height: '2px',
                         borderRadius: '2px 2px 0 0',
-                        background: 'var(--color-accent)',
+                        background: 'linear-gradient(90deg, transparent, var(--color-accent), var(--color-accent-rose), transparent)',
+                        boxShadow: '0 0 14px var(--color-accent-glow)',
                       }}
                     />
                   )}
@@ -146,6 +155,7 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
                 background: isPopupOpen ? 'var(--color-surface-3)' : 'transparent',
                 border: '1px solid var(--color-accent)',
                 color: 'var(--color-accent)',
+                boxShadow: '0 0 18px var(--color-accent-glow)',
                 fontSize: '12px',
                 cursor: 'pointer',
                 position: 'relative',
@@ -160,6 +170,7 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
                   height: '7px',
                   borderRadius: '50%',
                   background: 'var(--color-accent)',
+                  boxShadow: '0 0 10px var(--color-accent)',
                   animation: 'pulse 1.5s ease-in-out infinite',
                 }}
               />
@@ -184,11 +195,12 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
               background: 'transparent',
               border: '1px solid var(--color-border)',
               color: 'var(--color-text-muted)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
               fontSize: '12px',
               cursor: 'pointer',
             }}
           >
-            <LogOut size={13} />
+            <LogOut size={13} aria-hidden="true" />
             <span style={{ display: 'inline' }}>{t("common.signOut")}</span>
           </button>
         </div>

@@ -23,54 +23,14 @@ export default function Layout({ children }: { children: ReactNode }) {
     return (
         <ToastProvider>
             <div
-                className="flex flex-col flex-1 w-full"
+                className="flex flex-col flex-1 w-full overflow-x-hidden"
                 style={{
                     minHeight: "100vh",
                     background: "var(--color-bg)",
                     position: "relative",
                 }}
             >
-                <div
-                    className="pointer-events-none"
-                    style={{ position: "fixed", inset: 0, zIndex: 0 }}
-                >
-                    <div
-                        style={{
-                            position: "absolute",
-                            width: "800px",
-                            height: "800px",
-                            top: "-300px",
-                            left: "-200px",
-                            background:
-                                "radial-gradient(circle, rgba(124,106,247,0.12) 0%, transparent 60%)",
-                            filter: "blur(80px)",
-                        }}
-                    />
-                    <div
-                        style={{
-                            position: "absolute",
-                            width: "600px",
-                            height: "600px",
-                            top: "100px",
-                            right: "-150px",
-                            background:
-                                "radial-gradient(circle, rgba(79,70,229,0.09) 0%, transparent 60%)",
-                            filter: "blur(80px)",
-                        }}
-                    />
-                    <div
-                        style={{
-                            position: "absolute",
-                            width: "500px",
-                            height: "500px",
-                            bottom: "-100px",
-                            left: "30%",
-                            background:
-                                "radial-gradient(circle, rgba(124,106,247,0.07) 0%, transparent 60%)",
-                            filter: "blur(80px)",
-                        }}
-                    />
-                </div>
+                <div className="cyber-grid-overlay" style={{ zIndex: 0 }} aria-hidden="true" />
 
                 <div
                     className="flex flex-col flex-1 w-full"

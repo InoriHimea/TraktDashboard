@@ -20,7 +20,7 @@ import { cn } from '../../lib/utils'
 
 export type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
 export type Size    = 'sm' | 'md' | 'lg'
-export type Color   = 'violet' | 'emerald' | 'rose' | 'amber' | 'sky' | 'slate'
+export type Color   = 'cyan' | 'violet' | 'emerald' | 'rose' | 'amber' | 'sky' | 'slate'
 
 export interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'children'> {
   variant?: Variant
@@ -33,12 +33,13 @@ export interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'children'>
 
 // ─── Color palette ────────────────────────────────────────────────────────────
 const COLOR_MAP: Record<Color, { grad: string; glow: string; text: string; ring: string }> = {
-  violet:  { grad: 'linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%)', glow: 'rgba(109,40,217,0.45)', text: 'hsl(270 93% 64%)', ring: 'focus-visible:ring-violet-400' },
-  emerald: { grad: 'linear-gradient(135deg, #059669 0%, #34d399 100%)', glow: 'rgba(5,150,105,0.45)',  text: 'hsl(160 84% 60%)', ring: 'focus-visible:ring-emerald-400' },
-  rose:    { grad: 'linear-gradient(135deg, #e11d48 0%, #fb7185 100%)', glow: 'rgba(225,29,72,0.45)',  text: 'hsl(350 78% 68%)', ring: 'focus-visible:ring-rose-400' },
-  amber:   { grad: 'linear-gradient(135deg, #d97706 0%, #fbbf24 100%)', glow: 'rgba(217,119,6,0.45)',  text: 'hsl(38 92% 64%)',  ring: 'focus-visible:ring-amber-400' },
-  sky:     { grad: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)', glow: 'rgba(2,132,199,0.45)',  text: 'hsl(200 90% 64%)',  ring: 'focus-visible:ring-sky-400' },
-  slate:   { grad: 'linear-gradient(135deg, #475569 0%, #94a3b8 100%)', glow: 'rgba(71,85,105,0.35)',  text: 'hsl(220 14% 64%)',  ring: 'focus-visible:ring-slate-400' },
+  cyan:    { grad: 'linear-gradient(135deg, var(--color-accent) 0%, #8dfcff 100%)', glow: 'rgba(37,244,238,0.45)', text: 'var(--color-accent-light)', ring: 'focus-visible:ring-cyan-300' },
+  violet:  { grad: 'linear-gradient(135deg, var(--color-accent-violet) 0%, #c4b5fd 100%)', glow: 'rgba(139,92,246,0.42)', text: '#c4b5fd', ring: 'focus-visible:ring-violet-400' },
+  emerald: { grad: 'linear-gradient(135deg, #06b981 0%, var(--color-watched) 100%)', glow: 'rgba(49,245,168,0.36)',  text: 'var(--color-watched)', ring: 'focus-visible:ring-emerald-300' },
+  rose:    { grad: 'linear-gradient(135deg, #e11d48 0%, var(--color-accent-rose) 100%)', glow: 'rgba(255,61,129,0.42)',  text: 'var(--color-accent-rose)', ring: 'focus-visible:ring-rose-400' },
+  amber:   { grad: 'linear-gradient(135deg, #d97706 0%, var(--color-airing) 100%)', glow: 'rgba(248,211,92,0.34)',  text: 'var(--color-airing)',  ring: 'focus-visible:ring-amber-300' },
+  sky:     { grad: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)', glow: 'rgba(56,189,248,0.34)',  text: '#7dd3fc',  ring: 'focus-visible:ring-sky-300' },
+  slate:   { grad: 'linear-gradient(135deg, #314456 0%, #8fb3c7 100%)', glow: 'rgba(143,179,199,0.24)',  text: 'var(--color-text-secondary)',  ring: 'focus-visible:ring-slate-300' },
 }
 
 // ─── Shadow factory ───────────────────────────────────────────────────────────
@@ -73,7 +74,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       className,
       variant = 'primary',
       size = 'md',
-      color = 'violet',
+      color = 'cyan',
       loading = false,
       icon,
       children,
@@ -96,7 +97,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
     const variantClasses: Record<Variant, string> = {
       primary: cn(
-        'border border-white/20 text-white',
+        'border border-white/20',
         ringClass, 'focus-visible:ring-offset-[var(--color-bg)]',
       ),
       danger: cn(
@@ -127,6 +128,9 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
     if (variant === 'primary' || variant === 'danger') {
       mergedStyle.background = grad
+      if (variant === 'primary') {
+        mergedStyle.color = ['cyan', 'emerald', 'amber', 'sky'].includes(activeColor) ? '#001316' : '#fff'
+      }
     } else if (variant === 'secondary' || variant === 'ghost') {
       mergedStyle.color = textColor
     }

@@ -18,12 +18,17 @@ export function TraktProgressBar({
     return (
         <div
             className={cn(
-                "bg-neutral-800 rounded-full h-2 w-full overflow-hidden",
+                "bg-[var(--color-surface-3)] rounded-full h-2 w-full overflow-hidden",
                 className,
             )}
         >
             <motion.div
-                className="bg-violet-500 rounded-full h-full"
+                className="rounded-full h-full"
+                style={{
+                    background:
+                        "linear-gradient(90deg, var(--color-accent), var(--color-watched))",
+                    boxShadow: "0 0 14px var(--color-accent-glow)",
+                }}
                 initial={{ width: 0 }}
                 animate={{ width: `${pct}%` }}
                 transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
