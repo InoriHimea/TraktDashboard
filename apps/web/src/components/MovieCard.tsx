@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Film } from "lucide-react";
 import type { MovieProgress } from "@trakt-dashboard/types";
 import { tmdbImage } from "../lib/utils";
-import { t } from "../lib/i18n";
+import { getLocale, t } from "../lib/i18n";
 
 interface MovieCardProps {
     movie: MovieProgress;
@@ -20,7 +20,7 @@ export function MovieCard({ movie, index }: MovieCardProps) {
     const formatDate = (dateStr: string | null) => {
         if (!dateStr) return null;
         const date = new Date(dateStr);
-        return date.toLocaleDateString(undefined, {
+        return date.toLocaleDateString(getLocale(), {
             year: "numeric",
             month: "short",
             day: "numeric",

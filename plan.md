@@ -59,3 +59,26 @@
 - T7 验收：生产构建无主 chunk 超 500KB 警告，`html2canvas` 继续保持动态加载。
 - T9/T10 验收：使用 Browser 检查 desktop/mobile 的 TV shows、movies、show detail、stats、sync、settings、login；确认无文字溢出、控件重叠、进度条行为回归。
 - 每个 task 提交前更新 `plan.md`：把对应行从 `[ ]` 改为 `[x]`，并同步 root version。
+
+## Next Phase Stabilization Plan
+
+- [x] **P0: 安全依赖与发布配置收束**，`0.39.3`
+  升级 React Router、Hono、Vitest、Vite、Turbo、BullMQ、drizzle-kit/jsdom；移除未运行时使用的 `shadcn` production dependency；显式声明 `html2canvas`；补 `pnpm audit` 脚本；修正 `.env.example` OAuth 回调；本地 Docker build 和 GitHub workflow 均传递 `VITE_API_BASE`；修复 Firefox 下异常 locale 触发的日期渲染错误。提交：`chore(deps): refresh security and build configuration`
+
+- [ ] **P1: Firefox 渲染与基础 a11y 修复**，`0.39.4`
+  修 Settings label/input 绑定、name/autocomplete、reduced motion、明显 Firefox 渲染错位；不改页面主结构，不改电视节目进度条逻辑。提交：`fix(web): improve firefox rendering and accessibility`
+
+- [ ] **P2: API 测试真实化**，`0.39.5`
+  为 settings、watchlist add/remove、watchlist reconcile、show detail nextEpisode 增加 Hono route/service tests；API test 不再只等同于 typecheck。提交：`test(api): cover settings watchlist and show detail`
+
+- [ ] **P3: Watchlist 对账可靠性增强**，`0.39.6`
+  远端 watchlist 缺 TMDB id 时 fallback 到 Trakt/IMDB id；跳过但远端存在的项不触发误删；增加诊断日志。提交：`fix(watchlist): harden remote reconciliation`
+
+- [ ] **P4: 同步诊断与统计轻量增强**，`0.40.0`
+  Sync 页面展示最近同步摘要、失败项重试入口和远端/本地差异提示；Stats 增加 streak/近 30 天趋势等轻量指标。提交：`feat(sync): add diagnostics and trend signals`
+
+## Next Phase Browser Acceptance
+
+- 每个阶段完成后必须使用 headed Firefox 做 desktop/mobile 页面检查：login、TV shows、movies、show detail、stats、sync、settings、watchlist、calendar。
+- 如果进入真实登录墙，暂停执行并通知用户完成登录；登录完成后继续同一轮验收。
+- Firefox 验收记录至少包含：当前 URL、console error 数、横向溢出检测、关键页面截图路径。

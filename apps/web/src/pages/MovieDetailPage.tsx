@@ -5,7 +5,7 @@ import { ArrowLeft, Film, Clock, Calendar, Eye, Trash2, RefreshCw, Loader2, Hist
 import { useMovieDetail, useMovieHistory, useMarkMovieWatched, useDeleteMovieHistory, useWatchlist, useAddToWatchlist, useRemoveFromWatchlist } from "../hooks";
 import { tmdbImage } from "../lib/utils";
 import { useToast } from "../lib/toast";
-import { t } from "../lib/i18n";
+import { getLocale, t } from "../lib/i18n";
 import { Button } from "../components/ui/Button";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { Tag } from "../components/ui/Tag";
@@ -119,7 +119,7 @@ export default function MovieDetailPage() {
 
     const formatDate = (dateStr: string | null) => {
         if (!dateStr) return null;
-        return new Date(dateStr).toLocaleString(undefined, {
+        return new Date(dateStr).toLocaleString(getLocale(), {
             year: "numeric",
             month: "short",
             day: "numeric",
@@ -130,7 +130,7 @@ export default function MovieDetailPage() {
 
     const formatDateOnly = (dateStr: string | null) => {
         if (!dateStr) return null;
-        return new Date(dateStr).toLocaleDateString(undefined, {
+        return new Date(dateStr).toLocaleDateString(getLocale(), {
             year: "numeric",
             month: "long",
             day: "numeric",

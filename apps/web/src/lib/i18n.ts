@@ -25,14 +25,31 @@ const translations: Record<string, Translations> = {
     "en": enUS,
 };
 
+const DEFAULT_LOCALE = "zh-CN";
+
+function normalizeLocale(locale: string | null | undefined): string {
+    const value = locale?.trim();
+    if (!value || value === "undefined" || value === "null") {
+        return DEFAULT_LOCALE;
+    }
+
+    try {
+        return Intl.DateTimeFormat.supportedLocalesOf(value).length > 0
+            ? value
+            : DEFAULT_LOCALE;
+    } catch {
+        return DEFAULT_LOCALE;
+    }
+}
+
 function localeFallbacks(locale: string): string[] {
     return [locale, "zh-TW", "zh-SG", "zh-HK", "zh-CN", "en-US"];
 }
 
-let currentLocale = "zh-CN";
+let currentLocale = DEFAULT_LOCALE;
 
-export function setLocale(locale: string) {
-    currentLocale = locale;
+export function setLocale(locale: string | null | undefined) {
+    currentLocale = normalizeLocale(locale);
 }
 
 export function getLocale(): string {

@@ -9,6 +9,7 @@ TARGET="${TARGET:-all}"   # all | api | web
 # Registry mirrors (use internal Nexus for local builds, upstream for CI)
 NPM_REGISTRY="${NPM_REGISTRY:-https://nexus.mellivora.com.cn:18082/repository/npm-group/}"
 APK_MIRROR="${APK_MIRROR:-https://artifact.mellivora.com.cn/alpine/apk-group}"
+VITE_API_BASE="${VITE_API_BASE:-}"
 
 # Resolve repo root regardless of where the script is called from
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -59,6 +60,7 @@ build_web() {
     --tag "${WEB_IMAGE_LATEST}" \
     --build-arg NPM_REGISTRY="${NPM_REGISTRY}" \
     --build-arg APK_MIRROR="${APK_MIRROR}" \
+    --build-arg VITE_API_BASE="${VITE_API_BASE}" \
     --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     --label "org.opencontainers.image.version=${VERSION}" \
     --label "org.opencontainers.image.revision=$(git -C "${REPO_ROOT}" rev-parse --short HEAD 2>/dev/null || echo unknown)" \
@@ -86,6 +88,9 @@ log "Registry : ${REGISTRY}"
 log "Version  : ${VERSION}"
 log "Push     : ${PUSH}"
 log "Target   : ${TARGET}"
+if [[ -n "${VITE_API_BASE}" ]]; then
+  log "Web API  : ${VITE_API_BASE}"
+fi
 
 case "${TARGET}" in
   all)

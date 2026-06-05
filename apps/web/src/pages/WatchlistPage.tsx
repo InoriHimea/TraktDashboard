@@ -5,7 +5,7 @@ import { Tv2, Film, LayoutGrid, Trash2, Loader2, Search } from "lucide-react";
 import { useWatchlist, useRemoveFromWatchlist } from "../hooks";
 import type { WatchlistShowItem, WatchlistMovieItem } from "@trakt-dashboard/types";
 import { tmdbImage } from "../lib/utils";
-import { t } from "../lib/i18n";
+import { getLocale, t } from "../lib/i18n";
 import { useToast } from "../lib/toast";
 
 type FilterType = "all" | "shows" | "movies";
@@ -36,7 +36,7 @@ function WatchlistCard({
     const media = isShow ? item.show : item.movie;
     const poster = tmdbImage(media.posterPath, "w500");
     const href = isShow ? `/shows/${media.id}` : `/movies/${media.id}`;
-    const addedDate = new Date(item.addedAt).toLocaleDateString(undefined, {
+    const addedDate = new Date(item.addedAt).toLocaleDateString(getLocale(), {
         year: "numeric",
         month: "short",
         day: "numeric",

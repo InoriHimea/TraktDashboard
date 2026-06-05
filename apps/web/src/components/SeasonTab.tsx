@@ -31,7 +31,7 @@ export function SeasonTab({ season, isActive, onClick }: SeasonTabProps) {
                     ? "Specials"
                     : `Season ${season.seasonNumber}`
             }
-            className="relative overflow-visible flex flex-col items-center gap-5 shrink-0 group focus-visible:outline-none py-2"
+            className="relative flex w-[224px] shrink-0 flex-col items-center gap-5 overflow-visible py-2 group focus-visible:outline-none"
         >
             {/* 海报 */}
             <div className="relative overflow-visible">
