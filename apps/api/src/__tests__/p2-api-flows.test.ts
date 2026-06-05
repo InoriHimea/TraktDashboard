@@ -1,0 +1,558 @@
+import { Hono } from "hono";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const TEST_USER_ID = 42;
+
+type SelectResult = unknown[];
+
+interface MockDbState {
+    selectResults: SelectResult[];
+    insertResults: SelectResult[];
+    insertValues: unknown[];
+    conflictCalls: unknown[];
+    deleteWhereCalls: unknown[];
+}
+
+const dbMockState = vi.hoisted(() => ({
+    db: null as unknown,
+}));
+
+const schedulerMock = vi.hoisted(() => ({
+    registerUserSyncJob: vi.fn(),
+    getRedis: vi.fn(() => null),
+}));
+
+const traktMock = vi.hoisted(() => {
+    class MockTraktApiError extends Error {
+        constructor(
+            public readonly status: number,
+            public readonly body: string,
+        ) {
+            super(`Trakt API error: ${status} ${body}`);
+            this.name = "TraktApiError";
+        }
+    }
+
+    return {
+        TraktApiError: MockTraktApiError,
+        getTraktClient: vi.fn(),
+        client: {
+            addToWatchlist: vi.fn(),
+            removeFromWatchlist: vi.fn(),
+            getWatchlistShows: vi.fn(),
+            getWatchlistMovies: vi.fn(),
+        },
+    };
+});
+
+vi.mock("@trakt-dashboard/db", async () => {
+    const actual =
+        await vi.importActual<typeof import("@trakt-dashboard/db")>(
+            "@trakt-dashboard/db",
+        );
+    return {
+        ...actual,
+        getDb: () => dbMockState.db,
+    };
+});
+
+vi.mock("../jobs/scheduler.js", () => schedulerMock);
+vi.mock("../services/trakt.js", () => ({
+    getTraktClient: traktMock.getTraktClient,
+    TraktApiError: traktMock.TraktApiError,
+}));
+
+const { settingsRoutes } = await import("../routes/settings.js");
+const { watchlistRoutes } = await import("../routes/watchlist.js");
+const { showRoutes } = await import("../routes/shows.js");
+const { syncWatchlist } = await import("../services/sync.js");
+
+class SelectBuilder implements PromiseLike<SelectResult> {
+    constructor(private readonly result: SelectResult) {}
+
+    from() {
+        return this;
+    }
+
+    innerJoin() {
+        return this;
+    }
+
+    leftJoin() {
+        return this;
+    }
+
+    where() {
+        return this;
+    }
+
+    orderBy() {
+        return this;
+    }
+
+    limit() {
+        return this;
+    }
+
+    offset() {
+        return this;
+    }
+
+    then<TResult1 = SelectResult, TResult2 = never>(
+        onfulfilled?:
+            | ((value: SelectResult) => TResult1 | PromiseLike<TResult1>)
+            | null,
+        onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+    ): Promise<TResult1 | TResult2> {
+        return Promise.resolve(this.result).then(onfulfilled, onrejected);
+    }
+}
+
+class InsertBuilder implements PromiseLike<void> {
+    constructor(private readonly state: MockDbState) {}
+
+    values(value: unknown) {
+        this.state.insertValues.push(value);
+        return this;
+    }
+
+    onConflictDoUpdate(value: unknown) {
+        this.state.conflictCalls.push(value);
+        return this;
+    }
+
+    returning() {
+        return Promise.resolve(this.state.insertResults.shift() ?? []);
+    }
+
+    then<TResult1 = void, TResult2 = never>(
+        onfulfilled?: ((value: void) => TResult1 | PromiseLike<TResult1>) | null,
+        onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+    ): Promise<TResult1 | TResult2> {
+        return Promise.resolve(undefined).then(onfulfilled, onrejected);
+    }
+}
+
+class DeleteBuilder {
+    constructor(private readonly state: MockDbState) {}
+
+    where(value: unknown) {
+        this.state.deleteWhereCalls.push(value);
+        return Promise.resolve();
+    }
+}
+
+function createMockDb({
+    selectResults = [],
+    insertResults = [],
+}: {
+    selectResults?: SelectResult[];
+    insertResults?: SelectResult[];
+} = {}) {
+    const state: MockDbState = {
+        selectResults: [...selectResults],
+        insertResults: [...insertResults],
+        insertValues: [],
+        conflictCalls: [],
+        deleteWhereCalls: [],
+    };
+
+    const db = {
+        select: vi.fn(() => new SelectBuilder(state.selectResults.shift() ?? [])),
+        insert: vi.fn(() => new InsertBuilder(state)),
+        delete: vi.fn(() => new DeleteBuilder(state)),
+        __state: state,
+    };
+
+    return db;
+}
+
+function testApp(path: string, routes: Hono<{ Variables: { userId: number } }>) {
+    const app = new Hono<{ Variables: { userId: number } }>();
+    app.use("*", async (c, next) => {
+        c.set("userId", TEST_USER_ID);
+        await next();
+    });
+    app.route(path, routes);
+    return app;
+}
+
+function jsonRequest(method: string, body: unknown) {
+    return {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+    };
+}
+
+async function parseJson<T>(res: Response): Promise<T> {
+    return (await res.json()) as T;
+}
+
+const now = new Date("2026-06-05T12:00:00.000Z");
+
+function makeShow(overrides: Record<string, unknown> = {}) {
+    return {
+        id: 1,
+        tmdbId: 1001,
+        tvdbId: null,
+        imdbId: "tt1001",
+        traktId: 5001,
+        traktSlug: "neon-signal",
+        title: "Neon Signal",
+        overview: "Overview",
+        status: "returning series",
+        firstAired: "2026-01-01",
+        network: "HBO",
+        genres: ["Drama"],
+        posterPath: "/poster.jpg",
+        backdropPath: "/backdrop.jpg",
+        totalEpisodes: 10,
+        totalSeasons: 1,
+        originalName: "Neon Signal",
+        originalLanguage: "en",
+        translatedName: "Neon Signal CN",
+        translatedOverview: "Translated overview",
+        displayLanguage: "zh-CN",
+        lastSyncedAt: now,
+        createdAt: now,
+        ...overrides,
+    };
+}
+
+function makeMovie(overrides: Record<string, unknown> = {}) {
+    return {
+        id: 9,
+        tmdbId: 9009,
+        imdbId: "tt9009",
+        traktId: 7009,
+        traktSlug: "midnight-protocol",
+        title: "Midnight Protocol",
+        overview: "Overview",
+        releaseDate: "2026-01-01",
+        runtime: 118,
+        posterPath: "/movie.jpg",
+        backdropPath: "/movie-backdrop.jpg",
+        genres: ["Thriller"],
+        lastSyncedAt: now,
+        createdAt: now,
+        ...overrides,
+    };
+}
+
+function makeEpisode(overrides: Record<string, unknown> = {}) {
+    return {
+        id: 207,
+        showId: 1,
+        seasonId: 10,
+        seasonNumber: 1,
+        episodeNumber: 7,
+        title: "Afterimage",
+        overview: "Next episode",
+        translatedTitle: "Afterimage CN",
+        translatedOverview: "Next episode CN",
+        runtime: 45,
+        airDate: "2026-06-07",
+        stillPath: "/still.jpg",
+        traktId: 9207,
+        tmdbId: 8207,
+        ...overrides,
+    };
+}
+
+beforeEach(() => {
+    vi.clearAllMocks();
+    traktMock.getTraktClient.mockReturnValue(traktMock.client);
+    dbMockState.db = createMockDb();
+});
+
+describe("settings routes", () => {
+    it("returns defaults when no user settings row exists", async () => {
+        dbMockState.db = createMockDb({ selectResults: [[]] });
+        const app = testApp("/settings", settingsRoutes);
+
+        const res = await app.request("/settings");
+        const body = await parseJson<{
+            data: {
+                userId: number;
+                displayLanguage: string;
+                syncIntervalMinutes: number;
+                httpProxy: string | null;
+            };
+        }>(res);
+
+        expect(res.status).toBe(200);
+        expect(body).toEqual({
+            data: {
+                userId: TEST_USER_ID,
+                displayLanguage: "zh-CN",
+                syncIntervalMinutes: 60,
+                httpProxy: null,
+            },
+        });
+    });
+
+    it("persists updates and re-registers sync when interval changes", async () => {
+        const existing = {
+            userId: TEST_USER_ID,
+            displayLanguage: "zh-CN",
+            syncIntervalMinutes: 60,
+            httpProxy: null,
+        };
+        const db = createMockDb({ selectResults: [[existing]] });
+        dbMockState.db = db;
+        const app = testApp("/settings", settingsRoutes);
+
+        const res = await app.request(
+            "/settings",
+            jsonRequest("PUT", {
+                displayLanguage: "en-US",
+                syncIntervalMinutes: 120,
+                httpProxy: "http://127.0.0.1:7890",
+            }),
+        );
+        const body = await parseJson<{
+            data: {
+                userId: number;
+                displayLanguage: string;
+                syncIntervalMinutes: number;
+                httpProxy: string | null;
+            };
+        }>(res);
+
+        expect(res.status).toBe(200);
+        expect(body.data).toMatchObject({
+            userId: TEST_USER_ID,
+            displayLanguage: "en-US",
+            syncIntervalMinutes: 120,
+            httpProxy: "http://127.0.0.1:7890",
+        });
+        expect(db.__state.insertValues).toHaveLength(1);
+        expect(schedulerMock.registerUserSyncJob).toHaveBeenCalledWith(
+            TEST_USER_ID,
+        );
+    });
+});
+
+describe("watchlist routes", () => {
+    it("adds to Trakt before writing the local watchlist row", async () => {
+        const show = makeShow();
+        const inserted = {
+            id: 77,
+            userId: TEST_USER_ID,
+            showId: show.id,
+            movieId: null,
+            listedAt: now,
+            notes: "queue",
+        };
+        const db = createMockDb({
+            selectResults: [[show]],
+            insertResults: [[inserted]],
+        });
+        dbMockState.db = db;
+        traktMock.client.addToWatchlist.mockResolvedValue(undefined);
+        const app = testApp("/watchlist", watchlistRoutes);
+
+        const res = await app.request(
+            "/watchlist",
+            jsonRequest("POST", { type: "show", id: show.id, notes: "queue" }),
+        );
+        const body = await parseJson<{
+            data: { id: number; showId: number | null };
+        }>(res);
+
+        expect(res.status).toBe(200);
+        expect(body.data).toMatchObject({ id: 77, showId: show.id });
+        expect(traktMock.client.addToWatchlist).toHaveBeenCalledWith(
+            TEST_USER_ID,
+            "shows",
+            { trakt: 5001, tmdb: 1001, imdb: "tt1001" },
+        );
+        expect(db.__state.insertValues).toEqual([
+            expect.objectContaining({
+                userId: TEST_USER_ID,
+                showId: show.id,
+                movieId: null,
+                notes: "queue",
+            }),
+        ]);
+    });
+
+    it("keeps delete idempotent when Trakt reports a missing item", async () => {
+        const show = makeShow();
+        const db = createMockDb({
+            selectResults: [
+                [
+                    {
+                        watchlist: {
+                            id: 77,
+                            userId: TEST_USER_ID,
+                            showId: show.id,
+                            movieId: null,
+                        },
+                        shows: show,
+                        movies: null,
+                    },
+                ],
+            ],
+        });
+        dbMockState.db = db;
+        traktMock.client.removeFromWatchlist.mockRejectedValue(
+            new traktMock.TraktApiError(404, "not found"),
+        );
+        const app = testApp("/watchlist", watchlistRoutes);
+
+        const res = await app.request("/watchlist/77", { method: "DELETE" });
+        const body = await parseJson<{ ok: boolean }>(res);
+
+        expect(res.status).toBe(200);
+        expect(body).toEqual({ ok: true });
+        expect(traktMock.client.removeFromWatchlist).toHaveBeenCalledWith(
+            TEST_USER_ID,
+            "shows",
+            { trakt: 5001, tmdb: 1001, imdb: "tt1001" },
+        );
+        expect(db.__state.deleteWhereCalls).toHaveLength(1);
+    });
+});
+
+describe("show detail route", () => {
+    it("returns nextEpisode from the progress cache nextEpisodeId", async () => {
+        const show = makeShow();
+        const nextEpisode = makeEpisode();
+        const season = {
+            id: 10,
+            showId: show.id,
+            seasonNumber: 1,
+            episodeCount: 2,
+            airDate: "2026-01-01",
+            overview: null,
+            posterPath: null,
+        };
+        const progress = {
+            id: 501,
+            userId: TEST_USER_ID,
+            showId: show.id,
+            airedEpisodes: 2,
+            watchedEpisodes: 1,
+            nextEpisodeId: nextEpisode.id,
+            lastWatchedAt: now,
+            completed: false,
+            updatedAt: now,
+        };
+        const watchedEpisode = makeEpisode({
+            id: 201,
+            episodeNumber: 1,
+            airDate: "2026-01-01",
+        });
+        const db = createMockDb({
+            selectResults: [
+                [show],
+                [progress],
+                [season],
+                [watchedEpisode, nextEpisode],
+                [{ episodeId: watchedEpisode.id, watchedAt: now }],
+                [nextEpisode],
+            ],
+        });
+        dbMockState.db = db;
+        const app = testApp("/shows", showRoutes);
+
+        const res = await app.request("/shows/1");
+        const body = await parseJson<{
+            data: {
+                nextEpisode: {
+                    id: number;
+                    seasonNumber: number;
+                    episodeNumber: number;
+                    title: string;
+                } | null;
+                seasons: { episodes: unknown[] }[];
+                percentage: number;
+            };
+        }>(res);
+
+        expect(res.status).toBe(200);
+        expect(body.data.nextEpisode).toMatchObject({
+            id: nextEpisode.id,
+            seasonNumber: 1,
+            episodeNumber: 7,
+            title: "Afterimage",
+        });
+        expect(body.data.seasons[0].episodes).toHaveLength(2);
+        expect(body.data.percentage).toBe(50);
+    });
+});
+
+describe("syncWatchlist", () => {
+    it("upserts remote items, skips unknown media, and runs cleanup", async () => {
+        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+        const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+        const show = makeShow({ id: 11, tmdbId: 1101 });
+        const movie = makeMovie({ id: 22, tmdbId: 2202 });
+        const db = createMockDb({
+            selectResults: [
+                [{ id: show.id }],
+                [],
+                [{ id: movie.id }],
+                [],
+            ],
+        });
+        dbMockState.db = db;
+        traktMock.client.getWatchlistShows.mockResolvedValue([
+            {
+                listed_at: "2026-06-01T00:00:00.000Z",
+                show: { title: "Remote Show", ids: { tmdb: show.tmdbId } },
+            },
+            {
+                listed_at: "2026-06-01T00:00:00.000Z",
+                show: { title: "No Tmdb Show", ids: {} },
+            },
+            {
+                listed_at: "2026-06-01T00:00:00.000Z",
+                show: { title: "Missing Local Show", ids: { tmdb: 9999 } },
+            },
+        ]);
+        traktMock.client.getWatchlistMovies.mockResolvedValue([
+            {
+                listed_at: "2026-06-02T00:00:00.000Z",
+                movie: { title: "Remote Movie", ids: { tmdb: movie.tmdbId } },
+            },
+            {
+                listed_at: "2026-06-02T00:00:00.000Z",
+                movie: { title: "Missing Local Movie", ids: { tmdb: 9998 } },
+            },
+        ]);
+
+        await syncWatchlist(TEST_USER_ID);
+
+        expect(db.__state.insertValues).toEqual([
+            expect.objectContaining({
+                userId: TEST_USER_ID,
+                showId: show.id,
+                movieId: null,
+            }),
+            expect.objectContaining({
+                userId: TEST_USER_ID,
+                showId: null,
+                movieId: movie.id,
+            }),
+        ]);
+        expect(db.__state.conflictCalls).toHaveLength(2);
+        expect(db.__state.deleteWhereCalls).toHaveLength(2);
+        expect(warnSpy).toHaveBeenCalledWith(
+            expect.stringContaining('Skipping show "No Tmdb Show"'),
+        );
+        expect(warnSpy).toHaveBeenCalledWith(
+            expect.stringContaining('Show "Missing Local Show" not in database'),
+        );
+        expect(warnSpy).toHaveBeenCalledWith(
+            expect.stringContaining(
+                'Movie "Missing Local Movie" not in database',
+            ),
+        );
+
+        warnSpy.mockRestore();
+        logSpy.mockRestore();
+    });
+});

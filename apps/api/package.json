@@ -8,7 +8,7 @@
         "typecheck": "tsc -p tsconfig.json --noEmit",
         "dev": "bun --watch src/index.ts",
         "start": "bun src/index.ts",
-        "test": "tsc -p tsconfig.json --noEmit",
+        "test": "vitest --run",
         "lint": "tsc -p tsconfig.json --noEmit",
         "db:generate": "cd ../../packages/db && pnpm db:generate",
         "db:migrate": "bun src/migrate.ts"
@@ -29,6 +29,7 @@
     "devDependencies": {
         "@types/bun": "latest",
         "@types/node": "^22.10.2",
-        "fast-check": "^3.23.2"
+        "fast-check": "^3.23.2",
+        "vitest": "^4.1.8"
     }
 }

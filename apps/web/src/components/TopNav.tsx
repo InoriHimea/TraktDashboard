@@ -55,11 +55,18 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
   return (
     <>
       <header
+        className="top-nav-shell"
         style={{
           position: 'sticky',
           top: 0,
+          left: 0,
+          right: 0,
           zIndex: 40,
           height: '56px',
+          width: '100%',
+          maxWidth: '100vw',
+          boxSizing: 'border-box',
+          overflow: 'hidden',
           background: 'linear-gradient(180deg, var(--color-nav-glass), var(--color-surface))',
           borderBottom: '1px solid var(--color-border-subtle)',
           boxShadow: 'var(--shadow-nav)',
@@ -74,7 +81,7 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
       >
         {/* Logo */}
         <Link to="/tv-shows" style={{ textDecoration: 'none', flexShrink: 0, marginRight: '8px' }}>
-          <span style={{
+          <span className="top-nav-logo" style={{
             fontFamily: 'var(--font-display)',
             fontSize: '20px',
             color: 'var(--color-text)',
@@ -98,7 +105,18 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
         </Link>
 
         {/* Nav items */}
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '2px', flex: 1 }}>
+        <nav
+          className="top-nav-items"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '2px',
+            flex: 1,
+            minWidth: 0,
+            overflowX: 'auto',
+            scrollbarWidth: 'none',
+          }}
+        >
           {NAV.map(({ to, icon: Icon, labelKey }) => {
             const active = isNavActive(location.pathname, to)
             return (
@@ -106,9 +124,11 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
                 key={to}
                 to={to}
                 aria-current={active ? 'page' : undefined}
+                className="top-nav-link"
                 style={{ textDecoration: 'none' }}
               >
                 <motion.div
+                  className="top-nav-item"
                   whileHover={{
                     backgroundColor: active ? 'var(--color-nav-active-hover)' : 'var(--color-nav-hover)',
                     borderColor: active ? 'var(--color-nav-active-border)' : 'var(--color-border-subtle)',
@@ -194,7 +214,7 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
           )}
 
           {username && (
-            <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
+            <span className="topnav-username" style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
               @{username}
             </span>
           )}
@@ -216,7 +236,7 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
             }}
           >
             <LogOut size={13} aria-hidden="true" />
-            <span style={{ display: 'inline' }}>{t("common.signOut")}</span>
+            <span className="topnav-action-label" style={{ display: 'inline' }}>{t("common.signOut")}</span>
           </button>
         </div>
       </header>

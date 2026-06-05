@@ -68,7 +68,7 @@
 - [x] **P1: Firefox 渲染与基础 a11y 修复**，`0.39.4`
   修 Settings label/input 绑定、name/autocomplete、reduced motion、明显 Firefox 渲染错位；补浅色主题 token、TopNav active/hover 区分、电视节目卡片等高和播出日历海报尺寸/R 角；不改页面主结构，不改电视节目进度条逻辑。提交：`fix(web): improve firefox rendering and accessibility`
 
-- [ ] **P2: API 测试真实化**，`0.39.5`
+- [x] **P2: API 测试真实化**，`0.39.5`
   为 settings、watchlist add/remove、watchlist reconcile、show detail nextEpisode 增加 Hono route/service tests；API test 不再只等同于 typecheck。提交：`test(api): cover settings watchlist and show detail`
 
 - [ ] **P3: Watchlist 对账可靠性增强**，`0.39.6`

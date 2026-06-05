@@ -274,6 +274,37 @@ html[data-theme="light"] .cyber-grid-overlay {
   mask-image: linear-gradient(to bottom, rgba(0,0,0,0.56), rgba(0,0,0,0.18) 52%, transparent 100%);
 }
 
+.top-nav-items::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .top-nav-shell {
+    gap: 4px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  .top-nav-logo {
+    font-size: 18px !important;
+  }
+
+  .top-nav-link {
+    flex: 0 0 auto;
+  }
+
+  .top-nav-item {
+    gap: 0 !important;
+    padding: 6px 9px !important;
+  }
+
+  .nav-label-full,
+  .topnav-username,
+  .topnav-action-label {
+    display: none !important;
+  }
+}
+
 /* Poster hover shimmer */
 @keyframes poster-border-spin {
   0%   { --shimmer-angle: 0deg; }

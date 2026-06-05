@@ -15,6 +15,9 @@ const queryClient = new QueryClient({
     },
 });
 
+const enableReactQueryDevtools =
+    import.meta.env.DEV && import.meta.env.VITE_REACT_QUERY_DEVTOOLS === "true";
+
 const rootEl = document.getElementById("root");
 if (!rootEl) {
     throw new Error(
@@ -27,7 +30,7 @@ ReactDOM.createRoot(rootEl).render(
         <QueryClientProvider client={queryClient}>
             <BrowserRouter>
                 <App />
-                {import.meta.env.DEV && (
+                {enableReactQueryDevtools && (
                     <ReactQueryDevtools initialIsOpen={false} />
                 )}
             </BrowserRouter>
