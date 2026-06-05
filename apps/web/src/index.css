@@ -72,11 +72,19 @@ html, body, #root {
   --shadow-login-cta-hover: 0 8px 24px var(--color-accent-glow);
   --color-panel-glass: rgba(10, 16, 23, 0.78);
   --color-panel-glass-strong: rgba(15, 24, 34, 0.92);
+  --color-surface-hover: rgba(20, 33, 48, 0.92);
   --color-grid-line: rgba(37, 244, 238, 0.075);
   --color-grid-line-strong: rgba(255, 61, 129, 0.08);
   --color-nav-glass: rgba(5, 7, 11, 0.86);
+  --color-nav-hover: rgba(141,252,255,0.08);
+  --color-nav-active-bg: linear-gradient(180deg, rgba(37,244,238,0.18), rgba(139,92,246,0.12));
+  --color-nav-active-border: rgba(37,244,238,0.42);
+  --color-nav-active-hover: rgba(37,244,238,0.2);
+  --shadow-nav: 0 1px 0 rgba(141,252,255,0.08), 0 12px 32px rgba(0,0,0,0.18);
   --shadow-hud: 0 20px 50px rgba(0,0,0,0.34), inset 0 1px 0 rgba(141,252,255,0.08);
   --shadow-hud-glow: 0 0 0 1px rgba(37,244,238,0.14), 0 14px 40px rgba(37,244,238,0.08);
+  --shadow-media-card: 0 14px 28px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04);
+  --shadow-media-card-hover: 0 18px 42px rgba(0,0,0,0.36), 0 0 0 1px rgba(37,244,238,0.16);
 }
 
 @layer base {
@@ -209,28 +217,61 @@ button, a {
 /* Light theme */
 [data-theme="light"] {
   color-scheme: light;
-  --color-bg:        #f6fbff;
-  --color-surface:   #ffffff;
-  --color-surface-2: #eef7fb;
-  --color-surface-3: #e4f1f6;
-  --color-surface-4: #d8e8ef;
+  --color-bg:        #edf4fb;
+  --color-surface:   #fbfdff;
+  --color-surface-2: #f2f7fc;
+  --color-surface-3: #e6eef7;
+  --color-surface-4: #d5e3ee;
 
-  --color-border-base:   #b9d6e2;
-  --color-border:        #b9d6e2;
-  --color-border-subtle: #d9edf4;
+  --color-border-base:   #b5c9d8;
+  --color-border:        #b5c9d8;
+  --color-border-subtle: #d2e0ea;
+  --color-border-focus:  rgba(91,93,246,0.42);
+
+  --color-accent:        #5b5df6;
+  --color-accent-light:  #4338ca;
+  --color-accent-dim:    rgba(91,93,246,0.12);
+  --color-accent-glow:   rgba(91,93,246,0.18);
+  --color-accent-rose:   #db2777;
+  --color-accent-violet: #6d5dfc;
+  --color-accent-lime:   #3f8f1f;
 
   --color-text-base:      #06131a;
   --color-text:           #06131a;
   --color-text-secondary: #315364;
   --color-text-muted:     #6a8795;
+  --color-watched:        #059669;
+  --color-airing:         #b7791f;
+  --color-ended:          #6b7280;
   --color-panel-glass: rgba(255,255,255,0.82);
   --color-panel-glass-strong: rgba(255,255,255,0.94);
+  --color-surface-hover: rgba(232,239,248,0.92);
   --color-grid-line: rgba(5,116,136,0.07);
   --color-grid-line-strong: rgba(255,61,129,0.07);
-  --color-nav-glass: rgba(246,251,255,0.86);
+  --color-nav-glass: rgba(251,253,255,0.9);
+  --color-nav-hover: rgba(49,83,100,0.07);
+  --color-nav-active-bg: linear-gradient(180deg, rgba(91,93,246,0.15), rgba(8,145,178,0.08));
+  --color-nav-active-border: rgba(91,93,246,0.38);
+  --color-nav-active-hover: rgba(91,93,246,0.18);
+  --shadow-nav: 0 1px 0 rgba(255,255,255,0.75), 0 14px 30px rgba(38,67,89,0.12);
   --shadow-login-card: 0 20px 48px rgba(37,37,53,0.12), 0 0 0 1px rgba(37,244,238,0.08);
   --shadow-hud: 0 18px 44px rgba(37,65,84,0.12), inset 0 1px 0 rgba(255,255,255,0.7);
   --shadow-hud-glow: 0 0 0 1px rgba(37,244,238,0.16), 0 14px 32px rgba(37,65,84,0.1);
+  --shadow-media-card: 0 12px 26px rgba(43,73,96,0.13), 0 1px 0 rgba(255,255,255,0.9) inset;
+  --shadow-media-card-hover: 0 18px 36px rgba(43,73,96,0.18), 0 0 0 1px rgba(91,93,246,0.14);
+}
+
+html[data-theme="light"] body {
+  background-image:
+    linear-gradient(135deg, rgba(91,93,246,0.07), transparent 32%, rgba(8,145,178,0.06) 68%, transparent 100%),
+    linear-gradient(rgba(8,145,178,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(91,93,246,0.026) 1px, transparent 1px);
+  background-size: auto, 48px 48px, 48px 48px;
+}
+
+html[data-theme="light"] .cyber-grid-overlay {
+  opacity: 0.45;
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,0.56), rgba(0,0,0,0.18) 52%, transparent 100%);
 }
 
 /* Poster hover shimmer */

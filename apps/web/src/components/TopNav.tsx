@@ -22,6 +22,16 @@ const NAV = [
   { to: '/settings',   icon: Settings,  labelKey: 'nav.settings' },
 ]
 
+function isNavActive(pathname: string, to: string) {
+  if (to === '/tv-shows') {
+    return pathname === '/' || pathname.startsWith('/tv-shows') || pathname.startsWith('/shows/')
+  }
+  if (to === '/movies') {
+    return pathname.startsWith('/movies')
+  }
+  return pathname === to || pathname.startsWith(`${to}/`)
+}
+
 export default function TopNav({ username, onLogout }: TopNavProps) {
   const location = useLocation()
   const qc = useQueryClient()
@@ -52,7 +62,7 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
           height: '56px',
           background: 'linear-gradient(180deg, var(--color-nav-glass), var(--color-surface))',
           borderBottom: '1px solid var(--color-border-subtle)',
-          boxShadow: '0 1px 0 rgba(141,252,255,0.08), 0 12px 32px rgba(0,0,0,0.18)',
+          boxShadow: 'var(--shadow-nav)',
           backdropFilter: 'blur(18px)',
           WebkitBackdropFilter: 'blur(18px)',
           display: 'flex',
@@ -90,13 +100,18 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
         {/* Nav items */}
         <nav style={{ display: 'flex', alignItems: 'center', gap: '2px', flex: 1 }}>
           {NAV.map(({ to, icon: Icon, labelKey }) => {
-            const active = location.pathname.startsWith(to)
+            const active = isNavActive(location.pathname, to)
             return (
-              <Link key={to} to={to} style={{ textDecoration: 'none' }}>
+              <Link
+                key={to}
+                to={to}
+                aria-current={active ? 'page' : undefined}
+                style={{ textDecoration: 'none' }}
+              >
                 <motion.div
                   whileHover={{
-                    backgroundColor: 'var(--color-surface-3)',
-                    borderColor: 'var(--color-border-focus)',
+                    backgroundColor: active ? 'var(--color-nav-active-hover)' : 'var(--color-nav-hover)',
+                    borderColor: active ? 'var(--color-nav-active-border)' : 'var(--color-border-subtle)',
                   }}
                   style={{
                     display: 'flex',
@@ -105,11 +120,11 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
                     padding: '6px 12px',
                     borderRadius: 'var(--radius-md)',
                     color: active ? 'var(--color-accent-light)' : 'var(--color-text-secondary)',
-                    background: active ? 'var(--color-accent-dim)' : 'transparent',
-                    border: active ? '1px solid var(--color-border-focus)' : '1px solid transparent',
-                    boxShadow: active ? 'inset 0 1px 0 rgba(255,255,255,0.08), 0 0 18px var(--color-accent-glow)' : 'none',
+                    background: active ? 'var(--color-nav-active-bg)' : 'transparent',
+                    border: active ? '1px solid var(--color-nav-active-border)' : '1px solid transparent',
+                    boxShadow: active ? 'inset 0 1px 0 rgba(255,255,255,0.12), 0 0 18px var(--color-accent-glow)' : 'none',
                     fontSize: '13px',
-                    fontWeight: active ? 600 : 400,
+                    fontWeight: active ? 650 : 500,
                     position: 'relative',
                     whiteSpace: 'nowrap',
                   }}

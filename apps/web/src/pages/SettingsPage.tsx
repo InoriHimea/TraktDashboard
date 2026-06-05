@@ -158,8 +158,8 @@ export default function SettingsPage() {
                         }}
                     >
                         {/* Theme */}
-                        <div>
-                            <label style={labelStyle}>{t("settings.theme")}</label>
+                        <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+                            <legend style={labelStyle}>{t("settings.theme")}</legend>
                             <div style={{ display: "flex", gap: "12px" }}>
                                 {(["dark", "light"] as Theme[]).map((themeOption) => (
                                     <label
@@ -174,9 +174,11 @@ export default function SettingsPage() {
                                         }}
                                     >
                                         <input
+                                            id={`settings-theme-${themeOption}`}
                                             type="radio"
                                             name="theme"
                                             value={themeOption}
+                                            autoComplete="off"
                                             checked={theme === themeOption}
                                             onChange={() => {
                                                 setTheme(themeOption);
@@ -192,7 +194,7 @@ export default function SettingsPage() {
                                     </label>
                                 ))}
                             </div>
-                        </div>
+                        </fieldset>
 
                         <div
                             style={{
@@ -203,9 +205,15 @@ export default function SettingsPage() {
 
                         {/* Display Language */}
                         <div>
-                            <label style={labelStyle}>{t("settings.displayLanguage")}</label>
+                            <label htmlFor="settings-display-language" style={labelStyle}>
+                                {t("settings.displayLanguage")}
+                            </label>
                             <input
+                                id="settings-display-language"
+                                name="displayLanguage"
                                 type="text"
+                                autoComplete="language"
+                                spellCheck={false}
                                 value={displayLanguage}
                                 onChange={(e) =>
                                     setDisplayLanguage(e.target.value)
@@ -234,11 +242,15 @@ export default function SettingsPage() {
 
                         {/* Sync Interval */}
                         <div>
-                            <label style={labelStyle}>
+                            <label htmlFor="settings-sync-interval" style={labelStyle}>
                                 {t("settings.syncInterval")}
                             </label>
                             <input
+                                id="settings-sync-interval"
+                                name="syncIntervalMinutes"
                                 type="number"
+                                inputMode="numeric"
+                                autoComplete="off"
                                 min={1}
                                 max={10080}
                                 value={syncIntervalMinutes}
@@ -270,9 +282,16 @@ export default function SettingsPage() {
 
                         {/* HTTP Proxy */}
                         <div>
-                            <label style={labelStyle}>{t("settings.httpProxy")}</label>
+                            <label htmlFor="settings-http-proxy" style={labelStyle}>
+                                {t("settings.httpProxy")}
+                            </label>
                             <input
-                                type="text"
+                                id="settings-http-proxy"
+                                name="httpProxy"
+                                type="url"
+                                inputMode="url"
+                                autoComplete="off"
+                                spellCheck={false}
                                 value={httpProxy}
                                 onChange={(e) => setHttpProxy(e.target.value)}
                                 placeholder={t("settings.httpProxyPlaceholder")}

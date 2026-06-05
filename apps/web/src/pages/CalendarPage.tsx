@@ -82,9 +82,9 @@ export default function CalendarPage() {
                                         <Link
                                             key={ep.id}
                                             to={`/shows/${ep.show.id}`}
-                                            className="group relative flex items-center gap-4 p-3 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border-subtle)] hover:border-[var(--color-accent)]/30 hover:bg-[var(--color-surface-hover)] transition-all overflow-hidden"
+                                            className="group relative flex min-h-[140px] items-center gap-4 overflow-hidden rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-3 shadow-[var(--shadow-media-card)] transition-[background-color,border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-[var(--color-nav-active-border)] hover:bg-[var(--color-surface-hover)] hover:shadow-[var(--shadow-media-card-hover)] sm:min-h-[168px]"
                                         >
-                                            <div className="w-16 h-24 shrink-0 rounded-xl overflow-hidden bg-white/5 relative">
+                                            <div className="relative h-[128px] w-[86px] shrink-0 overflow-hidden rounded-[8px] bg-[var(--color-surface-3)] sm:h-[156px] sm:w-[104px]">
                                                 {posterUrl && (
                                                     <img
                                                         src={posterUrl}

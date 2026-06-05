@@ -39,6 +39,7 @@ export function ShowCard({ progress, index }: ShowCardProps) {
 
     return (
         <motion.div
+            className="h-full"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{
@@ -49,15 +50,16 @@ export function ShowCard({ progress, index }: ShowCardProps) {
         >
             <Link
                 to={`/shows/${show.id}`}
-                className="no-underline block"
+                className="block h-full no-underline"
             >
                 <motion.div
                     whileHover={{
                         y: -3,
-                        boxShadow: "0 12px 40px rgba(0,0,0,0.5)",
+                        boxShadow: "var(--shadow-media-card-hover)",
                     }}
                     transition={{ duration: 0.15 }}
-                    className="overflow-hidden rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] shadow-lg shadow-black/10 cursor-pointer"
+                    className="flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)]"
+                    style={{ boxShadow: "var(--shadow-media-card)" }}
                 >
                     {/* Poster — 2:3 aspect ratio */}
                     <div className="relative aspect-[2/3] bg-[var(--color-surface-3)]">
@@ -109,28 +111,26 @@ export function ShowCard({ progress, index }: ShowCardProps) {
                     </div>
 
                     {/* Info section */}
-                    <div className="p-[12px_14px_14px]">
+                    <div className="flex min-h-[104px] flex-1 flex-col p-[12px_14px_14px]">
                         {/* Primary title */}
                         <h3
-                            className="truncate text-[13px] font-semibold text-[var(--color-text)] tracking-tight leading-tight"
-                            style={{ marginBottom: secondaryTitle ? "2px" : "4px" }}
+                            className="h-4 truncate text-[13px] font-semibold leading-4 tracking-tight text-[var(--color-text)]"
                             title={primaryTitle}
                         >
                             {primaryTitle}
                         </h3>
 
                         {/* Original title (secondary) */}
-                        {secondaryTitle && (
-                            <p
-                                className="truncate text-[11px] text-[var(--color-text-muted)] mb-1 leading-tight"
-                                title={secondaryTitle}
-                            >
-                                {secondaryTitle}
-                            </p>
-                        )}
+                        <p
+                            className="mt-1 h-[14px] truncate text-[11px] leading-[14px] text-[var(--color-text-muted)]"
+                            title={secondaryTitle ?? undefined}
+                            aria-hidden={!secondaryTitle}
+                        >
+                            {secondaryTitle ?? "\u00a0"}
+                        </p>
 
                         {/* Status + network */}
-                        <div className="flex items-center gap-1.5 mb-3">
+                        <div className="mt-1.5 flex h-4 items-center gap-1.5">
                             <span
                                 className="inline-block w-[5px] h-[5px] rounded-full shrink-0"
                                 style={{ background: statusColor }}
@@ -141,7 +141,7 @@ export function ShowCard({ progress, index }: ShowCardProps) {
                         </div>
 
                         {/* Episode count */}
-                        <div className="flex items-center justify-between">
+                        <div className="mt-auto flex items-center justify-between">
                             <span className="text-[11px] text-[var(--color-text-muted)]">
                                 <span className="text-[var(--color-watched)] font-medium">
                                     {watchedEpisodes}
@@ -155,7 +155,7 @@ export function ShowCard({ progress, index }: ShowCardProps) {
                         </div>
 
                         {/* Next episode */}
-                        <div className="mt-1.5 flex min-h-4 items-center justify-end">
+                        <div className="mt-1.5 flex h-4 items-center justify-end">
                             {nextEpisode && !completed && (
                                 <span className="flex items-center gap-1 truncate text-[10px] leading-4 text-[var(--color-accent)]">
                                     <PlayCircle size={10} className="shrink-0" />
