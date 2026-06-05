@@ -71,7 +71,7 @@
 - [x] **P2: API 测试真实化**，`0.39.5`
   为 settings、watchlist add/remove、watchlist reconcile、show detail nextEpisode 增加 Hono route/service tests；API test 不再只等同于 typecheck。提交：`test(api): cover settings watchlist and show detail`
 
-- [ ] **P3: Watchlist 对账可靠性增强**，`0.39.6`
+- [x] **P3: Watchlist 对账可靠性增强**，`0.39.6`
   远端 watchlist 缺 TMDB id 时 fallback 到 Trakt/IMDB id；跳过但远端存在的项不触发误删；增加诊断日志。提交：`fix(watchlist): harden remote reconciliation`
 
 - [ ] **P4: 同步诊断与统计轻量增强**，`0.40.0`

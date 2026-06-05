@@ -1655,6 +1655,97 @@ export async function syncMovies(userId: number): Promise<void> {
 
 // ─── Watchlist sync ───────────────────────────────────────────────────────────
 
+type WatchlistRemoteIds = {
+    tmdb?: number | null;
+    trakt?: number | null;
+    imdb?: string | null;
+};
+
+type WatchlistMatchMethod = "tmdb" | "trakt" | "imdb";
+
+interface WatchlistLocalMatch {
+    id: number;
+    matchedBy: WatchlistMatchMethod;
+}
+
+function describeWatchlistIds(ids: WatchlistRemoteIds): string {
+    return [
+        `tmdb:${ids.tmdb ?? "none"}`,
+        `trakt:${ids.trakt ?? "none"}`,
+        `imdb:${ids.imdb ?? "none"}`,
+    ].join(", ");
+}
+
+async function findWatchlistShow(
+    db: ReturnType<typeof getDb>,
+    title: string,
+    ids: WatchlistRemoteIds,
+): Promise<WatchlistLocalMatch | null> {
+    if (ids.tmdb) {
+        const [show] = await db
+            .select({ id: shows.id })
+            .from(shows)
+            .where(eq(shows.tmdbId, ids.tmdb));
+        if (show) return { id: show.id, matchedBy: "tmdb" };
+    }
+
+    if (ids.trakt) {
+        const [show] = await db
+            .select({ id: shows.id })
+            .from(shows)
+            .where(eq(shows.traktId, ids.trakt));
+        if (show) return { id: show.id, matchedBy: "trakt" };
+    }
+
+    if (ids.imdb) {
+        const [show] = await db
+            .select({ id: shows.id })
+            .from(shows)
+            .where(eq(shows.imdbId, ids.imdb));
+        if (show) return { id: show.id, matchedBy: "imdb" };
+    }
+
+    console.warn(
+        `[sync:watchlist] Show "${title}" could not be resolved locally (${describeWatchlistIds(ids)}); preserving local show watchlist entries for this sync`,
+    );
+    return null;
+}
+
+async function findWatchlistMovie(
+    db: ReturnType<typeof getDb>,
+    title: string,
+    ids: WatchlistRemoteIds,
+): Promise<WatchlistLocalMatch | null> {
+    if (ids.tmdb) {
+        const [movie] = await db
+            .select({ id: movies.id })
+            .from(movies)
+            .where(eq(movies.tmdbId, ids.tmdb));
+        if (movie) return { id: movie.id, matchedBy: "tmdb" };
+    }
+
+    if (ids.trakt) {
+        const [movie] = await db
+            .select({ id: movies.id })
+            .from(movies)
+            .where(eq(movies.traktId, ids.trakt));
+        if (movie) return { id: movie.id, matchedBy: "trakt" };
+    }
+
+    if (ids.imdb) {
+        const [movie] = await db
+            .select({ id: movies.id })
+            .from(movies)
+            .where(eq(movies.imdbId, ids.imdb));
+        if (movie) return { id: movie.id, matchedBy: "imdb" };
+    }
+
+    console.warn(
+        `[sync:watchlist] Movie "${title}" could not be resolved locally (${describeWatchlistIds(ids)}); preserving local movie watchlist entries for this sync`,
+    );
+    return null;
+}
+
 export async function syncWatchlist(userId: number): Promise<void> {
     const db = getDb();
     const trakt = getTraktClient();
@@ -1672,30 +1763,29 @@ export async function syncWatchlist(userId: number): Promise<void> {
             `[sync:watchlist] Found ${watchlistShows.length} shows, ${watchlistMovies.length} movies`,
         );
 
-        const syncedShowIds: number[] = [];
-        const syncedMovieIds: number[] = [];
+        const syncedShowIds = new Set<number>();
+        const syncedMovieIds = new Set<number>();
+        let unresolvedShowCount = 0;
+        let unresolvedMovieCount = 0;
+        let fallbackShowMatchCount = 0;
+        let fallbackMovieMatchCount = 0;
 
         // Sync shows
         for (const item of watchlistShows) {
-            const tmdbId = item.show.ids.tmdb;
-            if (!tmdbId) {
-                console.warn(
-                    `[sync:watchlist] Skipping show "${item.show.title}" — missing TMDB id`,
-                );
+            const match = await findWatchlistShow(
+                db,
+                item.show.title,
+                item.show.ids,
+            );
+            if (!match) {
+                unresolvedShowCount++;
                 continue;
             }
-
-            // Find show in database
-            const [show] = await db
-                .select({ id: shows.id })
-                .from(shows)
-                .where(eq(shows.tmdbId, tmdbId));
-
-            if (!show) {
-                console.warn(
-                    `[sync:watchlist] Show "${item.show.title}" not in database, skipping`,
+            if (match.matchedBy !== "tmdb") {
+                fallbackShowMatchCount++;
+                console.log(
+                    `[sync:watchlist] Matched show "${item.show.title}" by ${match.matchedBy} fallback`,
                 );
-                continue;
             }
 
             // Insert or update watchlist entry
@@ -1703,7 +1793,7 @@ export async function syncWatchlist(userId: number): Promise<void> {
                 .insert(watchlist)
                 .values({
                     userId,
-                    showId: show.id,
+                    showId: match.id,
                     movieId: null,
                     listedAt: new Date(item.listed_at),
                 })
@@ -1713,30 +1803,25 @@ export async function syncWatchlist(userId: number): Promise<void> {
                         listedAt: new Date(item.listed_at),
                     },
                 });
-            syncedShowIds.push(show.id);
+            syncedShowIds.add(match.id);
         }
 
         // Sync movies
         for (const item of watchlistMovies) {
-            const tmdbId = item.movie.ids.tmdb;
-            if (!tmdbId) {
-                console.warn(
-                    `[sync:watchlist] Skipping movie "${item.movie.title}" — missing TMDB id`,
-                );
+            const match = await findWatchlistMovie(
+                db,
+                item.movie.title,
+                item.movie.ids,
+            );
+            if (!match) {
+                unresolvedMovieCount++;
                 continue;
             }
-
-            // Find movie in database
-            const [movie] = await db
-                .select({ id: movies.id })
-                .from(movies)
-                .where(eq(movies.tmdbId, tmdbId));
-
-            if (!movie) {
-                console.warn(
-                    `[sync:watchlist] Movie "${item.movie.title}" not in database, skipping`,
+            if (match.matchedBy !== "tmdb") {
+                fallbackMovieMatchCount++;
+                console.log(
+                    `[sync:watchlist] Matched movie "${item.movie.title}" by ${match.matchedBy} fallback`,
                 );
-                continue;
             }
 
             // Insert or update watchlist entry
@@ -1745,7 +1830,7 @@ export async function syncWatchlist(userId: number): Promise<void> {
                 .values({
                     userId,
                     showId: null,
-                    movieId: movie.id,
+                    movieId: match.id,
                     listedAt: new Date(item.listed_at),
                 })
                 .onConflictDoUpdate({
@@ -1754,28 +1839,45 @@ export async function syncWatchlist(userId: number): Promise<void> {
                         listedAt: new Date(item.listed_at),
                     },
                 });
-            syncedMovieIds.push(movie.id);
+            syncedMovieIds.add(match.id);
         }
 
-        const showCleanupWhere = and(
-            eq(watchlist.userId, userId),
-            isNotNull(watchlist.showId),
-            syncedShowIds.length > 0
-                ? notInArray(watchlist.showId, syncedShowIds)
-                : undefined,
-        );
-        await db.delete(watchlist).where(showCleanupWhere);
+        const syncedShowIdList = [...syncedShowIds];
+        const syncedMovieIdList = [...syncedMovieIds];
 
-        const movieCleanupWhere = and(
-            eq(watchlist.userId, userId),
-            isNotNull(watchlist.movieId),
-            syncedMovieIds.length > 0
-                ? notInArray(watchlist.movieId, syncedMovieIds)
-                : undefined,
-        );
-        await db.delete(watchlist).where(movieCleanupWhere);
+        if (unresolvedShowCount > 0) {
+            console.warn(
+                `[sync:watchlist] Skipping show cleanup: ${unresolvedShowCount} remote show(s) could not be resolved locally`,
+            );
+        } else {
+            const showCleanupWhere = and(
+                eq(watchlist.userId, userId),
+                isNotNull(watchlist.showId),
+                syncedShowIdList.length > 0
+                    ? notInArray(watchlist.showId, syncedShowIdList)
+                    : undefined,
+            );
+            await db.delete(watchlist).where(showCleanupWhere);
+        }
 
-        console.log(`[sync:watchlist] Watchlist sync complete`);
+        if (unresolvedMovieCount > 0) {
+            console.warn(
+                `[sync:watchlist] Skipping movie cleanup: ${unresolvedMovieCount} remote movie(s) could not be resolved locally`,
+            );
+        } else {
+            const movieCleanupWhere = and(
+                eq(watchlist.userId, userId),
+                isNotNull(watchlist.movieId),
+                syncedMovieIdList.length > 0
+                    ? notInArray(watchlist.movieId, syncedMovieIdList)
+                    : undefined,
+            );
+            await db.delete(watchlist).where(movieCleanupWhere);
+        }
+
+        console.log(
+            `[sync:watchlist] Watchlist sync complete (shows synced:${syncedShowIdList.length}, movies synced:${syncedMovieIdList.length}, show fallback:${fallbackShowMatchCount}, movie fallback:${fallbackMovieMatchCount}, unresolved shows:${unresolvedShowCount}, unresolved movies:${unresolvedMovieCount})`,
+        );
     } catch (e) {
         console.error(
             `[sync:watchlist] Failed to sync watchlist:`,

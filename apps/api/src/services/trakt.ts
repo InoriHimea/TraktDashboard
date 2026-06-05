@@ -174,7 +174,17 @@ export interface TraktWatchedMovie {
 
 export interface TraktWatchlistShow {
     listed_at: string;
-    show: TraktShow;
+    show: {
+        title: string;
+        year: number | null;
+        ids: {
+            trakt: number;
+            slug: string;
+            tvdb: number | null;
+            imdb: string | null;
+            tmdb: number | null;
+        };
+    };
 }
 
 export interface TraktWatchlistMovie {

@@ -485,7 +485,7 @@ describe("show detail route", () => {
 });
 
 describe("syncWatchlist", () => {
-    it("upserts remote items, skips unknown media, and runs cleanup", async () => {
+    it("upserts remote items and protects cleanup when remote media is unresolved", async () => {
         const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
         const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
         const show = makeShow({ id: 11, tmdbId: 1101 });
@@ -539,16 +539,94 @@ describe("syncWatchlist", () => {
             }),
         ]);
         expect(db.__state.conflictCalls).toHaveLength(2);
-        expect(db.__state.deleteWhereCalls).toHaveLength(2);
+        expect(db.__state.deleteWhereCalls).toHaveLength(0);
         expect(warnSpy).toHaveBeenCalledWith(
-            expect.stringContaining('Skipping show "No Tmdb Show"'),
-        );
-        expect(warnSpy).toHaveBeenCalledWith(
-            expect.stringContaining('Show "Missing Local Show" not in database'),
+            expect.stringContaining('Show "No Tmdb Show" could not be resolved'),
         );
         expect(warnSpy).toHaveBeenCalledWith(
             expect.stringContaining(
-                'Movie "Missing Local Movie" not in database',
+                'Show "Missing Local Show" could not be resolved',
+            ),
+        );
+        expect(warnSpy).toHaveBeenCalledWith(
+            expect.stringContaining(
+                'Movie "Missing Local Movie" could not be resolved',
+            ),
+        );
+        expect(warnSpy).toHaveBeenCalledWith(
+            expect.stringContaining("Skipping show cleanup"),
+        );
+        expect(warnSpy).toHaveBeenCalledWith(
+            expect.stringContaining("Skipping movie cleanup"),
+        );
+
+        warnSpy.mockRestore();
+        logSpy.mockRestore();
+    });
+
+    it("falls back to Trakt and IMDb ids before running cleanup", async () => {
+        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+        const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+        const show = makeShow({
+            id: 33,
+            tmdbId: 3303,
+            traktId: 3333,
+            imdbId: "tt3333",
+        });
+        const movie = makeMovie({
+            id: 44,
+            tmdbId: 4404,
+            traktId: 4444,
+            imdbId: "tt4444",
+        });
+        const db = createMockDb({
+            selectResults: [[{ id: show.id }], [{ id: movie.id }]],
+        });
+        dbMockState.db = db;
+        traktMock.client.getWatchlistShows.mockResolvedValue([
+            {
+                listed_at: "2026-06-03T00:00:00.000Z",
+                show: {
+                    title: "Fallback Show",
+                    ids: { tmdb: null, trakt: show.traktId, imdb: show.imdbId },
+                },
+            },
+        ]);
+        traktMock.client.getWatchlistMovies.mockResolvedValue([
+            {
+                listed_at: "2026-06-04T00:00:00.000Z",
+                movie: {
+                    title: "Fallback Movie",
+                    ids: { tmdb: null, trakt: null, imdb: movie.imdbId },
+                },
+            },
+        ]);
+
+        await syncWatchlist(TEST_USER_ID);
+
+        expect(db.__state.insertValues).toEqual([
+            expect.objectContaining({
+                userId: TEST_USER_ID,
+                showId: show.id,
+                movieId: null,
+            }),
+            expect.objectContaining({
+                userId: TEST_USER_ID,
+                showId: null,
+                movieId: movie.id,
+            }),
+        ]);
+        expect(db.__state.conflictCalls).toHaveLength(2);
+        expect(db.__state.deleteWhereCalls).toHaveLength(2);
+        expect(warnSpy).not.toHaveBeenCalled();
+        expect(logSpy).toHaveBeenCalledWith(
+            expect.stringContaining(
+                'Matched show "Fallback Show" by trakt fallback',
+            ),
+        );
+        expect(logSpy).toHaveBeenCalledWith(
+            expect.stringContaining(
+                'Matched movie "Fallback Movie" by imdb fallback',
             ),
         );
 
