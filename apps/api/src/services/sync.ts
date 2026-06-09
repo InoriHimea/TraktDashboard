@@ -12,11 +12,13 @@ import {
     watchResetCursors,
     watchlist,
 } from "@trakt-dashboard/db";
-import { eq, and, sql, or, gt, isNull, isNotNull, desc, inArray, notInArray } from "drizzle-orm";
+import { eq, and, sql, or, gt, isNull, isNotNull, desc, inArray, notInArray, ne } from "drizzle-orm";
 import { getTraktClient } from "./trakt.js";
+import type { TraktMovieHistoryEntry, TraktWatchedMovie } from "./trakt.js";
 import { getTmdbShow, getTmdbSeason, getTmdbMovie } from "./tmdb.js";
 import pLimit from "p-limit";
 import dayjs from "dayjs";
+import { withTimeout } from "../lib/timeout.js";
 
 // Concurrency: 5 shows in parallel, each show's seasons also fetched in parallel
 const SHOW_CONCURRENCY = 5;
@@ -100,53 +102,56 @@ function toErrorMessage(e: unknown): string {
     return String((e as { message?: string })?.message || e || "Unknown error");
 }
 
-function withTimeout<T>(
-    promise: Promise<T>,
-    ms: number,
-    label: string,
-): Promise<T> {
-    return Promise.race([
-        promise,
-        new Promise<never>((_, reject) =>
-            setTimeout(
-                () => reject(new Error(`Timeout after ${ms}ms: ${label}`)),
-                ms,
-            ),
-        ),
-    ]);
-}
-
 async function ensureSyncState(userId: number) {
     await getDb().insert(syncState).values({ userId }).onConflictDoNothing();
 }
 
-// ─── Full sync ────────────────────────────────────────────────────────────────
-
-export async function triggerFullSync(userId: number): Promise<void> {
-    const db = getDb();
+async function markSyncRunning(
+    userId: number,
+    currentShow: string,
+    resetFailedShows = false,
+): Promise<boolean> {
     await ensureSyncState(userId);
-    const [currentState] = await db
-        .select({ status: syncState.status })
-        .from(syncState)
-        .where(eq(syncState.userId, userId));
-    if (currentState?.status === "running") {
-        console.log(
-            `[sync] Full sync already running for user ${userId}, skipping`,
-        );
-        return;
-    }
-    await db
+    const result = await getDb()
         .update(syncState)
         .set({
             status: "running",
             progress: 0,
             total: 0,
             error: null,
-            currentShow: "Fetching watched shows from Trakt…",
-            failedShows: [],
+            currentShow,
+            ...(resetFailedShows ? { failedShows: [] } : {}),
             updatedAt: new Date(),
         })
+        .where(and(eq(syncState.userId, userId), ne(syncState.status, "running")))
+        .returning({ id: syncState.id });
+    return result.length > 0;
+}
+
+export async function getSyncStatus(userId: number) {
+    await ensureSyncState(userId);
+    const [state] = await getDb()
+        .select()
+        .from(syncState)
         .where(eq(syncState.userId, userId));
+    return state;
+}
+
+// ─── Full sync ────────────────────────────────────────────────────────────────
+
+export async function triggerFullSync(userId: number): Promise<void> {
+    const db = getDb();
+    const acquired = await markSyncRunning(
+        userId,
+        "Fetching watched shows from Trakt…",
+        true,
+    );
+    if (!acquired) {
+        console.log(
+            `[sync] Full sync already running for user ${userId}, skipping`,
+        );
+        return;
+    }
 
     try {
         const trakt = getTraktClient();
@@ -301,10 +306,10 @@ export async function triggerFullSync(userId: number): Promise<void> {
             .where(eq(syncState.userId, userId));
 
         console.log(`[sync] Full sync complete. ${failureMap.size} failures.`);
-    } catch (e: any) {
+    } catch (e) {
         await db
             .update(syncState)
-            .set({ status: "error", error: e.message, updatedAt: new Date() })
+            .set({ status: "error", error: toErrorMessage(e), updatedAt: new Date() })
             .where(eq(syncState.userId, userId));
         throw e;
     }
@@ -314,24 +319,9 @@ export async function triggerFullSync(userId: number): Promise<void> {
 
 export async function triggerIncrementalSync(userId: number): Promise<void> {
     const db = getDb();
-    await ensureSyncState(userId);
-    const [state] = await db
-        .select()
-        .from(syncState)
-        .where(eq(syncState.userId, userId));
-    if (state?.status === "running") return;
-
-    await db
-        .update(syncState)
-        .set({
-            status: "running",
-            progress: 0,
-            total: 0,
-            currentShow: "Fetching recent history…",
-            error: null,
-            updatedAt: new Date(),
-        })
-        .where(eq(syncState.userId, userId));
+    const state = await getSyncStatus(userId);
+    const acquired = await markSyncRunning(userId, "Fetching recent history…");
+    if (!acquired) return;
 
     try {
         const trakt = getTraktClient();
@@ -460,10 +450,10 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
                 updatedAt: new Date(),
             })
             .where(eq(syncState.userId, userId));
-    } catch (e: any) {
+    } catch (e) {
         await db
             .update(syncState)
-            .set({ status: "error", error: e.message, updatedAt: new Date() })
+            .set({ status: "error", error: toErrorMessage(e), updatedAt: new Date() })
             .where(eq(syncState.userId, userId));
     }
 }
@@ -1487,6 +1477,35 @@ export async function recalcShowProgress(
 
 // ─── Movie sync ───────────────────────────────────────────────────────────────
 
+async function recalcMovieProgress(userId: number, movieId: number): Promise<void> {
+  const db = getDb()
+  const [{ count, lastWatched }] = await db
+    .select({
+      count: sql<number>`count(distinct (${watchHistory.movieId}, ${watchHistory.watchedAt}, ${watchHistory.source}))`,
+      lastWatched: sql<Date | null>`max(watched_at)`,
+    })
+    .from(watchHistory)
+    .where(and(
+      eq(watchHistory.userId, userId),
+      eq(watchHistory.movieId, movieId),
+      eq(watchHistory.mediaType, 'movie'),
+    ))
+
+  await db.insert(userMovieProgress).values({
+    userId,
+    movieId,
+    watchCount: Number(count),
+    lastWatchedAt: lastWatched,
+  }).onConflictDoUpdate({
+    target: [userMovieProgress.userId, userMovieProgress.movieId],
+    set: {
+      watchCount: Number(count),
+      lastWatchedAt: lastWatched,
+      updatedAt: new Date(),
+    },
+  })
+}
+
 export async function syncMovies(userId: number): Promise<void> {
   const db = getDb()
   const trakt = getTraktClient()
@@ -1504,21 +1523,80 @@ export async function syncMovies(userId: number): Promise<void> {
     displayLanguage = null
   }
 
-  let watchedMovies: import('./trakt.js').TraktWatchedMovie[]
+  let watchedMovies: TraktWatchedMovie[]
+  let movieHistory: TraktMovieHistoryEntry[]
   try {
-    watchedMovies = await trakt.getWatchedMovies(userId)
+    const [remoteWatchedMovies, remoteMovieHistory] = await Promise.all([
+      trakt.getWatchedMovies(userId),
+      trakt.getMovieHistory(userId),
+    ])
+    watchedMovies = remoteWatchedMovies
+    movieHistory = remoteMovieHistory
   } catch (e) {
-    console.error(`[sync:movies] Failed to fetch watched movies:`, toErrorMessage(e))
+    console.error(`[sync:movies] Failed to fetch watched movie state:`, toErrorMessage(e))
     return
   }
 
-  console.log(`[sync:movies] Found ${watchedMovies.length} watched movies`)
+  console.log(`[sync:movies] Found ${watchedMovies.length} watched movies and ${movieHistory.length} history entries`)
 
   const limit = pLimit(SHOW_CONCURRENCY)
+  const watchedByTraktId = new Map<number, TraktWatchedMovie>()
+  const historyByTraktId = new Map<number, TraktMovieHistoryEntry[]>()
+  const remoteTraktPlayIds = movieHistory.map(entry => String(entry.id))
+  const affectedMovieIds = new Set<number>()
 
-  await Promise.all(watchedMovies.map(wm => limit(async () => {
-    const tmdbId = wm.movie.ids.tmdb
-    let title = wm.movie.title
+  for (const wm of watchedMovies) {
+    const traktId = wm.movie.ids.trakt
+    if (traktId) watchedByTraktId.set(traktId, wm)
+  }
+
+  for (const entry of movieHistory) {
+    if (entry.type !== 'movie') continue
+    const traktId = entry.movie?.ids?.trakt
+    if (!traktId) continue
+    if (!historyByTraktId.has(traktId)) historyByTraktId.set(traktId, [])
+    historyByTraktId.get(traktId)!.push(entry)
+  }
+
+  const staleTraktHistoryWhere = remoteTraktPlayIds.length
+    ? and(
+        eq(watchHistory.userId, userId),
+        eq(watchHistory.mediaType, 'movie'),
+        eq(watchHistory.source, 'trakt'),
+        or(
+          isNull(watchHistory.traktPlayId),
+          notInArray(watchHistory.traktPlayId, remoteTraktPlayIds),
+        ),
+      )
+    : and(
+        eq(watchHistory.userId, userId),
+        eq(watchHistory.mediaType, 'movie'),
+        eq(watchHistory.source, 'trakt'),
+      )
+
+  const staleRows = await db.select({ movieId: watchHistory.movieId })
+    .from(watchHistory)
+    .where(staleTraktHistoryWhere)
+
+  for (const row of staleRows) {
+    if (row.movieId) affectedMovieIds.add(row.movieId)
+  }
+
+  if (staleRows.length > 0) {
+    await db.delete(watchHistory).where(staleTraktHistoryWhere)
+  }
+
+  const remoteMovieTraktIds = new Set([
+    ...watchedByTraktId.keys(),
+    ...historyByTraktId.keys(),
+  ])
+
+  await Promise.all(Array.from(remoteMovieTraktIds).map(traktId => limit(async () => {
+    const wm = watchedByTraktId.get(traktId)
+    const historyEntries = historyByTraktId.get(traktId) ?? []
+    const remoteMovie = wm?.movie ?? historyEntries[0]?.movie
+    const tmdbId = remoteMovie?.ids.tmdb
+    let title = remoteMovie?.title ?? `trakt:${traktId}`
 
     if (!tmdbId) {
       console.warn(`[sync:movies] Skipping "${title}" — missing TMDB id`)
@@ -1577,9 +1655,9 @@ export async function syncMovies(userId: number): Promise<void> {
       // Upsert movie record
       const [movie] = await db.insert(movies).values({
         tmdbId,
-        traktId: wm.movie.ids.trakt,
-        traktSlug: wm.movie.ids.slug,
-        imdbId: wm.movie.ids.imdb || null,
+        traktId: remoteMovie.ids.trakt,
+        traktSlug: remoteMovie.ids.slug,
+        imdbId: remoteMovie.ids.imdb || null,
         title,
         overview,
         releaseDate,
@@ -1591,9 +1669,9 @@ export async function syncMovies(userId: number): Promise<void> {
       }).onConflictDoUpdate({
         target: [movies.tmdbId],
         set: {
-          traktId: wm.movie.ids.trakt,
-          traktSlug: wm.movie.ids.slug,
-          imdbId: wm.movie.ids.imdb || null,
+          traktId: remoteMovie.ids.trakt,
+          traktSlug: remoteMovie.ids.slug,
+          imdbId: remoteMovie.ids.imdb || null,
           title,
           overview,
           releaseDate,
@@ -1605,43 +1683,28 @@ export async function syncMovies(userId: number): Promise<void> {
         },
       }).returning({ id: movies.id })
 
-      // Upsert progress summary
-      await db.insert(userMovieProgress).values({
-        userId,
-        movieId: movie.id,
-        watchCount: wm.plays,
-        lastWatchedAt: wm.last_watched_at ? new Date(wm.last_watched_at) : null,
-      }).onConflictDoUpdate({
-        target: [userMovieProgress.userId, userMovieProgress.movieId],
-        set: {
-          watchCount: wm.plays,
-          lastWatchedAt: wm.last_watched_at ? new Date(wm.last_watched_at) : null,
-          updatedAt: new Date(),
-        },
-      })
+      affectedMovieIds.add(movie.id)
 
-      if (wm.last_watched_at) {
-        const watchedAt = new Date(wm.last_watched_at)
-        const [existing] = await db.select({ id: watchHistory.id })
-          .from(watchHistory)
-          .where(and(
-            eq(watchHistory.userId, userId),
-            eq(watchHistory.movieId, movie.id),
-            eq(watchHistory.mediaType, 'movie'),
-            eq(watchHistory.watchedAt, watchedAt),
-            eq(watchHistory.source, 'trakt'),
-          ))
-
-        if (!existing) {
-          await db.insert(watchHistory).values({
+      for (const entry of historyEntries) {
+        await db.insert(watchHistory).values({
+          userId,
+          movieId: movie.id,
+          episodeId: null,
+          mediaType: 'movie',
+          watchedAt: new Date(entry.watched_at),
+          source: 'trakt',
+          traktPlayId: String(entry.id),
+        }).onConflictDoUpdate({
+          target: watchHistory.traktPlayId,
+          set: {
             userId,
             movieId: movie.id,
             episodeId: null,
             mediaType: 'movie',
-            watchedAt,
+            watchedAt: new Date(entry.watched_at),
             source: 'trakt',
-          })
-        }
+          },
+        })
       }
 
       console.log(`[sync:movies] Synced "${title}"`)
@@ -1649,6 +1712,8 @@ export async function syncMovies(userId: number): Promise<void> {
       console.error(`[sync:movies] Error syncing "${title}":`, toErrorMessage(e))
     }
   })))
+
+  await Promise.all(Array.from(affectedMovieIds).map(movieId => limit(() => recalcMovieProgress(userId, movieId))))
 
   console.log(`[sync:movies] Movie sync complete`)
 }

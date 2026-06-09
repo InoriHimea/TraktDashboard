@@ -1,5 +1,6 @@
 import { getDb, metadataCache, userSettings } from "@trakt-dashboard/db";
 import { eq, and } from "drizzle-orm";
+import { withTimeout } from "../lib/timeout.js";
 
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const CACHE_TTL_HOURS = 24 * 7;
@@ -35,24 +36,6 @@ function buildFetchOptions(proxyUrl?: string): RequestInit {
     return { proxy: proxyUrl } as RequestInit & { proxy: string };
 }
 
-function withTimeout<T>(
-    promise: Promise<T>,
-    ms: number,
-    label: string,
-): Promise<T> {
-    let timerId: ReturnType<typeof setTimeout>;
-    const timeoutPromise = new Promise<never>((_, reject) => {
-        timerId = setTimeout(
-            () => reject(new Error(`[tmdb] Timeout after ${ms}ms: ${label}`)),
-            ms,
-        );
-    });
-    return Promise.race([
-        promise.finally(() => clearTimeout(timerId)),
-        timeoutPromise,
-    ]);
-}
-
 async function fetchWithRetry(
     url: string,
     proxyUrl?: string,
@@ -65,6 +48,7 @@ async function fetchWithRetry(
             fetch(url, baseOptions),
             FETCH_TIMEOUT_MS,
             url,
+            { prefix: "tmdb" },
         );
         if (res.status !== 429) return res;
         if (attempt === maxRetries) return res;

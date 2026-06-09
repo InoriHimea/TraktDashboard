@@ -19,6 +19,7 @@ const dbMockState = vi.hoisted(() => ({
 
 const schedulerMock = vi.hoisted(() => ({
     registerUserSyncJob: vi.fn(),
+    enqueueSyncNow: vi.fn(),
     getRedis: vi.fn(() => null),
 }));
 
@@ -41,9 +42,15 @@ const traktMock = vi.hoisted(() => {
             removeFromWatchlist: vi.fn(),
             getWatchlistShows: vi.fn(),
             getWatchlistMovies: vi.fn(),
+            getWatchedMovies: vi.fn(),
+            getMovieHistory: vi.fn(),
         },
     };
 });
+
+const tmdbMock = vi.hoisted(() => ({
+    getTmdbMovie: vi.fn(),
+}));
 
 vi.mock("@trakt-dashboard/db", async () => {
     const actual =
@@ -61,11 +68,17 @@ vi.mock("../services/trakt.js", () => ({
     getTraktClient: traktMock.getTraktClient,
     TraktApiError: traktMock.TraktApiError,
 }));
+vi.mock("../services/tmdb.js", () => ({
+    getTmdbMovie: tmdbMock.getTmdbMovie,
+    getTmdbSeason: vi.fn(),
+    getTmdbShow: vi.fn(),
+}));
 
 const { settingsRoutes } = await import("../routes/settings.js");
 const { watchlistRoutes } = await import("../routes/watchlist.js");
 const { showRoutes } = await import("../routes/shows.js");
-const { syncWatchlist } = await import("../services/sync.js");
+const { syncRoutes } = await import("../routes/sync.js");
+const { syncMovies, syncWatchlist } = await import("../services/sync.js");
 
 class SelectBuilder implements PromiseLike<SelectResult> {
     constructor(private readonly result: SelectResult) {}
@@ -98,6 +111,10 @@ class SelectBuilder implements PromiseLike<SelectResult> {
         return this;
     }
 
+    groupBy() {
+        return this;
+    }
+
     then<TResult1 = SelectResult, TResult2 = never>(
         onfulfilled?:
             | ((value: SelectResult) => TResult1 | PromiseLike<TResult1>)
@@ -118,6 +135,10 @@ class InsertBuilder implements PromiseLike<void> {
 
     onConflictDoUpdate(value: unknown) {
         this.state.conflictCalls.push(value);
+        return this;
+    }
+
+    onConflictDoNothing() {
         return this;
     }
 
@@ -484,6 +505,40 @@ describe("show detail route", () => {
     });
 });
 
+describe("sync routes", () => {
+    beforeEach(() => {
+        schedulerMock.enqueueSyncNow.mockReset();
+    });
+
+    it("queues manual sync with per-user dedup when idle", async () => {
+        const db = createMockDb({ selectResults: [[{ status: "idle" }]] });
+        dbMockState.db = db;
+        schedulerMock.enqueueSyncNow.mockResolvedValue({ id: "sync-now-42" });
+        const app = testApp("/sync", syncRoutes);
+
+        const res = await app.request("/sync/trigger", { method: "POST" });
+        const body = await parseJson<{ ok: boolean; message: string }>(res);
+
+        expect(res.status).toBe(202);
+        expect(body).toEqual({ ok: true, message: "Sync queued" });
+        expect(schedulerMock.enqueueSyncNow).toHaveBeenCalledWith(TEST_USER_ID);
+    });
+
+    it("rejects duplicate manual sync while a sync is running", async () => {
+        const db = createMockDb({ selectResults: [[{ status: "running" }]] });
+        dbMockState.db = db;
+        const app = testApp("/sync", syncRoutes);
+
+        const res = await app.request("/sync/trigger", { method: "POST" });
+        const body = await parseJson<{ ok: boolean; message: string }>(res);
+
+        expect(res.status).toBe(409);
+        expect(body.ok).toBe(false);
+        expect(body.message).toBe("Sync already running");
+        expect(schedulerMock.enqueueSyncNow).not.toHaveBeenCalled();
+    });
+});
+
 describe("syncWatchlist", () => {
     it("upserts remote items and protects cleanup when remote media is unresolved", async () => {
         const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -631,6 +686,106 @@ describe("syncWatchlist", () => {
         );
 
         warnSpy.mockRestore();
+        logSpy.mockRestore();
+    });
+});
+
+describe("syncMovies", () => {
+    it("recalculates movie progress from current history instead of Trakt plays", async () => {
+        const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+        const movie = makeMovie({
+            id: 378,
+            tmdbId: 9009,
+            traktId: 7009,
+            traktSlug: "legend",
+            title: "Legend",
+        });
+        const watchedAt = new Date("2026-06-06T08:58:00.000Z");
+        const db = createMockDb({
+            selectResults: [
+                [{ displayLanguage: "zh-CN" }],
+                [{ movieId: movie.id }],
+                [{ count: 1, lastWatched: watchedAt }],
+            ],
+            insertResults: [[{ id: movie.id }]],
+        });
+        dbMockState.db = db;
+        traktMock.client.getWatchedMovies.mockResolvedValue([
+            {
+                plays: 2,
+                last_watched_at: watchedAt.toISOString(),
+                last_updated_at: watchedAt.toISOString(),
+                movie: {
+                    title: movie.title,
+                    year: 2024,
+                    ids: {
+                        trakt: movie.traktId,
+                        slug: movie.traktSlug,
+                        imdb: movie.imdbId,
+                        tmdb: movie.tmdbId,
+                    },
+                },
+            },
+        ]);
+        traktMock.client.getMovieHistory.mockResolvedValue([
+            {
+                id: 2642,
+                watched_at: watchedAt.toISOString(),
+                action: "watch",
+                type: "movie",
+                movie: {
+                    title: movie.title,
+                    year: 2024,
+                    ids: {
+                        trakt: movie.traktId,
+                        slug: movie.traktSlug,
+                        imdb: movie.imdbId,
+                        tmdb: movie.tmdbId,
+                    },
+                },
+            },
+        ]);
+        tmdbMock.getTmdbMovie.mockResolvedValue({
+            title: movie.title,
+            original_title: movie.title,
+            original_language: "en",
+            overview: movie.overview,
+            release_date: movie.releaseDate,
+            runtime: movie.runtime,
+            poster_path: movie.posterPath,
+            backdrop_path: movie.backdropPath,
+            genres: movie.genres.map((name) => ({ name })),
+            translations: { translations: [] },
+        });
+
+        await syncMovies(TEST_USER_ID);
+
+        expect(db.__state.deleteWhereCalls).toHaveLength(1);
+        expect(db.__state.insertValues).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    movieId: movie.id,
+                    source: "trakt",
+                    traktPlayId: "2642",
+                    watchedAt,
+                }),
+                expect.objectContaining({
+                    userId: TEST_USER_ID,
+                    movieId: movie.id,
+                    watchCount: 1,
+                    lastWatchedAt: watchedAt,
+                }),
+            ]),
+        );
+        expect(db.__state.insertValues).not.toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    movieId: movie.id,
+                    watchCount: 2,
+                }),
+            ]),
+        );
+
         logSpy.mockRestore();
     });
 });

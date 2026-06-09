@@ -1,8 +1,32 @@
+import { randomUUID } from "node:crypto";
 import { getDb, users, metadataCache, userSettings } from "@trakt-dashboard/db";
 import { eq, and } from "drizzle-orm";
 import { getRedis } from "../jobs/scheduler.js";
+import { withTimeout } from "../lib/timeout.js";
 
 const FETCH_TIMEOUT_MS = 12000;
+const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
+const TOKEN_REFRESH_LOCK_TTL_MS = 45_000;
+const TOKEN_REFRESH_WAIT_BUDGET_MS = 15_000;
+
+function tokenExpiresSoon(expiresAt: Date | string, bufferMs = TOKEN_REFRESH_BUFFER_MS) {
+    return new Date(expiresAt).getTime() - Date.now() < bufferMs;
+}
+
+function sleep(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function parseRetryAfterSeconds(value: string | null): number {
+    if (!value) return 5;
+    const seconds = Number.parseInt(value, 10);
+    if (Number.isFinite(seconds)) return Math.max(seconds, 0);
+    const retryAt = Date.parse(value);
+    if (!Number.isNaN(retryAt)) {
+        return Math.max(Math.ceil((retryAt - Date.now()) / 1000), 0);
+    }
+    return 5;
+}
 
 // Proxy support — user setting first, then HTTP_PROXY / HTTPS_PROXY from environment
 async function getProxyUrl(userId?: number): Promise<string | undefined> {
@@ -32,25 +56,6 @@ function buildFetchOptions(proxyUrl?: string): RequestInit {
     return { proxy: proxyUrl } as RequestInit & { proxy: string };
 }
 
-// Reliable timeout via Promise.race (AbortController unreliable in Bun for established connections)
-function withTimeout<T>(
-    promise: Promise<T>,
-    ms: number,
-    label: string,
-): Promise<T> {
-    let timerId: ReturnType<typeof setTimeout>;
-    const timeoutPromise = new Promise<never>((_, reject) => {
-        timerId = setTimeout(
-            () => reject(new Error(`[trakt] Timeout after ${ms}ms: ${label}`)),
-            ms,
-        );
-    });
-    return Promise.race([
-        promise.finally(() => clearTimeout(timerId)),
-        timeoutPromise,
-    ]);
-}
-
 async function fetchWithTimeout(
     url: string,
     options?: RequestInit,
@@ -61,6 +66,7 @@ async function fetchWithTimeout(
         fetch(url, { ...buildFetchOptions(proxyUrl), ...options }),
         FETCH_TIMEOUT_MS,
         url,
+        { prefix: "trakt" },
     );
 }
 
@@ -110,6 +116,23 @@ export interface TraktHistoryEntry {
         };
     };
     show: TraktShow;
+}
+
+export interface TraktMovieHistoryEntry {
+    id: number;
+    watched_at: string;
+    action: string;
+    type: string;
+    movie: {
+        title: string;
+        year: number | null;
+        ids: {
+            trakt: number;
+            slug: string;
+            imdb: string | null;
+            tmdb: number | null;
+        };
+    };
 }
 
 export interface TraktShowDetail {
@@ -236,85 +259,118 @@ async function fetchWithRetry(
         const res = await fetchWithTimeout(url, options, userId);
         if (res.status !== 429) return res;
         if (attempt === maxRetries) return res;
-        const retryAfter = parseInt(res.headers.get("Retry-After") || "5");
+        const retryAfter = parseRetryAfterSeconds(res.headers.get("Retry-After"));
         console.warn(
             `[trakt] Rate limited, retrying in ${retryAfter}s (attempt ${attempt + 1}/${maxRetries})`,
         );
-        await new Promise((r) => setTimeout(r, retryAfter * 1000));
+        await sleep(retryAfter * 1000);
     }
     // unreachable
     throw new Error("fetchWithRetry: unreachable");
+}
+
+type TraktUserTokens = typeof users.$inferSelect;
+
+async function readUserTokens(userId: number): Promise<TraktUserTokens> {
+    const [user] = await getDb().select().from(users).where(eq(users.id, userId));
+    if (!user) throw new Error("User not found");
+    return user;
+}
+
+async function releaseOwnedLock(lockKey: string, lockValue: string) {
+    const redis = getRedis();
+    await redis.eval(
+        "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
+        1,
+        lockKey,
+        lockValue,
+    );
 }
 
 // Task 2.2: Token refresh with Redis distributed lock
 async function refreshToken(userId: number): Promise<string> {
     const redis = getRedis();
     const lockKey = `lock:token-refresh:${userId}`;
+    const lockValue = randomUUID();
+    const waitStartedAt = Date.now();
+    let attempt = 0;
 
-    // Try to acquire lock
-    for (let attempt = 0; attempt < 10; attempt++) {
-        const acquired = await redis.set(lockKey, "1", "EX", 30, "NX");
-        if (acquired) {
-            try {
-                const db = getDb();
-                const [user] = await db
-                    .select()
-                    .from(users)
-                    .where(eq(users.id, userId));
-                if (!user) throw new Error("User not found");
+    while (Date.now() - waitStartedAt < TOKEN_REFRESH_WAIT_BUDGET_MS) {
+        const acquired = await redis.set(
+            lockKey,
+            lockValue,
+            "PX",
+            TOKEN_REFRESH_LOCK_TTL_MS,
+            "NX",
+        );
 
-                const res = await fetchWithRetry(
-                    "https://api.trakt.tv/oauth/token",
-                    {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            refresh_token: user.traktRefreshToken,
-                            client_id: process.env.TRAKT_CLIENT_ID,
-                            client_secret: process.env.TRAKT_CLIENT_SECRET,
-                            redirect_uri: process.env.TRAKT_REDIRECT_URI,
-                            grant_type: "refresh_token",
-                        }),
-                    },
-                    3,
-                    userId,
-                );
-
-                if (!res.ok) throw new Error("Token refresh failed");
-
-                const data = (await res.json()) as {
-                    access_token: string;
-                    refresh_token: string;
-                    expires_in: number;
-                };
-
-                await db
-                    .update(users)
-                    .set({
-                        traktAccessToken: data.access_token,
-                        traktRefreshToken: data.refresh_token,
-                        tokenExpiresAt: new Date(
-                            Date.now() + data.expires_in * 1000,
-                        ),
-                        updatedAt: new Date(),
-                    })
-                    .where(eq(users.id, userId));
-
-                return data.access_token;
-            } finally {
-                await redis.del(lockKey);
-            }
+        if (!acquired) {
+            const user = await readUserTokens(userId);
+            if (!tokenExpiresSoon(user.tokenExpiresAt)) return user.traktAccessToken;
+            const backoffMs = Math.min(250 * 2 ** attempt, 2_000) + Math.floor(Math.random() * 100);
+            attempt++;
+            await sleep(backoffMs);
+            continue;
         }
 
-        // Lock held by another process — wait and re-read token from DB
-        await new Promise((r) => setTimeout(r, 500));
+        try {
+            const user = await readUserTokens(userId);
+            if (!tokenExpiresSoon(user.tokenExpiresAt)) return user.traktAccessToken;
+
+            const res = await fetchWithRetry(
+                "https://api.trakt.tv/oauth/token",
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        refresh_token: user.traktRefreshToken,
+                        client_id: process.env.TRAKT_CLIENT_ID,
+                        client_secret: process.env.TRAKT_CLIENT_SECRET,
+                        redirect_uri: process.env.TRAKT_REDIRECT_URI,
+                        grant_type: "refresh_token",
+                    }),
+                },
+                3,
+                userId,
+            );
+
+            if (!res.ok) {
+                throw new TraktApiError(res.status, await res.text());
+            }
+
+            const data = (await res.json()) as {
+                access_token: string;
+                refresh_token: string;
+                expires_in: number;
+            };
+
+            const updated = await getDb()
+                .update(users)
+                .set({
+                    traktAccessToken: data.access_token,
+                    traktRefreshToken: data.refresh_token,
+                    tokenExpiresAt: new Date(Date.now() + data.expires_in * 1000),
+                    updatedAt: new Date(),
+                })
+                .where(and(eq(users.id, userId), eq(users.traktRefreshToken, user.traktRefreshToken)))
+                .returning({ traktAccessToken: users.traktAccessToken });
+
+            if (updated.length === 0) {
+                const latest = await readUserTokens(userId);
+                if (!tokenExpiresSoon(latest.tokenExpiresAt)) return latest.traktAccessToken;
+                throw new Error(`Token refresh lost update race for user ${userId}`);
+            }
+
+            return data.access_token;
+        } finally {
+            await releaseOwnedLock(lockKey, lockValue);
+        }
     }
 
-    // Another process refreshed the token; read the latest from DB
-    const db = getDb();
-    const [user] = await db.select().from(users).where(eq(users.id, userId));
-    if (!user) throw new Error("User not found");
-    return user.traktAccessToken;
+    const user = await readUserTokens(userId);
+    if (!tokenExpiresSoon(user.tokenExpiresAt)) return user.traktAccessToken;
+
+    throw new Error(`Token refresh lock timed out for user ${userId}`);
 }
 
 // Cache TTLs in milliseconds
@@ -374,8 +430,7 @@ export function getTraktClient() {
 
         let token = user.traktAccessToken;
 
-        const bufferMs = 5 * 60 * 1000; // 5 minutes buffer
-        if (new Date(user.tokenExpiresAt).getTime() - Date.now() < bufferMs) {
+        if (tokenExpiresSoon(user.tokenExpiresAt)) {
             token = await refreshToken(userId);
         }
 
@@ -443,6 +498,31 @@ export function getTraktClient() {
                     params,
                 );
                 all.push(...(data as TraktHistoryEntry[]));
+
+                const pageCount = parseInt(
+                    headers.get("X-Pagination-Page-Count") || "1",
+                );
+                if (page >= pageCount) break;
+                page++;
+            }
+
+            return all;
+        },
+
+        getMovieHistory: async (userId: number): Promise<TraktMovieHistoryEntry[]> => {
+            const all: TraktMovieHistoryEntry[] = [];
+            let page = 1;
+
+            while (true) {
+                const { data, headers } = await traktFetchRaw(
+                    "/sync/history/movies",
+                    userId,
+                    {
+                        limit: "100",
+                        page: String(page),
+                    },
+                );
+                all.push(...(data as TraktMovieHistoryEntry[]));
 
                 const pageCount = parseInt(
                     headers.get("X-Pagination-Page-Count") || "1",

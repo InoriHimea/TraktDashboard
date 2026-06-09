@@ -4,19 +4,13 @@ import { eq, and, desc, sql, gt, like, isNull } from 'drizzle-orm'
 import type { MovieProgress, MovieWatchHistoryEntry } from '@trakt-dashboard/types'
 import { z } from 'zod'
 import { validateBody } from '../lib/validate.js'
+import { parseBoundedInt } from '../lib/number.js'
 
 const watchedAtSchema = z.object({
     watchedAt: z.string().datetime({ offset: true }).nullable().optional(),
 })
 
 export const movieRoutes = new Hono<{ Variables: { userId: number } }>()
-
-function parseBoundedInt(value: string | undefined, fallback: number, min: number, max: number): number {
-  if (!value) return fallback
-  const parsed = Number.parseInt(value, 10)
-  if (!Number.isFinite(parsed)) return fallback
-  return Math.min(Math.max(parsed, min), max)
-}
 
 async function recalcMovieProgress(userId: number, movieId: number): Promise<void> {
   const db = getDb()

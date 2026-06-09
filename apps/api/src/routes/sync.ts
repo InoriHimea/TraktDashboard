@@ -7,7 +7,7 @@ import {
     userShowProgress,
 } from "@trakt-dashboard/db";
 import { eq, sql } from "drizzle-orm";
-import { triggerFullSync } from "../services/sync.js";
+import { getSyncStatus, triggerFullSync } from "../services/sync.js";
 import { enqueueSyncNow } from "../jobs/scheduler.js";
 
 export const syncRoutes = new Hono<{ Variables: { userId: number } }>();
@@ -103,13 +103,23 @@ syncRoutes.get("/debug", async (c) => {
 // POST /api/sync/trigger — manual incremental sync
 syncRoutes.post("/trigger", async (c) => {
     const userId = c.get("userId");
+    const state = await getSyncStatus(userId);
+    if (state?.status === "running") {
+        return c.json({ ok: false, message: "Sync already running", status: state }, 409);
+    }
+
     await enqueueSyncNow(userId);
-    return c.json({ ok: true, message: "Sync queued" });
+    return c.json({ ok: true, message: "Sync queued" }, 202);
 });
 
 // POST /api/sync/full — full re-sync
 syncRoutes.post("/full", async (c) => {
     const userId = c.get("userId");
+    const state = await getSyncStatus(userId);
+    if (state?.status === "running") {
+        return c.json({ ok: false, message: "Sync already running", status: state }, 409);
+    }
+
     triggerFullSync(userId).catch(console.error);
-    return c.json({ ok: true, message: "Full sync started" });
+    return c.json({ ok: true, message: "Full sync started" }, 202);
 });
