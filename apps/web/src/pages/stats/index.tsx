@@ -146,7 +146,7 @@ export default function StatsPage() {
     return (
         <div
             style={{
-                minHeight: "100vh",
+                minHeight: "calc(100svh - var(--app-nav-height))",
                 position: "relative",
                 overflow: "hidden",
             }}

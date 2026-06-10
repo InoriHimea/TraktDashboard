@@ -147,7 +147,7 @@ export default function WatchlistPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
+        <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-[var(--color-bg)] text-[var(--color-text)]">
             <div className="mx-auto w-full max-w-none px-[3vw] py-8">
                 {/* Header */}
                 <div className="mb-7 flex flex-col gap-2">

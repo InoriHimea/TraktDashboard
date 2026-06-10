@@ -50,6 +50,7 @@ calendarRoutes.get("/", async (c) => {
                 originalName: row.show.originalName,
                 translatedName: row.show.translatedName,
                 posterPath: row.show.posterPath,
+                backdropPath: row.show.backdropPath,
                 network: row.show.network,
                 status: row.show.status,
             }

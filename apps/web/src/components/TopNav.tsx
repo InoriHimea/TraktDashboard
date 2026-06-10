@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { LayoutGroup, motion } from 'framer-motion'
 import { BarChart3, Tv2, Film, RefreshCw, Settings, LogOut, Bookmark, Calendar } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNowPlaying } from '../hooks/index'
@@ -57,12 +57,12 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
       <header
         className="top-nav-shell"
         style={{
-          position: 'sticky',
+          position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
           zIndex: 40,
-          height: '56px',
+          height: 'var(--app-nav-height)',
           width: '100%',
           maxWidth: '100vw',
           boxSizing: 'border-box',
@@ -117,59 +117,91 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
             scrollbarWidth: 'none',
           }}
         >
-          {NAV.map(({ to, icon: Icon, labelKey }) => {
-            const active = isNavActive(location.pathname, to)
-            return (
-              <Link
-                key={to}
-                to={to}
-                aria-current={active ? 'page' : undefined}
-                className="top-nav-link"
-                style={{ textDecoration: 'none' }}
-              >
-                <motion.div
-                  className="top-nav-item"
-                  whileHover={{
-                    backgroundColor: active ? 'var(--color-nav-active-hover)' : 'var(--color-nav-hover)',
-                    borderColor: active ? 'var(--color-nav-active-border)' : 'var(--color-border-subtle)',
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '6px 12px',
-                    borderRadius: 'var(--radius-md)',
-                    color: active ? 'var(--color-accent-light)' : 'var(--color-text-secondary)',
-                    background: active ? 'var(--color-nav-active-bg)' : 'transparent',
-                    border: active ? '1px solid var(--color-nav-active-border)' : '1px solid transparent',
-                    boxShadow: active ? 'inset 0 1px 0 rgba(255,255,255,0.12), 0 0 18px var(--color-accent-glow)' : 'none',
-                    fontSize: '13px',
-                    fontWeight: active ? 650 : 500,
-                    position: 'relative',
-                    whiteSpace: 'nowrap',
-                  }}
+          <LayoutGroup id="top-nav-active">
+            {NAV.map(({ to, icon: Icon, labelKey }) => {
+              const active = isNavActive(location.pathname, to)
+              return (
+                <Link
+                  key={to}
+                  to={to}
+                  aria-current={active ? 'page' : undefined}
+                  className="top-nav-link"
+                  style={{ textDecoration: 'none' }}
                 >
-                  <Icon size={14} aria-hidden="true" />
-                  <span className="nav-label-full" style={{ display: 'inline' }}>{t(labelKey)}</span>
-                  {active && (
-                    <motion.div
-                      layoutId="topnav-indicator"
+                  <motion.div
+                    className="top-nav-item"
+                    animate={{ backgroundColor: 'rgba(0, 0, 0, 0)', borderColor: 'rgba(0, 0, 0, 0)' }}
+                    whileHover={{
+                      backgroundColor: active ? 'rgba(0, 0, 0, 0)' : 'var(--color-nav-hover)',
+                      borderColor: active ? 'rgba(0, 0, 0, 0)' : 'var(--color-border-subtle)',
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '6px 12px',
+                      borderRadius: 'var(--radius-md)',
+                      color: active ? 'var(--color-accent-light)' : 'var(--color-text-secondary)',
+                      border: '1px solid transparent',
+                      fontSize: '13px',
+                      fontWeight: active ? 650 : 500,
+                      position: 'relative',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {active && (
+                      <motion.span
+                        layoutId="topnav-active-frame"
+                        className="top-nav-active-frame"
+                        aria-hidden="true"
+                        transition={{ type: 'spring', stiffness: 520, damping: 42, mass: 0.7 }}
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          borderRadius: 'inherit',
+                          background: 'var(--color-nav-active-bg)',
+                          border: '1px solid var(--color-nav-active-border)',
+                          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), 0 0 18px var(--color-accent-glow)',
+                          zIndex: 0,
+                        }}
+                      />
+                    )}
+                    <span
                       style={{
-                        position: 'absolute',
-                        bottom: '-1px',
-                        left: '8px',
-                        right: '8px',
-                        height: '2px',
-                        borderRadius: '2px 2px 0 0',
-                        background: 'linear-gradient(90deg, transparent, var(--color-accent), var(--color-accent-rose), transparent)',
-                        boxShadow: '0 0 14px var(--color-accent-glow)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        position: 'relative',
+                        zIndex: 1,
                       }}
-                    />
-                  )}
-                </motion.div>
-              </Link>
-            )
-          })}
+                    >
+                      <Icon size={14} aria-hidden="true" />
+                      <span className="nav-label-full" style={{ display: 'inline' }}>{t(labelKey)}</span>
+                    </span>
+                    {active && (
+                      <motion.div
+                        layoutId="topnav-indicator"
+                        className="top-nav-active-indicator"
+                        transition={{ type: 'spring', stiffness: 520, damping: 42, mass: 0.7 }}
+                        style={{
+                          position: 'absolute',
+                          bottom: '-1px',
+                          left: '8px',
+                          right: '8px',
+                          height: '2px',
+                          borderRadius: '2px 2px 0 0',
+                          background: 'linear-gradient(90deg, transparent, var(--color-accent), var(--color-accent-rose), transparent)',
+                          boxShadow: '0 0 14px var(--color-accent-glow)',
+                          zIndex: 2,
+                        }}
+                      />
+                    )}
+                  </motion.div>
+                </Link>
+              )
+            })}
+          </LayoutGroup>
         </nav>
 
         {/* Right: Now Playing trigger + username + logout */}

@@ -109,6 +109,7 @@ export interface CalendarEpisode {
         originalName: string | null;
         translatedName: string | null;
         posterPath: string | null;
+        backdropPath: string | null;
         network: string | null;
         status: string;
     };

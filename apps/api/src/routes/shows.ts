@@ -5,6 +5,7 @@ import type { ShowProgress, SeasonProgress, EpisodeProgress, ShowStatus } from '
 import { getTmdbEpisodeDetail } from '../services/tmdb.js'
 import { z } from 'zod'
 import { validateBody } from '../lib/validate.js'
+import { parseBoundedInt } from '../lib/number.js'
 
 const watchedAtSchema = z.object({
     watchedAt: z.string().datetime({ offset: true }).nullable().optional(),
@@ -13,13 +14,6 @@ import { getTraktClient } from '../services/trakt.js'
 import { recalcShowProgress, computeWatchedEpisodes, forceSyncShow } from '../services/sync.js'
 
 export const showRoutes = new Hono<{ Variables: { userId: number } }>()
-
-function parseBoundedInt(value: string | undefined, fallback: number, min: number, max: number): number {
-  if (!value) return fallback
-  const parsed = Number.parseInt(value, 10)
-  if (!Number.isFinite(parsed)) return fallback
-  return Math.min(Math.max(parsed, min), max)
-}
 
 function toEpisodeDto(ep: typeof episodes.$inferSelect) {
   return {
@@ -86,7 +80,7 @@ showRoutes.get('/progress', async (c) => {
       status: row.show.status as ShowStatus,
       firstAired: row.show.firstAired,
       network: row.show.network,
-      genres: row.show.genres as string[],
+      genres: row.show.genres,
       posterPath: row.show.posterPath,
       backdropPath: row.show.backdropPath,
       totalEpisodes: row.show.totalEpisodes,
@@ -95,9 +89,9 @@ showRoutes.get('/progress', async (c) => {
       createdAt: row.show.createdAt.toISOString(),
       // Task 7.2: multilingual fields
       originalName: row.show.originalName ?? null,
-      originalLanguage: (row.show as any).originalLanguage ?? null,
+      originalLanguage: row.show.originalLanguage ?? null,
       translatedName: row.show.translatedName ?? null,
-      translatedOverview: (row.show as any).translatedOverview ?? null,
+      translatedOverview: row.show.translatedOverview ?? null,
       displayLanguage: row.show.displayLanguage ?? null,
     },
     airedEpisodes: row.progress.airedEpisodes,
@@ -174,9 +168,9 @@ showRoutes.get('/:id', async (c) => {
         seasonNumber: ep.seasonNumber,
         episodeNumber: ep.episodeNumber,
         title: ep.title,
-        translatedTitle: (ep as any).translatedTitle ?? null,
+        translatedTitle: ep.translatedTitle ?? null,
         overview: ep.overview,
-        translatedOverview: (ep as any).translatedOverview ?? null,
+        translatedOverview: ep.translatedOverview ?? null,
         airDate: ep.airDate,
         watched: watchedMap.has(ep.id),
         watchedAt,
@@ -210,13 +204,13 @@ showRoutes.get('/:id', async (c) => {
       show: {
         ...show,
         status: show.status as ShowStatus,
-        genres: show.genres as string[],
+        genres: show.genres,
         lastSyncedAt: show.lastSyncedAt.toISOString(),
         createdAt: show.createdAt.toISOString(),
         originalName: show.originalName ?? null,
-        originalLanguage: (show as any).originalLanguage ?? null,
+        originalLanguage: show.originalLanguage ?? null,
         translatedName: show.translatedName ?? null,
-        translatedOverview: (show as any).translatedOverview ?? null,
+        translatedOverview: show.translatedOverview ?? null,
         displayLanguage: show.displayLanguage ?? null,
       },
       airedEpisodes,
@@ -321,9 +315,9 @@ showRoutes.get('/:showId/episodes/:season/:episode', async (c) => {
     seasonNumber: e.seasonNumber,
     episodeNumber: e.episodeNumber,
     title: e.title,
-    translatedTitle: (e as any).translatedTitle ?? null,
+    translatedTitle: e.translatedTitle ?? null,
     overview: e.overview,
-    translatedOverview: (e as any).translatedOverview ?? null,
+    translatedOverview: e.translatedOverview ?? null,
     airDate: e.airDate,
     watched: watchedEpisodeIds.has(e.id),
     watchedAt: null,  // Not needed for strip
@@ -339,9 +333,9 @@ showRoutes.get('/:showId/episodes/:season/:episode', async (c) => {
       seasonNumber: season,
       episodeNumber: episode,
       title: ep.title,
-      translatedTitle: (ep as any).translatedTitle ?? null,
+      translatedTitle: ep.translatedTitle ?? null,
       overview: ep.overview,
-      translatedOverview: (ep as any).translatedOverview ?? null,
+      translatedOverview: ep.translatedOverview ?? null,
       airDate: ep.airDate,
       runtime: ep.runtime,
       stillPath: ep.stillPath,
@@ -355,7 +349,7 @@ showRoutes.get('/:showId/episodes/:season/:episode', async (c) => {
         translatedName: show.translatedName ?? null,
         posterPath: show.posterPath,
         backdropPath: show.backdropPath ?? null,
-        genres: show.genres as string[],
+        genres: show.genres,
         traktId: show.traktId,
         traktSlug: show.traktSlug,
         tmdbId: show.tmdbId,
@@ -548,13 +542,13 @@ showRoutes.post('/:showId/reset', async (c) => {
       show: {
         ...show,
         status: show.status as ShowStatus,
-        genres: show.genres as string[],
+        genres: show.genres,
         lastSyncedAt: show.lastSyncedAt.toISOString(),
         createdAt: show.createdAt.toISOString(),
         originalName: show.originalName ?? null,
-        originalLanguage: (show as any).originalLanguage ?? null,
+        originalLanguage: show.originalLanguage ?? null,
         translatedName: show.translatedName ?? null,
-        translatedOverview: (show as any).translatedOverview ?? null,
+        translatedOverview: show.translatedOverview ?? null,
         displayLanguage: show.displayLanguage ?? null,
       },
       airedEpisodes,
@@ -618,7 +612,7 @@ showRoutes.post('/:showId/seasons/:season/mark-watched', async (c) => {
         userId,
         episodeId: e.id,
         watchedAt,
-        source: 'manual' as const,
+        source: 'manual',
       }))
     )
   }
@@ -640,8 +634,9 @@ showRoutes.post('/:showId/force-sync', async (c) => {
   try {
     await forceSyncShow(userId, showId)
     return c.json({ ok: true })
-  } catch (e: any) {
-    console.error(`[shows] Force sync failed for show ${showId}:`, e)
-    return c.json({ error: e.message || 'Failed to force sync show' }, 500)
+  } catch (error) {
+    console.error(`[shows] Force sync failed for show ${showId}:`, error)
+    const message = error instanceof Error ? error.message : 'Failed to force sync show'
+    return c.json({ error: message }, 500)
   }
 })

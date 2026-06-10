@@ -1,6 +1,6 @@
 {
   "name": "trakt-dashboard",
-  "version": "0.39.6",
+  "version": "0.40.1",
   "private": true,
   "scripts": {
     "dev": "turbo run dev",
@@ -8,6 +8,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "lint": "eslint .",
+    "ci": "pnpm lint && pnpm typecheck && pnpm build && pnpm test",
     "audit": "pnpm audit --audit-level=moderate",
     "db:generate": "turbo run db:generate",
     "db:migrate": "turbo run db:migrate",

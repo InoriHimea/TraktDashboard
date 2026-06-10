@@ -1,10 +1,22 @@
-import { useState } from 'react';
-import { Clock, ExternalLink } from 'lucide-react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
+import {
+  CalendarDays,
+  Check,
+  CheckCheck,
+  Clock,
+  ExternalLink,
+  Star,
+  Timer,
+  UserRound,
+} from 'lucide-react';
 import type { EpisodeDetailData, WatchHistoryEntry } from '@trakt-dashboard/types';
 import { DateTimePickerModal } from './DateTimePickerModal';
 import { Button } from './ui/Button';
 import { ConfirmDialog } from './ui/ConfirmDialog';
+import { Tag } from './ui/Tag';
 import { useMarkWatched, useEpisodeHistory, useDeleteHistory } from '../hooks';
+import { fmtAirDate, fmtRuntime } from '../lib/i18n';
+import { cn, formatEpisode } from '../lib/utils';
 
 interface EpisodeInfoCardProps {
   data: EpisodeDetailData;
@@ -13,20 +25,105 @@ interface EpisodeInfoCardProps {
   onRefetch: () => void;
 }
 
-function SingleCheckIcon() {
+type ExternalLinkTone = 'imdb' | 'tmdb' | 'tvdb' | 'trakt';
+
+const externalLinkTokens: Record<ExternalLinkTone, { text: string; bg: string; hoverBg: string; border: string; hoverBorder: string }> = {
+  imdb: {
+    text: 'var(--action-amber-text)',
+    bg: 'var(--action-amber-surface)',
+    hoverBg: 'var(--action-amber-surface-hover)',
+    border: 'var(--action-amber-border)',
+    hoverBorder: 'var(--action-amber-border-hover)',
+  },
+  tmdb: {
+    text: 'var(--action-sky-text)',
+    bg: 'var(--action-sky-surface)',
+    hoverBg: 'var(--action-sky-surface-hover)',
+    border: 'var(--action-sky-border)',
+    hoverBorder: 'var(--action-sky-border-hover)',
+  },
+  tvdb: {
+    text: 'var(--action-violet-text)',
+    bg: 'var(--action-violet-surface)',
+    hoverBg: 'var(--action-violet-surface-hover)',
+    border: 'var(--action-violet-border)',
+    hoverBorder: 'var(--action-violet-border-hover)',
+  },
+  trakt: {
+    text: 'var(--action-rose-text)',
+    bg: 'var(--action-rose-surface)',
+    hoverBg: 'var(--action-rose-surface-hover)',
+    border: 'var(--action-rose-border)',
+    hoverBorder: 'var(--action-rose-border-hover)',
+  },
+};
+
+type LinkPillStyle = CSSProperties & {
+  '--link-text'?: string;
+  '--link-bg'?: string;
+  '--link-hover-bg'?: string;
+  '--link-border'?: string;
+  '--link-hover-border'?: string;
+};
+
+function formatDirectors(directors: string[]) {
+  if (directors.length === 0) return null;
+  if (directors.length <= 2) return directors.join(' / ');
+  return `${directors.slice(0, 2).join(' / ')} 等 ${directors.length} 人`;
+}
+
+function EpisodeMetaItem({
+  icon,
+  label,
+  value,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+}) {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M4 12.5L9 17.5L20 6.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <div className="rounded-xl border border-border/45 bg-[var(--color-surface-2)]/72 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+      <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase text-muted-foreground">
+        <span className="text-[var(--color-accent-light)]">{icon}</span>
+        {label}
+      </div>
+      <p className="truncate text-sm font-semibold text-foreground">{value}</p>
+    </div>
   );
 }
 
-function DoubleCheckIcon() {
+function ExternalLinkPill({
+  href,
+  label,
+  tone,
+}: {
+  href: string;
+  label: string;
+  tone: ExternalLinkTone;
+}) {
+  const token = externalLinkTokens[tone];
+  const style = {
+    '--link-text': token.text,
+    '--link-bg': token.bg,
+    '--link-hover-bg': token.hoverBg,
+    '--link-border': token.border,
+    '--link-hover-border': token.hoverBorder,
+  } as LinkPillStyle;
+
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M2 12.5L7 17.5L18 6.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.5" />
-      <path d="M6 12.5L11 17.5L22 6.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={`打开 ${label}`}
+      className={cn(
+        'group inline-flex h-9 items-center gap-2 rounded-full border border-[var(--link-border)] bg-[var(--link-bg)] px-3 text-xs font-bold text-[var(--link-text)] shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--link-hover-border)] hover:bg-[var(--link-hover-bg)] hover:shadow-lg active:translate-y-0',
+      )}
+      style={style}
+    >
+      <span>{label}</span>
+      <ExternalLink className="size-3.5 opacity-60 transition group-hover:opacity-100" />
+    </a>
   );
 }
 
@@ -44,17 +141,20 @@ function DeleteHistoryModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div
-        className="relative z-10 w-[420px] max-w-[90vw] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl"
+        className="hud-panel-strong relative z-10 w-[420px] max-w-[90vw] rounded-[var(--radius-lg)] p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="mb-1 text-base font-bold text-foreground">删除观看记录</h3>
         <p className="mb-4 text-sm text-muted-foreground">请选择要删除的观看记录：</p>
-        <div className="max-h-64 space-y-2 overflow-y-auto">
+        <div className="flex max-h-64 flex-col gap-2 overflow-y-auto">
           {entries.map((entry) => {
             const label = entry.watchedAt
               ? new Date(entry.watchedAt).toLocaleString('zh-CN', {
-                  year: 'numeric', month: '2-digit', day: '2-digit',
-                  hour: '2-digit', minute: '2-digit',
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
                 })
               : '未知时间';
             return (
@@ -98,12 +198,17 @@ export function EpisodeInfoCard({ data, onHistoryClick, isWatched, onRefetch }: 
   const [confirmUnwatchOpen, setConfirmUnwatchOpen] = useState(false);
 
   const overview = data.translatedOverview ?? data.overview;
-  const episodeTitle = data.translatedTitle ?? data.title;
+  const episodeCode = formatEpisode(data.seasonNumber, data.episodeNumber);
+  const episodeTitle = data.translatedTitle ?? data.title ?? episodeCode;
+  const originalTitle =
+    data.translatedTitle && data.title && data.translatedTitle !== data.title
+      ? data.title
+      : null;
   const show = data.show;
   const showDisplayName = show.translatedName ?? show.title;
-
-  const year = data.airDate ? new Date(data.airDate).getFullYear() : '—';
-  const runtime = data.runtime || 24;
+  const directorLabel = formatDirectors(data.directors);
+  const runtimeLabel = fmtRuntime(data.runtime);
+  const genres = show.genres?.slice(0, 3) ?? [];
 
   const markWatched = useMarkWatched(data.showId, data.seasonNumber, data.episodeNumber);
   const { data: historyEntries = [] } = useEpisodeHistory(data.showId, data.seasonNumber, data.episodeNumber);
@@ -147,200 +252,123 @@ export function EpisodeInfoCard({ data, onHistoryClick, isWatched, onRefetch }: 
     ? `https://thetvdb.com/dereferrer/series/${show.tvdbId}`
     : null;
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
+  const metaItems = [
+    {
+      label: '季集',
+      value: `第 ${data.seasonNumber} 季 / 第 ${data.episodeNumber} 集`,
+      icon: <CalendarDays className="size-3.5" />,
+    },
+    {
+      label: '首播',
+      value: data.airDate ? fmtAirDate(data.airDate) : '未知',
+      icon: <Clock className="size-3.5" />,
+    },
+    {
+      label: '时长',
+      value: runtimeLabel || '未知',
+      icon: <Timer className="size-3.5" />,
+    },
+    ...(directorLabel
+      ? [
+          {
+            label: '导演',
+            value: directorLabel,
+            icon: <UserRound className="size-3.5" />,
+          },
+        ]
+      : []),
+  ];
 
-      {/* ── 面包屑 ── */}
-      <div
-        style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', marginBottom: '20px' }}
-        className="text-sm md:text-base"
-      >
-        <span className="font-extrabold text-foreground hover:text-primary transition-colors cursor-pointer tracking-wide">
+  return (
+    <div className="flex min-w-0 flex-col">
+      <div className="mb-5 flex flex-wrap items-center gap-2">
+        <Tag color="cyan" variant="outline" size="sm" className="rounded-full px-3 py-1 tabular-nums">
+          {episodeCode}
+        </Tag>
+        <span className="min-w-0 truncate text-sm font-semibold text-muted-foreground">
           {showDisplayName}
         </span>
-        <span className="text-muted-foreground/50 font-black">/</span>
-        <span className="text-muted-foreground font-bold tracking-wide">
-          Season {data.seasonNumber} • Episode {data.episodeNumber}
-        </span>
       </div>
 
-      {/* ── 标题（渐变多色）── */}
-      {episodeTitle && (
-        <h1
-          style={{ marginBottom: '24px' }}
-          className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1]"
-        >
-          {/* 渐变色标题：紫 → 靛蓝 → 天蓝，深色/浅色下都清晰易读 */}
-          <span
-            className="bg-clip-text text-transparent"
-            style={{
-              backgroundImage: 'linear-gradient(120deg, #a855f7 0%, #818cf8 45%, #38bdf8 100%)',
-            }}
-          >
-            {episodeTitle}
-          </span>
+      <div className="mb-6">
+        <h1 className="text-3xl font-black leading-[1.08] text-foreground sm:text-4xl lg:text-5xl">
+          {episodeTitle}
         </h1>
-      )}
+        {originalTitle && (
+          <p className="mt-3 text-sm font-medium text-muted-foreground sm:text-base">
+            {originalTitle}
+          </p>
+        )}
+      </div>
 
-      {/* ── 元信息行 ── */}
-      <p style={{ marginBottom: '28px' }} className="text-muted-foreground text-sm md:text-base font-bold uppercase tracking-widest">
-        {year}
-        <span className="mx-2 opacity-30">•</span>
-        {runtime} mins
-        <span className="mx-2 opacity-30">•</span>
-        TV-14
-        <span className="mx-2 opacity-30">•</span>
-        Anime
-      </p>
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {metaItems.map((item) => (
+          <EpisodeMetaItem
+            key={item.label}
+            icon={item.icon}
+            label={item.label}
+            value={item.value}
+          />
+        ))}
+      </div>
 
-      {/* ── Trakt 评分（精致卡片样式）── */}
-      {data.traktRating != null && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '36px' }}>
+      <div className="mb-7 flex flex-wrap items-center gap-3">
+        {data.traktRating != null && (
           <div
-            className="inline-flex items-center gap-3 rounded-xl border transition-all duration-200 cursor-default group/rating"
-            style={{
-              padding: '8px 14px',
-              background: 'rgba(168, 85, 247, 0.10)',
-              borderColor: 'rgba(168, 85, 247, 0.32)',
-            }}
+            className={cn(
+              'inline-flex items-center gap-3 rounded-xl border px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]',
+              data.traktRating >= 80 && 'border-emerald-300/35 bg-emerald-300/10',
+              data.traktRating >= 60 && data.traktRating < 80 && 'border-cyan-300/35 bg-cyan-300/10',
+              data.traktRating < 60 && 'border-amber-300/35 bg-amber-300/10',
+            )}
           >
-            {/* 星星 icon */}
-            <div
-              className="shrink-0 group-hover/rating:scale-110 transition-transform duration-200"
-              style={{ color: '#a855f7' }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2L14.8214 8.11672L21.5106 8.90983L16.5651 13.4833L17.8779 20.0902L12 16.8L6.12215 20.0902L7.43493 13.4833L2.48944 8.90983L9.17863 8.11672L12 2Z" />
-              </svg>
-            </div>
-
-            {/* 分隔线 */}
-            <div style={{ width: '1px', height: '22px', background: 'rgba(168, 85, 247, 0.25)', flexShrink: 0 }} />
-
-            {/* 分数 + 标签 */}
-            <div className="flex flex-col leading-none" style={{ gap: '4px' }}>
-              <span className="font-black text-foreground tabular-nums" style={{ fontSize: '17px', lineHeight: 1 }}>
+            <Star className="size-4 fill-current text-[var(--color-airing)]" />
+            <div className="leading-none">
+              <p className="text-lg font-black tabular-nums text-foreground">
                 {data.traktRating}
-                <span className="font-bold text-muted-foreground" style={{ fontSize: '12px' }}>%</span>
-              </span>
-              <span
-                className="font-bold uppercase"
-                style={{ fontSize: '9px', letterSpacing: '0.18em', color: 'rgba(168, 85, 247, 0.85)' }}
-              >
-                Trakt Score
-              </span>
+                <span className="ml-0.5 text-xs text-muted-foreground">%</span>
+              </p>
+              <p className="mt-1 text-[10px] font-bold uppercase text-muted-foreground">
+                Trakt 评分
+              </p>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* ── 简介 ── */}
-      {overview && (
-        <div style={{ marginBottom: '36px' }}>
-          <p
-            className="text-muted-foreground/80 text-base md:text-lg font-medium max-w-3xl whitespace-pre-line"
-            style={{
-              display: '-webkit-box',
-              WebkitLineClamp: 6,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-              lineHeight: '2',
-            }}
-          >
-            {overview}
-          </p>
-        </div>
-      )}
-
-      {/* ── 外部链接（品牌化 Pill 按钮）── */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', marginBottom: '40px' }}>
-
-        {/* IMDb — 琥珀/黄色系 */}
-        {imdbUrl && (
-          <a
-            href={imdbUrl} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center rounded-lg border transition-all duration-200 hover:scale-[1.04] active:scale-[0.97]"
-            style={{ padding: '7px 11px', background: 'rgba(245,197,24,0.09)', borderColor: 'rgba(245,197,24,0.40)' }}
-            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(245,197,24,0.18)'; el.style.borderColor = 'rgba(245,197,24,0.65)'; el.style.boxShadow = '0 0 16px rgba(245,197,24,0.22)'; }}
-            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(245,197,24,0.09)'; el.style.borderColor = 'rgba(245,197,24,0.40)'; el.style.boxShadow = 'none'; }}
-          >
-            <span className="rounded font-black leading-none" style={{ background: '#f5c518', color: '#000', fontSize: '11px', padding: '2px 5px', letterSpacing: '-0.02em' }}>
-              IMDb
-            </span>
-          </a>
         )}
 
-        {/* TMDB — 青蓝色系 */}
-        {tmdbUrl && (
-          <a
-            href={tmdbUrl} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-lg border transition-all duration-200 hover:scale-[1.04] active:scale-[0.97] font-bold"
-            style={{ padding: '7px 11px', color: '#01b4e4', fontSize: '12px', letterSpacing: '0.04em', background: 'rgba(1,180,228,0.09)', borderColor: 'rgba(1,180,228,0.38)' }}
-            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(1,180,228,0.18)'; el.style.borderColor = 'rgba(1,180,228,0.62)'; el.style.boxShadow = '0 0 16px rgba(1,180,228,0.20)'; }}
-            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(1,180,228,0.09)'; el.style.borderColor = 'rgba(1,180,228,0.38)'; el.style.boxShadow = 'none'; }}
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
-              <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 4a6 6 0 1 1 0 12A6 6 0 0 1 12 6z" opacity="0.4"/>
-              <circle cx="12" cy="12" r="4"/>
-            </svg>
-            TMDB
-          </a>
-        )}
-
-        {/* TVDB — 靛蓝色系 */}
-        {tvdbUrl && (
-          <a
-            href={tvdbUrl} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-lg border transition-all duration-200 hover:scale-[1.04] active:scale-[0.97] font-bold"
-            style={{ padding: '7px 11px', color: '#6699ff', fontSize: '12px', letterSpacing: '0.04em', background: 'rgba(102,153,255,0.09)', borderColor: 'rgba(102,153,255,0.38)' }}
-            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(102,153,255,0.18)'; el.style.borderColor = 'rgba(102,153,255,0.62)'; el.style.boxShadow = '0 0 16px rgba(102,153,255,0.20)'; }}
-            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(102,153,255,0.09)'; el.style.borderColor = 'rgba(102,153,255,0.38)'; el.style.boxShadow = 'none'; }}
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-              <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3l-4 4-4-4"/>
-            </svg>
-            TVDB
-          </a>
-        )}
-
-        {/* Trakt — 红色系 */}
-        {traktUrl && (
-          <a
-            href={traktUrl} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-lg border transition-all duration-200 hover:scale-[1.04] active:scale-[0.97] font-bold"
-            style={{ padding: '7px 11px', color: '#ed1c24', fontSize: '12px', letterSpacing: '0.04em', background: 'rgba(237,28,36,0.09)', borderColor: 'rgba(237,28,36,0.38)' }}
-            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(237,28,36,0.17)'; el.style.borderColor = 'rgba(237,28,36,0.62)'; el.style.boxShadow = '0 0 16px rgba(237,28,36,0.20)'; }}
-            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(237,28,36,0.09)'; el.style.borderColor = 'rgba(237,28,36,0.38)'; el.style.boxShadow = 'none'; }}
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-              <path d="M4 13L9 18L20 7"/>
-            </svg>
-            Trakt
-          </a>
-        )}
+        {genres.map((genre) => (
+          <Tag key={genre} color="slate" variant="outline" size="sm" className="rounded-full px-3 py-1">
+            {genre}
+          </Tag>
+        ))}
       </div>
 
-      {/* ── 操作栏 ── */}
-      <div
-        style={{
-          paddingTop: '24px',
-          borderTop: '1px solid rgba(128,128,128,0.18)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-        }}
-      >
+      <div className="mb-7 max-w-3xl">
+        <p className="line-clamp-6 whitespace-pre-line text-base font-medium leading-8 text-muted-foreground/88 sm:text-lg">
+          {overview?.trim() || '暂无简介'}
+        </p>
+      </div>
+
+      {(imdbUrl || tmdbUrl || tvdbUrl || traktUrl) && (
+        <div className="mb-8 flex flex-wrap items-center gap-2.5">
+          {imdbUrl && <ExternalLinkPill href={imdbUrl} label="IMDb" tone="imdb" />}
+          {tmdbUrl && <ExternalLinkPill href={tmdbUrl} label="TMDB" tone="tmdb" />}
+          {tvdbUrl && <ExternalLinkPill href={tvdbUrl} label="TVDB" tone="tvdb" />}
+          {traktUrl && <ExternalLinkPill href={traktUrl} label="Trakt" tone="trakt" />}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-3 border-t border-border/45 pt-5 sm:flex-row sm:flex-wrap">
         <Button
           type="button"
-          variant={isWatched ? "secondary" : "primary"}
-          color={isWatched ? "emerald" : "violet"}
+          variant={isWatched ? 'secondary' : 'primary'}
+          color={isWatched ? 'emerald' : 'violet'}
           size="md"
           loading={markWatched.isPending || deleteHistory.isPending}
-          icon={isWatched ? <DoubleCheckIcon /> : <SingleCheckIcon />}
+          icon={isWatched ? <CheckCheck className="size-4" /> : <Check className="size-4" />}
           onClick={isWatched ? () => setConfirmUnwatchOpen(true) : () => setConfirmWatchOpen(true)}
           aria-label={isWatched ? '取消观看' : '标记为已观看'}
           title={isWatched ? '点击删除观看记录' : '标记为已观看'}
-          className="w-[152px]"
+          className="w-full sm:w-[156px]"
         >
           {isWatched ? '已观看' : '标记已观看'}
         </Button>
@@ -350,24 +378,22 @@ export function EpisodeInfoCard({ data, onHistoryClick, isWatched, onRefetch }: 
           variant="secondary"
           color="slate"
           size="md"
-          icon={<Clock size={16} />}
+          icon={<Clock className="size-4" />}
           onClick={onHistoryClick}
           aria-label="观看历史"
           title="观看历史"
-          className="w-[152px]"
+          className="w-full sm:w-[156px]"
         >
           观看历史
         </Button>
       </div>
 
-      {/* ── 日期时间选择弹框 ── */}
       <DateTimePickerModal
         open={datePickerOpen}
         onClose={() => setDatePickerOpen(false)}
         onConfirm={handleMarkWatched}
       />
 
-      {/* ── 多条历史删除选择弹框 ── */}
       {deleteModalOpen && (
         <DeleteHistoryModal
           entries={historyEntries}

@@ -154,12 +154,14 @@ export async function startScheduler() {
 
 export async function enqueueSyncNow(userId: number) {
     const queue = getSyncQueue();
-    await queue.add(
+    return queue.add(
         "incremental-sync",
         { userId },
         {
+            jobId: `sync-now-${userId}`,
             priority: 1,
-            removeOnComplete: 5,
+            removeOnComplete: true,
+            removeOnFail: 5,
         },
     );
 }

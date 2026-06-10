@@ -31,7 +31,7 @@ function MetricTile({ label, value, tone = "text-[var(--color-text)]", wide = fa
 
 function PageSkeleton() {
     return (
-        <div className="min-h-screen bg-[var(--color-bg)] px-[3vw] py-8 text-[var(--color-text)]">
+        <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-[var(--color-bg)] px-[3vw] py-8 text-[var(--color-text)]">
             <div className="flex w-full max-w-none flex-col gap-8 animate-pulse">
                 <div className="h-10 w-24 rounded-lg bg-[var(--color-surface-3)]" />
                 <div className="flex flex-col gap-10 lg:flex-row">
@@ -87,7 +87,7 @@ export default function MovieDetailPage() {
 
     if (error) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-[var(--color-bg)] px-6 text-[var(--color-text)]">
+            <div className="flex min-h-[calc(100svh-var(--app-nav-height))] items-center justify-center bg-[var(--color-bg)] px-6 text-[var(--color-text)]">
                 <div className="flex flex-col items-center gap-4 text-center">
                     <p className="text-sm text-[var(--color-error)]">加载失败，请重试</p>
                     <Button
@@ -107,7 +107,7 @@ export default function MovieDetailPage() {
 
     if (!progress) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-[var(--color-bg)] text-[var(--color-text-muted)]">
+            <div className="flex min-h-[calc(100svh-var(--app-nav-height))] items-center justify-center bg-[var(--color-bg)] text-[var(--color-text-muted)]">
                 {t("common.notFound")}
             </div>
         );
@@ -163,7 +163,7 @@ export default function MovieDetailPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
+        <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-[var(--color-bg)] text-[var(--color-text)]">
             {backdrop && !backdropError && (
                 <div className="pointer-events-none absolute left-0 top-0 h-[420px] w-full overflow-hidden opacity-55">
                     <img
@@ -181,8 +181,9 @@ export default function MovieDetailPage() {
                 <Button
                     type="button"
                     variant="ghost"
+                    color="slate"
                     size="md"
-                    icon={<ArrowLeft size={14} />}
+                    icon={<ArrowLeft className="size-4" />}
                     onClick={() => navigate(-1)}
                     className="w-fit"
                 >
@@ -303,7 +304,7 @@ export default function MovieDetailPage() {
                 </section>
 
                 <section className="border-t border-[var(--color-border-subtle)] pt-7">
-                    <div className="mb-5 inline-flex rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] p-1 shadow-lg shadow-black/10">
+                    <div className="mb-5 inline-flex rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 shadow-lg shadow-black/10">
                         {[
                             ["details", "资料", Film],
                             ["history", t("watchHistory.showTitle"), History],
@@ -311,11 +312,11 @@ export default function MovieDetailPage() {
                             <button
                                 key={key as string}
                                 onClick={() => setActiveTab(key as "details" | "history")}
-                                className="inline-flex h-8 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors"
+                                className="inline-flex h-9 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors"
                                 style={{
-                                    color: activeTab === key ? "var(--color-accent-light)" : "var(--color-text-secondary)",
-                                    background: activeTab === key ? "var(--color-accent-dim)" : "transparent",
-                                    border: activeTab === key ? "1px solid var(--color-border-focus)" : "1px solid transparent",
+                                    color: activeTab === key ? "var(--action-violet-text)" : "var(--color-text-secondary)",
+                                    background: activeTab === key ? "var(--action-violet-surface)" : "transparent",
+                                    border: activeTab === key ? "1px solid var(--action-violet-border)" : "1px solid transparent",
                                 }}
                             >
                                 <Icon size={14} /> {label as string}

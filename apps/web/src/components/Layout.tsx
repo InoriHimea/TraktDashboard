@@ -23,11 +23,12 @@ export default function Layout({ children }: { children: ReactNode }) {
     return (
         <ToastProvider>
             <div
-                className="flex flex-col flex-1 w-full overflow-x-hidden"
+                className="flex flex-col flex-1 w-full"
                 style={{
-                    minHeight: "100vh",
+                    minHeight: "100svh",
                     background: "var(--color-bg)",
                     position: "relative",
+                    overflowX: "clip",
                 }}
             >
                 <div className="cyber-grid-overlay" style={{ zIndex: 0 }} aria-hidden="true" />
@@ -41,7 +42,13 @@ export default function Layout({ children }: { children: ReactNode }) {
                     onLogout={() => logout()}
                 />
 
-                    <main className="flex flex-col flex-1 w-full">
+                    <main
+                        className="flex flex-col flex-1 w-full"
+                        style={{
+                            minHeight: "100svh",
+                            paddingTop: "var(--app-nav-height)",
+                        }}
+                    >
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={location.pathname}
