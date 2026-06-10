@@ -206,7 +206,6 @@ describe("Trakt token refresh", () => {
             [
                 [makeUser()],
                 [makeUser()],
-                [],
                 [
                     makeUser({
                         traktAccessToken: "access-raced",

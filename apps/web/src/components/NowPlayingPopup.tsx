@@ -169,7 +169,7 @@ export function NowPlayingPopup({
                     transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
                     style={{
                         position: "fixed",
-                        top: "64px",
+                        top: "calc(var(--app-nav-height) + 8px)",
                         right: "16px",
                         zIndex: 50,
                         width: "300px",

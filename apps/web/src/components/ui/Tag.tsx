@@ -1,3 +1,4 @@
+import type { CSSProperties, ReactNode } from "react";
 import { cn } from "../../lib/utils";
 import type { Color } from "./Button";
 
@@ -7,64 +8,25 @@ export interface TagProps extends React.HTMLAttributes<HTMLSpanElement> {
   color?: TagColor;
   variant?: "solid" | "outline" | "3d";
   size?: "sm" | "md";
-  icon?: React.ReactNode;
+  icon?: ReactNode;
 }
 
-const TAG_COLORS: Record<TagColor, { solid: string; outline: string; shadow: string; text: string }> = {
-  cyan: {
-    solid: "bg-cyan-300 text-cyan-950",
-    outline: "border-cyan-300/30 text-cyan-200 bg-cyan-300/10",
-    shadow: "shadow-[inset_0_1px_1px_rgba(255,255,255,0.22),_0_0_18px_rgba(37,244,238,0.20)] bg-gradient-to-b from-cyan-300 to-cyan-500 text-cyan-950 border-cyan-200/40",
-    text: "text-cyan-300",
-  },
-  violet: {
-    solid: "bg-violet-500 text-white",
-    outline: "border-violet-400/30 text-violet-200 bg-violet-500/10",
-    shadow: "shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),_0_0_18px_rgba(139,92,246,0.22)] bg-gradient-to-b from-violet-500 to-violet-700 text-white border-violet-300/30",
-    text: "text-violet-500",
-  },
-  emerald: {
-    solid: "bg-emerald-400 text-emerald-950",
-    outline: "border-emerald-400/30 text-emerald-200 bg-emerald-500/10",
-    shadow: "shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),_0_0_18px_rgba(49,245,168,0.20)] bg-gradient-to-b from-emerald-300 to-emerald-500 text-emerald-950 border-emerald-200/30",
-    text: "text-emerald-500",
-  },
-  rose: {
-    solid: "bg-rose-500 text-white",
-    outline: "border-rose-400/30 text-rose-200 bg-rose-500/10",
-    shadow: "shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),_0_0_18px_rgba(255,61,129,0.22)] bg-gradient-to-b from-rose-400 to-rose-600 text-white border-rose-300/30",
-    text: "text-rose-500",
-  },
-  amber: {
-    solid: "bg-amber-300 text-amber-950",
-    outline: "border-amber-300/30 text-amber-200 bg-amber-500/10",
-    shadow: "shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),_0_0_18px_rgba(248,211,92,0.18)] bg-gradient-to-b from-amber-300 to-amber-500 text-amber-950 border-amber-200/30",
-    text: "text-amber-500",
-  },
-  sky: {
-    solid: "bg-sky-400 text-sky-950",
-    outline: "border-sky-400/30 text-sky-200 bg-sky-500/10",
-    shadow: "shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),_0_0_18px_rgba(56,189,248,0.18)] bg-gradient-to-b from-sky-300 to-sky-500 text-sky-950 border-sky-200/30",
-    text: "text-sky-500",
-  },
-  slate: {
-    solid: "bg-slate-500 text-white",
-    outline: "border-slate-400/25 text-slate-200 bg-slate-500/10",
-    shadow: "shadow-[inset_0_1px_1px_rgba(255,255,255,0.16),_0_0_14px_rgba(143,179,199,0.12)] bg-gradient-to-b from-slate-500 to-slate-700 text-white border-slate-300/25",
-    text: "text-slate-500",
-  },
-  zinc: {
-    solid: "bg-zinc-500 text-white",
-    outline: "border-zinc-500/30 text-zinc-600 dark:text-zinc-400 bg-zinc-500/10",
-    shadow: "shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),_0_2px_4px_rgba(113,113,122,0.3)] bg-gradient-to-b from-zinc-500 to-zinc-600 text-white border-zinc-700/50",
-    text: "text-zinc-500",
-  },
-  neutral: {
-    solid: "bg-neutral-500 text-white",
-    outline: "border-neutral-500/30 text-neutral-600 dark:text-neutral-400 bg-neutral-500/10",
-    shadow: "shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),_0_2px_4px_rgba(115,115,115,0.3)] bg-gradient-to-b from-neutral-500 to-neutral-600 text-white border-neutral-700/50",
-    text: "text-neutral-500",
-  },
+const TAG_COLOR_VARS: Record<TagColor, { text: string; solid: string; solidText: string }> = {
+  cyan: { text: "var(--action-cyan-text)", solid: "var(--action-cyan-solid)", solidText: "var(--action-cyan-primary-text)" },
+  violet: { text: "var(--action-violet-text)", solid: "var(--action-violet-solid)", solidText: "var(--action-violet-primary-text)" },
+  emerald: { text: "var(--action-emerald-text)", solid: "var(--action-emerald-solid)", solidText: "var(--action-emerald-primary-text)" },
+  rose: { text: "var(--action-rose-text)", solid: "var(--action-rose-solid)", solidText: "var(--action-rose-primary-text)" },
+  amber: { text: "var(--action-amber-text)", solid: "var(--action-amber-solid)", solidText: "var(--action-amber-primary-text)" },
+  sky: { text: "var(--action-sky-text)", solid: "var(--action-sky-solid)", solidText: "var(--action-sky-primary-text)" },
+  slate: { text: "var(--action-slate-text)", solid: "var(--action-slate-solid)", solidText: "var(--action-slate-primary-text)" },
+  zinc: { text: "var(--color-text-secondary)", solid: "var(--color-surface-4)", solidText: "var(--color-text)" },
+  neutral: { text: "var(--color-text-secondary)", solid: "var(--color-surface-4)", solidText: "var(--color-text)" },
+};
+
+type TagStyle = CSSProperties & {
+  "--tag-color"?: string;
+  "--tag-solid"?: string;
+  "--tag-solid-text"?: string;
 };
 
 export function Tag({
@@ -73,34 +35,47 @@ export function Tag({
   size = "md",
   icon,
   className,
+  style,
   children,
   ...props
 }: TagProps) {
-  const colorStyles = TAG_COLORS[color];
+  const colorVars = TAG_COLOR_VARS[color];
 
   const variantClasses = {
-    solid: colorStyles.solid,
-    outline: cn("border", colorStyles.outline),
-    "3d": cn("border", colorStyles.shadow),
+    solid: "border border-transparent bg-[var(--tag-solid)] text-[var(--tag-solid-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]",
+    outline: "border border-[color-mix(in_srgb,var(--tag-color)_34%,transparent)] bg-[color-mix(in_srgb,var(--tag-color)_10%,transparent)] text-[var(--tag-color)]",
+    "3d": cn(
+      "border border-[color-mix(in_srgb,var(--tag-color)_30%,transparent)] text-[var(--tag-color)]",
+      "bg-[linear-gradient(180deg,color-mix(in_srgb,var(--tag-color)_14%,var(--color-surface)),color-mix(in_srgb,var(--tag-color)_7%,var(--color-surface-2)))]",
+      "shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_1px_2px_rgba(0,0,0,0.08)]",
+    ),
   };
 
   const sizeClasses = {
-    sm: "px-2 py-0.5 text-[10px] gap-1",
-    md: "px-2.5 py-1 text-xs gap-1.5",
+    sm: "px-2.5 py-1 text-[11px] gap-1",
+    md: "px-3 py-1.5 text-xs gap-1.5",
   };
+
+  const tagStyle = {
+    ...(style as CSSProperties | undefined),
+    "--tag-color": colorVars.text,
+    "--tag-solid": colorVars.solid,
+    "--tag-solid-text": colorVars.solidText,
+  } as TagStyle;
 
   return (
     <span
       className={cn(
-        "inline-flex items-center justify-center rounded-md font-medium whitespace-nowrap",
+        "inline-flex items-center justify-center rounded-full font-semibold whitespace-nowrap",
         variantClasses[variant],
         sizeClasses[size],
         className
       )}
+      style={tagStyle}
       {...props}
     >
       {icon && (
-        <span className={cn("shrink-0", variant === "3d" ? "text-white/80" : "")}>
+        <span className="shrink-0">
           {icon}
         </span>
       )}

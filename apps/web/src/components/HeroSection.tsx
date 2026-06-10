@@ -397,8 +397,8 @@ export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetCli
                         borderRadius: "24px",
                         gap: "20px",
                         position: "sticky",
-                        top: "32px",
-                        maxHeight: "calc(100vh - 64px)",
+                        top: "calc(var(--app-nav-height) + 32px)",
+                        maxHeight: "calc(100svh - var(--app-nav-height) - 64px)",
                         overflow: "hidden",
                     }}
                 >

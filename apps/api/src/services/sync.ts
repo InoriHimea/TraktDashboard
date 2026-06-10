@@ -426,6 +426,129 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
             ),
         );
 
+        // ── Incremental movie history ─────────────────────────────────────────
+        const movieEntries = history.filter((e) => e.type === "movie") as Array<
+            typeof history[0] & {
+                movie: { title: string; year: number | null; ids: { trakt: number; slug: string; imdb: string | null; tmdb: number | null } };
+            }
+        >;
+        const movieMap = new Map<number, typeof movieEntries>();
+        for (const entry of movieEntries) {
+            const traktId = entry.movie?.ids?.trakt;
+            if (!traktId) continue;
+            if (!movieMap.has(traktId)) movieMap.set(traktId, []);
+            movieMap.get(traktId)!.push(entry);
+        }
+
+        if (movieMap.size > 0) {
+            await db
+                .update(syncState)
+                .set({ currentShow: `Syncing ${movieMap.size} movie(s)…`, updatedAt: new Date() })
+                .where(eq(syncState.userId, userId));
+
+            await Promise.all(
+                Array.from(movieMap.entries()).map(([movieTraktId, entries]) =>
+                    limit(async () => {
+                        try {
+                            const tmdbId = entries[0].movie?.ids?.tmdb;
+                            const movieTitle = entries[0].movie?.title ?? `trakt:${movieTraktId}`;
+
+                            // Resolve or upsert the movie row
+                            const [existingMovie] = await db
+                                .select({ id: movies.id })
+                                .from(movies)
+                                .where(eq(movies.traktId, movieTraktId));
+
+                            let movieId: number;
+                            if (existingMovie) {
+                                movieId = existingMovie.id;
+                            } else {
+                                if (!tmdbId) {
+                                    console.warn(`[sync:incr] Skipping movie "${movieTitle}" — missing TMDB id`);
+                                    return;
+                                }
+                                let title = movieTitle;
+                                let posterPath: string | null = null;
+                                let backdropPath: string | null = null;
+                                let overview: string | null = null;
+                                let releaseDate: string | null = null;
+                                let runtime: number | null = null;
+                                let genres: string[] = [];
+                                try {
+                                    const tmdbData = await getTmdbMovie(tmdbId, userId);
+                                    title = tmdbData.title || title;
+                                    posterPath = tmdbData.poster_path ?? null;
+                                    backdropPath = tmdbData.backdrop_path ?? null;
+                                    overview = tmdbData.overview ?? null;
+                                    releaseDate = tmdbData.release_date ?? null;
+                                    runtime = tmdbData.runtime ?? null;
+                                    genres = tmdbData.genres?.map((g) => g.name) ?? [];
+                                } catch (e) {
+                                    console.warn(`[sync:incr] TMDB fetch failed for "${movieTitle}": ${toErrorMessage(e)}`);
+                                }
+                                const mov = entries[0].movie;
+                                const [upserted] = await db
+                                    .insert(movies)
+                                    .values({
+                                        tmdbId: tmdbId,
+                                        traktId: mov.ids.trakt,
+                                        traktSlug: mov.ids.slug,
+                                        imdbId: mov.ids.imdb ?? null,
+                                        title,
+                                        overview,
+                                        releaseDate,
+                                        runtime,
+                                        posterPath,
+                                        backdropPath,
+                                        genres,
+                                        lastSyncedAt: new Date(),
+                                    })
+                                    .onConflictDoUpdate({
+                                        target: [movies.tmdbId],
+                                        set: { traktId: mov.ids.trakt, lastSyncedAt: new Date() },
+                                    })
+                                    .returning({ id: movies.id });
+                                movieId = upserted.id;
+                            }
+
+                            for (const entry of entries) {
+                                await db
+                                    .insert(watchHistory)
+                                    .values({
+                                        userId,
+                                        movieId,
+                                        episodeId: null,
+                                        mediaType: "movie",
+                                        watchedAt: new Date(entry.watched_at),
+                                        source: "trakt",
+                                        traktPlayId: String(entry.id),
+                                    })
+                                    .onConflictDoUpdate({
+                                        target: watchHistory.traktPlayId,
+                                        set: { userId, movieId, mediaType: "movie", watchedAt: new Date(entry.watched_at), source: "trakt" },
+                                    });
+                            }
+                            await recalcMovieProgress(userId, movieId);
+                            console.log(`[sync:incr] Synced movie "${entries[0].movie?.title}"`);
+                        } catch (e) {
+                            console.error(`[sync:incr] Error on movie trakt:${movieTraktId}:`, toErrorMessage(e));
+                        }
+                    }),
+                ),
+            );
+        }
+
+        // ── Incremental watchlist ─────────────────────────────────────────────
+        try {
+            await db
+                .update(syncState)
+                .set({ currentShow: "Syncing watchlist…", updatedAt: new Date() })
+                .where(eq(syncState.userId, userId));
+            await syncWatchlist(userId);
+        } catch (e) {
+            console.error("[sync:incr] Watchlist sync failed:", toErrorMessage(e));
+        }
+
         // Conservative cursor advance: if any show failed, roll back the cursor
         // to 1 second before the earliest failed entry so the next incremental
         // sync re-fetches that window and fills the gap automatically.
@@ -1477,7 +1600,7 @@ export async function recalcShowProgress(
 
 // ─── Movie sync ───────────────────────────────────────────────────────────────
 
-async function recalcMovieProgress(userId: number, movieId: number): Promise<void> {
+export async function recalcMovieProgress(userId: number, movieId: number): Promise<void> {
   const db = getDb()
   const [{ count, lastWatched }] = await db
     .select({

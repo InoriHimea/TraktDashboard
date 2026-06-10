@@ -16,7 +16,7 @@ import { useToast } from "../lib/toast";
 
 function PageSkeleton() {
     return (
-        <div className="min-h-screen bg-[var(--color-bg)]">
+        <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-[var(--color-bg)]">
             <div className="max-w-[1100px] mx-auto px-6 lg:px-8 py-8">
                 <div className="flex gap-8 items-start animate-pulse">
                     {/* 主栏 */}
@@ -55,7 +55,7 @@ function PageSkeleton() {
 
 function PageError({ onRetry }: { onRetry: () => void }) {
     return (
-        <div className="min-h-screen bg-[var(--color-bg)] flex items-center justify-center">
+        <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-[var(--color-bg)] flex items-center justify-center">
             <div className="text-center flex flex-col items-center gap-4">
                 <div className="w-14 h-14 rounded-xl bg-red-950/40 border border-red-500/15 flex items-center justify-center">
                     <span className="text-xl">⚠</span>
@@ -116,7 +116,7 @@ export default function ShowDetailPage() {
 
     if (!progress) {
         return (
-            <div className="min-h-screen bg-[var(--color-bg)] flex items-center justify-center">
+            <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-[var(--color-bg)] flex items-center justify-center">
                 <div className="text-center flex flex-col items-center gap-3">
                     <p className="text-[var(--color-text-muted)] text-base">
                         未找到该剧集
@@ -166,7 +166,7 @@ export default function ShowDetailPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
+        <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-[var(--color-bg)] text-[var(--color-text)]">
             <div className="relative flex w-full max-w-none flex-col gap-8 px-[3vw] py-8">
                 <Button
                     type="button"
@@ -225,6 +225,7 @@ export default function ShowDetailPage() {
                     style={{
                         marginTop: "40px",
                         paddingTop: "32px",
+                        scrollMarginTop: "calc(var(--app-nav-height) + 24px)",
                         borderTop: "1px solid var(--color-border-subtle)",
                     }}
                 >

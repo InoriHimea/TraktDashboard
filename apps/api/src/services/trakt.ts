@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { getDb, users, metadataCache, userSettings } from "@trakt-dashboard/db";
 import { eq, and } from "drizzle-orm";
 import { getRedis } from "../jobs/scheduler.js";
-import { withTimeout } from "../lib/timeout.js";
+import { providerFetch, sleep } from "../lib/http.js";
 
 const FETCH_TIMEOUT_MS = 12000;
 const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
@@ -11,21 +11,6 @@ const TOKEN_REFRESH_WAIT_BUDGET_MS = 15_000;
 
 function tokenExpiresSoon(expiresAt: Date | string, bufferMs = TOKEN_REFRESH_BUFFER_MS) {
     return new Date(expiresAt).getTime() - Date.now() < bufferMs;
-}
-
-function sleep(ms: number) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function parseRetryAfterSeconds(value: string | null): number {
-    if (!value) return 5;
-    const seconds = Number.parseInt(value, 10);
-    if (Number.isFinite(seconds)) return Math.max(seconds, 0);
-    const retryAt = Date.parse(value);
-    if (!Number.isNaN(retryAt)) {
-        return Math.max(Math.ceil((retryAt - Date.now()) / 1000), 0);
-    }
-    return 5;
 }
 
 // Proxy support — user setting first, then HTTP_PROXY / HTTPS_PROXY from environment
@@ -48,25 +33,6 @@ async function getProxyUrl(userId?: number): Promise<string | undefined> {
         process.env.https_proxy ||
         process.env.http_proxy ||
         undefined
-    );
-}
-
-function buildFetchOptions(proxyUrl?: string): RequestInit {
-    if (!proxyUrl) return {};
-    return { proxy: proxyUrl } as RequestInit & { proxy: string };
-}
-
-async function fetchWithTimeout(
-    url: string,
-    options?: RequestInit,
-    userId?: number,
-): Promise<Response> {
-    const proxyUrl = await getProxyUrl(userId);
-    return withTimeout(
-        fetch(url, { ...buildFetchOptions(proxyUrl), ...options }),
-        FETCH_TIMEOUT_MS,
-        url,
-        { prefix: "trakt" },
     );
 }
 
@@ -248,27 +214,6 @@ export interface TraktShowProgress {
     } | null;
 }
 
-// Task 8.1: Generic fetch with 429 retry
-async function fetchWithRetry(
-    url: string,
-    options: RequestInit,
-    maxRetries = 3,
-    userId?: number,
-): Promise<Response> {
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        const res = await fetchWithTimeout(url, options, userId);
-        if (res.status !== 429) return res;
-        if (attempt === maxRetries) return res;
-        const retryAfter = parseRetryAfterSeconds(res.headers.get("Retry-After"));
-        console.warn(
-            `[trakt] Rate limited, retrying in ${retryAfter}s (attempt ${attempt + 1}/${maxRetries})`,
-        );
-        await sleep(retryAfter * 1000);
-    }
-    // unreachable
-    throw new Error("fetchWithRetry: unreachable");
-}
-
 type TraktUserTokens = typeof users.$inferSelect;
 
 async function readUserTokens(userId: number): Promise<TraktUserTokens> {
@@ -317,9 +262,11 @@ async function refreshToken(userId: number): Promise<string> {
             const user = await readUserTokens(userId);
             if (!tokenExpiresSoon(user.tokenExpiresAt)) return user.traktAccessToken;
 
-            const res = await fetchWithRetry(
-                "https://api.trakt.tv/oauth/token",
-                {
+            const tokenUrl = "https://api.trakt.tv/oauth/token";
+            const proxyUrl = await getProxyUrl();
+            const tokenRes = await providerFetch({
+                url: tokenUrl,
+                init: {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -330,15 +277,17 @@ async function refreshToken(userId: number): Promise<string> {
                         grant_type: "refresh_token",
                     }),
                 },
-                3,
-                userId,
-            );
+                proxyUrl,
+                timeoutMs: FETCH_TIMEOUT_MS,
+                maxRetries: 0,
+                prefix: "trakt:refresh",
+            });
 
-            if (!res.ok) {
-                throw new TraktApiError(res.status, await res.text());
+            if (!tokenRes.ok) {
+                throw new TraktApiError(tokenRes.status, await tokenRes.text());
             }
 
-            const data = (await res.json()) as {
+            const data = (await tokenRes.json()) as {
                 access_token: string;
                 refresh_token: string;
                 expires_in: number;
@@ -440,8 +389,10 @@ export function getTraktClient() {
                 url.searchParams.set(k, v),
             );
 
-        // Task 8.2: Use fetchWithRetry
-        const res = await fetchWithRetry(url.toString(), {
+        // Resolve proxy after token refresh so that any DB select order matches
+        // the original fetchWithTimeout pattern (getProxyUrl was called post-refresh).
+        const proxyUrl = await getProxyUrl(userId);
+        const mergedInit = {
             ...init,
             headers: {
                 Authorization: `Bearer ${token}`,
@@ -450,7 +401,17 @@ export function getTraktClient() {
                 "Content-Type": "application/json",
                 ...(init?.headers as Record<string, string> | undefined),
             },
-        }, 3, userId);
+        };
+
+        const res = await providerFetch({
+            url: url.toString(),
+            init: mergedInit,
+            proxyUrl,
+            timeoutMs: FETCH_TIMEOUT_MS,
+            maxRetries: 3,
+            prefix: "trakt",
+            retryStatuses: [429, 500, 502, 503, 504],
+        });
 
         if (!res.ok) throw new TraktApiError(res.status, await res.text());
 

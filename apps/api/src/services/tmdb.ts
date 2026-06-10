@@ -1,6 +1,6 @@
 import { getDb, metadataCache, userSettings } from "@trakt-dashboard/db";
 import { eq, and } from "drizzle-orm";
-import { withTimeout } from "../lib/timeout.js";
+import { providerFetch } from "../lib/http.js";
 
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const CACHE_TTL_HOURS = 24 * 7;
@@ -31,36 +31,6 @@ export async function getProxyUrl(
     );
 }
 
-function buildFetchOptions(proxyUrl?: string): RequestInit {
-    if (!proxyUrl) return {};
-    return { proxy: proxyUrl } as RequestInit & { proxy: string };
-}
-
-async function fetchWithRetry(
-    url: string,
-    proxyUrl?: string,
-    maxRetries = 3,
-    options?: RequestInit,
-): Promise<Response> {
-    const baseOptions = options || buildFetchOptions(proxyUrl);
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        const res = await withTimeout(
-            fetch(url, baseOptions),
-            FETCH_TIMEOUT_MS,
-            url,
-            { prefix: "tmdb" },
-        );
-        if (res.status !== 429) return res;
-        if (attempt === maxRetries) return res;
-        const retryAfter = parseInt(res.headers.get("Retry-After") || "5");
-        console.warn(
-            `[tmdb] Rate limited, retrying in ${retryAfter}s (attempt ${attempt + 1}/${maxRetries})`,
-        );
-        await new Promise((r) => setTimeout(r, retryAfter * 1000));
-    }
-    throw new Error("fetchWithRetry: unreachable");
-}
-
 async function tmdbFetch<T>(
     path: string,
     params?: Record<string, string>,
@@ -75,26 +45,26 @@ async function tmdbFetch<T>(
         Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
 
     const proxyUrl = await getProxyUrl(userId);
-    const fetchOpts = buildFetchOptions(proxyUrl);
 
     // TMDB supports two auth methods:
     // - v4 Read Access Token (long JWT starting with "eyJ"): Authorization: Bearer <token>
     // - v3 API Key (short alphanumeric): ?api_key=<key>
     const isBearer = apiKey.startsWith("eyJ");
-    const opts: RequestInit = {
-        ...fetchOpts,
-        headers: {
-            ...((fetchOpts as any).headers || {}),
-            ...(isBearer
-                ? { Authorization: `Bearer ${apiKey}` }
-                : {}),
-        },
+    const headers: Record<string, string> = {
+        ...(isBearer ? { Authorization: `Bearer ${apiKey}` } : {}),
     };
     if (!isBearer) {
         url.searchParams.set("api_key", apiKey);
     }
 
-    const res = await fetchWithRetry(url.toString(), proxyUrl, 3, opts);
+    const res = await providerFetch({
+        url: url.toString(),
+        init: { headers },
+        proxyUrl,
+        timeoutMs: FETCH_TIMEOUT_MS,
+        maxRetries: 3,
+        prefix: "tmdb",
+    });
     if (!res.ok) throw new Error(`TMDB ${res.status}: ${path}`);
     return res.json() as Promise<T>;
 }

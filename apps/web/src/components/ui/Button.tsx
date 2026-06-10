@@ -13,7 +13,7 @@
  *
  * Colors: violet (default), emerald, rose, amber, sky, slate
  */
-import { forwardRef } from 'react'
+import { forwardRef, type CSSProperties, type ReactNode } from 'react'
 import { motion, type HTMLMotionProps } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
 import { cn } from '../../lib/utils'
@@ -27,19 +27,38 @@ export interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'children'>
   size?: Size
   color?: Color
   loading?: boolean
-  icon?: React.ReactNode
-  children?: React.ReactNode
+  icon?: ReactNode
+  children?: ReactNode
 }
 
 // ─── Color palette ────────────────────────────────────────────────────────────
-const COLOR_MAP: Record<Color, { grad: string; glow: string; text: string; ring: string }> = {
-  cyan:    { grad: 'linear-gradient(135deg, var(--color-accent) 0%, #8dfcff 100%)', glow: 'rgba(37,244,238,0.45)', text: 'var(--color-accent-light)', ring: 'focus-visible:ring-cyan-300' },
-  violet:  { grad: 'linear-gradient(135deg, var(--color-accent-violet) 0%, #c4b5fd 100%)', glow: 'rgba(139,92,246,0.42)', text: '#c4b5fd', ring: 'focus-visible:ring-violet-400' },
-  emerald: { grad: 'linear-gradient(135deg, #06b981 0%, var(--color-watched) 100%)', glow: 'rgba(49,245,168,0.36)',  text: 'var(--color-watched)', ring: 'focus-visible:ring-emerald-300' },
-  rose:    { grad: 'linear-gradient(135deg, #e11d48 0%, var(--color-accent-rose) 100%)', glow: 'rgba(255,61,129,0.42)',  text: 'var(--color-accent-rose)', ring: 'focus-visible:ring-rose-400' },
-  amber:   { grad: 'linear-gradient(135deg, #d97706 0%, var(--color-airing) 100%)', glow: 'rgba(248,211,92,0.34)',  text: 'var(--color-airing)',  ring: 'focus-visible:ring-amber-300' },
-  sky:     { grad: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)', glow: 'rgba(56,189,248,0.34)',  text: '#7dd3fc',  ring: 'focus-visible:ring-sky-300' },
-  slate:   { grad: 'linear-gradient(135deg, #314456 0%, #8fb3c7 100%)', glow: 'rgba(143,179,199,0.24)',  text: 'var(--color-text-secondary)',  ring: 'focus-visible:ring-slate-300' },
+type ColorToken = {
+  grad: string
+  glow: string
+  text: string
+  primaryText: string
+  bg: string
+  hoverBg: string
+  border: string
+  hoverBorder: string
+  ring: string
+}
+
+const COLOR_MAP: Record<Color, ColorToken> = {
+  cyan:    { grad: 'linear-gradient(135deg, var(--action-cyan-solid) 0%, color-mix(in srgb, var(--action-cyan-solid), white 32%) 100%)', glow: 'rgba(37,244,238,0.38)', text: 'var(--action-cyan-text)', primaryText: 'var(--action-cyan-primary-text)', bg: 'var(--action-cyan-surface)', hoverBg: 'var(--action-cyan-surface-hover)', border: 'var(--action-cyan-border)', hoverBorder: 'var(--action-cyan-border-hover)', ring: 'focus-visible:ring-cyan-300' },
+  violet:  { grad: 'linear-gradient(135deg, var(--action-violet-solid) 0%, color-mix(in srgb, var(--action-violet-solid), white 28%) 100%)', glow: 'rgba(139,92,246,0.34)', text: 'var(--action-violet-text)', primaryText: 'var(--action-violet-primary-text)', bg: 'var(--action-violet-surface)', hoverBg: 'var(--action-violet-surface-hover)', border: 'var(--action-violet-border)', hoverBorder: 'var(--action-violet-border-hover)', ring: 'focus-visible:ring-violet-400' },
+  emerald: { grad: 'linear-gradient(135deg, var(--action-emerald-solid) 0%, color-mix(in srgb, var(--action-emerald-solid), white 26%) 100%)', glow: 'rgba(49,245,168,0.30)',  text: 'var(--action-emerald-text)', primaryText: 'var(--action-emerald-primary-text)', bg: 'var(--action-emerald-surface)', hoverBg: 'var(--action-emerald-surface-hover)', border: 'var(--action-emerald-border)', hoverBorder: 'var(--action-emerald-border-hover)', ring: 'focus-visible:ring-emerald-300' },
+  rose:    { grad: 'linear-gradient(135deg, var(--action-rose-solid) 0%, color-mix(in srgb, var(--action-rose-solid), white 22%) 100%)', glow: 'rgba(255,61,129,0.34)',  text: 'var(--action-rose-text)', primaryText: 'var(--action-rose-primary-text)', bg: 'var(--action-rose-surface)', hoverBg: 'var(--action-rose-surface-hover)', border: 'var(--action-rose-border)', hoverBorder: 'var(--action-rose-border-hover)', ring: 'focus-visible:ring-rose-400' },
+  amber:   { grad: 'linear-gradient(135deg, var(--action-amber-solid) 0%, color-mix(in srgb, var(--action-amber-solid), white 24%) 100%)', glow: 'rgba(248,211,92,0.28)',  text: 'var(--action-amber-text)', primaryText: 'var(--action-amber-primary-text)', bg: 'var(--action-amber-surface)', hoverBg: 'var(--action-amber-surface-hover)', border: 'var(--action-amber-border)', hoverBorder: 'var(--action-amber-border-hover)', ring: 'focus-visible:ring-amber-300' },
+  sky:     { grad: 'linear-gradient(135deg, var(--action-sky-solid) 0%, color-mix(in srgb, var(--action-sky-solid), white 28%) 100%)', glow: 'rgba(56,189,248,0.28)',  text: 'var(--action-sky-text)', primaryText: 'var(--action-sky-primary-text)', bg: 'var(--action-sky-surface)', hoverBg: 'var(--action-sky-surface-hover)', border: 'var(--action-sky-border)', hoverBorder: 'var(--action-sky-border-hover)', ring: 'focus-visible:ring-sky-300' },
+  slate:   { grad: 'linear-gradient(135deg, var(--action-slate-solid) 0%, color-mix(in srgb, var(--action-slate-solid), white 34%) 100%)', glow: 'rgba(143,179,199,0.20)',  text: 'var(--action-slate-text)', primaryText: 'var(--action-slate-primary-text)', bg: 'var(--action-slate-surface)', hoverBg: 'var(--action-slate-surface-hover)', border: 'var(--action-slate-border)', hoverBorder: 'var(--action-slate-border-hover)', ring: 'focus-visible:ring-slate-300' },
+}
+
+type ButtonStyle = CSSProperties & {
+  '--button-bg'?: string
+  '--button-border'?: string
+  '--button-hover-bg'?: string
+  '--button-hover-border'?: string
 }
 
 // ─── Shadow factory ───────────────────────────────────────────────────────────
@@ -84,7 +103,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref,
   ) => {
     const activeColor = variant === 'danger' ? 'rose' : color
-    const { grad, glow, text: textColor, ring: ringClass } = COLOR_MAP[activeColor]
+    const token = COLOR_MAP[activeColor]
+    const { grad, glow, ring: ringClass } = token
     const shadows = makeShadows(glow)
     const currentShadows = shadows[variant]
 
@@ -97,42 +117,45 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
     const variantClasses: Record<Variant, string> = {
       primary: cn(
-        'border border-white/20',
+        'border border-[var(--button-border)]',
         ringClass, 'focus-visible:ring-offset-[var(--color-bg)]',
       ),
       danger: cn(
-        'border border-white/20 text-white',
+        'border border-[var(--button-border)] text-white',
         `focus-visible:ring-rose-400 focus-visible:ring-offset-[var(--color-bg)]`,
       ),
       secondary: cn(
-        'bg-[var(--color-surface-2)] border border-[var(--color-border)]',
-        `hover:bg-[var(--color-surface)]`,
+        'border border-[var(--button-border)] bg-[var(--button-bg)]',
+        'hover:border-[var(--button-hover-border)] hover:bg-[var(--button-hover-bg)]',
         ringClass, 'focus-visible:ring-offset-[var(--color-bg)]',
       ),
       ghost: cn(
-        'bg-transparent border border-[var(--color-border)] text-[var(--color-text-muted)]',
-        `hover:bg-[var(--color-surface-2)] hover:border-white/20`,
+        'border border-[var(--button-border)] bg-transparent',
+        'hover:border-[var(--button-hover-border)] hover:bg-[var(--button-hover-bg)]',
         ringClass, 'focus-visible:ring-offset-[var(--color-bg)]',
       ),
     }
 
     const sizeClasses: Record<Size, string> = {
-      sm: 'h-8 min-w-[2rem] px-4 text-xs rounded-full',
-      md: 'h-10 min-w-[2.5rem] px-5 text-sm rounded-full',
+      sm: 'h-9 min-w-[2.25rem] px-4 text-[13px] rounded-full',
+      md: 'h-11 min-w-[2.75rem] px-5 text-sm rounded-full',
       lg: 'h-12 min-w-[3rem] px-6 text-base rounded-[0.75rem]',
     }
 
     const mergedStyle = {
-      ...(style as React.CSSProperties | undefined),
-    } as React.CSSProperties
+      ...(style as CSSProperties | undefined),
+      '--button-bg': token.bg,
+      '--button-border': token.border,
+      '--button-hover-bg': token.hoverBg,
+      '--button-hover-border': token.hoverBorder,
+    } as ButtonStyle
 
     if (variant === 'primary' || variant === 'danger') {
       mergedStyle.background = grad
-      if (variant === 'primary') {
-        mergedStyle.color = ['cyan', 'emerald', 'amber', 'sky'].includes(activeColor) ? '#001316' : '#fff'
-      }
+      mergedStyle.color = variant === 'danger' ? 'var(--action-rose-primary-text)' : token.primaryText
+      mergedStyle['--button-border'] = 'rgba(255,255,255,0.28)'
     } else if (variant === 'secondary' || variant === 'ghost') {
-      mergedStyle.color = textColor
+      mergedStyle.color = token.text
     }
 
     return (

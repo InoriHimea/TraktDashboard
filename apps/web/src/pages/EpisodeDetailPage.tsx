@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
 import { ArrowLeft, Check, RefreshCw } from "lucide-react";
 import { useEpisodeDetail } from "../hooks";
@@ -10,17 +10,18 @@ import { EpisodePlaceholder } from "../components/ui/EpisodePlaceholder";
 import { Tag } from "../components/ui/Tag";
 import { resolveEpisodeStillLarge, resolveBackdropFallback } from "../lib/image";
 import { t } from "../lib/i18n";
+import { formatEpisode } from "../lib/utils";
 
 function EpisodeDetailState({
     message,
     action,
 }: {
     message: string;
-    action?: React.ReactNode;
+    action?: ReactNode;
 }) {
     return (
-        <div className="flex min-h-screen items-center justify-center bg-background px-6 text-foreground">
-            <div className="flex flex-col items-center gap-4 text-center">
+        <div className="flex min-h-[calc(100svh-var(--app-nav-height))] items-center justify-center bg-background px-6 text-foreground">
+            <div className="hud-panel flex max-w-sm flex-col items-center gap-4 p-8 text-center">
                 <p className="text-sm text-muted-foreground">{message}</p>
                 {action}
             </div>
@@ -30,18 +31,23 @@ function EpisodeDetailState({
 
 function EpisodeDetailSkeleton() {
     return (
-        <div className="min-h-screen bg-background px-[3vw] py-8 text-foreground">
-            <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-10 animate-pulse">
-                <div className="h-10 w-24 rounded-lg bg-muted" />
-                <div className="flex flex-col gap-12 md:flex-row">
-                    <div className="aspect-video w-full rounded-2xl bg-muted md:w-[420px]" />
-                    <div className="flex flex-1 flex-col gap-4 py-4">
-                        <div className="h-8 w-52 rounded-lg bg-muted" />
-                        <div className="h-14 w-3/4 rounded-lg bg-muted" />
-                        <div className="h-24 w-full rounded-lg bg-muted/70" />
+        <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-background text-foreground">
+            <div className="mx-auto flex w-full max-w-[1440px] animate-pulse flex-col gap-10 px-4 py-8 sm:px-6 lg:px-8">
+                <div className="h-10 w-28 rounded-full bg-muted/70" />
+                <div className="grid items-center gap-8 lg:grid-cols-[minmax(360px,0.74fr)_minmax(0,1fr)] lg:gap-12">
+                    <div className="aspect-video w-full rounded-[var(--radius-xl)] bg-muted/70" />
+                    <div className="flex flex-col gap-5 py-3">
+                        <div className="h-5 w-44 rounded-full bg-muted/70" />
+                        <div className="h-14 w-4/5 rounded-xl bg-muted" />
+                        <div className="grid gap-3 sm:grid-cols-3">
+                            <div className="h-20 rounded-xl bg-muted/70" />
+                            <div className="h-20 rounded-xl bg-muted/70" />
+                            <div className="h-20 rounded-xl bg-muted/70" />
+                        </div>
+                        <div className="h-28 w-full rounded-xl bg-muted/60" />
                     </div>
                 </div>
-                <div className="h-56 rounded-2xl bg-muted/70" />
+                <div className="h-64 rounded-[var(--radius-xl)] bg-muted/60" />
             </div>
         </div>
     );
@@ -118,84 +124,110 @@ export default function EpisodeDetailPage() {
     const stillUrl = resolveEpisodeStillLarge(data.stillPath);
     const fallbackUrl = resolveBackdropFallback(data.show.backdropPath);
     const heroImageUrl = stillUrl ?? fallbackUrl;
-
-    const containerStyle = { width: "94%", maxWidth: "1440px", margin: "0 auto" };
+    const episodeCode = formatEpisode(data.seasonNumber, data.episodeNumber);
+    const title = data.translatedTitle ?? data.title ?? episodeCode;
 
     return (
-        <div className="min-h-screen w-full bg-background text-foreground pb-32 md:pb-20 flex flex-col gap-8 md:gap-12 overflow-x-hidden">
-            <header className="sticky top-0 z-10 bg-background/90 backdrop-blur-md border-b border-border/40 h-16 flex items-center shrink-0 w-full">
-                <div style={containerStyle}>
+        <div className="relative min-h-[calc(100svh-var(--app-nav-height))] w-full overflow-hidden bg-background pb-24 text-foreground">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-[540px] overflow-hidden">
+                {heroImageUrl && (
+                    <img
+                        src={heroImageUrl}
+                        alt=""
+                        className="h-full w-full scale-105 object-cover opacity-25 blur-2xl"
+                    />
+                )}
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,7,11,0.48),var(--color-bg)_78%)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(37,244,238,0.14),transparent_34%),radial-gradient(circle_at_82%_8%,rgba(255,61,129,0.10),transparent_30%)]" />
+            </div>
+
+            <main className="relative z-10 mx-auto flex w-full max-w-[1440px] flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <Button
                         type="button"
                         variant="ghost"
                         color="slate"
-                        size="sm"
+                        size="md"
                         icon={<ArrowLeft className="size-4" />}
                         onClick={() => navigate(-1)}
-                        className="-ml-1"
+                        className="w-fit"
                     >
-                        Back
+                        {t("common.back")}
                     </Button>
-                </div>
-            </header>
-
-            <main
-                className="w-full mx-auto flex flex-col md:flex-row items-center"
-                style={{ width: "94%", maxWidth: "1440px", margin: "0 auto", gap: "48px" }}
-            >
-                <div className="w-full md:w-[380px] lg:w-[460px] shrink-0 flex items-center justify-center">
-                    <div className="w-full aspect-video rounded-2xl overflow-hidden shadow-2xl border border-border/30 relative">
-                        {heroImageUrl ? (
-                            <img src={heroImageUrl} className="w-full h-full object-cover" alt="" />
-                        ) : (
-                            <EpisodePlaceholder
-                                seasonNumber={data.seasonNumber}
-                                episodeNumber={data.episodeNumber}
-                            />
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none" />
-
-                        {isWatched && (
-                            <Tag
-                                color="emerald"
-                                variant="3d"
-                                size="sm"
-                                icon={<Check className="size-3.5" strokeWidth={4} />}
-                                className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2 rounded-full bg-black/60 px-4 py-1.5 text-white shadow-xl backdrop-blur-md"
-                            >
-                                Watched
-                            </Tag>
-                        )}
+                    <div className="flex min-w-0 items-center gap-2 rounded-full border border-border/50 bg-[var(--color-surface-2)]/70 px-3 py-1.5 text-xs font-semibold text-muted-foreground sm:max-w-[50%]">
+                        <span className="truncate text-foreground/90">{data.show.translatedName ?? data.show.title}</span>
+                        <span className="text-muted-foreground/50">/</span>
+                        <span className="tabular-nums text-[var(--color-accent-light)]">{episodeCode}</span>
                     </div>
                 </div>
 
-                <div className="flex-1 flex flex-col justify-center min-w-0" style={{ margin: "20px 0" }}>
-                    <EpisodeInfoCard
-                        data={data}
-                        isWatched={isWatched}
-                        onHistoryClick={() => setHistoryPanelOpen(true)}
-                        onRefetch={() => refetch()}
-                    />
-                </div>
-            </main>
+                <section className="grid items-center gap-8 lg:grid-cols-[minmax(360px,0.74fr)_minmax(0,1fr)] lg:gap-12 xl:gap-14">
+                    <div className="w-full">
+                        <div className="hud-panel-strong relative aspect-video w-full overflow-hidden rounded-[var(--radius-xl)] border border-border/50 shadow-2xl shadow-black/35">
+                            {heroImageUrl ? (
+                                <img
+                                    src={heroImageUrl}
+                                    className="h-full w-full object-cover"
+                                    alt={title}
+                                />
+                            ) : (
+                                <EpisodePlaceholder
+                                    seasonNumber={data.seasonNumber}
+                                    episodeNumber={data.episodeNumber}
+                                />
+                            )}
+                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/78 via-black/12 to-transparent" />
+                            <div className="absolute left-4 top-4 flex flex-wrap items-center gap-2">
+                                <Tag color="slate" variant="3d" size="sm" className="rounded-full px-3 py-1 tabular-nums">
+                                    {episodeCode}
+                                </Tag>
+                                {isWatched && (
+                                    <Tag
+                                        color="emerald"
+                                        variant="3d"
+                                        size="sm"
+                                        icon={<Check className="size-3.5" strokeWidth={4} />}
+                                        className="rounded-full px-3 py-1"
+                                    >
+                                        已观看
+                                    </Tag>
+                                )}
+                            </div>
+                            <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3">
+                                <p className="line-clamp-2 text-sm font-semibold text-white/90 sm:text-base">
+                                    {data.show.translatedName ?? data.show.title}
+                                </p>
+                                {data.traktRating != null && (
+                                    <div className="shrink-0 rounded-full border border-[var(--action-amber-border)] bg-[var(--action-amber-surface)] px-3 py-1 text-xs font-black text-[var(--action-amber-text)] shadow-lg backdrop-blur-md">
+                                        {data.traktRating}
+                                        <span className="ml-0.5 opacity-65">%</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
 
-            <section
-                className="w-full border-t border-border/40 bg-muted/5"
-                style={{
-                    paddingTop: "3rem",
-                    paddingLeft: "calc((100vw - min(1440px, 94vw)) / 2)",
-                    paddingRight: "calc((100vw - min(1440px, 94vw)) / 2)",
-                }}
-            >
-                <EpisodeSeasonStrip
-                    showId={data.showId}
-                    seasonNumber={data.seasonNumber}
-                    currentEpisodeNumber={data.episodeNumber}
-                    episodes={data.seasonEpisodes || []}
-                    watched={isWatched}
-                    fallbackImageUrl={fallbackUrl}
-                />
-            </section>
+                    <div className="flex min-w-0 flex-col justify-center">
+                        <EpisodeInfoCard
+                            data={data}
+                            isWatched={isWatched}
+                            onHistoryClick={() => setHistoryPanelOpen(true)}
+                            onRefetch={() => refetch()}
+                        />
+                    </div>
+                </section>
+
+                <section className="border-t border-border/40 pt-8 lg:pt-10">
+                    <EpisodeSeasonStrip
+                        showId={data.showId}
+                        seasonNumber={data.seasonNumber}
+                        currentEpisodeNumber={data.episodeNumber}
+                        episodes={data.seasonEpisodes || []}
+                        watched={isWatched}
+                        fallbackImageUrl={fallbackUrl}
+                    />
+                </section>
+            </main>
 
             <WatchHistoryPanel
                 open={historyPanelOpen}

@@ -3,6 +3,7 @@ import { getDb, watchlist, shows, movies } from "@trakt-dashboard/db";
 import { eq, and, desc, isNotNull } from "drizzle-orm";
 import { z } from "zod";
 import { validateBody } from "../lib/validate";
+import { syncWatchlist } from "../services/sync.js";
 import { getTraktClient, TraktApiError } from "../services/trakt.js";
 
 const addSchema = z.object({
@@ -100,33 +101,39 @@ watchlistRoutes.post("/", async (c) => {
             toTraktIds(media),
         );
 
-        const listedAt = new Date();
-        const values = {
-            userId,
-            showId: type === "show" ? id : null,
-            movieId: type === "movie" ? id : null,
-            listedAt,
-            notes: notes || null,
-        };
-        const [item] =
-            type === "show"
-                ? await db
-                      .insert(watchlist)
-                      .values(values)
-                      .onConflictDoUpdate({
-                          target: [watchlist.userId, watchlist.showId],
-                          set: { listedAt, notes: notes || null },
-                      })
-                      .returning()
-                : await db
-                      .insert(watchlist)
-                      .values(values)
-                      .onConflictDoUpdate({
-                          target: [watchlist.userId, watchlist.movieId],
-                          set: { listedAt, notes: notes || null },
-                      })
-                      .returning();
-        return c.json({ data: item });
+        try {
+            const listedAt = new Date();
+            const values = {
+                userId,
+                showId: type === "show" ? id : null,
+                movieId: type === "movie" ? id : null,
+                listedAt,
+                notes: notes || null,
+            };
+            const [item] =
+                type === "show"
+                    ? await db
+                          .insert(watchlist)
+                          .values(values)
+                          .onConflictDoUpdate({
+                              target: [watchlist.userId, watchlist.showId],
+                              set: { listedAt, notes: notes || null },
+                          })
+                          .returning()
+                    : await db
+                          .insert(watchlist)
+                          .values(values)
+                          .onConflictDoUpdate({
+                              target: [watchlist.userId, watchlist.movieId],
+                              set: { listedAt, notes: notes || null },
+                          })
+                          .returning();
+            return c.json({ data: item });
+        } catch (dbErr) {
+            console.warn("[watchlist] Local DB write failed after Trakt add, scheduling reconcile:", dbErr);
+            syncWatchlist(userId).catch((e) => console.error("[watchlist] Background reconcile failed:", e));
+            throw dbErr;
+        }
     } catch (error) {
         console.error("[watchlist] Add failed:", error);
         return c.json({ error: "Failed to add to watchlist" }, 502);
@@ -166,7 +173,13 @@ watchlistRoutes.delete("/:id", async (c) => {
             }
         }
 
-        await db.delete(watchlist).where(and(eq(watchlist.id, id), eq(watchlist.userId, userId)));
+        try {
+            await db.delete(watchlist).where(and(eq(watchlist.id, id), eq(watchlist.userId, userId)));
+        } catch (dbErr) {
+            console.warn("[watchlist] Local DB delete failed after Trakt remove, scheduling reconcile:", dbErr);
+            syncWatchlist(userId).catch((e) => console.error("[watchlist] Background reconcile failed:", e));
+            throw dbErr;
+        }
         return c.json({ ok: true });
     } catch (error) {
         console.error("[watchlist] Delete failed:", error);
