@@ -437,6 +437,48 @@ describe("watchlist routes", () => {
     });
 });
 
+describe("watchlist T02 resilience", () => {
+    it("POST /api/watchlist fires syncWatchlist on local DB failure", async () => {
+        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+        const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+        const show = makeShow();
+        const db = createMockDb({ selectResults: [[show]] });
+        const dbError = new Error("local write failed");
+        db.insert.mockImplementation(() => {
+            throw dbError;
+        });
+        dbMockState.db = db;
+        traktMock.client.addToWatchlist.mockResolvedValue(undefined);
+        traktMock.client.getWatchlistShows.mockResolvedValue([]);
+        traktMock.client.getWatchlistMovies.mockResolvedValue([]);
+        const app = testApp("/watchlist", watchlistRoutes);
+
+        const res = await app.request(
+            "/watchlist",
+            jsonRequest("POST", { type: "show", id: show.id, notes: "queue" }),
+        );
+        const body = await parseJson<{ error: string }>(res);
+
+        expect(res.status).toBe(502);
+        expect(body).toEqual({ error: "Failed to add to watchlist" });
+        expect(traktMock.client.addToWatchlist).toHaveBeenCalledWith(
+            TEST_USER_ID,
+            "shows",
+            { trakt: 5001, tmdb: 1001, imdb: "tt1001" },
+        );
+        // The route imports syncWatchlist directly, so verify the reconcile side effect.
+        expect(traktMock.client.getWatchlistShows).toHaveBeenCalledWith(TEST_USER_ID);
+        expect(traktMock.client.getWatchlistMovies).toHaveBeenCalledWith(TEST_USER_ID);
+        expect(warnSpy).toHaveBeenCalledWith(
+            "[watchlist] Local DB write failed after Trakt add, scheduling reconcile:",
+            dbError,
+        );
+
+        warnSpy.mockRestore();
+        errorSpy.mockRestore();
+    });
+});
+
 describe("show detail route", () => {
     it("returns nextEpisode from the progress cache nextEpisodeId", async () => {
         const show = makeShow();
