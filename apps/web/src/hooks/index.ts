@@ -14,6 +14,7 @@ import type {
     MovieProgress,
     MovieWatchHistoryEntry,
     CalendarEpisode,
+    HistoryPage,
 } from "@trakt-dashboard/types";
 import { api } from "../lib/api";
 
@@ -304,6 +305,23 @@ export function useMarkSeasonWatched(showId: number) {
             qc.invalidateQueries({ queryKey: queryKeys.showDetail(showId) });
             qc.invalidateQueries({ queryKey: queryKeys.showsProgress.all });
         },
+    });
+}
+
+// ─── History Hooks ────────────────────────────────────────────────────────────
+
+export function useHistory(
+    mediaType: "all" | "episode" | "movie" = "all",
+    startDate?: string,
+    endDate?: string,
+    limit = 50,
+    offset = 0,
+) {
+    return useQuery<HistoryPage>({
+        queryKey: queryKeys.history.list(mediaType, startDate, endDate, limit, offset),
+        queryFn: () =>
+            api.history.list(mediaType, startDate, endDate, limit, offset).then((r) => r.data),
+        staleTime: 1000 * 60,
     });
 }
 

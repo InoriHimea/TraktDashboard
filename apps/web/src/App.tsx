@@ -16,6 +16,7 @@ const SettingsPage = React.lazy(() => import("./pages/SettingsPage"));
 const LoginPage = React.lazy(() => import("./pages/LoginPage"));
 const WatchlistPage = React.lazy(() => import("./pages/WatchlistPage"));
 const CalendarPage = React.lazy(() => import("./pages/CalendarPage"));
+const HistoryPage = React.lazy(() => import("./pages/HistoryPage"));
 
 // Error Boundary component
 class ErrorBoundary extends React.Component<
@@ -155,6 +156,7 @@ export default function App() {
                                     <Route path="/shows/:id" element={<ShowDetailPage />} />
                                     <Route path="/calendar" element={<CalendarPage />} />
                                     <Route path="/watchlist" element={<WatchlistPage />} />
+                                    <Route path="/history" element={<HistoryPage />} />
                                     <Route path="/stats" element={<StatsPage />} />
                                     <Route path="/sync" element={<SyncPage />} />
                                     <Route path="/settings" element={<SettingsPage />} />

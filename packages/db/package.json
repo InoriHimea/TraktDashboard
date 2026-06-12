@@ -1,6 +1,6 @@
 {
     "name": "@trakt-dashboard/db",
-    "version": "0.42.1",
+    "version": "0.42.4",
     "private": true,
     "main": "./src/index.ts",
     "types": "./src/index.ts",

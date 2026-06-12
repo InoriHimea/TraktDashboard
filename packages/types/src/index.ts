@@ -403,3 +403,40 @@ export interface WatchlistMovieItem {
 }
 
 export type WatchlistItemWithMedia = WatchlistShowItem | WatchlistMovieItem;
+
+// ─── History ──────────────────────────────────────────────────────────────────
+
+export interface HistoryEpisodeRef {
+    id: number;
+    seasonNumber: number;
+    episodeNumber: number;
+    title: string | null;
+}
+
+export interface HistoryShowRef {
+    id: number;
+    title: string;
+    translatedName: string | null;
+    posterPath: string | null;
+}
+
+export interface HistoryMovieRef {
+    id: number;
+    title: string;
+    posterPath: string | null;
+}
+
+export interface HistoryEntry {
+    id: number;
+    mediaType: "episode" | "movie";
+    watchedAt: string | null;
+    source: string;
+    episode?: HistoryEpisodeRef;
+    show?: HistoryShowRef;
+    movie?: HistoryMovieRef;
+}
+
+export interface HistoryPage {
+    entries: HistoryEntry[];
+    total: number;
+}

@@ -27,6 +27,7 @@
         "movies": "电影",
         "calendar": "播出日历",
         "watchlist": "待看列表",
+        "history": "观看历史",
         "statistics": "统计",
         "sync": "同步",
         "settings": "设置"
@@ -97,6 +98,23 @@
         "seasonLabel": "第 {{number}} 季",
         "specials": "特别篇",
         "episodeCount": "{{watched}}/{{total}} 集"
+    },
+    "history": {
+        "title": "观看历史",
+        "all": "全部",
+        "episodes": "剧集",
+        "movies": "电影",
+        "today": "今天",
+        "yesterday": "昨天",
+        "startDate": "开始日期",
+        "endDate": "结束日期",
+        "count": "共 {{count}} 条记录",
+        "loading": "正在加载历史记录…",
+        "loadFailed": "加载历史记录失败。",
+        "empty": "暂无观看记录。",
+        "emptyHint": "开始观看后记录将出现在这里。",
+        "loadMore": "加载更多",
+        "exportCsv": "导出 CSV"
     },
     "watchlist": {
         "title": "待看列表",

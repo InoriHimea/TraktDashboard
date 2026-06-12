@@ -27,6 +27,7 @@
         "movies": "Movies",
         "calendar": "Calendar",
         "watchlist": "Watchlist",
+        "history": "History",
         "statistics": "Statistics",
         "sync": "Sync",
         "settings": "Settings"
@@ -97,6 +98,23 @@
         "seasonLabel": "Season {{number}}",
         "specials": "Specials",
         "episodeCount": "{{watched}}/{{total}} episodes"
+    },
+    "history": {
+        "title": "Watch History",
+        "all": "All",
+        "episodes": "Episodes",
+        "movies": "Movies",
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "startDate": "Start date",
+        "endDate": "End date",
+        "count": "{{count}} records",
+        "loading": "Loading history…",
+        "loadFailed": "Failed to load history.",
+        "empty": "No watch history yet.",
+        "emptyHint": "Start watching and records will appear here.",
+        "loadMore": "Load more",
+        "exportCsv": "Export CSV"
     },
     "watchlist": {
         "title": "Watchlist",

@@ -10,6 +10,7 @@ import {
     LogOut,
     Bookmark,
     Calendar,
+    Clock,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNowPlaying } from "../hooks/index";
@@ -26,6 +27,7 @@ const NAV = [
     { to: "/movies", icon: Film, labelKey: "nav.movies" },
     { to: "/calendar", icon: Calendar, labelKey: "nav.calendar" },
     { to: "/watchlist", icon: Bookmark, labelKey: "nav.watchlist" },
+    { to: "/history", icon: Clock, labelKey: "nav.history" },
     { to: "/stats", icon: BarChart3, labelKey: "nav.statistics" },
     { to: "/sync", icon: RefreshCw, labelKey: "nav.sync" },
     { to: "/settings", icon: Settings, labelKey: "nav.settings" },
