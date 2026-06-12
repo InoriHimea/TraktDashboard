@@ -1,4 +1,3 @@
-import { withTimeout } from "./timeout.js";
 import type { RateLimiter } from "./rate-limit.js";
 import { recordProviderCall, recordRateLimited, recordRetry } from "./observability.js";
 
@@ -67,18 +66,20 @@ export async function providerFetch(opts: ProviderFetchOptions): Promise<Respons
     const retryableStatuses = new Set(retryStatuses);
     const lastAttempt = Math.max(0, Math.floor(maxRetries));
 
+    const urlStr = url.toString();
+
     for (let attempt = 0; attempt <= lastAttempt; attempt++) {
+        // N1-T01: use AbortController so the underlying TCP connection is cancelled on
+        // timeout, not just raced against a reject promise that leaves it dangling.
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
         try {
             if (rateLimiter) {
                 await rateLimiter.acquire();
             }
             recordProviderCall(prefix); // P2-T05 observability
-            const res = await withTimeout(
-                fetch(url, fetchOptions),
-                timeoutMs,
-                `fetch ${url.toString()}`,
-                { prefix },
-            );
+            const res = await fetch(url, { ...fetchOptions, signal: controller.signal });
+            clearTimeout(timeoutId);
 
             if (!retryableStatuses.has(res.status) || attempt === lastAttempt) {
                 return res;
@@ -89,6 +90,14 @@ export async function providerFetch(opts: ProviderFetchOptions): Promise<Respons
             await discardResponseBody(res);
             await sleep(getRetryDelayMs(res, attempt));
         } catch (error) {
+            clearTimeout(timeoutId);
+            // AbortError = our timeout fired deliberately — never retry, surface as TimeoutError.
+            if (error instanceof Error && error.name === "AbortError") {
+                const p = prefix ? `[${prefix}] ` : "";
+                const timeoutError = new Error(`${p}Timeout after ${timeoutMs}ms: fetch ${urlStr}`);
+                timeoutError.name = "TimeoutError";
+                throw timeoutError;
+            }
             if (attempt === lastAttempt) {
                 throw error;
             }

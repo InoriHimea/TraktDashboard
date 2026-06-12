@@ -45,4 +45,15 @@ export const queryKeys = {
         all: ["watchlist"] as const,
         byType: (type: string | undefined) => ["watchlist", type] as const,
     },
+
+    history: {
+        all: ["history"] as const,
+        list: (
+            mediaType: string,
+            startDate: string | undefined,
+            endDate: string | undefined,
+            limit: number,
+            offset: number,
+        ) => ["history", mediaType, startDate, endDate, limit, offset] as const,
+    },
 } as const;

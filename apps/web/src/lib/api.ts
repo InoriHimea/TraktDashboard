@@ -15,6 +15,7 @@ import type {
     CalendarEpisode,
     WatchlistItem,
     WatchlistItemWithMedia,
+    HistoryPage,
 } from "@trakt-dashboard/types";
 
 const API_BASE = "/api";
@@ -155,6 +156,35 @@ export const api = {
             request<{ ok: boolean }>(`/movies/${id}/history/${historyId}`, {
                 method: "DELETE",
             }),
+    },
+    history: {
+        list: (
+            mediaType: "all" | "episode" | "movie" = "all",
+            startDate?: string,
+            endDate?: string,
+            limit = 50,
+            offset = 0,
+        ) => {
+            const params = new URLSearchParams({
+                mediaType,
+                limit: String(limit),
+                offset: String(offset),
+            });
+            if (startDate) params.set("startDate", startDate);
+            if (endDate) params.set("endDate", endDate);
+            return request<ApiResponse<HistoryPage>>(`/history?${params}`);
+        },
+        export: (
+            mediaType: "all" | "episode" | "movie" = "all",
+            format: "csv" | "json" = "csv",
+            startDate?: string,
+            endDate?: string,
+        ) => {
+            const params = new URLSearchParams({ mediaType, format });
+            if (startDate) params.set("startDate", startDate);
+            if (endDate) params.set("endDate", endDate);
+            return `/api/history/export?${params}`;
+        },
     },
     watchlist: {
         list: (type?: "shows" | "movies") => {
