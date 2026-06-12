@@ -1,4 +1,5 @@
-export const CARD_BG = "linear-gradient(180deg, rgba(141,252,255,0.045), transparent 42%), var(--color-panel-glass)";
+export const CARD_BG =
+    "linear-gradient(180deg, rgba(141,252,255,0.045), transparent 42%), var(--color-panel-glass)";
 export const CARD_BDR = "1px solid var(--color-border-subtle)";
 export const CARD_BLR = "blur(24px)";
 export const CARD_SHD = "var(--shadow-hud)";
@@ -7,7 +8,11 @@ export const T2 = "var(--color-text-secondary)";
 export const T3 = "var(--color-text-muted)";
 
 export const COLORS = {
-    cyan: { base: "var(--color-accent)", light: "var(--color-accent-light)", bg: "rgba(37,244,238,0.14)" },
+    cyan: {
+        base: "var(--color-accent)",
+        light: "var(--color-accent-light)",
+        bg: "rgba(37,244,238,0.14)",
+    },
     violet: { base: "var(--color-accent-violet)", light: "#c4b5fd", bg: "rgba(139,92,246,0.15)" },
     emerald: { base: "#06b981", light: "var(--color-watched)", bg: "rgba(49,245,168,0.13)" },
     amber: { base: "#d97706", light: "var(--color-airing)", bg: "rgba(248,211,92,0.14)" },

@@ -19,11 +19,7 @@ import type {
 
 const API_BASE = "/api";
 
-async function request<T>(
-    path: string,
-    options?: RequestInit,
-    base = API_BASE,
-): Promise<T> {
+async function request<T>(path: string, options?: RequestInit, base = API_BASE): Promise<T> {
     // Fix: only set Content-Type for requests that carry a body (not GET / HEAD)
     const method = options?.method?.toUpperCase() ?? "GET";
     const headers: Record<string, string> = {};
@@ -55,8 +51,7 @@ async function request<T>(
 export const api = {
     auth: {
         me: () => request<AuthStatus>("/auth/me", undefined, ""),
-        logout: () =>
-            request<{ ok: boolean }>("/auth/logout", { method: "POST" }, ""),
+        logout: () => request<{ ok: boolean }>("/auth/logout", { method: "POST" }, ""),
     },
     shows: {
         // Task 4.2: Accept optional limit/offset pagination params
@@ -68,16 +63,11 @@ export const api = {
                 limit: String(limit),
                 offset: String(offset),
             });
-            return request<PaginatedResponse<ShowProgress>>(
-                `/shows/progress?${params}`,
-            );
+            return request<PaginatedResponse<ShowProgress>>(`/shows/progress?${params}`);
         },
-        detail: (id: number) =>
-            request<ApiResponse<ShowProgress>>(`/shows/${id}`),
+        detail: (id: number) => request<ApiResponse<ShowProgress>>(`/shows/${id}`),
         history: (showId: number) =>
-            request<ApiResponse<WatchHistoryEntry[]>>(
-                `/shows/${showId}/history`,
-            ),
+            request<ApiResponse<WatchHistoryEntry[]>>(`/shows/${showId}/history`),
         deleteHistory: (showId: number, historyId: number) =>
             request<{ ok: boolean }>(`/shows/${showId}/history/${historyId}`, {
                 method: "DELETE",
@@ -104,12 +94,7 @@ export const api = {
             request<ApiResponse<EpisodeDetailData>>(
                 `/shows/${showId}/episodes/${season}/${episode}`,
             ),
-        watch: (
-            showId: number,
-            season: number,
-            episode: number,
-            watchedAt: string | null,
-        ) =>
+        watch: (showId: number, season: number, episode: number, watchedAt: string | null) =>
             request<{ ok: boolean; historyId: number }>(
                 `/shows/${showId}/episodes/${season}/${episode}/watch`,
                 { method: "POST", body: JSON.stringify({ watchedAt }) },
@@ -122,8 +107,7 @@ export const api = {
     sync: {
         status: () => request<ApiResponse<SyncState>>("/sync/status"),
         debug: () => request<ApiResponse<SyncDebugState>>("/sync/debug"),
-        trigger: () =>
-            request<{ ok: boolean }>("/sync/trigger", { method: "POST" }),
+        trigger: () => request<{ ok: boolean }>("/sync/trigger", { method: "POST" }),
         full: () => request<{ ok: boolean }>("/sync/full", { method: "POST" }),
     },
     stats: {
@@ -138,8 +122,7 @@ export const api = {
             }),
     },
     trakt: {
-        watching: () =>
-            request<ApiResponse<NowPlayingEpisode | null>>("/trakt/watching"),
+        watching: () => request<ApiResponse<NowPlayingEpisode | null>>("/trakt/watching"),
     },
     calendar: {
         list: (before = 14, after = 30) => {
@@ -158,16 +141,11 @@ export const api = {
                 limit: String(limit),
                 offset: String(offset),
             });
-            return request<PaginatedResponse<MovieProgress>>(
-                `/movies/progress?${params}`,
-            );
+            return request<PaginatedResponse<MovieProgress>>(`/movies/progress?${params}`);
         },
-        detail: (id: number) =>
-            request<ApiResponse<MovieProgress>>(`/movies/${id}`),
+        detail: (id: number) => request<ApiResponse<MovieProgress>>(`/movies/${id}`),
         history: (id: number) =>
-            request<ApiResponse<MovieWatchHistoryEntry[]>>(
-                `/movies/${id}/history`,
-            ),
+            request<ApiResponse<MovieWatchHistoryEntry[]>>(`/movies/${id}/history`),
         watch: (id: number, watchedAt: string | null) =>
             request<{ ok: boolean; historyId: number }>(`/movies/${id}/watch`, {
                 method: "POST",
@@ -181,9 +159,7 @@ export const api = {
     watchlist: {
         list: (type?: "shows" | "movies") => {
             const params = type ? `?type=${type}` : "";
-            return request<ApiResponse<WatchlistItemWithMedia[]>>(
-                `/watchlist${params}`,
-            );
+            return request<ApiResponse<WatchlistItemWithMedia[]>>(`/watchlist${params}`);
         },
         add: (type: "show" | "movie", id: number, notes?: string) =>
             request<ApiResponse<WatchlistItem>>("/watchlist", {

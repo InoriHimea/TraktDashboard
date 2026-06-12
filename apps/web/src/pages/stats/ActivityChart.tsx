@@ -40,9 +40,7 @@ const CustomTooltip = ({
                 boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
             }}
         >
-            <p style={{ color: T3, marginBottom: "3px", fontSize: "11px" }}>
-                {label}
-            </p>
+            <p style={{ color: T3, marginBottom: "3px", fontSize: "11px" }}>{label}</p>
             <p
                 style={{
                     color: COLORS.cyan.light,
@@ -51,9 +49,7 @@ const CustomTooltip = ({
                 }}
             >
                 {payload[0].value}{" "}
-                <span style={{ fontSize: "11px", fontWeight: 400, color: T2 }}>
-                    集
-                </span>
+                <span style={{ fontSize: "11px", fontWeight: 400, color: T2 }}>集</span>
             </p>
         </div>
     );
@@ -119,10 +115,7 @@ export function ActivityChart({
                         left: -28,
                     }}
                 >
-                    <CartesianGrid
-                        vertical={false}
-                        stroke="var(--color-border-subtle)"
-                    />
+                    <CartesianGrid vertical={false} stroke="var(--color-border-subtle)" />
                     <XAxis
                         dataKey="month"
                         tick={{

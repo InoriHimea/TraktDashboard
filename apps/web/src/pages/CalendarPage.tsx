@@ -6,7 +6,15 @@ import isToday from "dayjs/plugin/isToday";
 import isTomorrow from "dayjs/plugin/isTomorrow";
 import isYesterday from "dayjs/plugin/isYesterday";
 import "dayjs/locale/zh-cn";
-import { Calendar, ChevronLeft, ChevronRight, Clock, MoreVertical, PlayCircle } from "lucide-react";
+import {
+    Calendar,
+    CheckCircle2,
+    ChevronLeft,
+    ChevronRight,
+    Clock,
+    MoreVertical,
+    PlayCircle,
+} from "lucide-react";
 import { EpisodePlaceholder } from "../components/ui/EpisodePlaceholder";
 import { useCalendar } from "../hooks";
 import { resolveBackdropFallback, tmdbImage } from "../lib/image";
@@ -98,7 +106,9 @@ function CalendarEpisodeArtwork({ episode }: { episode: CalendarEpisode }) {
     const [failedImages, setFailedImages] = useState<Set<string>>(() => new Set());
     const stillUrl = tmdbImage(episode.stillPath, "w500");
     const fallbackUrl = resolveBackdropFallback(episode.show.backdropPath);
-    const imageUrl = [stillUrl, fallbackUrl].find((url): url is string => url !== null && !failedImages.has(url));
+    const imageUrl = [stillUrl, fallbackUrl].find(
+        (url): url is string => url !== null && !failedImages.has(url),
+    );
 
     if (!imageUrl) {
         return (
@@ -139,7 +149,10 @@ function CalendarSkeleton() {
             <div className="h-36 rounded-[var(--radius-xl)] bg-[var(--color-surface-2)]" />
             <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
                 {Array.from({ length: 8 }).map((_, index) => (
-                    <div key={index} className="aspect-video rounded-[var(--radius-lg)] bg-[var(--color-surface-2)]" />
+                    <div
+                        key={index}
+                        className="aspect-video rounded-[var(--radius-lg)] bg-[var(--color-surface-2)]"
+                    />
                 ))}
             </div>
         </div>
@@ -174,7 +187,11 @@ export default function CalendarPage() {
     }, [dateKeys, dayGroups, todayKey]);
 
     useEffect(() => {
-        selectedDateRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+        selectedDateRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "nearest",
+            inline: "center",
+        });
     }, [selectedDate]);
 
     if (isLoading) return <CalendarSkeleton />;
@@ -187,7 +204,10 @@ export default function CalendarPage() {
         );
     }
 
-    const selectedIndex = Math.max(0, dayGroups.findIndex((group) => group.date === selectedDate));
+    const selectedIndex = Math.max(
+        0,
+        dayGroups.findIndex((group) => group.date === selectedDate),
+    );
     const selectedGroup = dayGroups[selectedIndex];
     const todayGroup = dayGroups.find((group) => group.date === todayKey);
 
@@ -262,15 +282,24 @@ export default function CalendarPage() {
                                                         : "border-[var(--color-border-subtle)] bg-[var(--color-surface)]/80 text-[var(--color-text-secondary)] hover:border-[var(--action-cyan-border)] hover:bg-[var(--color-surface-hover)]",
                                                 )}
                                             >
-                                                <span className="text-sm font-bold">{dayjs(group.date).format("M月")}</span>
+                                                <span className="text-sm font-bold">
+                                                    {dayjs(group.date).format("M月")}
+                                                </span>
                                                 <span className="mt-1 text-lg font-black leading-none tabular-nums">
                                                     {dayjs(group.date).format("D")}
                                                 </span>
-                                                <span className="mt-2 text-xs font-bold">{weekday(group.date)}</span>
+                                                <span className="mt-2 text-xs font-bold">
+                                                    {weekday(group.date)}
+                                                </span>
                                                 <span className="mt-2 flex min-h-4 items-center justify-center gap-1">
-                                                    {Array.from({ length: dots }).map((_, index) => (
-                                                        <span key={index} className="size-1.5 rounded-full bg-[var(--action-cyan-solid)]" />
-                                                    ))}
+                                                    {Array.from({ length: dots }).map(
+                                                        (_, index) => (
+                                                            <span
+                                                                key={index}
+                                                                className="size-1.5 rounded-full bg-[var(--action-cyan-solid)]"
+                                                            />
+                                                        ),
+                                                    )}
                                                     {extra > 0 && (
                                                         <span className="text-[11px] font-black text-[var(--action-cyan-text)]">
                                                             +{extra}
@@ -307,9 +336,12 @@ export default function CalendarPage() {
                             <section className="flex flex-col gap-5">
                                 <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                                     <div>
-                                        <h2 className="text-2xl font-black">{formatDateTitle(selectedGroup.date)}</h2>
+                                        <h2 className="text-2xl font-black">
+                                            {formatDateTitle(selectedGroup.date)}
+                                        </h2>
                                         <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                                            {dayjs(selectedGroup.date).format("YYYY-MM-DD")} · 同日 {selectedGroup.episodes.length} 集
+                                            {dayjs(selectedGroup.date).format("YYYY-MM-DD")} · 同日{" "}
+                                            {selectedGroup.episodes.length} 集
                                         </p>
                                     </div>
                                 </div>
@@ -327,7 +359,10 @@ export default function CalendarPage() {
 
                                                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/72 via-black/14 to-transparent" />
                                                     <div className="absolute left-2.5 top-2.5 rounded-full border border-white/20 bg-[var(--color-panel-glass-strong)] px-2.5 py-1 text-[11px] font-black tabular-nums text-foreground shadow-lg backdrop-blur-md">
-                                                        {formatEpisode(episode.seasonNumber, episode.episodeNumber)}
+                                                        {formatEpisode(
+                                                            episode.seasonNumber,
+                                                            episode.episodeNumber,
+                                                        )}
                                                     </div>
                                                     <span
                                                         aria-hidden="true"
@@ -339,6 +374,12 @@ export default function CalendarPage() {
                                                         <Clock className="size-3" />
                                                         {formatAirTime(episode.airDate)}
                                                     </div>
+                                                    {episode.watched && (
+                                                        <div className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/20 px-2.5 py-1 text-[11px] font-bold text-emerald-100 shadow-lg backdrop-blur-md">
+                                                            <CheckCircle2 className="size-3" />
+                                                            已观看
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 <div className="flex min-h-[104px] flex-col gap-2 p-3">
@@ -351,7 +392,9 @@ export default function CalendarPage() {
                                                         </p>
                                                     </div>
                                                     <div className="mt-auto flex items-center justify-between gap-3 text-xs text-[var(--color-text-muted)]">
-                                                        <span>{episode.show.network || "未知平台"}</span>
+                                                        <span>
+                                                            {episode.show.network || "未知平台"}
+                                                        </span>
                                                         <span className="inline-flex items-center gap-1 text-[var(--action-cyan-text)]">
                                                             <PlayCircle className="size-3.5" />
                                                             详情

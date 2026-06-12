@@ -5,13 +5,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { History, Info, RotateCcw, Tv2, RefreshCw, Bookmark } from "lucide-react";
-import {
-    resolveTitle,
-    resolveOverview,
-    statusZh,
-    statusColor,
-    fmtDateZh,
-} from "../lib/i18n";
+import { resolveTitle, resolveOverview, statusZh, statusColor, fmtDateZh } from "../lib/i18n";
 import { resolveShowPoster } from "../lib/image";
 import { Button } from "./ui/Button";
 import { Tag } from "./ui/Tag";
@@ -31,25 +25,32 @@ interface HeroSectionProps {
     isComplete?: boolean;
 }
 
-export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetClick, onForceSyncClick, onToggleWatchlist, isForceSyncing, isWatchlistPending, inWatchlist, isComplete }: HeroSectionProps) {
+export function HeroSection({
+    progress,
+    onWatchClick,
+    onHistoryClick,
+    onResetClick,
+    onForceSyncClick,
+    onToggleWatchlist,
+    isForceSyncing,
+    isWatchlistPending,
+    inWatchlist,
+    isComplete,
+}: HeroSectionProps) {
     const { show, lastWatchedAt, seasons } = progress;
     const [posterError, setPosterError] = useState(false);
 
     const posterUrl = resolveShowPoster(show.posterPath, "w500");
-    const { primary, secondary } = resolveTitle(show);
+    const { primary } = resolveTitle(show);
     const overview = resolveOverview(show);
     const sColor = statusColor(show.status);
     const sLabel = statusZh(show.status);
 
     // Watched badge: all aired episodes watched
     const isAllWatched =
-        progress.airedEpisodes > 0 &&
-        progress.watchedEpisodes >= progress.airedEpisodes;
-    const year = show.firstAired
-        ? new Date(show.firstAired).getFullYear()
-        : null;
-    const isAiring =
-        show.status === "returning series" || show.status === "in production";
+        progress.airedEpisodes > 0 && progress.watchedEpisodes >= progress.airedEpisodes;
+    const year = show.firstAired ? new Date(show.firstAired).getFullYear() : null;
+    const isAiring = show.status === "returning series" || show.status === "in production";
 
     // Inject .text-gradient-ruby styles into document.head and clean up on unmount
     useEffect(() => {
@@ -71,10 +72,7 @@ export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetCli
 
     return (
         <div className="w-full max-w-none px-0 pt-8 pb-4">
-            <div
-                className="flex flex-col lg:flex-row items-start relative"
-                style={{ gap: "40px" }}
-            >
+            <div className="flex flex-col lg:flex-row items-start relative" style={{ gap: "40px" }}>
                 {/* ── 1. 左: 海报 ── */}
                 <motion.div
                     initial={{ opacity: 0, y: 12 }}
@@ -103,10 +101,7 @@ export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetCli
                                 />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center">
-                                    <Tv2
-                                        size={40}
-                                        className="text-[var(--color-border)]"
-                                    />
+                                    <Tv2 size={40} className="text-[var(--color-border)]" />
                                 </div>
                             )}
                         </div>
@@ -115,24 +110,53 @@ export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetCli
                         {/* Watched badge — inside poster, bottom-center, double-groove border */}
                         {isAllWatched && (
                             <div className="absolute bottom-0 left-0 right-0 flex justify-center pb-10 pointer-events-none">
-                                <div style={{
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: "6px",
-                                    padding: "6px 14px",
-                                    borderRadius: "99px",
-                                    background: "rgba(0,0,0,0.55)",
-                                    backdropFilter: "blur(12px)",
-                                    WebkitBackdropFilter: "blur(12px)",
-                                    boxShadow: "0 0 0 1px rgba(52,211,153,0.55), 0 0 0 3px rgba(52,211,153,0.12), inset 0 1px 0 rgba(255,255,255,0.15), 0 4px 12px rgba(0,0,0,0.4)",
-                                    border: "1px solid rgba(52,211,153,0.7)",
-                                }}>
+                                <div
+                                    style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "6px",
+                                        padding: "6px 14px",
+                                        borderRadius: "99px",
+                                        background: "rgba(0,0,0,0.55)",
+                                        backdropFilter: "blur(12px)",
+                                        WebkitBackdropFilter: "blur(12px)",
+                                        boxShadow:
+                                            "0 0 0 1px rgba(52,211,153,0.55), 0 0 0 3px rgba(52,211,153,0.12), inset 0 1px 0 rgba(255,255,255,0.15), 0 4px 12px rgba(0,0,0,0.4)",
+                                        border: "1px solid rgba(52,211,153,0.7)",
+                                    }}
+                                >
                                     {/* Double checkmark */}
-                                    <svg width="15" height="11" viewBox="0 0 30 22" fill="none" style={{ color: "#34d399", flexShrink: 0 }}>
-                                        <path d="M2 11L8 17L18 6" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/>
-                                        <path d="M11 11L17 17L27 6" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                    <svg
+                                        width="15"
+                                        height="11"
+                                        viewBox="0 0 30 22"
+                                        fill="none"
+                                        style={{ color: "#34d399", flexShrink: 0 }}
+                                    >
+                                        <path
+                                            d="M2 11L8 17L18 6"
+                                            stroke="currentColor"
+                                            strokeWidth="2.8"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        />
+                                        <path
+                                            d="M11 11L17 17L27 6"
+                                            stroke="currentColor"
+                                            strokeWidth="2.8"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        />
                                     </svg>
-                                    <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.12em", color: "#34d399", textTransform: "uppercase" }}>
+                                    <span
+                                        style={{
+                                            fontSize: "10px",
+                                            fontWeight: 700,
+                                            letterSpacing: "0.12em",
+                                            color: "#34d399",
+                                            textTransform: "uppercase",
+                                        }}
+                                    >
                                         Watched
                                     </span>
                                 </div>
@@ -323,7 +347,14 @@ export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetCli
                     <OverviewText text={overview} className="max-w-2xl mt-1" />
 
                     {/* Action buttons — inline with middle column content */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                            flexWrap: "wrap",
+                        }}
+                    >
                         {isComplete && onResetClick && (
                             <Button
                                 type="button"
@@ -356,7 +387,12 @@ export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetCli
                                 variant="secondary"
                                 color="slate"
                                 size="sm"
-                                icon={<RefreshCw size={14} className={isForceSyncing ? "animate-spin" : ""} />}
+                                icon={
+                                    <RefreshCw
+                                        size={14}
+                                        className={isForceSyncing ? "animate-spin" : ""}
+                                    />
+                                }
                                 onClick={onForceSyncClick}
                                 disabled={isForceSyncing}
                                 className="rounded-full"
@@ -370,7 +406,12 @@ export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetCli
                                 variant={inWatchlist ? "primary" : "secondary"}
                                 color="amber"
                                 size="sm"
-                                icon={<Bookmark size={14} fill={inWatchlist ? "currentColor" : "none"} />}
+                                icon={
+                                    <Bookmark
+                                        size={14}
+                                        fill={inWatchlist ? "currentColor" : "none"}
+                                    />
+                                }
                                 onClick={onToggleWatchlist}
                                 disabled={isWatchlistPending}
                                 className="rounded-full"
@@ -440,11 +481,7 @@ export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetCli
                             },
                             {
                                 value: show.firstAired
-                                    ? String(
-                                          new Date(
-                                              show.firstAired,
-                                          ).getFullYear(),
-                                      )
+                                    ? String(new Date(show.firstAired).getFullYear())
                                     : "—",
                                 label: "首播年份",
                             },
@@ -483,8 +520,7 @@ export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetCli
                             }}
                         >
                             {show.genres.slice(0, 5).map((g, i) => {
-                                const style =
-                                    GENRE_COLORS[i % GENRE_COLORS.length];
+                                const style = GENRE_COLORS[i % GENRE_COLORS.length];
                                 return (
                                     <Tag key={g} color="slate" variant="3d" size="sm">
                                         <span
@@ -518,15 +554,10 @@ export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetCli
                             const totalEpisodes =
                                 show.totalEpisodes ??
                                 seasons.reduce((s, x) => s + x.episodeCount, 0);
-                            const totalWatched = seasons.reduce(
-                                (s, x) => s + x.watchedCount,
-                                0,
-                            );
+                            const totalWatched = seasons.reduce((s, x) => s + x.watchedCount, 0);
                             const overallPct =
                                 totalEpisodes > 0
-                                    ? Math.round(
-                                          (totalWatched / totalEpisodes) * 100,
-                                      )
+                                    ? Math.round((totalWatched / totalEpisodes) * 100)
                                     : 0;
                             const remaining = totalEpisodes - totalWatched;
                             return (
@@ -602,20 +633,14 @@ export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetCli
                                     }}
                                 >
                                     {seasons.map((s, i) => {
-                                        const totalSeasonEpisodes =
-                                            s.episodeCount;
+                                        const totalSeasonEpisodes = s.episodeCount;
                                         const pct =
                                             totalSeasonEpisodes > 0
                                                 ? Math.round(
-                                                      (s.watchedCount /
-                                                          totalSeasonEpisodes) *
-                                                          100,
+                                                      (s.watchedCount / totalSeasonEpisodes) * 100,
                                                   )
                                                 : 0;
-                                        const pal =
-                                            SEASON_PALETTES[
-                                                i % SEASON_PALETTES.length
-                                            ];
+                                        const pal = SEASON_PALETTES[i % SEASON_PALETTES.length];
                                         const statusText =
                                             pct === 100
                                                 ? `${totalSeasonEpisodes}集 · 全部看完`
@@ -644,18 +669,12 @@ export function HeroSection({ progress, onWatchClick, onHistoryClick, onResetCli
                                                 </div>
                                                 <ProgressBar
                                                     pct={pct}
-                                                    totalTicks={
-                                                        totalSeasonEpisodes
-                                                    }
+                                                    totalTicks={totalSeasonEpisodes}
                                                     colorFrom={pal.colorFrom}
                                                     colorTo={pal.colorTo}
                                                     trackRgb={pal.trackRgb}
                                                     height={20}
-                                                    labelLeft={
-                                                        pct > 0
-                                                            ? `${pct}%`
-                                                            : undefined
-                                                    }
+                                                    labelLeft={pct > 0 ? `${pct}%` : undefined}
                                                 />
                                             </div>
                                         );
@@ -708,10 +727,7 @@ function ProgressBar({
     labelLeft,
 }: ProgressBarProps) {
     const validPct = Math.min(Math.max(pct, 0), 100);
-    const ticks = Array.from(
-        { length: Math.max(totalTicks - 1, 0) },
-        (_, i) => i + 1,
-    );
+    const ticks = Array.from({ length: Math.max(totalTicks - 1, 0) }, (_, i) => i + 1);
     const r = Math.round(height / 2);
 
     // If fill is too narrow to fit the label comfortably, render it outside
@@ -760,7 +776,9 @@ function ProgressBar({
                     <div
                         style={{
                             position: "absolute",
-                            top: 0, bottom: 0, left: 0,
+                            top: 0,
+                            bottom: 0,
+                            left: 0,
                             width: `${validPct}%`,
                             borderRadius: r,
                             background: `linear-gradient(90deg, ${colorFrom} 0%, ${colorTo} 100%)`,
@@ -770,31 +788,44 @@ function ProgressBar({
                         }}
                     >
                         {/* Layer 2: top specular highlight */}
-                        <div style={{
-                            position: "absolute",
-                            top: 0, left: 0, right: 0,
-                            height: "55%",
-                            borderRadius: `${r}px ${r}px 40% 40% / ${r}px ${r}px 24px 24px`,
-                            background: "linear-gradient(180deg, rgba(255,255,255,0.70) 0%, rgba(255,255,255,0.15) 60%, transparent 100%)",
-                            pointerEvents: "none",
-                        }} />
+                        <div
+                            style={{
+                                position: "absolute",
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                height: "55%",
+                                borderRadius: `${r}px ${r}px 40% 40% / ${r}px ${r}px 24px 24px`,
+                                background:
+                                    "linear-gradient(180deg, rgba(255,255,255,0.70) 0%, rgba(255,255,255,0.15) 60%, transparent 100%)",
+                                pointerEvents: "none",
+                            }}
+                        />
 
                         {/* Layer 3: bottom depth shadow */}
-                        <div style={{
-                            position: "absolute",
-                            bottom: 0, left: 0, right: 0,
-                            height: "35%",
-                            background: "linear-gradient(0deg, rgba(0,0,0,0.18) 0%, transparent 100%)",
-                            pointerEvents: "none",
-                        }} />
+                        <div
+                            style={{
+                                position: "absolute",
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                height: "35%",
+                                background:
+                                    "linear-gradient(0deg, rgba(0,0,0,0.18) 0%, transparent 100%)",
+                                pointerEvents: "none",
+                            }}
+                        />
 
                         {/* Layer 4: inner side vignette */}
-                        <div style={{
-                            position: "absolute",
-                            inset: 0,
-                            background: "radial-gradient(ellipse at 50% 0%, transparent 40%, rgba(0,0,0,0.12) 100%)",
-                            pointerEvents: "none",
-                        }} />
+                        <div
+                            style={{
+                                position: "absolute",
+                                inset: 0,
+                                background:
+                                    "radial-gradient(ellipse at 50% 0%, transparent 40%, rgba(0,0,0,0.12) 100%)",
+                                pointerEvents: "none",
+                            }}
+                        />
 
                         {/* Tick dividers inside fill */}
                         {ticks.map((i) => {
@@ -805,7 +836,8 @@ function ProgressBar({
                                     key={i}
                                     style={{
                                         position: "absolute",
-                                        top: "15%", bottom: "15%",
+                                        top: "15%",
+                                        bottom: "15%",
                                         left: `${(tickPos / validPct) * 100}%`,
                                         width: "1px",
                                         background: "rgba(255,255,255,0.35)",
@@ -817,17 +849,28 @@ function ProgressBar({
 
                         {/* Label inside fill — only when fill is wide enough */}
                         {labelLeft && labelInside && (
-                            <div style={{
-                                position: "absolute", top: 0, bottom: 0, left: "12px",
-                                display: "flex", alignItems: "center", zIndex: 10, pointerEvents: "none",
-                            }}>
-                                <span style={{
-                                    fontSize: "12px", fontWeight: 800,
-                                    color: "rgba(255,255,255,0.95)",
-                                    textShadow: `0 1px 3px rgba(0,0,0,0.3)`,
-                                    whiteSpace: "nowrap",
-                                    letterSpacing: "0.01em",
-                                }}>
+                            <div
+                                style={{
+                                    position: "absolute",
+                                    top: 0,
+                                    bottom: 0,
+                                    left: "12px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    zIndex: 10,
+                                    pointerEvents: "none",
+                                }}
+                            >
+                                <span
+                                    style={{
+                                        fontSize: "12px",
+                                        fontWeight: 800,
+                                        color: "rgba(255,255,255,0.95)",
+                                        textShadow: `0 1px 3px rgba(0,0,0,0.3)`,
+                                        whiteSpace: "nowrap",
+                                        letterSpacing: "0.01em",
+                                    }}
+                                >
                                     {labelLeft}
                                 </span>
                             </div>
@@ -838,21 +881,28 @@ function ProgressBar({
 
             {/* Label outside — floats just after the fill tip when fill is too narrow */}
             {labelLeft && !labelInside && (
-                <div style={{
-                    position: "absolute",
-                    top: 0, bottom: 0,
-                    // Sit 8px to the right of the fill edge
-                    left: `calc(${validPct}% + 8px)`,
-                    display: "flex", alignItems: "center",
-                    pointerEvents: "none",
-                    zIndex: 2,
-                }}>
-                    <span style={{
-                        fontSize: "12px", fontWeight: 700,
-                        color: `rgba(${trackRgb}, 1)`,
-                        whiteSpace: "nowrap",
-                        letterSpacing: "0.01em",
-                    }}>
+                <div
+                    style={{
+                        position: "absolute",
+                        top: 0,
+                        bottom: 0,
+                        // Sit 8px to the right of the fill edge
+                        left: `calc(${validPct}% + 8px)`,
+                        display: "flex",
+                        alignItems: "center",
+                        pointerEvents: "none",
+                        zIndex: 2,
+                    }}
+                >
+                    <span
+                        style={{
+                            fontSize: "12px",
+                            fontWeight: 700,
+                            color: `rgba(${trackRgb}, 1)`,
+                            whiteSpace: "nowrap",
+                            letterSpacing: "0.01em",
+                        }}
+                    >
                         {labelLeft}
                     </span>
                 </div>

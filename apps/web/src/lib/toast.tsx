@@ -12,7 +12,11 @@ export interface Toast {
 
 interface ToastContextValue {
     toasts: Toast[];
-    toast: (message: string, type?: ToastType, action?: { label: string; onClick: () => void }) => void;
+    toast: (
+        message: string,
+        type?: ToastType,
+        action?: { label: string; onClick: () => void },
+    ) => void;
     dismiss: (id: number) => void;
 }
 
@@ -31,7 +35,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const toast = useCallback(
-        (message: string, type: ToastType = "info", action?: { label: string; onClick: () => void }) => {
+        (
+            message: string,
+            type: ToastType = "info",
+            action?: { label: string; onClick: () => void },
+        ) => {
             const id = ++nextId;
             setToasts((prev) => [...prev, { id, type, message, action }]);
             const timer = setTimeout(() => dismiss(id), action ? 6000 : 3000);
@@ -41,9 +49,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     );
 
     return (
-        <ToastContext.Provider value={{ toasts, toast, dismiss }}>
-            {children}
-        </ToastContext.Provider>
+        <ToastContext.Provider value={{ toasts, toast, dismiss }}>{children}</ToastContext.Provider>
     );
 }
 

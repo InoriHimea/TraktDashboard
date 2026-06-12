@@ -22,7 +22,7 @@ const translations: Record<string, Translations> = {
     "zh-SG": zhCN,
     "zh-TW": zhCN,
     "en-US": enUS,
-    "en": enUS,
+    en: enUS,
 };
 
 const DEFAULT_LOCALE = "zh-CN";
@@ -34,9 +34,7 @@ function normalizeLocale(locale: string | null | undefined): string {
     }
 
     try {
-        return Intl.DateTimeFormat.supportedLocalesOf(value).length > 0
-            ? value
-            : DEFAULT_LOCALE;
+        return Intl.DateTimeFormat.supportedLocalesOf(value).length > 0 ? value : DEFAULT_LOCALE;
     } catch {
         return DEFAULT_LOCALE;
     }
@@ -56,8 +54,16 @@ export function getLocale(): string {
     return currentLocale;
 }
 
-function getNestedValue(obj: any, path: string): string | undefined {
-    return path.split(".").reduce((acc, part) => acc?.[part], obj);
+function getNestedValue(obj: unknown, path: string): string | undefined {
+    let acc: unknown = obj;
+    for (const part of path.split(".")) {
+        if (acc && typeof acc === "object" && part in acc) {
+            acc = (acc as Record<string, unknown>)[part];
+        } else {
+            return undefined;
+        }
+    }
+    return typeof acc === "string" ? acc : undefined;
 }
 
 export function t(key: TranslationKey, params?: Record<string, string | number>): string {
@@ -131,10 +137,7 @@ export function resolveTitle(show: Show): {
     // No translation available — use stored title, show original as secondary
     return {
         primary: show.title,
-        secondary:
-            show.originalName && show.originalName !== show.title
-                ? show.originalName
-                : null,
+        secondary: show.originalName && show.originalName !== show.title ? show.originalName : null,
     };
 }
 
@@ -162,9 +165,7 @@ export function resolveEpisodeTitle(episode: EpisodeProgress): string {
 
 // ─── Episode overview resolution ─────────────────────────────────────────────
 
-export function resolveEpisodeOverview(
-    episode: EpisodeProgress,
-): string | null {
+export function resolveEpisodeOverview(episode: EpisodeProgress): string | null {
     return episode.translatedOverview || episode.overview || null;
 }
 

@@ -37,11 +37,17 @@ function detailDataArbitrary() {
         translatedTitle: fc.option(fc.string({ minLength: 1 }), { nil: null }),
         overview: fc.option(fc.string({ minLength: 1 }), { nil: null }),
         translatedOverview: fc.option(fc.string({ minLength: 1 }), { nil: null }),
-        airDate: fc.option(fc.date().map((date) => date.toISOString().slice(0, 10)), { nil: null }),
+        airDate: fc.option(
+            fc.date().map((date) => date.toISOString().slice(0, 10)),
+            { nil: null },
+        ),
         runtime: fc.option(fc.integer({ min: 1, max: 240 }), { nil: null }),
         stillPath: fc.constant(null),
         watched: fc.boolean(),
-        watchedAt: fc.option(fc.date().map((date) => date.toISOString()), { nil: null }),
+        watchedAt: fc.option(
+            fc.date().map((date) => date.toISOString()),
+            { nil: null },
+        ),
         traktRating: fc.option(fc.integer({ min: 0, max: 100 }), { nil: null }),
         directors: fc.array(fc.string({ minLength: 1 }), { maxLength: 3 }),
         show: fc.record({
@@ -68,7 +74,10 @@ describe("EpisodeDetailPage", () => {
                 const { unmount } = render(
                     <MemoryRouter initialEntries={[`/shows/${badShowId}/seasons/1/episodes/1`]}>
                         <Routes>
-                            <Route path="/shows/:showId/seasons/:season/episodes/:episode" element={<EpisodeDetailPage />} />
+                            <Route
+                                path="/shows/:showId/seasons/:season/episodes/:episode"
+                                element={<EpisodeDetailPage />}
+                            />
                             <Route path="/tv-shows" element={<div>TV shows page</div>} />
                         </Routes>
                     </MemoryRouter>,
@@ -94,7 +103,10 @@ describe("EpisodeDetailPage", () => {
                 const { unmount } = render(
                     <MemoryRouter initialEntries={["/shows/1/seasons/1/episodes/1"]}>
                         <Routes>
-                            <Route path="/shows/:showId/seasons/:season/episodes/:episode" element={<EpisodeDetailPage />} />
+                            <Route
+                                path="/shows/:showId/seasons/:season/episodes/:episode"
+                                element={<EpisodeDetailPage />}
+                            />
                         </Routes>
                     </MemoryRouter>,
                 );

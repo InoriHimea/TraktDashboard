@@ -17,8 +17,7 @@ export function SeasonTab({ season, isActive, onClick }: SeasonTabProps) {
     const [imgError, setImgError] = useState(false);
     const posterUrl = resolveShowPoster(season.posterPath, "w342");
     const showImg = posterUrl && !imgError;
-    const isComplete =
-        season.watchedCount >= season.airedCount && season.airedCount > 0;
+    const isComplete = season.watchedCount >= season.airedCount && season.airedCount > 0;
 
     return (
         <motion.button
@@ -26,11 +25,7 @@ export function SeasonTab({ season, isActive, onClick }: SeasonTabProps) {
             whileTap={{ scale: 0.95 }}
             role="tab"
             aria-selected={isActive}
-            aria-label={
-                season.seasonNumber === 0
-                    ? "Specials"
-                    : `Season ${season.seasonNumber}`
-            }
+            aria-label={season.seasonNumber === 0 ? "Specials" : `Season ${season.seasonNumber}`}
             className="relative flex w-[224px] shrink-0 flex-col items-center gap-5 overflow-visible py-2 group focus-visible:outline-none"
         >
             {/* 海报 */}
@@ -60,9 +55,7 @@ export function SeasonTab({ season, isActive, onClick }: SeasonTabProps) {
                     ) : (
                         <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center border border-white/5">
                             <span className="text-2xl text-white/40 font-black tracking-wider">
-                                {season.seasonNumber === 0
-                                    ? "SP"
-                                    : `S${season.seasonNumber}`}
+                                {season.seasonNumber === 0 ? "SP" : `S${season.seasonNumber}`}
                             </span>
                         </div>
                     )}
@@ -89,8 +82,7 @@ export function SeasonTab({ season, isActive, onClick }: SeasonTabProps) {
                                 width: "28px",
                                 height: "28px",
                                 borderRadius: "50%",
-                                background:
-                                    "linear-gradient(145deg, #4ade80, #16a34a)",
+                                background: "linear-gradient(145deg, #4ade80, #16a34a)",
                                 boxShadow:
                                     "0 2px 8px rgba(0,0,0,0.5), 0 1px 2px rgba(74,222,128,0.6), inset 0 1px 1px rgba(255,255,255,0.3)",
                                 display: "flex",
@@ -112,15 +104,11 @@ export function SeasonTab({ season, isActive, onClick }: SeasonTabProps) {
             <motion.span
                 className="text-[12px] font-medium leading-none"
                 animate={{
-                    color: isActive
-                        ? "var(--color-text)"
-                        : "var(--color-text-muted)",
+                    color: isActive ? "var(--color-text)" : "var(--color-text-muted)",
                 }}
                 transition={{ duration: 0.15 }}
             >
-                {season.seasonNumber === 0
-                    ? "Specials"
-                    : `Season ${season.seasonNumber}`}
+                {season.seasonNumber === 0 ? "Specials" : `Season ${season.seasonNumber}`}
             </motion.span>
         </motion.button>
     );

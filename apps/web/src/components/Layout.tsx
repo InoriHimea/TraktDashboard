@@ -37,10 +37,10 @@ export default function Layout({ children }: { children: ReactNode }) {
                     className="flex flex-col flex-1 w-full"
                     style={{ position: "relative", zIndex: 1 }}
                 >
-                <TopNav
-                    username={auth?.user?.traktUsername ?? null}
-                    onLogout={() => logout()}
-                />
+                    <TopNav
+                        username={auth?.user?.traktUsername ?? null}
+                        onLogout={() => logout()}
+                    />
 
                     <main
                         className="flex flex-col flex-1 w-full"

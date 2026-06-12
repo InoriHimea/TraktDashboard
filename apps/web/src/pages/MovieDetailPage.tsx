@@ -1,8 +1,27 @@
 import { useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Film, Clock, Calendar, Eye, Trash2, RefreshCw, Loader2, History, Bookmark } from "lucide-react";
-import { useMovieDetail, useMovieHistory, useMarkMovieWatched, useDeleteMovieHistory, useWatchlist, useAddToWatchlist, useRemoveFromWatchlist } from "../hooks";
+import {
+    ArrowLeft,
+    Film,
+    Clock,
+    Calendar,
+    Eye,
+    Trash2,
+    RefreshCw,
+    Loader2,
+    History,
+    Bookmark,
+} from "lucide-react";
+import {
+    useMovieDetail,
+    useMovieHistory,
+    useMarkMovieWatched,
+    useDeleteMovieHistory,
+    useWatchlist,
+    useAddToWatchlist,
+    useRemoveFromWatchlist,
+} from "../hooks";
 import { tmdbImage } from "../lib/utils";
 import { useToast } from "../lib/toast";
 import { getLocale, t } from "../lib/i18n";
@@ -15,14 +34,28 @@ function DetailRow({ label, value }: { label: string; value: string }) {
     return (
         <div className="flex items-start justify-between gap-4 border-b border-white/[0.04] pb-2 last:border-0 last:pb-0">
             <span className="shrink-0 text-[var(--color-text-muted)]">{label}</span>
-            <span className="min-w-0 text-right font-medium text-[var(--color-text-secondary)] break-words">{value}</span>
+            <span className="min-w-0 text-right font-medium text-[var(--color-text-secondary)] break-words">
+                {value}
+            </span>
         </div>
     );
 }
 
-function MetricTile({ label, value, tone = "text-[var(--color-text)]", wide = false }: { label: string; value: string; tone?: string; wide?: boolean }) {
+function MetricTile({
+    label,
+    value,
+    tone = "text-[var(--color-text)]",
+    wide = false,
+}: {
+    label: string;
+    value: string;
+    tone?: string;
+    wide?: boolean;
+}) {
     return (
-        <div className={`rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-surface-2)] px-3 py-3 ${wide ? "col-span-2" : ""}`}>
+        <div
+            className={`rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-surface-2)] px-3 py-3 ${wide ? "col-span-2" : ""}`}
+        >
             <div className="mb-1 text-[11px] text-[var(--color-text-muted)]">{label}</div>
             <div className={`truncate text-base font-bold ${tone}`}>{value}</div>
         </div>
@@ -59,7 +92,9 @@ export default function MovieDetailPage() {
     const deleteHistory = useDeleteMovieHistory(isValidId ? movieId : 0);
 
     const { data: watchlistItems } = useWatchlist("movies");
-    const watchlistItem = watchlistItems?.find((item) => "movie" in item && item.movie.id === movieId);
+    const watchlistItem = watchlistItems?.find(
+        (item) => "movie" in item && item.movie.id === movieId,
+    );
     const inWatchlist = !!watchlistItem;
     const addToWatchlist = useAddToWatchlist();
     const removeFromWatchlist = useRemoveFromWatchlist();
@@ -207,7 +242,10 @@ export default function MovieDetailPage() {
                                 />
                             ) : (
                                 <div className="flex h-full w-full items-center justify-center">
-                                    <Film size={48} className="text-[var(--color-text-muted)] opacity-40" />
+                                    <Film
+                                        size={48}
+                                        className="text-[var(--color-text-muted)] opacity-40"
+                                    />
                                 </div>
                             )}
                         </div>
@@ -226,7 +264,8 @@ export default function MovieDetailPage() {
                             <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-[var(--color-text-secondary)]">
                                 {movie.releaseDate && (
                                     <span className="inline-flex items-center gap-1.5">
-                                        <Calendar size={14} /> {new Date(movie.releaseDate).getFullYear()}
+                                        <Calendar size={14} />{" "}
+                                        {new Date(movie.releaseDate).getFullYear()}
                                     </span>
                                 )}
                                 {movie.runtime && (
@@ -275,24 +314,43 @@ export default function MovieDetailPage() {
                                 variant={inWatchlist ? "primary" : "secondary"}
                                 color="amber"
                                 size="md"
-                                icon={<Bookmark size={15} fill={inWatchlist ? "currentColor" : "none"} />}
+                                icon={
+                                    <Bookmark
+                                        size={15}
+                                        fill={inWatchlist ? "currentColor" : "none"}
+                                    />
+                                }
                                 onClick={() => {
                                     if (inWatchlist && watchlistItem) {
                                         removeFromWatchlist.mutate(watchlistItem.id, {
-                                            onSuccess: () => toast(t("watchlist.removeSuccess"), "success"),
-                                            onError: () => toast(t("watchlist.removeFailed"), "error", {
-                                                label: "重试",
-                                                onClick: () => removeFromWatchlist.mutate(watchlistItem.id)
-                                            }),
+                                            onSuccess: () =>
+                                                toast(t("watchlist.removeSuccess"), "success"),
+                                            onError: () =>
+                                                toast(t("watchlist.removeFailed"), "error", {
+                                                    label: "重试",
+                                                    onClick: () =>
+                                                        removeFromWatchlist.mutate(
+                                                            watchlistItem.id,
+                                                        ),
+                                                }),
                                         });
                                     } else {
-                                        addToWatchlist.mutate({ type: "movie", id: movieId }, {
-                                            onSuccess: () => toast("已添加到待看列表", "success"),
-                                            onError: () => toast("添加失败", "error", {
-                                                label: "重试",
-                                                onClick: () => addToWatchlist.mutate({ type: "movie", id: movieId })
-                                            }),
-                                        });
+                                        addToWatchlist.mutate(
+                                            { type: "movie", id: movieId },
+                                            {
+                                                onSuccess: () =>
+                                                    toast("已添加到待看列表", "success"),
+                                                onError: () =>
+                                                    toast("添加失败", "error", {
+                                                        label: "重试",
+                                                        onClick: () =>
+                                                            addToWatchlist.mutate({
+                                                                type: "movie",
+                                                                id: movieId,
+                                                            }),
+                                                    }),
+                                            },
+                                        );
                                     }
                                 }}
                                 disabled={isWatchlistPending}
@@ -314,9 +372,18 @@ export default function MovieDetailPage() {
                                 onClick={() => setActiveTab(key as "details" | "history")}
                                 className="inline-flex h-9 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors"
                                 style={{
-                                    color: activeTab === key ? "var(--action-violet-text)" : "var(--color-text-secondary)",
-                                    background: activeTab === key ? "var(--action-violet-surface)" : "transparent",
-                                    border: activeTab === key ? "1px solid var(--action-violet-border)" : "1px solid transparent",
+                                    color:
+                                        activeTab === key
+                                            ? "var(--action-violet-text)"
+                                            : "var(--color-text-secondary)",
+                                    background:
+                                        activeTab === key
+                                            ? "var(--action-violet-surface)"
+                                            : "transparent",
+                                    border:
+                                        activeTab === key
+                                            ? "1px solid var(--action-violet-border)"
+                                            : "1px solid transparent",
                                 }}
                             >
                                 <Icon size={14} /> {label as string}
@@ -334,28 +401,81 @@ export default function MovieDetailPage() {
                                 className="grid max-w-6xl grid-cols-1 gap-4 xl:grid-cols-[1.2fr_1fr_1fr]"
                             >
                                 <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-5 shadow-lg shadow-black/10">
-                                    <div className="mb-4 text-xs uppercase tracking-[0.18em] text-[var(--color-text-muted)]">影片档案</div>
+                                    <div className="mb-4 text-xs uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+                                        影片档案
+                                    </div>
                                     <div className="grid gap-3 text-sm">
-                                        <DetailRow label="上映日期" value={formatDateOnly(movie.releaseDate) ?? t("common.unknown")} />
-                                        <DetailRow label="片长" value={movie.runtime ? `${movie.runtime} 分钟` : t("common.unknown")} />
-                                        <DetailRow label="类型" value={movie.genres.length ? movie.genres.join(" / ") : t("common.unknown")} />
-                                        <DetailRow label="同步时间" value={formatDate(movie.lastSyncedAt) ?? t("common.unknown")} />
+                                        <DetailRow
+                                            label="上映日期"
+                                            value={
+                                                formatDateOnly(movie.releaseDate) ??
+                                                t("common.unknown")
+                                            }
+                                        />
+                                        <DetailRow
+                                            label="片长"
+                                            value={
+                                                movie.runtime
+                                                    ? `${movie.runtime} 分钟`
+                                                    : t("common.unknown")
+                                            }
+                                        />
+                                        <DetailRow
+                                            label="类型"
+                                            value={
+                                                movie.genres.length
+                                                    ? movie.genres.join(" / ")
+                                                    : t("common.unknown")
+                                            }
+                                        />
+                                        <DetailRow
+                                            label="同步时间"
+                                            value={
+                                                formatDate(movie.lastSyncedAt) ??
+                                                t("common.unknown")
+                                            }
+                                        />
                                     </div>
                                 </div>
                                 <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-5 shadow-lg shadow-black/10">
-                                    <div className="mb-4 text-xs uppercase tracking-[0.18em] text-[var(--color-text-muted)]">观看档案</div>
+                                    <div className="mb-4 text-xs uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+                                        观看档案
+                                    </div>
                                     <div className="grid grid-cols-2 gap-3">
-                                        <MetricTile label="观看次数" value={String(watchCount)} tone="text-[var(--color-watched)]" />
-                                        <MetricTile label="累计时长" value={formatMinutes(totalWatchMinutes)} />
-                                        <MetricTile label="最近观看" value={formatDate(lastWatchedAt) ?? "未观看"} wide />
+                                        <MetricTile
+                                            label="观看次数"
+                                            value={String(watchCount)}
+                                            tone="text-[var(--color-watched)]"
+                                        />
+                                        <MetricTile
+                                            label="累计时长"
+                                            value={formatMinutes(totalWatchMinutes)}
+                                        />
+                                        <MetricTile
+                                            label="最近观看"
+                                            value={formatDate(lastWatchedAt) ?? "未观看"}
+                                            wide
+                                        />
                                     </div>
                                 </div>
                                 <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-5 shadow-lg shadow-black/10">
-                                    <div className="mb-4 text-xs uppercase tracking-[0.18em] text-[var(--color-text-muted)]">外部数据</div>
+                                    <div className="mb-4 text-xs uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+                                        外部数据
+                                    </div>
                                     <div className="grid gap-3 text-sm">
                                         <DetailRow label="TMDB" value={`#${movie.tmdbId}`} />
-                                        <DetailRow label="IMDb" value={movie.imdbId || t("common.unknown")} />
-                                        <DetailRow label="Trakt" value={String(movie.traktSlug || movie.traktId || t("common.unknown"))} />
+                                        <DetailRow
+                                            label="IMDb"
+                                            value={movie.imdbId || t("common.unknown")}
+                                        />
+                                        <DetailRow
+                                            label="Trakt"
+                                            value={String(
+                                                movie.traktSlug ||
+                                                    movie.traktId ||
+                                                    t("common.unknown"),
+                                            )}
+                                        />
                                     </div>
                                 </div>
                             </motion.div>
@@ -368,20 +488,27 @@ export default function MovieDetailPage() {
                                 className="max-w-4xl"
                             >
                                 <div className="mb-4 flex items-center gap-2">
-                                    <h2 className="text-lg font-semibold">{t("watchHistory.showTitle")}</h2>
+                                    <h2 className="text-lg font-semibold">
+                                        {t("watchHistory.showTitle")}
+                                    </h2>
                                     {visibleHistory.length > 0 && (
                                         <span className="text-sm text-[var(--color-text-muted)]">
-                                            {t("watchHistory.recordCount", { count: visibleHistory.length })}
+                                            {t("watchHistory.recordCount", {
+                                                count: visibleHistory.length,
+                                            })}
                                         </span>
                                     )}
                                 </div>
 
                                 {historyLoading ? (
                                     <div className="inline-flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
-                                        <Loader2 size={14} className="animate-spin" /> {t("common.loading")}
+                                        <Loader2 size={14} className="animate-spin" />{" "}
+                                        {t("common.loading")}
                                     </div>
                                 ) : visibleHistory.length === 0 ? (
-                                    <p className="text-sm text-[var(--color-text-muted)]">{t("watchHistory.empty")}</p>
+                                    <p className="text-sm text-[var(--color-text-muted)]">
+                                        {t("watchHistory.empty")}
+                                    </p>
                                 ) : (
                                     <div className="flex flex-col gap-2">
                                         <AnimatePresence>
@@ -394,7 +521,8 @@ export default function MovieDetailPage() {
                                                     className="flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-4 py-3"
                                                 >
                                                     <span className="text-sm text-[var(--color-text-secondary)]">
-                                                        {formatDate(entry.watchedAt) ?? t("watchHistory.unknownTime")}
+                                                        {formatDate(entry.watchedAt) ??
+                                                            t("watchHistory.unknownTime")}
                                                     </span>
                                                     <Button
                                                         type="button"

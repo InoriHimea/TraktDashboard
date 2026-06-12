@@ -16,7 +16,7 @@ locales/
 ### Import the translation function
 
 ```typescript
-import { t, setLocale, getLocale } from '../lib/i18n';
+import { t, setLocale, getLocale } from "../lib/i18n";
 ```
 
 ### Use translations in components
@@ -75,7 +75,7 @@ Example:
 
 ```typescript
 // Component
-t("myFeature.greeting", { name: "Alice" })
+t("myFeature.greeting", { name: "Alice" });
 // Output: "Hello, Alice!" or "你好，Alice！"
 ```
 

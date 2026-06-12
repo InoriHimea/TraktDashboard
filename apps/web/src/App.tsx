@@ -48,8 +48,7 @@ class ErrorBoundary extends React.Component<
                                 应用出错
                             </h2>
                             <p className="text-[var(--color-text-secondary)] text-sm leading-relaxed">
-                                {this.state.error?.message ||
-                                    "An unexpected error occurred"}
+                                {this.state.error?.message || "An unexpected error occurred"}
                             </p>
                         </div>
                         <button
@@ -72,9 +71,7 @@ function RouteLoadingFallback() {
         <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)]">
             <div className="flex flex-col items-center gap-4">
                 <div className="w-8 h-8 rounded-full border-2 border-[var(--color-accent)] border-t-transparent animate-spin" />
-                <p className="text-[var(--color-text-muted)] text-sm">
-                    Loading…
-                </p>
+                <p className="text-[var(--color-text-muted)] text-sm">Loading…</p>
             </div>
         </div>
     );
@@ -88,9 +85,7 @@ export default function App() {
             <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)]">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-8 h-8 rounded-full border-2 border-[var(--color-accent)] border-t-transparent animate-spin" />
-                    <p className="text-[var(--color-text-muted)] text-sm">
-                        Loading…
-                    </p>
+                    <p className="text-[var(--color-text-muted)] text-sm">Loading…</p>
                 </div>
             </div>
         );
@@ -149,12 +144,12 @@ export default function App() {
                         <Layout>
                             <React.Suspense fallback={<RouteLoadingFallback />}>
                                 <Routes>
+                                    <Route path="/" element={<Navigate to="/tv-shows" replace />} />
+                                    <Route path="/tv-shows" element={<TVShowsPage />} />
                                     <Route
-                                        path="/"
+                                        path="/progress"
                                         element={<Navigate to="/tv-shows" replace />}
                                     />
-                                    <Route path="/tv-shows" element={<TVShowsPage />} />
-                                    <Route path="/progress" element={<Navigate to="/tv-shows" replace />} />
                                     <Route path="/movies" element={<MoviesPage />} />
                                     <Route path="/movies/:id" element={<MovieDetailPage />} />
                                     <Route path="/shows/:id" element={<ShowDetailPage />} />
@@ -163,10 +158,7 @@ export default function App() {
                                     <Route path="/stats" element={<StatsPage />} />
                                     <Route path="/sync" element={<SyncPage />} />
                                     <Route path="/settings" element={<SettingsPage />} />
-                                    <Route
-                                        path="*"
-                                        element={<Navigate to="/tv-shows" replace />}
-                                    />
+                                    <Route path="*" element={<Navigate to="/tv-shows" replace />} />
                                     <Route
                                         path="/shows/:showId/seasons/:season/episodes/:episode"
                                         element={<EpisodeDetailPage />}

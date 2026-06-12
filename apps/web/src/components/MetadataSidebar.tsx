@@ -13,8 +13,7 @@ import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 import { Star, Tv, Calendar, Layers, Film, Info } from "lucide-react";
 import { cn } from "../lib/utils";
-import { InlineProgressBar } from "./ProgressBarWidget";
-import type { Show, SeasonProgress } from "@trakt-dashboard/types";
+import type { Show } from "@trakt-dashboard/types";
 
 // ─── 动画预设 ─────────────────────────────────────────────────────────────────
 
@@ -75,12 +74,7 @@ export interface RatingCardProps {
     className?: string;
 }
 
-export function RatingCard({
-    score,
-    source = "Trakt",
-    voteCount,
-    className,
-}: RatingCardProps) {
+export function RatingCard({ score, source = "Trakt", voteCount, className }: RatingCardProps) {
     const stars = score != null ? Math.round((score / 10) * 5) : 0;
     const displayScore = score != null ? score.toFixed(1) : "—";
 
@@ -111,8 +105,7 @@ export function RatingCard({
                     {/* 来源 + 票数 */}
                     <span className="text-[10px] text-white/30 leading-none">
                         {source}
-                        {voteCount != null &&
-                            ` · ${voteCount.toLocaleString()} 票`}
+                        {voteCount != null && ` · ${voteCount.toLocaleString()} 票`}
                     </span>
                 </div>
             </div>
@@ -134,14 +127,8 @@ export interface ShowInfoGridProps {
     className?: string;
 }
 
-export function ShowInfoGrid({
-    items,
-    columns = 2,
-    className,
-}: ShowInfoGridProps) {
-    const filtered = items.filter(
-        (item) => item.value != null && item.value !== "",
-    );
+export function ShowInfoGrid({ items, columns = 2, className }: ShowInfoGridProps) {
+    const filtered = items.filter((item) => item.value != null && item.value !== "");
 
     return (
         <GlassCard className={className}>
@@ -215,10 +202,7 @@ export interface SeasonProgressWallProps {
     className?: string;
 }
 
-export function SeasonProgressWall({
-    seasons,
-    className,
-}: SeasonProgressWallProps) {
+export function SeasonProgressWall({ seasons, className }: SeasonProgressWallProps) {
     if (!seasons.length) return null;
 
     return (
@@ -229,11 +213,9 @@ export function SeasonProgressWall({
                     const total = season.episodeCount;
                     const watched = season.watchedCount;
                     const aired = season.airedCount ?? total;
-                    const pct =
-                        total > 0 ? Math.round((watched / total) * 100) : 0;
+                    const pct = total > 0 ? Math.round((watched / total) * 100) : 0;
                     const airedPct = total > 0 ? (aired / total) * 100 : 100;
-                    const label =
-                        season.label ?? `第 ${season.seasonNumber} 季`;
+                    const label = season.label ?? `第 ${season.seasonNumber} 季`;
                     const isComplete = watched >= aired && aired > 0;
 
                     return (
@@ -261,9 +243,7 @@ export function SeasonProgressWall({
                                 <motion.div
                                     className={cn(
                                         "absolute inset-y-0 left-0 rounded-full transition-colors",
-                                        isComplete
-                                            ? "bg-emerald-500"
-                                            : "bg-purple-500",
+                                        isComplete ? "bg-emerald-500" : "bg-purple-500",
                                     )}
                                     initial={{ width: 0 }}
                                     animate={{
@@ -357,50 +337,26 @@ export function MetadataSidebar({
         <div className={cn("flex flex-col gap-3", className)}>
             {/* 评分 */}
             {rating != null && (
-                <motion.div
-                    custom={0}
-                    variants={fadeUp}
-                    initial="hidden"
-                    animate="visible"
-                >
-                    <RatingCard
-                        score={rating}
-                        source={ratingSource}
-                        voteCount={ratingVotes}
-                    />
+                <motion.div custom={0} variants={fadeUp} initial="hidden" animate="visible">
+                    <RatingCard score={rating} source={ratingSource} voteCount={ratingVotes} />
                 </motion.div>
             )}
 
             {/* 作品信息 */}
-            <motion.div
-                custom={1}
-                variants={fadeUp}
-                initial="hidden"
-                animate="visible"
-            >
+            <motion.div custom={1} variants={fadeUp} initial="hidden" animate="visible">
                 <ShowInfoGrid items={infoItems} columns={2} />
             </motion.div>
 
             {/* 类型标签 */}
             {(show.genres?.length ?? 0) > 0 && (
-                <motion.div
-                    custom={2}
-                    variants={fadeUp}
-                    initial="hidden"
-                    animate="visible"
-                >
+                <motion.div custom={2} variants={fadeUp} initial="hidden" animate="visible">
                     <GenreTags genres={show.genres} />
                 </motion.div>
             )}
 
             {/* 分季进度 */}
             {seasons.length > 0 && (
-                <motion.div
-                    custom={3}
-                    variants={fadeUp}
-                    initial="hidden"
-                    animate="visible"
-                >
+                <motion.div custom={3} variants={fadeUp} initial="hidden" animate="visible">
                     <SeasonProgressWall seasons={seasons} />
                 </motion.div>
             )}

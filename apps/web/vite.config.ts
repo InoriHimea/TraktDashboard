@@ -25,10 +25,6 @@ export default defineConfig(({ mode }) => {
         build: {
             sourcemap: "hidden", // generate sourcemaps for error tracking but do not expose them publicly
         },
-        test: {
-            environment: "jsdom",
-            globals: true,
-            setupFiles: ["./src/test/setup.ts"],
-        },
+        // Test config lives in vitest.config.ts (P1-T06).
     };
 });

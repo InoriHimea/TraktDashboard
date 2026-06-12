@@ -22,10 +22,7 @@ export default function TVShowsPage() {
     const [debouncedSearch, setDebouncedSearch] = useState("");
 
     useEffect(() => {
-        const timer = window.setTimeout(
-            () => setDebouncedSearch(search.trim()),
-            280,
-        );
+        const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 280);
         return () => window.clearTimeout(timer);
     }, [search]);
 

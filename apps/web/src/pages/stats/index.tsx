@@ -41,14 +41,8 @@ export default function StatsPage() {
                         gap: "12px",
                     }}
                 >
-                    <Loader2
-                        size={24}
-                        color={COLORS.violet.base}
-                        className="animate-spin"
-                    />
-                    <p style={{ fontSize: "13px", color: T3 }}>
-                        正在加载统计数据…
-                    </p>
+                    <Loader2 size={24} color={COLORS.violet.base} className="animate-spin" />
+                    <p style={{ fontSize: "13px", color: T3 }}>正在加载统计数据…</p>
                 </div>
             </div>
         );
@@ -62,9 +56,7 @@ export default function StatsPage() {
                     minHeight: "60vh",
                 }}
             >
-                <p style={{ color: "#f87171", fontSize: "14px" }}>
-                    统计数据加载失败，请稍后重试。
-                </p>
+                <p style={{ color: "#f87171", fontSize: "14px" }}>统计数据加载失败，请稍后重试。</p>
             </div>
         );
 
@@ -72,12 +64,15 @@ export default function StatsPage() {
 
     const totalHours = Math.floor(stats.totalRuntimeMinutes / 60);
     const totalDays = (stats.totalRuntimeMinutes / (60 * 24)).toFixed(1);
-    const episodeHours = Math.floor((stats.totalEpisodeRuntimeMinutes ?? stats.totalRuntimeMinutes) / 60);
+    const episodeHours = Math.floor(
+        (stats.totalEpisodeRuntimeMinutes ?? stats.totalRuntimeMinutes) / 60,
+    );
     const movieHours = Math.floor((stats.totalMovieRuntimeMinutes ?? 0) / 60);
     const totalEntries = stats.totalEpisodesWatched + (stats.totalMovieWatches ?? 0);
-    const completionRate = stats.totalShowsWatched > 0
-        ? Math.round((stats.totalShowsCompleted / stats.totalShowsWatched) * 100)
-        : 0;
+    const completionRate =
+        stats.totalShowsWatched > 0
+            ? Math.round((stats.totalShowsCompleted / stats.totalShowsWatched) * 100)
+            : 0;
     const movieWatches = stats.totalMovieWatches ?? 0;
     const mediaBreakdown = [
         { label: "剧集", value: stats.totalEpisodesWatched, color: COLORS.cyan },
@@ -106,12 +101,9 @@ export default function StatsPage() {
         (best, item) => (item.count > best.count ? item : best),
         chartData[0] ?? { month: "暂无", count: 0 },
     );
-    const monthlyAverage = Math.round(
-        totalEntries / Math.max(activeMonths.length, 1),
-    );
-    const movieRewatchRatio = stats.totalMoviesWatched > 0
-        ? (movieWatches / stats.totalMoviesWatched).toFixed(1)
-        : "0.0";
+    const monthlyAverage = Math.round(totalEntries / Math.max(activeMonths.length, 1));
+    const movieRewatchRatio =
+        stats.totalMoviesWatched > 0 ? (movieWatches / stats.totalMoviesWatched).toFixed(1) : "0.0";
     const signalMetrics: SignalMetric[] = [
         {
             label: "月峰值",
@@ -182,15 +174,13 @@ export default function StatsPage() {
                                 fontSize: "36px",
                                 fontWeight: 400,
                                 color: T1,
-                            lineHeight: 1.1,
-                            marginBottom: "6px",
+                                lineHeight: 1.1,
+                                marginBottom: "6px",
                             }}
                         >
                             数据统计
                         </h2>
-                        <p style={{ color: T3, fontSize: "14px" }}>
-                            您的观看历史概览
-                        </p>
+                        <p style={{ color: T3, fontSize: "14px" }}>您的观看历史概览</p>
                     </div>
                     <button
                         onClick={async () => {
@@ -199,13 +189,14 @@ export default function StatsPage() {
                             try {
                                 const html2canvas = (await import("html2canvas")).default;
                                 const canvas = await html2canvas(container, {
-                                    backgroundColor: window.getComputedStyle(document.body).backgroundColor,
+                                    backgroundColor: window.getComputedStyle(document.body)
+                                        .backgroundColor,
                                     scale: 2,
                                     useCORS: true,
                                     logging: false,
                                 });
                                 const link = document.createElement("a");
-                                link.download = `trakt-stats-${new Date().toISOString().split('T')[0]}.png`;
+                                link.download = `trakt-stats-${new Date().toISOString().split("T")[0]}.png`;
                                 link.href = canvas.toDataURL("image/png");
                                 link.click();
                             } catch (err) {
@@ -227,8 +218,12 @@ export default function StatsPage() {
                             cursor: "pointer",
                             transition: "background-color 0.2s, border-color 0.2s, box-shadow 0.2s",
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-3)")}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-surface-2)")}
+                        onMouseEnter={(e) =>
+                            (e.currentTarget.style.background = "var(--color-surface-3)")
+                        }
+                        onMouseLeave={(e) =>
+                            (e.currentTarget.style.background = "var(--color-surface-2)")
+                        }
                     >
                         导出图片
                     </button>
@@ -339,7 +334,10 @@ export default function StatsPage() {
                         <ActivityChart chartData={chartData} maxBar={maxBar} />
 
                         {/* Recent activity */}
-                        <RecentActivity recentlyWatched={stats.recentlyWatched} recentlyWatchedMovies={stats.recentlyWatchedMovies} />
+                        <RecentActivity
+                            recentlyWatched={stats.recentlyWatched}
+                            recentlyWatchedMovies={stats.recentlyWatchedMovies}
+                        />
                     </div>
                 </div>
             </div>

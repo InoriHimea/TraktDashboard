@@ -120,9 +120,12 @@ export default function WatchlistPage() {
         return () => window.clearTimeout(timer);
     }, [search]);
 
-    const { data: items, isLoading, error, refetch } = useWatchlist(
-        filter === "all" ? undefined : filter,
-    );
+    const {
+        data: items,
+        isLoading,
+        error,
+        refetch,
+    } = useWatchlist(filter === "all" ? undefined : filter);
     const removeFromWatchlist = useRemoveFromWatchlist();
 
     const filtered = items?.filter((item) => {
@@ -139,7 +142,7 @@ export default function WatchlistPage() {
         } catch {
             toast(t("watchlist.removeFailed"), "error", {
                 label: "重试",
-                onClick: () => handleRemove(id)
+                onClick: () => handleRemove(id),
             });
         } finally {
             setRemovingId(null);

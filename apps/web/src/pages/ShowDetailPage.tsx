@@ -2,14 +2,22 @@ import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, RefreshCw, CheckCheck } from "lucide-react";
-import { useShowDetail, useResetProgress, useMarkSeasonWatched, useForceSync, useWatchlist, useAddToWatchlist, useRemoveFromWatchlist } from "../hooks";
+import {
+    useShowDetail,
+    useResetProgress,
+    useMarkSeasonWatched,
+    useForceSync,
+    useWatchlist,
+    useAddToWatchlist,
+    useRemoveFromWatchlist,
+} from "../hooks";
 import { HeroSection } from "../components/HeroSection";
 import { SeasonTab } from "../components/SeasonTab";
 import { EpisodeGrid } from "../components/EpisodeGrid";
 import { WatchHistoryPanel } from "../components/WatchHistoryPanel";
 import { Button } from "../components/ui/Button";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
-import { resolveTitle, t } from "../lib/i18n";
+import { t } from "../lib/i18n";
 import { useToast } from "../lib/toast";
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
@@ -60,9 +68,7 @@ function PageError({ onRetry }: { onRetry: () => void }) {
                 <div className="w-14 h-14 rounded-xl bg-red-950/40 border border-red-500/15 flex items-center justify-center">
                     <span className="text-xl">⚠</span>
                 </div>
-                <p className="text-[var(--color-text-muted)] text-sm">
-                    加载失败，请重试
-                </p>
+                <p className="text-[var(--color-text-muted)] text-sm">加载失败，请重试</p>
                 <Button
                     variant="secondary"
                     size="md"
@@ -85,12 +91,7 @@ export default function ShowDetailPage() {
     const showId = Number(id);
     const isValidId = Number.isInteger(showId) && showId > 0;
 
-    const {
-        data: progress,
-        isLoading,
-        error,
-        refetch,
-    } = useShowDetail(isValidId ? showId : 0);
+    const { data: progress, isLoading, error, refetch } = useShowDetail(isValidId ? showId : 0);
     const [activeSeason, setActiveSeason] = useState<number | null>(null);
     const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
     const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
@@ -118,9 +119,7 @@ export default function ShowDetailPage() {
         return (
             <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-[var(--color-bg)] flex items-center justify-center">
                 <div className="text-center flex flex-col items-center gap-3">
-                    <p className="text-[var(--color-text-muted)] text-base">
-                        未找到该剧集
-                    </p>
+                    <p className="text-[var(--color-text-muted)] text-base">未找到该剧集</p>
                     <Button
                         variant="ghost"
                         size="sm"
@@ -136,13 +135,10 @@ export default function ShowDetailPage() {
 
     const { seasons, show } = progress;
     const currentSeasonNumber = activeSeason ?? seasons[0]?.seasonNumber ?? 1;
-    const currentSeason =
-        seasons.find((s) => s.seasonNumber === currentSeasonNumber) ??
-        seasons[0];
+    const currentSeason = seasons.find((s) => s.seasonNumber === currentSeasonNumber) ?? seasons[0];
 
     // Compute overall progress
-    const totalEpisodes =
-        show.totalEpisodes ?? seasons.reduce((s, x) => s + x.episodeCount, 0);
+    const totalEpisodes = show.totalEpisodes ?? seasons.reduce((s, x) => s + x.episodeCount, 0);
     const totalWatched = seasons.reduce((s, x) => s + x.watchedCount, 0);
     const isComplete = totalEpisodes > 0 && totalWatched >= totalEpisodes;
 
@@ -152,9 +148,7 @@ export default function ShowDetailPage() {
             await resetProgress.mutateAsync();
             setResetConfirmOpen(false);
         } catch (err) {
-            setResetError(
-                err instanceof Error ? err.message : "重置失败，请重试",
-            );
+            setResetError(err instanceof Error ? err.message : "重置失败，请重试");
         }
     };
 
@@ -188,29 +182,36 @@ export default function ShowDetailPage() {
                     onForceSyncClick={() => {
                         forceSync.mutate(undefined, {
                             onSuccess: () => toast("已触发元数据刷新", "success"),
-                            onError: (err) => toast(`刷新失败: ${err.message}`, "error", {
-                                label: "重试",
-                                onClick: () => forceSync.mutate(undefined)
-                            }),
+                            onError: (err) =>
+                                toast(`刷新失败: ${err.message}`, "error", {
+                                    label: "重试",
+                                    onClick: () => forceSync.mutate(undefined),
+                                }),
                         });
                     }}
                     onToggleWatchlist={() => {
                         if (inWatchlist && watchlistItem) {
                             removeFromWatchlist.mutate(watchlistItem.id, {
                                 onSuccess: () => toast(t("watchlist.removeSuccess"), "success"),
-                                onError: () => toast(t("watchlist.removeFailed"), "error", {
-                                    label: "重试",
-                                    onClick: () => removeFromWatchlist.mutate(watchlistItem.id)
-                                }),
+                                onError: () =>
+                                    toast(t("watchlist.removeFailed"), "error", {
+                                        label: "重试",
+                                        onClick: () => removeFromWatchlist.mutate(watchlistItem.id),
+                                    }),
                             });
                         } else {
-                            addToWatchlist.mutate({ type: "show", id: showId }, {
-                                onSuccess: () => toast("已添加到待看列表", "success"),
-                                onError: () => toast("添加失败", "error", {
-                                    label: "重试",
-                                    onClick: () => addToWatchlist.mutate({ type: "show", id: showId })
-                                }),
-                            });
+                            addToWatchlist.mutate(
+                                { type: "show", id: showId },
+                                {
+                                    onSuccess: () => toast("已添加到待看列表", "success"),
+                                    onError: () =>
+                                        toast("添加失败", "error", {
+                                            label: "重试",
+                                            onClick: () =>
+                                                addToWatchlist.mutate({ type: "show", id: showId }),
+                                        }),
+                                },
+                            );
                         }
                     }}
                     isForceSyncing={forceSync.isPending}
@@ -287,12 +288,8 @@ export default function ShowDetailPage() {
                                 <SeasonTab
                                     key={s.seasonNumber}
                                     season={s}
-                                    isActive={
-                                        s.seasonNumber === currentSeasonNumber
-                                    }
-                                    onClick={() =>
-                                        setActiveSeason(s.seasonNumber)
-                                    }
+                                    isActive={s.seasonNumber === currentSeasonNumber}
+                                    onClick={() => setActiveSeason(s.seasonNumber)}
                                 />
                             ))}
                         </div>
@@ -304,7 +301,9 @@ export default function ShowDetailPage() {
                             <span className="text-sm text-[var(--color-text-muted)]">
                                 {currentSeason.seasonNumber === 0
                                     ? t("shows.specials")
-                                    : t("shows.seasonLabel", { number: currentSeason.seasonNumber })}
+                                    : t("shows.seasonLabel", {
+                                          number: currentSeason.seasonNumber,
+                                      })}
                                 {" · "}
                                 {t("shows.episodeCount", {
                                     watched: currentSeason.watchedCount,
@@ -323,12 +322,25 @@ export default function ShowDetailPage() {
                                         markSeasonWatched.mutate(
                                             { season: currentSeason.seasonNumber, watchedAt: null },
                                             {
-                                                onSuccess: () => toast(t("shows.markSeasonWatchedSuccess"), "success"),
-                                                onError: () => toast(t("shows.markSeasonWatchedError"), "error", {
-                                                    label: "重试",
-                                                    onClick: () => markSeasonWatched.mutate({ season: currentSeason.seasonNumber, watchedAt: null })
-                                                }),
-                                            }
+                                                onSuccess: () =>
+                                                    toast(
+                                                        t("shows.markSeasonWatchedSuccess"),
+                                                        "success",
+                                                    ),
+                                                onError: () =>
+                                                    toast(
+                                                        t("shows.markSeasonWatchedError"),
+                                                        "error",
+                                                        {
+                                                            label: "重试",
+                                                            onClick: () =>
+                                                                markSeasonWatched.mutate({
+                                                                    season: currentSeason.seasonNumber,
+                                                                    watchedAt: null,
+                                                                }),
+                                                        },
+                                                    ),
+                                            },
                                         )
                                     }
                                 >

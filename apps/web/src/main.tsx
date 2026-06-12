@@ -30,9 +30,7 @@ ReactDOM.createRoot(rootEl).render(
         <QueryClientProvider client={queryClient}>
             <BrowserRouter>
                 <App />
-                {enableReactQueryDevtools && (
-                    <ReactQueryDevtools initialIsOpen={false} />
-                )}
+                {enableReactQueryDevtools && <ReactQueryDevtools initialIsOpen={false} />}
             </BrowserRouter>
         </QueryClientProvider>
     </React.StrictMode>,

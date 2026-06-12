@@ -30,7 +30,11 @@ export function EpisodeSeasonStrip({
 
     useEffect(() => {
         if (currentRef.current) {
-            currentRef.current.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+            currentRef.current.scrollIntoView({
+                behavior: "smooth",
+                block: "nearest",
+                inline: "center",
+            });
         }
     }, [currentEpisodeNumber, watched]);
 
@@ -42,27 +46,38 @@ export function EpisodeSeasonStrip({
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div className="flex min-w-0 flex-col gap-2">
                     <div className="flex items-center gap-3">
-                        <h2 className="text-2xl font-black text-foreground">
-                            {seasonLabel}
-                        </h2>
+                        <h2 className="text-2xl font-black text-foreground">{seasonLabel}</h2>
                         <div className="h-px w-16 bg-gradient-to-r from-[var(--color-accent)]/60 to-transparent" />
                     </div>
                     <p className="text-sm font-medium text-muted-foreground">
                         {episodes.length} 集
                         {episodes.length > 0 && (
-                            <span className="text-muted-foreground/50"> / 当前 {formatEpisode(seasonNumber, currentEpisodeNumber)}</span>
+                            <span className="text-muted-foreground/50">
+                                {" "}
+                                / 当前 {formatEpisode(seasonNumber, currentEpisodeNumber)}
+                            </span>
                         )}
                     </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
                     {watchedCount > 0 && (
-                        <Tag color="emerald" variant="outline" size="sm" className="rounded-full px-3 py-1">
+                        <Tag
+                            color="emerald"
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full px-3 py-1"
+                        >
                             {watchedCount} 已看
                         </Tag>
                     )}
                     {episodes.length > watchedCount && (
-                        <Tag color="slate" variant="outline" size="sm" className="rounded-full px-3 py-1">
+                        <Tag
+                            color="slate"
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full px-3 py-1"
+                        >
                             {episodes.length - watchedCount} 未看
                         </Tag>
                     )}
@@ -82,7 +97,8 @@ export function EpisodeSeasonStrip({
                     )}
                 >
                     {episodes.map((episode) => {
-                        const isCurrent = Number(episode.episodeNumber) === Number(currentEpisodeNumber);
+                        const isCurrent =
+                            Number(episode.episodeNumber) === Number(currentEpisodeNumber);
                         const isUnaired = episode.aired === false;
                         const stillUrl = resolveEpisodeStill(episode.stillPath);
                         const thumbUrl = stillUrl ?? fallbackImageUrl ?? null;
@@ -95,7 +111,11 @@ export function EpisodeSeasonStrip({
                                 ref={isCurrent ? currentRef : null}
                                 type="button"
                                 aria-current={isCurrent ? "true" : undefined}
-                                onClick={() => navigate(`/shows/${showId}/seasons/${seasonNumber}/episodes/${episode.episodeNumber}`)}
+                                onClick={() =>
+                                    navigate(
+                                        `/shows/${showId}/seasons/${seasonNumber}/episodes/${episode.episodeNumber}`,
+                                    )
+                                }
                                 className={cn(
                                     "group rounded-[var(--radius-lg)] border p-1.5 text-left transition duration-200 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)]",
                                     watched && "w-[286px] flex-none snap-center sm:w-[320px]",
@@ -140,7 +160,12 @@ export function EpisodeSeasonStrip({
                                             </Tag>
                                         )}
                                         {isUnaired && (
-                                            <Tag color="amber" variant="3d" size="sm" className="rounded-full px-2 py-0.5">
+                                            <Tag
+                                                color="amber"
+                                                variant="3d"
+                                                size="sm"
+                                                className="rounded-full px-2 py-0.5"
+                                            >
                                                 未播
                                             </Tag>
                                         )}

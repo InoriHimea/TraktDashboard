@@ -19,23 +19,14 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export function ShowCard({ progress, index }: ShowCardProps) {
-    const {
-        show,
-        watchedEpisodes,
-        airedEpisodes,
-        nextEpisode,
-        completed,
-        percentage,
-    } = progress;
+    const { show, watchedEpisodes, airedEpisodes, nextEpisode, completed, percentage } = progress;
     const poster = tmdbImage(show.posterPath, "w500");
     const statusColor = STATUS_COLOR[show.status] || "var(--color-text-muted)";
     const [imgError, setImgError] = useState(false);
 
     // Task 13: multilingual title logic
     const primaryTitle = show.translatedName ?? show.title;
-    const secondaryTitle = show.translatedName
-        ? (show.originalName ?? null)
-        : null;
+    const secondaryTitle = show.translatedName ? (show.originalName ?? null) : null;
 
     return (
         <motion.div
@@ -48,10 +39,7 @@ export function ShowCard({ progress, index }: ShowCardProps) {
                 ease: [0.16, 1, 0.3, 1],
             }}
         >
-            <Link
-                to={`/shows/${show.id}`}
-                className="block h-full no-underline"
-            >
+            <Link to={`/shows/${show.id}`} className="block h-full no-underline">
                 <motion.div
                     whileHover={{
                         y: -3,

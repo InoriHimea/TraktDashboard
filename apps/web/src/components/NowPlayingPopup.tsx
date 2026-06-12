@@ -14,29 +14,17 @@ interface NowPlayingPopupProps {
 
 // ─── Pure helpers (exported for property tests) ───────────────────────────────
 
-export function computeRemainingMinutes(
-    expiresAt: string,
-    now = Date.now(),
-): number {
-    return Math.max(
-        0,
-        Math.round((new Date(expiresAt).getTime() - now) / 60_000),
-    );
+export function computeRemainingMinutes(expiresAt: string, now = Date.now()): number {
+    return Math.max(0, Math.round((new Date(expiresAt).getTime() - now) / 60_000));
 }
 
-export function computeProgressPct(
-    runtime: number | null,
-    remainingMinutes: number,
-): number {
+export function computeProgressPct(runtime: number | null, remainingMinutes: number): number {
     if (runtime == null || runtime <= 0) return 0;
     const elapsed = runtime - remainingMinutes;
     return Math.min(100, Math.max(0, (elapsed / runtime) * 100));
 }
 
-export function formatSeasonEpisode(
-    seasonNumber: number,
-    episodeNumber: number,
-): string {
+export function formatSeasonEpisode(seasonNumber: number, episodeNumber: number): string {
     return `S${seasonNumber}·E${episodeNumber}`;
 }
 
@@ -153,9 +141,7 @@ export function NowPlayingPopup({
         return () => clearInterval(timer);
     }, [data?.expiresAt]);
 
-    const progressPct = data
-        ? computeProgressPct(data.runtime, remainingMinutes)
-        : 0;
+    const progressPct = data ? computeProgressPct(data.runtime, remainingMinutes) : 0;
 
     return (
         <AnimatePresence>
@@ -239,12 +225,7 @@ export function NowPlayingPopup({
                             >
                                 {data.show.posterPath && !posterError ? (
                                     <img
-                                        src={
-                                            tmdbImage(
-                                                data.show.posterPath,
-                                                "w92",
-                                            ) ?? undefined
-                                        }
+                                        src={tmdbImage(data.show.posterPath, "w92") ?? undefined}
                                         alt={data.show.title}
                                         onError={() => setPosterError(true)}
                                         style={{
@@ -328,8 +309,7 @@ export function NowPlayingPopup({
                                             marginTop: "6px",
                                             height: "3px",
                                             borderRadius: "999px",
-                                            background:
-                                                "var(--color-surface-3)",
+                                            background: "var(--color-surface-3)",
                                             overflow: "hidden",
                                         }}
                                     >

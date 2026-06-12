@@ -47,7 +47,14 @@ export function TopGenres({ topGenres }: { topGenres: { name: string; count: num
                                     marginBottom: "8px",
                                 }}
                             >
-                                <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "8px",
+                                        minWidth: 0,
+                                    }}
+                                >
                                     <span
                                         style={{
                                             border: `1px solid ${c.base}33`,

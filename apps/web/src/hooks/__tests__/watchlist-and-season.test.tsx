@@ -2,7 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useWatchlist, useAddToWatchlist, useRemoveFromWatchlist, useMarkSeasonWatched } from "../index";
+import {
+    useWatchlist,
+    useAddToWatchlist,
+    useRemoveFromWatchlist,
+    useMarkSeasonWatched,
+} from "../index";
 
 vi.mock("../../lib/api", () => ({
     api: {
@@ -112,7 +117,11 @@ describe("useMarkSeasonWatched", () => {
     beforeEach(() => vi.clearAllMocks());
 
     it("calls api.shows.markSeasonWatched with showId and season", async () => {
-        vi.mocked(api.shows.markSeasonWatched).mockResolvedValue({ ok: true, marked: 5, alreadyWatched: 0 } as never);
+        vi.mocked(api.shows.markSeasonWatched).mockResolvedValue({
+            ok: true,
+            marked: 5,
+            alreadyWatched: 0,
+        } as never);
         const { result } = renderHook(() => useMarkSeasonWatched(10), { wrapper: makeWrapper() });
         result.current.mutate({ season: 2, watchedAt: null });
         await waitFor(() => expect(result.current.isSuccess).toBe(true));

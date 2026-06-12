@@ -59,7 +59,11 @@ export function MediaListPage<T>({
 
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
-            if (e.key === "/" && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
+            if (
+                e.key === "/" &&
+                document.activeElement?.tagName !== "INPUT" &&
+                document.activeElement?.tagName !== "TEXTAREA"
+            ) {
                 e.preventDefault();
                 searchRef.current?.focus();
             }
@@ -163,13 +167,8 @@ export function MediaListPage<T>({
                         animate={{ opacity: 1 }}
                         className="flex flex-col items-center gap-3 pt-20"
                     >
-                        <Loader2
-                            size={24}
-                            className="animate-spin text-[var(--color-accent)]"
-                        />
-                        <p className="text-[var(--color-text-muted)] text-sm">
-                            {loadingLabel}
-                        </p>
+                        <Loader2 size={24} className="animate-spin text-[var(--color-accent)]" />
+                        <p className="text-[var(--color-text-muted)] text-sm">{loadingLabel}</p>
                     </motion.div>
                 ) : error ? (
                     <motion.div
@@ -177,9 +176,7 @@ export function MediaListPage<T>({
                         animate={{ opacity: 1, y: 0 }}
                         className="flex flex-col items-center gap-3 pt-20"
                     >
-                        <p className="text-[var(--color-error)] text-sm">
-                            {errorLabel}
-                        </p>
+                        <p className="text-[var(--color-error)] text-sm">{errorLabel}</p>
                         <Button
                             type="button"
                             variant="secondary"
@@ -200,9 +197,7 @@ export function MediaListPage<T>({
                             {search ? searchEmptyLabel : emptyLabel}
                         </p>
                         {!search && (
-                            <p className="text-[var(--color-text-muted)] text-xs">
-                                {importHint}
-                            </p>
+                            <p className="text-[var(--color-text-muted)] text-xs">{importHint}</p>
                         )}
                     </motion.div>
                 ) : (

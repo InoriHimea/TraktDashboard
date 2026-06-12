@@ -36,9 +36,7 @@ export function SignalMetrics({ metrics }: { metrics: SignalMetric[] }) {
                     gap: "12px",
                 }}
             >
-                <h3 style={{ fontSize: "15px", fontWeight: 700, color: T1 }}>
-                    信号指标
-                </h3>
+                <h3 style={{ fontSize: "15px", fontWeight: 700, color: T1 }}>信号指标</h3>
                 <span
                     style={{
                         border: `1px solid ${COLORS.cyan.base}33`,

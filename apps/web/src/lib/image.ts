@@ -4,10 +4,7 @@
  * All callers should handle null by rendering a placeholder.
  */
 
-export function tmdbImage(
-    path: string | null | undefined,
-    size = "w500",
-): string | null {
+export function tmdbImage(path: string | null | undefined, size = "w500"): string | null {
     if (!path) return null;
     // Route through local API proxy for caching & auth
     return `/api/img/${size}${path}`;
@@ -17,9 +14,7 @@ export function tmdbImage(
  * Returns the best available still image URL for an episode.
  * stillPath comes from the DB (populated during sync from TMDB).
  */
-export function resolveEpisodeStill(
-    stillPath: string | null | undefined,
-): string | null {
+export function resolveEpisodeStill(stillPath: string | null | undefined): string | null {
     return tmdbImage(stillPath, "w300");
 }
 
@@ -27,9 +22,7 @@ export function resolveEpisodeStill(
  * Returns a large still image suitable for hero backdrops.
  * Uses w1280 for good quality without full original overhead.
  */
-export function resolveEpisodeStillLarge(
-    stillPath: string | null | undefined,
-): string | null {
+export function resolveEpisodeStillLarge(stillPath: string | null | undefined): string | null {
     return tmdbImage(stillPath, "w1280");
 }
 
@@ -46,9 +39,7 @@ export function resolveShowPoster(
 /**
  * Returns the best available backdrop URL.
  */
-export function resolveBackdrop(
-    backdropPath: string | null | undefined,
-): string | null {
+export function resolveBackdrop(backdropPath: string | null | undefined): string | null {
     return tmdbImage(backdropPath, "original");
 }
 
@@ -56,8 +47,6 @@ export function resolveBackdrop(
  * Returns a backdrop sized for episode thumbnail fallback (w1280).
  * Used when an episode has no stillPath.
  */
-export function resolveBackdropFallback(
-    backdropPath: string | null | undefined,
-): string | null {
+export function resolveBackdropFallback(backdropPath: string | null | undefined): string | null {
     return tmdbImage(backdropPath, "w1280");
 }

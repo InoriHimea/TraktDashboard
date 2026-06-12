@@ -1,0 +1,48 @@
+// Centralized React Query key factory (P3-T05).
+//
+// Single source of truth for every query key so query/invalidate/remove calls can't drift
+// out of sync via hand-typed string arrays. Group `.all` keys are prefixes used to
+// invalidate a whole family; the functions produce specific keys.
+
+export const queryKeys = {
+    auth: ["auth"] as const,
+    syncStatus: ["sync-status"] as const,
+    syncDebug: ["sync-debug"] as const,
+    stats: ["stats"] as const,
+    settings: ["settings"] as const,
+    nowPlaying: ["now-playing"] as const,
+
+    showsProgress: {
+        all: ["shows-progress"] as const,
+        list: (filter: string, search: string, limit: number, offset: number) =>
+            ["shows-progress", filter, search, limit, offset] as const,
+    },
+    showDetail: (id: number | string) => ["show-detail", id] as const,
+    showHistory: (showId: number | string) => ["show-history", showId] as const,
+
+    calendar: (before: number, after: number) => ["calendar", before, after] as const,
+
+    episodeDetail: {
+        all: ["episode-detail"] as const,
+        byEp: (showId: number | string, season: number, episode: number) =>
+            ["episode-detail", showId, season, episode] as const,
+    },
+    episodeHistory: {
+        all: ["episode-history"] as const,
+        byEp: (showId: number | string, season: number, episode: number) =>
+            ["episode-history", showId, season, episode] as const,
+    },
+
+    moviesProgress: {
+        all: ["movies-progress"] as const,
+        list: (filter: string, search: string, limit: number, offset: number) =>
+            ["movies-progress", filter, search, limit, offset] as const,
+    },
+    movieDetail: (id: number | string) => ["movie-detail", id] as const,
+    movieHistory: (id: number | string) => ["movie-history", id] as const,
+
+    watchlist: {
+        all: ["watchlist"] as const,
+        byType: (type: string | undefined) => ["watchlist", type] as const,
+    },
+} as const;

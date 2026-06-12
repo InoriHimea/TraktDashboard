@@ -12,11 +12,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { CheckCircle2, Clock, Eye, EyeOff } from "lucide-react";
-import {
-    resolveEpisodeTitle,
-    resolveEpisodeOverview,
-    fmtRuntime,
-} from "../lib/i18n";
+import { resolveEpisodeTitle, resolveEpisodeOverview, fmtRuntime } from "../lib/i18n";
 import { resolveEpisodeStill } from "../lib/image";
 import { EpisodePlaceholder } from "./ui/EpisodePlaceholder";
 import { ProgressBarWidget } from "./ProgressBarWidget";
@@ -28,11 +24,7 @@ interface EpisodeCardProps {
     seasonNumber: number;
 }
 
-export function EpisodeCard({
-    episode,
-    index,
-    seasonNumber,
-}: EpisodeCardProps) {
+export function EpisodeCard({ episode, index, seasonNumber }: EpisodeCardProps) {
     const [imgError, setImgError] = useState(false);
 
     const contextLabel = `S${String(seasonNumber).padStart(2, "0")}E${String(episode.episodeNumber).padStart(2, "0")}`;
@@ -60,8 +52,7 @@ export function EpisodeCard({
                     : isWatched
                       ? "border-violet-500/20 bg-violet-950/20 hover:bg-violet-950/30 hover:border-violet-500/30 cursor-pointer"
                       : "border-white/[0.07] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.12] cursor-pointer",
-                !isUnaired &&
-                    "hover:-translate-y-px hover:shadow-[0_6px_24px_rgba(0,0,0,0.3)]",
+                !isUnaired && "hover:-translate-y-px hover:shadow-[0_6px_24px_rgba(0,0,0,0.3)]",
             ].join(" ")}
             tabIndex={isUnaired ? -1 : 0}
             role="article"
@@ -89,11 +80,7 @@ export function EpisodeCard({
                     {isWatched && (
                         <div className="absolute inset-0 bg-violet-900/25 flex items-center justify-center">
                             <div className="w-8 h-8 rounded-full bg-violet-500/80 flex items-center justify-center shadow-lg shadow-violet-900/50">
-                                <CheckCircle2
-                                    size={15}
-                                    className="text-white"
-                                    strokeWidth={2.5}
-                                />
+                                <CheckCircle2 size={15} className="text-white" strokeWidth={2.5} />
                             </div>
                         </div>
                     )}
@@ -116,9 +103,7 @@ export function EpisodeCard({
                     {isWatched && episode.runtime && (
                         <div className="absolute bottom-1.5 right-1.5">
                             <ProgressBarWidget
-                                watchedMinutes={
-                                    episode.watched ? (episode.runtime ?? 0) : 0
-                                }
+                                watchedMinutes={episode.watched ? (episode.runtime ?? 0) : 0}
                                 totalMinutes={episode.runtime ?? 0}
                             />
                         </div>
@@ -162,9 +147,7 @@ export function EpisodeCard({
                             <span
                                 className={[
                                     "flex items-center gap-1 text-[10px] font-medium shrink-0",
-                                    isWatched
-                                        ? "text-violet-400/70"
-                                        : "text-white/18",
+                                    isWatched ? "text-violet-400/70" : "text-white/18",
                                 ].join(" ")}
                             >
                                 {isWatched ? (

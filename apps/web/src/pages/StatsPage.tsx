@@ -10,16 +10,7 @@ import {
     CartesianGrid,
     Cell,
 } from "recharts";
-import {
-    Tv2,
-    CheckCircle2,
-    Clock,
-    TrendingUp,
-    Star,
-    Loader2,
-    Film,
-    PieChart,
-} from "lucide-react";
+import { Tv2, CheckCircle2, Clock, TrendingUp, Loader2, Film } from "lucide-react";
 import { useStats } from "../hooks";
 import { tmdbImage } from "../lib/utils";
 import { fmtDateZh } from "../lib/i18n";
@@ -182,9 +173,7 @@ const CustomTooltip = ({
                 boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
             }}
         >
-            <p style={{ color: T3, marginBottom: "3px", fontSize: "11px" }}>
-                {label}
-            </p>
+            <p style={{ color: T3, marginBottom: "3px", fontSize: "11px" }}>{label}</p>
             <p
                 style={{
                     color: COLORS.violet.light,
@@ -193,9 +182,7 @@ const CustomTooltip = ({
                 }}
             >
                 {payload[0].value}{" "}
-                <span style={{ fontSize: "11px", fontWeight: 400, color: T2 }}>
-                    集
-                </span>
+                <span style={{ fontSize: "11px", fontWeight: 400, color: T2 }}>集</span>
             </p>
         </div>
     );
@@ -224,14 +211,8 @@ export default function StatsPage() {
                         gap: "12px",
                     }}
                 >
-                    <Loader2
-                        size={24}
-                        color={COLORS.violet.base}
-                        className="animate-spin"
-                    />
-                    <p style={{ fontSize: "13px", color: T3 }}>
-                        正在加载统计数据…
-                    </p>
+                    <Loader2 size={24} color={COLORS.violet.base} className="animate-spin" />
+                    <p style={{ fontSize: "13px", color: T3 }}>正在加载统计数据…</p>
                 </div>
             </div>
         );
@@ -245,9 +226,7 @@ export default function StatsPage() {
                     minHeight: "60vh",
                 }}
             >
-                <p style={{ color: "#f87171", fontSize: "14px" }}>
-                    统计数据加载失败，请稍后重试。
-                </p>
+                <p style={{ color: "#f87171", fontSize: "14px" }}>统计数据加载失败，请稍后重试。</p>
             </div>
         );
 
@@ -255,12 +234,15 @@ export default function StatsPage() {
 
     const totalHours = Math.floor(stats.totalRuntimeMinutes / 60);
     const totalDays = (stats.totalRuntimeMinutes / (60 * 24)).toFixed(1);
-    const episodeHours = Math.floor((stats.totalEpisodeRuntimeMinutes ?? stats.totalRuntimeMinutes) / 60);
+    const episodeHours = Math.floor(
+        (stats.totalEpisodeRuntimeMinutes ?? stats.totalRuntimeMinutes) / 60,
+    );
     const movieHours = Math.floor((stats.totalMovieRuntimeMinutes ?? 0) / 60);
     const totalEntries = stats.totalEpisodesWatched + (stats.totalMovieWatches ?? 0);
-    const completionRate = stats.totalShowsWatched > 0
-        ? Math.round((stats.totalShowsCompleted / stats.totalShowsWatched) * 100)
-        : 0;
+    const completionRate =
+        stats.totalShowsWatched > 0
+            ? Math.round((stats.totalShowsCompleted / stats.totalShowsWatched) * 100)
+            : 0;
     const mediaBreakdown = [
         { label: "剧集", value: stats.totalEpisodesWatched, color: COLORS.violet },
         { label: "电影", value: stats.totalMovieWatches ?? 0, color: COLORS.rose },
@@ -359,9 +341,7 @@ export default function StatsPage() {
                     >
                         数据统计
                     </h2>
-                    <p style={{ color: T3, fontSize: "14px" }}>
-                        您的观看历史概览
-                    </p>
+                    <p style={{ color: T3, fontSize: "14px" }}>您的观看历史概览</p>
                 </motion.div>
 
                 {/* Empty state */}
@@ -485,8 +465,16 @@ export default function StatsPage() {
                                                 marginBottom: "8px",
                                             }}
                                         >
-                                            <span style={{ fontSize: "13px", color: T2 }}>{item.label}</span>
-                                            <span style={{ fontSize: "13px", color: T1, fontWeight: 600 }}>
+                                            <span style={{ fontSize: "13px", color: T2 }}>
+                                                {item.label}
+                                            </span>
+                                            <span
+                                                style={{
+                                                    fontSize: "13px",
+                                                    color: T1,
+                                                    fontWeight: 600,
+                                                }}
+                                            >
                                                 {item.value.toLocaleString("zh-CN")}
                                             </span>
                                         </div>
@@ -505,7 +493,9 @@ export default function StatsPage() {
                                                     background: `linear-gradient(90deg, ${item.color.base}, ${item.color.light})`,
                                                 }}
                                                 initial={{ width: 0 }}
-                                                animate={{ width: `${Math.round((item.value / maxMedia) * 100)}%` }}
+                                                animate={{
+                                                    width: `${Math.round((item.value / maxMedia) * 100)}%`,
+                                                }}
                                                 transition={{ duration: 0.8, delay: 0.45 }}
                                             />
                                         </div>
@@ -546,54 +536,35 @@ export default function StatsPage() {
                                     }}
                                 >
                                     {stats.topGenres.map(
-                                        (
-                                            g: { name: string; count: number },
-                                            i: number,
-                                        ) => {
+                                        (g: { name: string; count: number }, i: number) => {
                                             const pct = Math.round(
-                                                (g.count /
-                                                    stats.topGenres[0].count) *
-                                                    100,
+                                                (g.count / stats.topGenres[0].count) * 100,
                                             );
-                                            const c =
-                                                GENRE_COLORS[
-                                                    i % GENRE_COLORS.length
-                                                ];
+                                            const c = GENRE_COLORS[i % GENRE_COLORS.length];
                                             return (
                                                 <div key={g.name}>
                                                     <div
                                                         style={{
                                                             display: "flex",
-                                                            alignItems:
-                                                                "center",
-                                                            justifyContent:
-                                                                "space-between",
+                                                            alignItems: "center",
+                                                            justifyContent: "space-between",
                                                             marginBottom: "8px",
                                                         }}
                                                     >
                                                         <span
                                                             style={{
-                                                                fontSize:
-                                                                    "13px",
-                                                                color:
-                                                                    i === 0
-                                                                        ? T1
-                                                                        : T2,
-                                                                fontWeight:
-                                                                    i === 0
-                                                                        ? 600
-                                                                        : 400,
+                                                                fontSize: "13px",
+                                                                color: i === 0 ? T1 : T2,
+                                                                fontWeight: i === 0 ? 600 : 400,
                                                             }}
                                                         >
                                                             {g.name}
                                                         </span>
                                                         <span
                                                             style={{
-                                                                fontSize:
-                                                                    "12px",
+                                                                fontSize: "12px",
                                                                 color: T3,
-                                                                fontVariantNumeric:
-                                                                    "tabular-nums",
+                                                                fontVariantNumeric: "tabular-nums",
                                                             }}
                                                         >
                                                             {g.count}
@@ -602,18 +573,15 @@ export default function StatsPage() {
                                                     <div
                                                         style={{
                                                             height: "4px",
-                                                            borderRadius:
-                                                                "999px",
-                                                            background:
-                                                                "var(--color-surface-3)",
+                                                            borderRadius: "999px",
+                                                            background: "var(--color-surface-3)",
                                                             overflow: "hidden",
                                                         }}
                                                     >
                                                         <motion.div
                                                             style={{
                                                                 height: "100%",
-                                                                borderRadius:
-                                                                    "999px",
+                                                                borderRadius: "999px",
                                                                 background: `linear-gradient(90deg, ${c.base}, ${c.light})`,
                                                             }}
                                                             initial={{
@@ -624,13 +592,8 @@ export default function StatsPage() {
                                                             }}
                                                             transition={{
                                                                 duration: 1,
-                                                                delay:
-                                                                    0.38 +
-                                                                    i * 0.06,
-                                                                ease: [
-                                                                    0.16, 1,
-                                                                    0.3, 1,
-                                                                ],
+                                                                delay: 0.38 + i * 0.06,
+                                                                ease: [0.16, 1, 0.3, 1],
                                                             }}
                                                         />
                                                     </div>
@@ -690,11 +653,7 @@ export default function StatsPage() {
                                         color: T3,
                                     }}
                                 >
-                                    <TrendingUp
-                                        size={13}
-                                        color={COLORS.sky.base}
-                                    />{" "}
-                                    过去 12 个月
+                                    <TrendingUp size={13} color={COLORS.sky.base} /> 过去 12 个月
                                 </span>
                             </div>
                             <ResponsiveContainer width="100%" height={200}>
@@ -743,14 +702,9 @@ export default function StatsPage() {
                                                 fill={
                                                     entry.count === 0
                                                         ? "var(--color-surface-3)"
-                                                        : barColor(
-                                                              entry.count,
-                                                              maxBar,
-                                                          )
+                                                        : barColor(entry.count, maxBar)
                                                 }
-                                                fillOpacity={
-                                                    entry.count === 0 ? 1 : 0.85
-                                                }
+                                                fillOpacity={entry.count === 0 ? 1 : 0.85}
                                             />
                                         ))}
                                     </Bar>
@@ -819,26 +773,22 @@ export default function StatsPage() {
                                                     {/* Thumbnail — 16:9 episode still, fallback to poster */}
                                                     <div
                                                         style={{
-                                                            position:
-                                                                "relative",
+                                                            position: "relative",
                                                             width: "min(34vw, 240px)",
                                                             aspectRatio: "16 / 9",
                                                             borderRadius: "12px",
                                                             overflow: "hidden",
-                                                            background:
-                                                                "var(--color-surface-3)",
+                                                            background: "var(--color-surface-3)",
                                                             flexShrink: 1,
                                                             outline:
                                                                 "1px solid var(--color-border)",
                                                         }}
                                                     >
-                                                        {r.stillPath ||
-                                                        r.posterPath ? (
+                                                        {r.stillPath || r.posterPath ? (
                                                             <img
                                                                 src={
                                                                     tmdbImage(
-                                                                        r.stillPath ??
-                                                                            r.posterPath,
+                                                                        r.stillPath ?? r.posterPath,
                                                                         r.stillPath
                                                                             ? "w500"
                                                                             : "w342",
@@ -848,8 +798,7 @@ export default function StatsPage() {
                                                                 style={{
                                                                     width: "100%",
                                                                     height: "100%",
-                                                                    objectFit:
-                                                                        "cover",
+                                                                    objectFit: "cover",
                                                                 }}
                                                                 loading="lazy"
                                                             />
@@ -858,12 +807,9 @@ export default function StatsPage() {
                                                                 style={{
                                                                     width: "100%",
                                                                     height: "100%",
-                                                                    display:
-                                                                        "flex",
-                                                                    alignItems:
-                                                                        "center",
-                                                                    justifyContent:
-                                                                        "center",
+                                                                    display: "flex",
+                                                                    alignItems: "center",
+                                                                    justifyContent: "center",
                                                                 }}
                                                             >
                                                                 <Tv2
@@ -875,46 +821,34 @@ export default function StatsPage() {
                                                         {/* Episode pill */}
                                                         <div
                                                             style={{
-                                                                position:
-                                                                    "absolute",
+                                                                position: "absolute",
                                                                 bottom: 0,
                                                                 left: 0,
                                                                 right: 0,
                                                                 display: "flex",
-                                                                justifyContent:
-                                                                    "center",
-                                                                paddingBottom:
-                                                                    "8px",
+                                                                justifyContent: "center",
+                                                                paddingBottom: "8px",
                                                             }}
                                                         >
                                                             <div
                                                                 style={{
-                                                                    background:
-                                                                        "rgba(0,0,0,0.75)",
-                                                                    backdropFilter:
-                                                                        "blur(8px)",
-                                                                    borderRadius:
-                                                                        "6px",
-                                                                    padding:
-                                                                        "4px 10px",
-                                                                    fontSize:
-                                                                        "13px",
+                                                                    background: "rgba(0,0,0,0.75)",
+                                                                    backdropFilter: "blur(8px)",
+                                                                    borderRadius: "6px",
+                                                                    padding: "4px 10px",
+                                                                    fontSize: "13px",
                                                                     fontWeight: 600,
                                                                     color: "rgba(255,255,255,0.95)",
                                                                     lineHeight: 1.4,
                                                                 }}
                                                             >
                                                                 S
-                                                                {String(
-                                                                    r.seasonNumber,
-                                                                ).padStart(
+                                                                {String(r.seasonNumber).padStart(
                                                                     2,
                                                                     "0",
                                                                 )}
                                                                 E
-                                                                {String(
-                                                                    r.episodeNumber,
-                                                                ).padStart(
+                                                                {String(r.episodeNumber).padStart(
                                                                     2,
                                                                     "0",
                                                                 )}
@@ -923,32 +857,23 @@ export default function StatsPage() {
                                                         {/* Watched badge */}
                                                         <div
                                                             style={{
-                                                                position:
-                                                                    "absolute",
+                                                                position: "absolute",
                                                                 top: "8px",
                                                                 right: "8px",
                                                                 width: "24px",
                                                                 height: "24px",
-                                                                borderRadius:
-                                                                    "50%",
-                                                                background:
-                                                                    COLORS
-                                                                        .emerald
-                                                                        .base,
+                                                                borderRadius: "50%",
+                                                                background: COLORS.emerald.base,
                                                                 display: "flex",
-                                                                alignItems:
-                                                                    "center",
-                                                                justifyContent:
-                                                                    "center",
+                                                                alignItems: "center",
+                                                                justifyContent: "center",
                                                                 boxShadow: `0 2px 8px ${COLORS.emerald.base}99`,
                                                             }}
                                                         >
                                                             <CheckCircle2
                                                                 size={14}
                                                                 color="#fff"
-                                                                strokeWidth={
-                                                                    2.5
-                                                                }
+                                                                strokeWidth={2.5}
                                                             />
                                                         </div>
                                                     </div>
@@ -965,41 +890,35 @@ export default function StatsPage() {
                                                     >
                                                         <p
                                                             style={{
-                                                                fontSize:
-                                                                    "16px",
+                                                                fontSize: "16px",
                                                                 color: T1,
                                                                 fontWeight: 600,
-                                                                overflow:
-                                                                    "hidden",
-                                                                textOverflow:
-                                                                    "ellipsis",
-                                                                whiteSpace:
-                                                                    "nowrap",
+                                                                overflow: "hidden",
+                                                                textOverflow: "ellipsis",
+                                                                whiteSpace: "nowrap",
                                                             }}
                                                         >
                                                             {r.showTitle}
                                                         </p>
                                                         <p
                                                             style={{
-                                                                fontSize:
-                                                                    "14px",
+                                                                fontSize: "14px",
                                                                 color: T2,
-                                                                overflow:
-                                                                    "hidden",
-                                                                textOverflow:
-                                                                    "ellipsis",
-                                                                whiteSpace:
-                                                                    "nowrap",
+                                                                overflow: "hidden",
+                                                                textOverflow: "ellipsis",
+                                                                whiteSpace: "nowrap",
                                                             }}
                                                         >
                                                             S
-                                                            {String(
-                                                                r.seasonNumber,
-                                                            ).padStart(2, "0")}
+                                                            {String(r.seasonNumber).padStart(
+                                                                2,
+                                                                "0",
+                                                            )}
                                                             E
-                                                            {String(
-                                                                r.episodeNumber,
-                                                            ).padStart(2, "0")}
+                                                            {String(r.episodeNumber).padStart(
+                                                                2,
+                                                                "0",
+                                                            )}
                                                             {r.episodeTitle
                                                                 ? ` · ${r.episodeTitle}`
                                                                 : ""}
@@ -1010,14 +929,18 @@ export default function StatsPage() {
                                                                 color: T3,
                                                             }}
                                                         >
-                                                            {r.watchedAt ? new Date(r.watchedAt).toLocaleString('zh-CN', {
-                                                                year: 'numeric',
-                                                                month: '2-digit',
-                                                                day: '2-digit',
-                                                                hour: '2-digit',
-                                                                minute: '2-digit',
-                                                                hour12: false
-                                                            }) : '未知时间'}
+                                                            {r.watchedAt
+                                                                ? new Date(
+                                                                      r.watchedAt,
+                                                                  ).toLocaleString("zh-CN", {
+                                                                      year: "numeric",
+                                                                      month: "2-digit",
+                                                                      day: "2-digit",
+                                                                      hour: "2-digit",
+                                                                      minute: "2-digit",
+                                                                      hour12: false,
+                                                                  })
+                                                                : "未知时间"}
                                                         </span>
                                                     </div>
                                                 </motion.div>
@@ -1058,7 +981,10 @@ export default function StatsPage() {
                                     }}
                                 >
                                     {stats.recentlyWatchedMovies.slice(0, 8).map((movie) => (
-                                        <div key={`${movie.movieId}-${movie.watchedAt}`} style={{ minWidth: 0 }}>
+                                        <div
+                                            key={`${movie.movieId}-${movie.watchedAt}`}
+                                            style={{ minWidth: 0 }}
+                                        >
                                             <div
                                                 style={{
                                                     aspectRatio: "2 / 3",
@@ -1074,11 +1000,24 @@ export default function StatsPage() {
                                                         src={tmdbImage(movie.posterPath, "w342")!}
                                                         alt=""
                                                         loading="lazy"
-                                                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                                        style={{
+                                                            width: "100%",
+                                                            height: "100%",
+                                                            objectFit: "cover",
+                                                        }}
                                                     />
                                                 ) : (
-                                                    <div style={{ display: "grid", placeItems: "center", height: "100%" }}>
-                                                        <Film size={22} color="var(--color-text-muted)" />
+                                                    <div
+                                                        style={{
+                                                            display: "grid",
+                                                            placeItems: "center",
+                                                            height: "100%",
+                                                        }}
+                                                    >
+                                                        <Film
+                                                            size={22}
+                                                            color="var(--color-text-muted)"
+                                                        />
                                                     </div>
                                                 )}
                                             </div>

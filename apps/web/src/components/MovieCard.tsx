@@ -37,10 +37,7 @@ export function MovieCard({ movie, index }: MovieCardProps) {
                 ease: [0.16, 1, 0.3, 1],
             }}
         >
-            <Link
-                to={`/movies/${movieData.id}`}
-                className="no-underline block"
-            >
+            <Link to={`/movies/${movieData.id}`} className="no-underline block">
                 <motion.div
                     whileHover={{
                         y: -3,
@@ -108,9 +105,7 @@ export function MovieCard({ movie, index }: MovieCardProps) {
                         {movieData.releaseDate && (
                             <div className="flex items-center gap-1.5 mb-3">
                                 <span className="text-[11px] text-[var(--color-text-muted)]">
-                                    {new Date(
-                                        movieData.releaseDate,
-                                    ).getFullYear()}
+                                    {new Date(movieData.releaseDate).getFullYear()}
                                 </span>
                             </div>
                         )}

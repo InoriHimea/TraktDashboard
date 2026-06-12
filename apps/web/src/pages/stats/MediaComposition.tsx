@@ -49,46 +49,61 @@ export function MediaComposition({
                 {mediaBreakdown.map((item) => {
                     const pct = Math.round((item.value / Math.max(totalEntries, 1)) * 100);
                     return (
-                    <div key={item.label}>
-                        <div
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                marginBottom: "8px",
-                            }}
-                        >
-                            <span style={{ fontSize: "13px", color: T2 }}>{item.label}</span>
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                <span style={{ fontSize: "12px", color: T3, fontVariantNumeric: "tabular-nums" }}>
-                                    {pct}%
-                                </span>
-                                <span style={{ fontSize: "13px", color: T1, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
-                                    {item.value.toLocaleString("zh-CN")}
-                                </span>
+                        <div key={item.label}>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    marginBottom: "8px",
+                                }}
+                            >
+                                <span style={{ fontSize: "13px", color: T2 }}>{item.label}</span>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                    <span
+                                        style={{
+                                            fontSize: "12px",
+                                            color: T3,
+                                            fontVariantNumeric: "tabular-nums",
+                                        }}
+                                    >
+                                        {pct}%
+                                    </span>
+                                    <span
+                                        style={{
+                                            fontSize: "13px",
+                                            color: T1,
+                                            fontWeight: 600,
+                                            fontVariantNumeric: "tabular-nums",
+                                        }}
+                                    >
+                                        {item.value.toLocaleString("zh-CN")}
+                                    </span>
+                                </div>
+                            </div>
+                            <div
+                                style={{
+                                    height: "8px",
+                                    borderRadius: "999px",
+                                    background: "var(--color-surface-3)",
+                                    overflow: "hidden",
+                                }}
+                            >
+                                <motion.div
+                                    style={{
+                                        height: "100%",
+                                        borderRadius: "999px",
+                                        background: `linear-gradient(90deg, ${item.color.base}, ${item.color.light})`,
+                                        boxShadow: `0 0 14px ${item.color.base}55`,
+                                    }}
+                                    initial={{ width: 0 }}
+                                    animate={{
+                                        width: `${Math.round((item.value / maxMedia) * 100)}%`,
+                                    }}
+                                    transition={{ duration: 0.8, delay: 0.45 }}
+                                />
                             </div>
                         </div>
-                        <div
-                            style={{
-                                height: "8px",
-                                borderRadius: "999px",
-                                background: "var(--color-surface-3)",
-                                overflow: "hidden",
-                            }}
-                        >
-                            <motion.div
-                                style={{
-                                    height: "100%",
-                                    borderRadius: "999px",
-                                    background: `linear-gradient(90deg, ${item.color.base}, ${item.color.light})`,
-                                    boxShadow: `0 0 14px ${item.color.base}55`,
-                                }}
-                                initial={{ width: 0 }}
-                                animate={{ width: `${Math.round((item.value / maxMedia) * 100)}%` }}
-                                transition={{ duration: 0.8, delay: 0.45 }}
-                            />
-                        </div>
-                    </div>
                     );
                 })}
             </div>

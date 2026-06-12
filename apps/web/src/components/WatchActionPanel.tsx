@@ -21,7 +21,6 @@ type WatchOption = "just-now" | "release-date" | "other-date" | "unknown-date";
 export function WatchActionPanel({
     open,
     onClose,
-    episodeId,
     showId,
     seasonNumber,
     episodeNumber,
@@ -84,13 +83,9 @@ export function WatchActionPanel({
             case "just-now":
                 return "刚刚";
             case "release-date":
-                return airDate
-                    ? `首播日期 (${new Date(airDate).toLocaleDateString("zh-CN")})`
-                    : "";
+                return airDate ? `首播日期 (${new Date(airDate).toLocaleDateString("zh-CN")})` : "";
             case "other-date":
-                return selectedDateTime
-                    ? new Date(selectedDateTime).toLocaleString("zh-CN")
-                    : "";
+                return selectedDateTime ? new Date(selectedDateTime).toLocaleString("zh-CN") : "";
             case "unknown-date":
                 return "未知时间";
             default:
@@ -124,9 +119,7 @@ export function WatchActionPanel({
             <SlidingPanel open={open} onClose={onClose} title="标记为已观看">
                 <div className="p-6">
                     <div className="space-y-3">
-                        <p className="text-sm text-[var(--color-text-muted)] mb-4">
-                            选择观看时间
-                        </p>
+                        <p className="text-sm text-[var(--color-text-muted)] mb-4">选择观看时间</p>
 
                         {/* Just now */}
                         <button
@@ -134,10 +127,7 @@ export function WatchActionPanel({
                             className="w-full flex items-center gap-3 p-4 rounded-xl bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] border border-[var(--color-border)] transition-colors text-left"
                         >
                             <div className="w-10 h-10 rounded-lg bg-[var(--color-accent)]/10 flex items-center justify-center shrink-0">
-                                <Clock
-                                    size={18}
-                                    className="text-[var(--color-accent)]"
-                                />
+                                <Clock size={18} className="text-[var(--color-accent)]" />
                             </div>
                             <div className="flex-1">
                                 <div className="text-sm font-medium text-[var(--color-text)]">
@@ -156,10 +146,7 @@ export function WatchActionPanel({
                             className="w-full flex items-center gap-3 p-4 rounded-xl bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] border border-[var(--color-border)] transition-colors text-left disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[var(--color-surface-2)]"
                         >
                             <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
-                                <Calendar
-                                    size={18}
-                                    className="text-blue-400"
-                                />
+                                <Calendar size={18} className="text-blue-400" />
                             </div>
                             <div className="flex-1">
                                 <div className="text-sm font-medium text-[var(--color-text)]">
@@ -179,10 +166,7 @@ export function WatchActionPanel({
                             className="w-full flex items-center gap-3 p-4 rounded-xl bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] border border-[var(--color-border)] transition-colors text-left"
                         >
                             <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0">
-                                <Calendar
-                                    size={18}
-                                    className="text-green-400"
-                                />
+                                <Calendar size={18} className="text-green-400" />
                             </div>
                             <div className="flex-1">
                                 <div className="text-sm font-medium text-[var(--color-text)]">
@@ -200,10 +184,7 @@ export function WatchActionPanel({
                             className="w-full flex items-center gap-3 p-4 rounded-xl bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] border border-[var(--color-border)] transition-colors text-left"
                         >
                             <div className="w-10 h-10 rounded-lg bg-gray-500/10 flex items-center justify-center shrink-0">
-                                <HelpCircle
-                                    size={18}
-                                    className="text-gray-400"
-                                />
+                                <HelpCircle size={18} className="text-gray-400" />
                             </div>
                             <div className="flex-1">
                                 <div className="text-sm font-medium text-[var(--color-text)]">

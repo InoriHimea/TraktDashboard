@@ -46,13 +46,9 @@ describe("SettingsPage", () => {
     it("saves display language, sync interval, and proxy settings", async () => {
         render(<SettingsPage />);
 
-        const languageInput = await screen.findByPlaceholderText(
-            "例如：zh-CN、en-US、ja-JP",
-        );
+        const languageInput = await screen.findByPlaceholderText("例如：zh-CN、en-US、ja-JP");
         const intervalInput = screen.getByRole("spinbutton");
-        const proxyInput = screen.getByPlaceholderText(
-            "http://proxy.example.com:7890",
-        );
+        const proxyInput = screen.getByPlaceholderText("http://proxy.example.com:7890");
 
         fireEvent.change(languageInput, { target: { value: "en-US" } });
         fireEvent.change(intervalInput, { target: { value: "120" } });
@@ -77,9 +73,7 @@ describe("SettingsPage", () => {
     it("blocks invalid proxy values before saving", async () => {
         render(<SettingsPage />);
 
-        const proxyInput = await screen.findByPlaceholderText(
-            "http://proxy.example.com:7890",
-        );
+        const proxyInput = await screen.findByPlaceholderText("http://proxy.example.com:7890");
         fireEvent.change(proxyInput, { target: { value: "socks5://proxy" } });
         fireEvent.click(screen.getByRole("button", { name: /保存/ }));
 

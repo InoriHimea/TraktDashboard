@@ -14,35 +14,26 @@ import { useSyncStatus, useTriggerSync, useTriggerFullSync } from "../hooks";
 export default function SyncPage() {
     const { data: sync, isLoading } = useSyncStatus();
     const { mutate: triggerSync, isPending: syncing } = useTriggerSync();
-    const { mutate: triggerFull, isPending: fullSyncing } =
-        useTriggerFullSync();
+    const { mutate: triggerFull, isPending: fullSyncing } = useTriggerFullSync();
     const [syncError, setSyncError] = useState<string | null>(null);
 
     const isRunning = sync?.status === "running";
     const syncPct =
-        isRunning && sync.total > 0
-            ? Math.round((sync.progress / sync.total) * 100)
-            : 0;
+        isRunning && sync.total > 0 ? Math.round((sync.progress / sync.total) * 100) : 0;
     const failedShows = sync?.failedShows ?? [];
     const anyPending = syncing || fullSyncing;
 
     const handleTriggerSync = () => {
         setSyncError(null);
         triggerSync(undefined, {
-            onError: (err) =>
-                setSyncError(
-                    err instanceof Error ? err.message : "触发同步失败",
-                ),
+            onError: (err) => setSyncError(err instanceof Error ? err.message : "触发同步失败"),
         });
     };
 
     const handleTriggerFull = () => {
         setSyncError(null);
         triggerFull(undefined, {
-            onError: (err) =>
-                setSyncError(
-                    err instanceof Error ? err.message : "触发全量同步失败",
-                ),
+            onError: (err) => setSyncError(err instanceof Error ? err.message : "触发全量同步失败"),
         });
     };
 
@@ -270,9 +261,7 @@ export default function SyncPage() {
                             >
                                 <Clock size={13} />
                                 上次同步：
-                                {new Date(sync.lastSyncAt).toLocaleString(
-                                    "zh-CN",
-                                )}
+                                {new Date(sync.lastSyncAt).toLocaleString("zh-CN")}
                             </div>
                         )}
 
@@ -336,24 +325,15 @@ export default function SyncPage() {
                                                 lineHeight: 1.6,
                                             }}
                                         >
-                                            仅同步上次以来的新观看记录，速度快。同时会拉取
-                                            TMDB
+                                            仅同步上次以来的新观看记录，速度快。同时会拉取 TMDB
                                             的本地化标题（根据设置中的显示语言）。
                                         </p>
                                     </div>
                                     <motion.button
                                         onClick={handleTriggerSync}
                                         disabled={anyPending || isRunning}
-                                        whileHover={
-                                            anyPending || isRunning
-                                                ? {}
-                                                : { scale: 1.02 }
-                                        }
-                                        whileTap={
-                                            anyPending || isRunning
-                                                ? {}
-                                                : { scale: 0.98 }
-                                        }
+                                        whileHover={anyPending || isRunning ? {} : { scale: 1.02 }}
+                                        whileTap={anyPending || isRunning ? {} : { scale: 0.98 }}
                                         style={{
                                             display: "inline-flex",
                                             alignItems: "center",
@@ -372,9 +352,7 @@ export default function SyncPage() {
                                             fontWeight: 600,
                                             border: "none",
                                             cursor:
-                                                anyPending || isRunning
-                                                    ? "not-allowed"
-                                                    : "pointer",
+                                                anyPending || isRunning ? "not-allowed" : "pointer",
                                             flexShrink: 0,
                                             transition: "background 0.15s",
                                             boxShadow:
@@ -385,9 +363,7 @@ export default function SyncPage() {
                                     >
                                         <RefreshCw
                                             size={14}
-                                            className={
-                                                syncing ? "animate-spin" : ""
-                                            }
+                                            className={syncing ? "animate-spin" : ""}
                                         />
                                         {syncing ? "排队中…" : "立即同步"}
                                     </motion.button>
@@ -429,24 +405,15 @@ export default function SyncPage() {
                                                 lineHeight: 1.6,
                                             }}
                                         >
-                                            重新同步全部历史记录，并强制刷新所有剧集的
-                                            TMDB
+                                            重新同步全部历史记录，并强制刷新所有剧集的 TMDB
                                             元数据（含本地化标题、简介）。耗时较长，适合首次使用或修复数据。
                                         </p>
                                     </div>
                                     <motion.button
                                         onClick={handleTriggerFull}
                                         disabled={anyPending || isRunning}
-                                        whileHover={
-                                            anyPending || isRunning
-                                                ? {}
-                                                : { scale: 1.02 }
-                                        }
-                                        whileTap={
-                                            anyPending || isRunning
-                                                ? {}
-                                                : { scale: 0.98 }
-                                        }
+                                        whileHover={anyPending || isRunning ? {} : { scale: 1.02 }}
+                                        whileTap={anyPending || isRunning ? {} : { scale: 0.98 }}
                                         style={{
                                             display: "inline-flex",
                                             alignItems: "center",
@@ -468,9 +435,7 @@ export default function SyncPage() {
                                                     ? "1px solid transparent"
                                                     : "1px solid #38bdf840",
                                             cursor:
-                                                anyPending || isRunning
-                                                    ? "not-allowed"
-                                                    : "pointer",
+                                                anyPending || isRunning ? "not-allowed" : "pointer",
                                             flexShrink: 0,
                                             transition: "background 0.15s",
                                             boxShadow:
@@ -481,11 +446,7 @@ export default function SyncPage() {
                                     >
                                         <Database
                                             size={14}
-                                            className={
-                                                fullSyncing
-                                                    ? "animate-spin"
-                                                    : ""
-                                            }
+                                            className={fullSyncing ? "animate-spin" : ""}
                                         />
                                         {fullSyncing ? "同步中…" : "全量同步"}
                                     </motion.button>
@@ -516,10 +477,7 @@ export default function SyncPage() {
                             marginBottom: "16px",
                         }}
                     >
-                        <AlertTriangle
-                            size={15}
-                            style={{ color: "var(--color-airing)" }}
-                        />
+                        <AlertTriangle size={15} style={{ color: "var(--color-airing)" }} />
                         <h3
                             style={{
                                 fontSize: "14px",
@@ -541,8 +499,7 @@ export default function SyncPage() {
                             <div
                                 key={`${f.tmdbId}-${f.title}`}
                                 style={{
-                                    paddingBottom:
-                                        i < failedShows.length - 1 ? "12px" : 0,
+                                    paddingBottom: i < failedShows.length - 1 ? "12px" : 0,
                                     borderBottom:
                                         i < failedShows.length - 1
                                             ? "1px solid var(--color-border-subtle)"
@@ -621,10 +578,7 @@ export default function SyncPage() {
                                     marginBottom: "8px",
                                 }}
                             >
-                                <CheckCircle2
-                                    size={16}
-                                    style={{ color: "#10b981" }}
-                                />
+                                <CheckCircle2 size={16} style={{ color: "#10b981" }} />
                                 <span
                                     style={{
                                         fontSize: "13px",
@@ -662,7 +616,10 @@ export default function SyncPage() {
                                 borderRadius: "var(--radius-md)",
                                 padding: "16px",
                                 background: failedShows.length > 0 ? "#ef444414" : "#6b728014",
-                                border: failedShows.length > 0 ? "1px solid #ef444428" : "1px solid #6b728028",
+                                border:
+                                    failedShows.length > 0
+                                        ? "1px solid #ef444428"
+                                        : "1px solid #6b728028",
                             }}
                         >
                             <div
@@ -675,7 +632,9 @@ export default function SyncPage() {
                             >
                                 <AlertCircle
                                     size={16}
-                                    style={{ color: failedShows.length > 0 ? "#ef4444" : "#6b7280" }}
+                                    style={{
+                                        color: failedShows.length > 0 ? "#ef4444" : "#6b7280",
+                                    }}
                                 />
                                 <span
                                     style={{

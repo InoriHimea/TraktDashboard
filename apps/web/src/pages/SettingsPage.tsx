@@ -29,8 +29,7 @@ const labelStyle: React.CSSProperties = {
 
 export default function SettingsPage() {
     const { data: settings, isLoading } = useSettings();
-    const { mutateAsync: updateSettings, isPending: saving } =
-        useUpdateSettings();
+    const { mutateAsync: updateSettings, isPending: saving } = useUpdateSettings();
 
     const [displayLanguage, setDisplayLanguage] = useState("zh-CN");
     const [syncIntervalMinutes, setSyncIntervalMinutes] = useState(60);
@@ -60,10 +59,7 @@ export default function SettingsPage() {
 
         // Validate displayLanguage (BCP 47 format: xx or xx-YY)
         const langTrimmed = displayLanguage.trim();
-        if (
-            langTrimmed &&
-            !/^[a-zA-Z]{2,3}(-[a-zA-Z]{2,4})?$/.test(langTrimmed)
-        ) {
+        if (langTrimmed && !/^[a-zA-Z]{2,3}(-[a-zA-Z]{2,4})?$/.test(langTrimmed)) {
             toast(t("settings.validationLanguageError"), "error");
             return;
         }
@@ -84,11 +80,10 @@ export default function SettingsPage() {
             setLocale(langTrimmed);
             toast(t("settings.saveSuccess"), "success");
         } catch (err: unknown) {
-            const message =
-                err instanceof Error ? err.message : t("settings.saveFailed");
+            const message = err instanceof Error ? err.message : t("settings.saveFailed");
             toast(message, "error", {
                 label: "重试",
-                onClick: () => handleSave()
+                onClick: () => handleSave(),
             });
         }
     }
@@ -186,11 +181,12 @@ export default function SettingsPage() {
                                                 persistTheme(themeOption);
                                             }}
                                             style={{
-                                                accentColor:
-                                                    "var(--color-accent)",
+                                                accentColor: "var(--color-accent)",
                                             }}
                                         />
-                                        {t(`settings.theme${themeOption.charAt(0).toUpperCase() + themeOption.slice(1)}`)}
+                                        {t(
+                                            `settings.theme${themeOption.charAt(0).toUpperCase() + themeOption.slice(1)}`,
+                                        )}
                                     </label>
                                 ))}
                             </div>
@@ -215,9 +211,7 @@ export default function SettingsPage() {
                                 autoComplete="language"
                                 spellCheck={false}
                                 value={displayLanguage}
-                                onChange={(e) =>
-                                    setDisplayLanguage(e.target.value)
-                                }
+                                onChange={(e) => setDisplayLanguage(e.target.value)}
                                 placeholder={t("settings.displayLanguagePlaceholder")}
                                 style={inputStyle}
                             />
@@ -254,11 +248,7 @@ export default function SettingsPage() {
                                 min={1}
                                 max={10080}
                                 value={syncIntervalMinutes}
-                                onChange={(e) =>
-                                    setSyncIntervalMinutes(
-                                        Number(e.target.value),
-                                    )
-                                }
+                                onChange={(e) => setSyncIntervalMinutes(Number(e.target.value))}
                                 style={inputStyle}
                             />
                             <p
@@ -311,9 +301,7 @@ export default function SettingsPage() {
                     </div>
 
                     {/* Save button */}
-                    <div
-                        style={{ display: "flex", justifyContent: "flex-end" }}
-                    >
+                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
                         <motion.button
                             type="submit"
                             disabled={saving}
@@ -322,8 +310,7 @@ export default function SettingsPage() {
                                     ? {}
                                     : {
                                           scale: 1.02,
-                                          boxShadow:
-                                              "0 4px 20px var(--color-accent-glow)",
+                                          boxShadow: "0 4px 20px var(--color-accent-glow)",
                                       }
                             }
                             whileTap={saving ? {} : { scale: 0.98 }}
@@ -333,21 +320,15 @@ export default function SettingsPage() {
                                 gap: "8px",
                                 padding: "10px 24px",
                                 borderRadius: "var(--radius-md)",
-                                background: saving
-                                    ? "var(--color-surface-3)"
-                                    : "#10b981",
-                                color: saving
-                                    ? "var(--color-text-muted)"
-                                    : "#fff",
+                                background: saving ? "var(--color-surface-3)" : "#10b981",
+                                color: saving ? "var(--color-text-muted)" : "#fff",
                                 fontSize: "14px",
                                 fontWeight: 600,
                                 border: "none",
                                 cursor: saving ? "not-allowed" : "pointer",
                                 letterSpacing: "-0.01em",
                                 transition: "background 0.15s",
-                                boxShadow: saving
-                                    ? "none"
-                                    : "0 2px 12px rgba(16,185,129,0.35)",
+                                boxShadow: saving ? "none" : "0 2px 12px rgba(16,185,129,0.35)",
                             }}
                         >
                             <Save size={15} />

@@ -7,13 +7,8 @@ interface TraktProgressBarProps {
     className?: string;
 }
 
-export function TraktProgressBar({
-    watched,
-    total,
-    className,
-}: TraktProgressBarProps) {
-    const pct =
-        total === 0 ? 0 : Math.min(100, Math.max(0, (watched / total) * 100));
+export function TraktProgressBar({ watched, total, className }: TraktProgressBarProps) {
+    const pct = total === 0 ? 0 : Math.min(100, Math.max(0, (watched / total) * 100));
 
     return (
         <div
@@ -25,8 +20,7 @@ export function TraktProgressBar({
             <motion.div
                 className="rounded-full h-full"
                 style={{
-                    background:
-                        "linear-gradient(90deg, var(--color-accent), var(--color-watched))",
+                    background: "linear-gradient(90deg, var(--color-accent), var(--color-watched))",
                     boxShadow: "0 0 14px var(--color-accent-glow)",
                 }}
                 initial={{ width: 0 }}

@@ -12,13 +12,7 @@ import { resolveEpisodeStillLarge, resolveBackdropFallback } from "../lib/image"
 import { t } from "../lib/i18n";
 import { formatEpisode } from "../lib/utils";
 
-function EpisodeDetailState({
-    message,
-    action,
-}: {
-    message: string;
-    action?: ReactNode;
-}) {
+function EpisodeDetailState({ message, action }: { message: string; action?: ReactNode }) {
     return (
         <div className="flex min-h-[calc(100svh-var(--app-nav-height))] items-center justify-center bg-background px-6 text-foreground">
             <div className="hud-panel flex max-w-sm flex-col items-center gap-4 p-8 text-center">
@@ -155,9 +149,13 @@ export default function EpisodeDetailPage() {
                         {t("common.back")}
                     </Button>
                     <div className="flex min-w-0 items-center gap-2 rounded-full border border-border/50 bg-[var(--color-surface-2)]/70 px-3 py-1.5 text-xs font-semibold text-muted-foreground sm:max-w-[50%]">
-                        <span className="truncate text-foreground/90">{data.show.translatedName ?? data.show.title}</span>
+                        <span className="truncate text-foreground/90">
+                            {data.show.translatedName ?? data.show.title}
+                        </span>
                         <span className="text-muted-foreground/50">/</span>
-                        <span className="tabular-nums text-[var(--color-accent-light)]">{episodeCode}</span>
+                        <span className="tabular-nums text-[var(--color-accent-light)]">
+                            {episodeCode}
+                        </span>
                     </div>
                 </div>
 
@@ -178,7 +176,12 @@ export default function EpisodeDetailPage() {
                             )}
                             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/78 via-black/12 to-transparent" />
                             <div className="absolute left-4 top-4 flex flex-wrap items-center gap-2">
-                                <Tag color="slate" variant="3d" size="sm" className="rounded-full px-3 py-1 tabular-nums">
+                                <Tag
+                                    color="slate"
+                                    variant="3d"
+                                    size="sm"
+                                    className="rounded-full px-3 py-1 tabular-nums"
+                                >
                                     {episodeCode}
                                 </Tag>
                                 {isWatched && (

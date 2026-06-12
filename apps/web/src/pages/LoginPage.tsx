@@ -147,8 +147,8 @@ export default function LoginPage() {
                                 maxWidth: "560px",
                             }}
                         >
-                            A polished private dashboard for your Trakt history, TV progress,
-                            movie watches, and completion insights.
+                            A polished private dashboard for your Trakt history, TV progress, movie
+                            watches, and completion insights.
                         </p>
                     </div>
 
@@ -308,7 +308,10 @@ export default function LoginPage() {
                                             fontWeight: 750,
                                         }}
                                     >
-                                        <BarChart3 size={15} style={{ color: "var(--color-accent)" }} />
+                                        <BarChart3
+                                            size={15}
+                                            style={{ color: "var(--color-accent)" }}
+                                        />
                                         Watch overview
                                     </div>
                                     <div
@@ -385,7 +388,10 @@ export default function LoginPage() {
                                                 background: "rgba(255,255,255,0.035)",
                                             }}
                                         >
-                                            <div className="flex items-center" style={{ gap: "10px" }}>
+                                            <div
+                                                className="flex items-center"
+                                                style={{ gap: "10px" }}
+                                            >
                                                 <div
                                                     className="flex items-center justify-center"
                                                     style={{
@@ -396,7 +402,11 @@ export default function LoginPage() {
                                                         color: "var(--color-accent-light)",
                                                     }}
                                                 >
-                                                    {status === "Watched" ? <Film size={15} /> : <Clock3 size={15} />}
+                                                    {status === "Watched" ? (
+                                                        <Film size={15} />
+                                                    ) : (
+                                                        <Clock3 size={15} />
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <p
@@ -470,8 +480,8 @@ export default function LoginPage() {
                                             marginTop: "7px",
                                         }}
                                     >
-                                        Sign in with Trakt to import shows, movies, and watch history
-                                        into your private dashboard.
+                                        Sign in with Trakt to import shows, movies, and watch
+                                        history into your private dashboard.
                                     </p>
                                 </div>
                             </div>
@@ -527,7 +537,11 @@ export default function LoginPage() {
 
                             <div className="grid" style={{ gap: "11px" }}>
                                 {TRUST_ITEMS.map((item) => (
-                                    <div key={item} className="flex items-center" style={{ gap: "11px" }}>
+                                    <div
+                                        key={item}
+                                        className="flex items-center"
+                                        style={{ gap: "11px" }}
+                                    >
                                         <CheckCircle2
                                             size={16}
                                             style={{ color: "var(--color-watched)", flexShrink: 0 }}
