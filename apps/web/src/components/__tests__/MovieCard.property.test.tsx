@@ -56,7 +56,18 @@ describe("MovieCard", () => {
 
                 const link = screen.getByRole("link");
                 expect(link).toHaveAttribute("href", `/movies/${movie.movie.id}`);
-                expect(within(link).getByText(movie.movie.title)).toBeInTheDocument();
+                // Two issues with a plain getByText(title):
+                //   1. testing-library normalizes the *actual* DOM text (collapses spaces)
+                //      but compares against the *raw* expected string, so a title like
+                //      "!  !" (two spaces) never matches because "! !" !== "!  !".
+                //   2. When releaseDate and lastWatchedAt are both null the parent info
+                //      <div> has no other text, so its textContent equals the title —
+                //      causing a "found multiple elements" error.
+                // Fix: pre-normalise the expected string and restrict to selector:"h3".
+                const normalizedTitle = movie.movie.title.trim().replace(/\s+/g, " ");
+                expect(
+                    within(link).getByText(normalizedTitle, { selector: "h3" }),
+                ).toBeInTheDocument();
                 expect(
                     within(link).getByText(
                         movie.watchCount > 0 ? `已观看 ${movie.watchCount} 次` : "未观看",
@@ -65,6 +76,9 @@ describe("MovieCard", () => {
 
                 unmount();
             }),
+            // Pinned seed to make the run deterministic; 1085168968 was the seed
+            // that first exposed the heading-vs-parent-div collision above.
+            { seed: 1085168968, numRuns: 200 },
         );
     });
 });
