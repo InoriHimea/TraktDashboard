@@ -3,18 +3,17 @@ import IORedis from "ioredis";
 import { getDb, users, userSettings, metadataCache } from "@trakt-dashboard/db";
 import { eq, lt } from "drizzle-orm";
 import { triggerIncrementalSync, resetStaleRunningSyncs } from "../services/sync.js";
+import { withTimeout } from "../lib/timeout.js";
+import { METADATA_MAX_AGE_HOURS } from "../services/tmdb.js";
 
 let connection: IORedis | null = null;
 let syncQueue: Queue | null = null;
 
 export function getRedis() {
     if (!connection) {
-        connection = new IORedis(
-            process.env.REDIS_URL || "redis://localhost:6379",
-            {
-                maxRetriesPerRequest: null,
-            },
-        );
+        connection = new IORedis(process.env.REDIS_URL || "redis://localhost:6379", {
+            maxRetriesPerRequest: null,
+        });
         connection.on("error", (err) => {
             console.error("[redis] Connection error:", err);
         });
@@ -27,6 +26,17 @@ export function getSyncQueue() {
         syncQueue = new Queue("sync", { connection: getRedis() });
     }
     return syncQueue;
+}
+
+// P2-T14: lightweight Redis/queue health probe. Returns false (never throws) when Redis
+// is unreachable so callers can degrade gracefully (e.g. 503 instead of a fake 200).
+export async function isQueueHealthy(): Promise<boolean> {
+    try {
+        const pong = await withTimeout(getRedis().ping(), 2000, "redis ping");
+        return pong === "PONG";
+    } catch {
+        return false;
+    }
 }
 
 // Task 8.1: Read syncIntervalMinutes from user_settings, fallback to env/default
@@ -59,10 +69,7 @@ export async function registerUserSyncJob(userId: number) {
             await queue.removeRepeatableByKey(existing.key);
         }
     } catch (e) {
-        console.warn(
-            `[scheduler] Could not remove existing repeat job for user ${userId}:`,
-            e,
-        );
+        console.warn(`[scheduler] Could not remove existing repeat job for user ${userId}:`, e);
     }
 
     await queue.add(
@@ -93,18 +100,16 @@ export async function startScheduler() {
         async (job) => {
             if (job.name === "incremental-sync") {
                 const { userId } = job.data;
-                console.log(
-                    `[scheduler] Running incremental sync for user ${userId}`,
-                );
+                console.log(`[scheduler] Running incremental sync for user ${userId}`);
                 await triggerIncrementalSync(userId);
             } else if (job.name === "cleanup-cache") {
                 console.log(`[scheduler] Running metadata cache cleanup`);
                 try {
                     const db = getDb();
-                    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-                    const result = await db
-                        .delete(metadataCache)
-                        .where(lt(metadataCache.cachedAt, sevenDaysAgo));
+                    // P2-T04: only delete rows past the longest TTL + stale grace window, so
+                    // still-valid 30d show/season metadata is not wiped by the daily cleanup.
+                    const cutoff = new Date(Date.now() - METADATA_MAX_AGE_HOURS * 60 * 60 * 1000);
+                    await db.delete(metadataCache).where(lt(metadataCache.cachedAt, cutoff));
                     // Drizzle Postgres.js returns { count } depending on driver, but logging completion is enough
                     console.log(`[scheduler] Metadata cache cleanup completed`);
                 } catch (e) {
@@ -142,7 +147,7 @@ export async function startScheduler() {
                 repeat: { every: 24 * 60 * 60 * 1000 }, // Daily
                 removeOnComplete: 10,
                 removeOnFail: 5,
-            }
+            },
         );
         console.log(`[scheduler] Registered daily metadata cache cleanup job`);
     } catch (e) {

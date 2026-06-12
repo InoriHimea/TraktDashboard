@@ -3,6 +3,7 @@ import { getDb, users, metadataCache, userSettings } from "@trakt-dashboard/db";
 import { eq, and } from "drizzle-orm";
 import { getRedis } from "../jobs/scheduler.js";
 import { providerFetch, sleep } from "../lib/http.js";
+import { getProviderRateLimiter } from "../lib/rate-limit.js";
 
 const FETCH_TIMEOUT_MS = 12000;
 const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
@@ -241,13 +242,7 @@ async function refreshToken(userId: number): Promise<string> {
     let attempt = 0;
 
     while (Date.now() - waitStartedAt < TOKEN_REFRESH_WAIT_BUDGET_MS) {
-        const acquired = await redis.set(
-            lockKey,
-            lockValue,
-            "PX",
-            TOKEN_REFRESH_LOCK_TTL_MS,
-            "NX",
-        );
+        const acquired = await redis.set(lockKey, lockValue, "PX", TOKEN_REFRESH_LOCK_TTL_MS, "NX");
 
         if (!acquired) {
             const user = await readUserTokens(userId);
@@ -281,6 +276,7 @@ async function refreshToken(userId: number): Promise<string> {
                 timeoutMs: FETCH_TIMEOUT_MS,
                 maxRetries: 0,
                 prefix: "trakt:refresh",
+                rateLimiter: getProviderRateLimiter("trakt"),
             });
 
             if (!tokenRes.ok) {
@@ -301,7 +297,9 @@ async function refreshToken(userId: number): Promise<string> {
                     tokenExpiresAt: new Date(Date.now() + data.expires_in * 1000),
                     updatedAt: new Date(),
                 })
-                .where(and(eq(users.id, userId), eq(users.traktRefreshToken, user.traktRefreshToken)))
+                .where(
+                    and(eq(users.id, userId), eq(users.traktRefreshToken, user.traktRefreshToken)),
+                )
                 .returning({ traktAccessToken: users.traktAccessToken });
 
             if (updated.length === 0) {
@@ -369,12 +367,9 @@ export function getTraktClient() {
         userId: number,
         params?: Record<string, string>,
         init?: RequestInit,
-    ): Promise<{ data: any; headers: Headers }> {
+    ): Promise<{ data: unknown; headers: Headers }> {
         const db = getDb();
-        const [user] = await db
-            .select()
-            .from(users)
-            .where(eq(users.id, userId));
+        const [user] = await db.select().from(users).where(eq(users.id, userId));
         if (!user) throw new Error("User not found");
 
         let token = user.traktAccessToken;
@@ -384,10 +379,7 @@ export function getTraktClient() {
         }
 
         const url = new URL(`https://api.trakt.tv${path}`);
-        if (params)
-            Object.entries(params).forEach(([k, v]) =>
-                url.searchParams.set(k, v),
-            );
+        if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
 
         // Resolve proxy after token refresh so that any DB select order matches
         // the original fetchWithTimeout pattern (getProxyUrl was called post-refresh).
@@ -411,6 +403,7 @@ export function getTraktClient() {
             maxRetries: 3,
             prefix: "trakt",
             retryStatuses: [429, 500, 502, 503, 504],
+            rateLimiter: getProviderRateLimiter("trakt"),
         });
 
         if (!res.ok) throw new TraktApiError(res.status, await res.text());
@@ -430,19 +423,13 @@ export function getTraktClient() {
 
     return {
         getWatchedShows: (userId: number) =>
-            traktFetch<TraktWatchedShow[]>(
-                "/sync/watched/shows?extended=noseasons",
-                userId,
-            ),
+            traktFetch<TraktWatchedShow[]>("/sync/watched/shows?extended=noseasons", userId),
 
         getWatchedMovies: (userId: number) =>
             traktFetch<TraktWatchedMovie[]>("/sync/watched/movies", userId),
 
         // Task 3.2: getHistory now uses traktFetchRaw (unified token refresh + 429 retry)
-        getHistory: async (
-            userId: number,
-            startAt?: string,
-        ): Promise<TraktHistoryEntry[]> => {
+        getHistory: async (userId: number, startAt?: string): Promise<TraktHistoryEntry[]> => {
             const all: TraktHistoryEntry[] = [];
             let page = 1;
 
@@ -460,9 +447,7 @@ export function getTraktClient() {
                 );
                 all.push(...(data as TraktHistoryEntry[]));
 
-                const pageCount = parseInt(
-                    headers.get("X-Pagination-Page-Count") || "1",
-                );
+                const pageCount = parseInt(headers.get("X-Pagination-Page-Count") || "1");
                 if (page >= pageCount) break;
                 page++;
             }
@@ -475,19 +460,13 @@ export function getTraktClient() {
             let page = 1;
 
             while (true) {
-                const { data, headers } = await traktFetchRaw(
-                    "/sync/history/movies",
-                    userId,
-                    {
-                        limit: "100",
-                        page: String(page),
-                    },
-                );
+                const { data, headers } = await traktFetchRaw("/sync/history/movies", userId, {
+                    limit: "100",
+                    page: String(page),
+                });
                 all.push(...(data as TraktMovieHistoryEntry[]));
 
-                const pageCount = parseInt(
-                    headers.get("X-Pagination-Page-Count") || "1",
-                );
+                const pageCount = parseInt(headers.get("X-Pagination-Page-Count") || "1");
                 if (page >= pageCount) break;
                 page++;
             }
@@ -501,15 +480,10 @@ export function getTraktClient() {
                 userId,
             ),
 
-        getWatching: async (
-            userId: number,
-        ): Promise<TraktWatchingResponse | null> => {
-            const { data } = await traktFetchRaw(
-                "/users/me/watching?extended=full",
-                userId,
-            );
+        getWatching: async (userId: number): Promise<TraktWatchingResponse | null> => {
+            const { data } = await traktFetchRaw("/users/me/watching?extended=full", userId);
             if (!data) return null;
-            if ((data as any).type !== "episode") return null;
+            if ((data as { type?: string }).type !== "episode") return null;
             return data as TraktWatchingResponse;
         },
 
@@ -646,17 +620,50 @@ export function getTraktClient() {
             episode: number,
             userId: number,
         ): Promise<number | null> => {
+            // P2-T04: ratings change slowly — cache for 24h instead of a live fetch on every
+            // episode detail view, with stale fallback on provider failure.
+            const db = getDb();
+            const cacheKey = `${traktId}_s${season}e${episode}`;
+            const RATING_TTL_MS = 24 * 60 * 60 * 1000;
+            const [cached] = await db
+                .select()
+                .from(metadataCache)
+                .where(
+                    and(
+                        eq(metadataCache.source, "trakt_episode_rating"),
+                        eq(metadataCache.externalId, cacheKey),
+                    ),
+                );
+            if (cached) {
+                const age = Date.now() - new Date(cached.cachedAt).getTime();
+                if (age < RATING_TTL_MS) {
+                    return (cached.data as { rating: number | null }).rating;
+                }
+            }
             try {
                 const data = await traktFetch<{
                     rating: number;
                     votes: number;
-                }>(
-                    `/shows/${traktId}/seasons/${season}/episodes/${episode}/ratings`,
-                    userId,
-                );
+                }>(`/shows/${traktId}/seasons/${season}/episodes/${episode}/ratings`, userId);
                 // Convert 0-10 float to 0-100 integer
-                return Math.round(data.rating * 10);
+                const rating = Math.round(data.rating * 10);
+                await db
+                    .insert(metadataCache)
+                    .values({
+                        source: "trakt_episode_rating",
+                        externalId: cacheKey,
+                        data: { rating },
+                        cachedAt: new Date(),
+                    })
+                    .onConflictDoUpdate({
+                        target: [metadataCache.source, metadataCache.externalId],
+                        set: { data: { rating }, cachedAt: new Date() },
+                    });
+                return rating;
             } catch (e) {
+                if (cached) {
+                    return (cached.data as { rating: number | null }).rating;
+                }
                 console.warn(
                     `[trakt] Episode rating fetch failed for ${traktId} s${season}e${episode}:`,
                     e,
@@ -677,18 +684,13 @@ export function getTraktClient() {
             type: "shows" | "movies",
             ids: { trakt?: number; tmdb?: number; imdb?: string },
         ): Promise<void> => {
-            await traktFetchRaw(
-                "/sync/watchlist",
-                userId,
-                undefined,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        [type]: [{ ids }],
-                    }),
-                },
-            );
+            await traktFetchRaw("/sync/watchlist", userId, undefined, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    [type]: [{ ids }],
+                }),
+            });
         },
 
         removeFromWatchlist: async (
@@ -696,18 +698,13 @@ export function getTraktClient() {
             type: "shows" | "movies",
             ids: { trakt?: number; tmdb?: number; imdb?: string },
         ): Promise<void> => {
-            await traktFetchRaw(
-                "/sync/watchlist/remove",
-                userId,
-                undefined,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        [type]: [{ ids }],
-                    }),
-                },
-            );
+            await traktFetchRaw("/sync/watchlist/remove", userId, undefined, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    [type]: [{ ids }],
+                }),
+            });
         },
     };
 }

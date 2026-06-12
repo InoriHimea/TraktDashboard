@@ -209,4 +209,3 @@ This feature separates TV shows and movies into distinct pages within the Trakt 
 5. THE Movie_Detail_Page SHALL provide a button to mark as watched
 6. THE Movie_Detail_Page SHALL provide a button to delete watch history records
 7. THE Movie_Detail_Page SHALL display Trakt rating and TMDB rating
-

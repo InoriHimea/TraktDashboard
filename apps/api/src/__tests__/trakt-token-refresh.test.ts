@@ -11,9 +11,8 @@ const redisMock = vi.hoisted(() => ({
 }));
 
 vi.mock("@trakt-dashboard/db", async () => {
-    const actual = await vi.importActual<typeof import("@trakt-dashboard/db")>(
-        "@trakt-dashboard/db",
-    );
+    const actual =
+        await vi.importActual<typeof import("@trakt-dashboard/db")>("@trakt-dashboard/db");
     return {
         ...actual,
         getDb: () => dbMock.db,
@@ -107,13 +106,7 @@ beforeEach(() => {
 describe("Trakt token refresh", () => {
     it("refreshes an expired token once and releases only the owned Redis lock", async () => {
         const future = new Date(Date.now() + 60 * 60 * 1000);
-        dbMock.db = makeDb(
-            [
-                [makeUser()],
-                [makeUser()],
-            ],
-            [[{ traktAccessToken: "access-new" }]],
-        );
+        dbMock.db = makeDb([[makeUser()], [makeUser()]], [[{ traktAccessToken: "access-new" }]]);
         redisMock.redis.set.mockResolvedValue("OK");
         vi.stubGlobal(
             "fetch",

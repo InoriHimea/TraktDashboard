@@ -1,15 +1,83 @@
 import { getDb, metadataCache, userSettings } from "@trakt-dashboard/db";
 import { eq, and } from "drizzle-orm";
 import { providerFetch } from "../lib/http.js";
+import { getProviderRateLimiter } from "../lib/rate-limit.js";
 
 const TMDB_BASE = "https://api.themoviedb.org/3";
-const CACHE_TTL_HOURS = 24 * 7;
 const FETCH_TIMEOUT_MS = 12000;
 
+// Per-source cache TTLs (P2-T04). Show/movie/season metadata is stable (30d); episode
+// detail changes more often (7d). On provider failure we serve stale cache within a grace
+// window so a transient TMDB outage degrades gracefully instead of erroring.
+const CACHE_TTL_HOURS: Record<string, number> = {
+    tmdb_show: 24 * 30,
+    tmdb_movie: 24 * 30,
+    tmdb_season: 24 * 30,
+    tmdb_episode: 24 * 7,
+};
+const DEFAULT_TTL_HOURS = 24 * 7;
+const STALE_GRACE_HOURS = 24 * 14;
+// Longest a row can stay useful (max TTL + grace). The cleanup job must not delete inside this.
+export const METADATA_MAX_AGE_HOURS = 24 * 30 + STALE_GRACE_HOURS;
+
+function ttlHoursFor(source: string): number {
+    return CACHE_TTL_HOURS[source] ?? DEFAULT_TTL_HOURS;
+}
+
+interface CachedFetchOptions<T> {
+    source: string;
+    cacheKey: string;
+    fetcher: () => Promise<T>;
+    /** Skip the freshness check and always re-fetch, but still fall back to stale on failure. */
+    forceRefresh?: boolean;
+}
+
+// P2-T04: stale-while-revalidate cache wrapper. Fresh cache short-circuits; on a provider
+// failure a still-within-grace stale row is served instead of throwing.
+async function cachedProviderFetch<T>({
+    source,
+    cacheKey,
+    fetcher,
+    forceRefresh = false,
+}: CachedFetchOptions<T>): Promise<T> {
+    const db = getDb();
+    const [cached] = await db
+        .select()
+        .from(metadataCache)
+        .where(and(eq(metadataCache.source, source), eq(metadataCache.externalId, cacheKey)));
+
+    const now = Date.now();
+    const ttlMs = ttlHoursFor(source) * 60 * 60 * 1000;
+    const graceMs = (ttlHoursFor(source) + STALE_GRACE_HOURS) * 60 * 60 * 1000;
+    const ageMs = cached ? now - new Date(cached.cachedAt).getTime() : Infinity;
+
+    if (cached && !forceRefresh && ageMs < ttlMs) {
+        return cached.data as T;
+    }
+
+    try {
+        const data = await fetcher();
+        await db
+            .insert(metadataCache)
+            .values({ source, externalId: cacheKey, data, cachedAt: new Date() })
+            .onConflictDoUpdate({
+                target: [metadataCache.source, metadataCache.externalId],
+                set: { data, cachedAt: new Date() },
+            });
+        return data;
+    } catch (e) {
+        if (cached && ageMs < graceMs) {
+            console.warn(
+                `[tmdb] Serving stale ${source}/${cacheKey} (age ${Math.round(ageMs / 3.6e6)}h) after fetch failure`,
+            );
+            return cached.data as T;
+        }
+        throw e;
+    }
+}
+
 // ─── Dynamic proxy (Task 6.3) ─────────────────────────────────────────────────
-export async function getProxyUrl(
-    userId?: number,
-): Promise<string | undefined> {
+export async function getProxyUrl(userId?: number): Promise<string | undefined> {
     if (userId) {
         try {
             const db = getDb();
@@ -41,8 +109,7 @@ async function tmdbFetch<T>(
         throw new Error("[tmdb] TMDB_API_KEY environment variable is not set");
     }
     const url = new URL(`${TMDB_BASE}${path}`);
-    if (params)
-        Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+    if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
 
     const proxyUrl = await getProxyUrl(userId);
 
@@ -64,6 +131,7 @@ async function tmdbFetch<T>(
         timeoutMs: FETCH_TIMEOUT_MS,
         maxRetries: 3,
         prefix: "tmdb",
+        rateLimiter: getProviderRateLimiter("tmdb"),
     });
     if (!res.ok) throw new Error(`TMDB ${res.status}: ${path}`);
     return res.json() as Promise<T>;
@@ -161,46 +229,17 @@ export async function getTmdbShow(
     language?: string,
     userId?: number,
 ): Promise<TmdbShow> {
-    const db = getDb();
     const cacheKey = language ? `${tmdbId}_${language}` : String(tmdbId);
-
-    const [cached] = await db
-        .select()
-        .from(metadataCache)
-        .where(
-            and(
-                eq(metadataCache.source, "tmdb_show"),
-                eq(metadataCache.externalId, cacheKey),
-            ),
-        );
-
-    if (cached) {
-        const age = Date.now() - new Date(cached.cachedAt).getTime();
-        if (age < CACHE_TTL_HOURS * 60 * 60 * 1000)
-            return cached.data as TmdbShow;
-    }
-
     const params: Record<string, string> = {
         append_to_response: "external_ids,translations",
     };
     if (language) params.language = language;
 
-    const data = await tmdbFetch<TmdbShow>(`/tv/${tmdbId}`, params, userId);
-
-    await db
-        .insert(metadataCache)
-        .values({
-            source: "tmdb_show",
-            externalId: cacheKey,
-            data,
-            cachedAt: new Date(),
-        })
-        .onConflictDoUpdate({
-            target: [metadataCache.source, metadataCache.externalId],
-            set: { data, cachedAt: new Date() },
-        });
-
-    return data;
+    return cachedProviderFetch<TmdbShow>({
+        source: "tmdb_show",
+        cacheKey,
+        fetcher: () => tmdbFetch<TmdbShow>(`/tv/${tmdbId}`, params, userId),
+    });
 }
 
 export async function getTmdbMovie(
@@ -208,46 +247,17 @@ export async function getTmdbMovie(
     userId?: number,
     language?: string,
 ): Promise<TmdbMovie> {
-    const db = getDb();
     const cacheKey = `tmdb_movie_${tmdbId}_${language || "base"}`;
-
-    const [cached] = await db
-        .select()
-        .from(metadataCache)
-        .where(
-            and(
-                eq(metadataCache.source, "tmdb_movie"),
-                eq(metadataCache.externalId, cacheKey),
-            ),
-        );
-
-    if (cached) {
-        const age = Date.now() - new Date(cached.cachedAt).getTime();
-        if (age < CACHE_TTL_HOURS * 60 * 60 * 1000)
-            return cached.data as TmdbMovie;
-    }
-
     const params: Record<string, string> = {
         append_to_response: "translations",
     };
     if (language) params.language = language;
 
-    const data = await tmdbFetch<TmdbMovie>(`/movie/${tmdbId}`, params, userId);
-
-    await db
-        .insert(metadataCache)
-        .values({
-            source: "tmdb_movie",
-            externalId: cacheKey,
-            data,
-            cachedAt: new Date(),
-        })
-        .onConflictDoUpdate({
-            target: [metadataCache.source, metadataCache.externalId],
-            set: { data, cachedAt: new Date() },
-        });
-
-    return data;
+    return cachedProviderFetch<TmdbMovie>({
+        source: "tmdb_movie",
+        cacheKey,
+        fetcher: () => tmdbFetch<TmdbMovie>(`/movie/${tmdbId}`, params, userId),
+    });
 }
 
 export async function getTmdbSeason(
@@ -257,59 +267,24 @@ export async function getTmdbSeason(
     userId?: number,
     forceRefresh?: boolean,
 ): Promise<TmdbSeason> {
-    const db = getDb();
     // Language-aware cache key — prevents stale English cache being reused for localized requests
     const cacheKey = language
         ? `${tmdbId}_s${seasonNumber}_${language}`
         : `${tmdbId}_s${seasonNumber}`;
 
-    if (!forceRefresh) {
-        const [cached] = await db
-            .select()
-            .from(metadataCache)
-            .where(
-                and(
-                    eq(metadataCache.source, "tmdb_season"),
-                    eq(metadataCache.externalId, cacheKey),
-                ),
-            );
-
-        if (cached) {
-            const age = Date.now() - new Date(cached.cachedAt).getTime();
-            if (age < CACHE_TTL_HOURS * 60 * 60 * 1000)
-                return cached.data as TmdbSeason;
-        }
-    }
-
     const params: Record<string, string> = {};
     if (language) params.language = language;
 
-    const data = await tmdbFetch<TmdbSeason>(
-        `/tv/${tmdbId}/season/${seasonNumber}`,
-        params,
-        userId,
-    );
-
-    await db
-        .insert(metadataCache)
-        .values({
-            source: "tmdb_season",
-            externalId: cacheKey,
-            data,
-            cachedAt: new Date(),
-        })
-        .onConflictDoUpdate({
-            target: [metadataCache.source, metadataCache.externalId],
-            set: { data, cachedAt: new Date() },
-        });
-
-    return data;
+    return cachedProviderFetch<TmdbSeason>({
+        source: "tmdb_season",
+        cacheKey,
+        forceRefresh,
+        fetcher: () =>
+            tmdbFetch<TmdbSeason>(`/tv/${tmdbId}/season/${seasonNumber}`, params, userId),
+    });
 }
 
-export function getTmdbImageUrl(
-    path: string | null,
-    size = "w500",
-): string | null {
+export function getTmdbImageUrl(path: string | null, size = "w500"): string | null {
     if (!path) return null;
     return `https://image.tmdb.org/t/p/${size}${path}`;
 }
@@ -321,63 +296,34 @@ export async function getTmdbEpisodeDetail(
     language?: string,
     userId?: number,
 ): Promise<{ directors: string[] }> {
-    const db = getDb();
     const cacheKey = language
         ? `tmdb_episode_${tmdbShowId}_s${seasonNumber}e${episodeNumber}_${language}`
         : `tmdb_episode_${tmdbShowId}_s${seasonNumber}e${episodeNumber}`;
 
-    // Check cache (TTL 7 days)
-    const [cached] = await db
-        .select()
-        .from(metadataCache)
-        .where(
-            and(
-                eq(metadataCache.source, "tmdb_episode"),
-                eq(metadataCache.externalId, cacheKey),
-            ),
-        );
+    const params: Record<string, string> = { append_to_response: "credits" };
+    if (language) params.language = language;
 
-    if (cached) {
-        const age = Date.now() - new Date(cached.cachedAt).getTime();
-        if (age < CACHE_TTL_HOURS * 60 * 60 * 1000) {
-            return cached.data as { directors: string[] };
-        }
-    }
-
-    // Fetch from TMDB (with degradation on failure)
     try {
-        const params: Record<string, string> = {
-            append_to_response: "credits",
-        };
-        if (language) params.language = language;
-
-        const data = await tmdbFetch<any>(
-            `/tv/${tmdbShowId}/season/${seasonNumber}/episode/${episodeNumber}`,
-            params,
-            userId,
-        );
-
-        const directors = (data.credits?.crew ?? [])
-            .filter((c: any) => c.job === "Director")
-            .map((c: any) => c.name);
-
-        const result = { directors };
-
-        // Write cache
-        await db
-            .insert(metadataCache)
-            .values({
-                source: "tmdb_episode",
-                externalId: cacheKey,
-                data: result,
-                cachedAt: new Date(),
-            })
-            .onConflictDoUpdate({
-                target: [metadataCache.source, metadataCache.externalId],
-                set: { data: result, cachedAt: new Date() },
-            });
-
-        return result;
+        // cachedProviderFetch handles per-source TTL + stale-while-revalidate; the outer
+        // catch preserves the existing graceful degradation when no cache is available.
+        return await cachedProviderFetch<{ directors: string[] }>({
+            source: "tmdb_episode",
+            cacheKey,
+            fetcher: async () => {
+                const data = await tmdbFetch<{
+                    credits?: { crew?: Array<{ job?: string; name?: string }> };
+                }>(
+                    `/tv/${tmdbShowId}/season/${seasonNumber}/episode/${episodeNumber}`,
+                    params,
+                    userId,
+                );
+                const directors = (data.credits?.crew ?? [])
+                    .filter((c) => c.job === "Director")
+                    .map((c) => c.name)
+                    .filter((name): name is string => Boolean(name));
+                return { directors };
+            },
+        });
     } catch (e) {
         console.warn(
             `[tmdb] Episode detail fetch failed for ${tmdbShowId} s${seasonNumber}e${episodeNumber}:`,

@@ -23,9 +23,7 @@ describe("parseRetryAfterSeconds", () => {
     });
 
     it("parses HTTP-date returning positive seconds for future date", () => {
-        const future = new globalThis.Date(
-            globalThis.Date.now() + 30_000,
-        ).toUTCString();
+        const future = new globalThis.Date(globalThis.Date.now() + 30_000).toUTCString();
         const result = parseRetryAfterSeconds(future);
         expect(result).toBeGreaterThan(0);
         expect(result).toBeLessThanOrEqual(60);
@@ -45,10 +43,7 @@ describe("providerFetch", () => {
     });
 
     it("returns response on 200 without retry", async () => {
-        vi.stubGlobal(
-            "fetch",
-            vi.fn().mockResolvedValue(new Response("{}", { status: 200 })),
-        );
+        vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 200 })));
 
         const res = await providerFetch({ url: "https://example.com/test" });
 
@@ -57,10 +52,7 @@ describe("providerFetch", () => {
     });
 
     it("returns 400 without retry", async () => {
-        vi.stubGlobal(
-            "fetch",
-            vi.fn().mockResolvedValue(new Response("bad", { status: 400 })),
-        );
+        vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("bad", { status: 400 })));
 
         const res = await providerFetch({ url: "https://example.com/test" });
 
@@ -71,7 +63,8 @@ describe("providerFetch", () => {
     it("retries on 500 and succeeds on second attempt", async () => {
         vi.stubGlobal(
             "fetch",
-            vi.fn()
+            vi
+                .fn()
                 .mockResolvedValueOnce(new Response("error", { status: 500 }))
                 .mockResolvedValue(new Response("{}", { status: 200 })),
         );
@@ -92,10 +85,9 @@ describe("providerFetch", () => {
         const headers = new Headers({ "Retry-After": "1" });
         vi.stubGlobal(
             "fetch",
-            vi.fn()
-                .mockResolvedValueOnce(
-                    new Response("rate limited", { status: 429, headers }),
-                )
+            vi
+                .fn()
+                .mockResolvedValueOnce(new Response("rate limited", { status: 429, headers }))
                 .mockResolvedValue(new Response("{}", { status: 200 })),
         );
 
@@ -113,7 +105,8 @@ describe("providerFetch", () => {
     it("retries on network error then succeeds", async () => {
         vi.stubGlobal(
             "fetch",
-            vi.fn()
+            vi
+                .fn()
                 .mockRejectedValueOnce(new Error("ECONNREFUSED"))
                 .mockResolvedValue(new Response("{}", { status: 200 })),
         );
@@ -130,10 +123,7 @@ describe("providerFetch", () => {
     });
 
     it("throws on network error after all retries", async () => {
-        vi.stubGlobal(
-            "fetch",
-            vi.fn().mockRejectedValue(new Error("Network down")),
-        );
+        vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Network down")));
 
         const promise = providerFetch({
             url: "https://example.com/test",

@@ -21,10 +21,7 @@ export async function validateBody<T>(
     return { data: result.data };
 }
 
-export function validateQuery<T>(
-    c: Context,
-    schema: z.ZodType<T>,
-): { data: T } | Response {
+export function validateQuery<T>(c: Context, schema: z.ZodType<T>): { data: T } | Response {
     const raw = c.req.query();
     const result = schema.safeParse(raw);
     if (!result.success) {

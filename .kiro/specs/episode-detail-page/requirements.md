@@ -5,6 +5,7 @@
 The Episode Detail Page displays comprehensive information about a single TV show episode, including hero section with backdrop imagery, episode metadata, watch status management, and related episodes navigation. The page adapts its layout and action buttons based on whether the episode has been watched or not.
 
 **Technical Stack:**
+
 - React + TypeScript
 - shadcn/ui components (Button, Badge, Card, Separator, ScrollArea, etc.)
 - Tailwind CSS v4 with `@theme inline` blocks
@@ -13,6 +14,7 @@ The Episode Detail Page displays comprehensive information about a single TV sho
 
 **shadcn/ui Guidelines:**
 This feature MUST follow shadcn/ui best practices as defined in `.agents/skills/shadcn/SKILL.md`:
+
 - Use semantic color tokens (`bg-primary`, `text-muted-foreground`) instead of raw color values
 - Use `gap-*` for spacing, never `space-x-*` or `space-y-*`
 - Use `size-*` when width and height are equal
@@ -226,4 +228,3 @@ This feature MUST follow shadcn/ui best practices as defined in `.agents/skills/
 8. THE Breadcrumb_Navigation SHALL use chevron_right icons to indicate hierarchy
 9. THE Episode_Detail_Page SHALL be keyboard navigable with proper focus states
 10. THE Episode_Detail_Page SHALL use ARIA attributes where appropriate for screen reader support
-

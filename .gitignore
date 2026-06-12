@@ -5,6 +5,9 @@ dist
 .turbo
 *.log
 .DS_Store
+coverage
+.codegraph
+*.tsbuildinfo
 
 # Compiled TypeScript artifacts — should never appear in src/
 # (web uses noEmit:true, api outputs to dist/)

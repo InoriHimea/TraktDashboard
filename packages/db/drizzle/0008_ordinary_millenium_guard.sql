@@ -1,0 +1,1 @@
+CREATE INDEX "watch_history_user_episode_idx" ON "watch_history" USING btree ("user_id","episode_id");

@@ -95,11 +95,7 @@ watchlistRoutes.post("/", async (c) => {
         if (!media) return c.json({ error: `${type} not found` }, 404);
 
         const trakt = getTraktClient();
-        await trakt.addToWatchlist(
-            userId,
-            type === "show" ? "shows" : "movies",
-            toTraktIds(media),
-        );
+        await trakt.addToWatchlist(userId, type === "show" ? "shows" : "movies", toTraktIds(media));
 
         try {
             const listedAt = new Date();
@@ -130,8 +126,13 @@ watchlistRoutes.post("/", async (c) => {
                           .returning();
             return c.json({ data: item });
         } catch (dbErr) {
-            console.warn("[watchlist] Local DB write failed after Trakt add, scheduling reconcile:", dbErr);
-            syncWatchlist(userId).catch((e) => console.error("[watchlist] Background reconcile failed:", e));
+            console.warn(
+                "[watchlist] Local DB write failed after Trakt add, scheduling reconcile:",
+                dbErr,
+            );
+            syncWatchlist(userId).catch((e) =>
+                console.error("[watchlist] Background reconcile failed:", e),
+            );
             throw dbErr;
         }
     } catch (error) {
@@ -161,11 +162,7 @@ watchlistRoutes.delete("/:id", async (c) => {
         const media = item.shows ?? item.movies;
         if (media) {
             try {
-                await getTraktClient().removeFromWatchlist(
-                    userId,
-                    mediaType,
-                    toTraktIds(media),
-                );
+                await getTraktClient().removeFromWatchlist(userId, mediaType, toTraktIds(media));
             } catch (error) {
                 if (!(error instanceof TraktApiError && error.status === 404)) {
                     throw error;
@@ -174,10 +171,17 @@ watchlistRoutes.delete("/:id", async (c) => {
         }
 
         try {
-            await db.delete(watchlist).where(and(eq(watchlist.id, id), eq(watchlist.userId, userId)));
+            await db
+                .delete(watchlist)
+                .where(and(eq(watchlist.id, id), eq(watchlist.userId, userId)));
         } catch (dbErr) {
-            console.warn("[watchlist] Local DB delete failed after Trakt remove, scheduling reconcile:", dbErr);
-            syncWatchlist(userId).catch((e) => console.error("[watchlist] Background reconcile failed:", e));
+            console.warn(
+                "[watchlist] Local DB delete failed after Trakt remove, scheduling reconcile:",
+                dbErr,
+            );
+            syncWatchlist(userId).catch((e) =>
+                console.error("[watchlist] Background reconcile failed:", e),
+            );
             throw dbErr;
         }
         return c.json({ ok: true });

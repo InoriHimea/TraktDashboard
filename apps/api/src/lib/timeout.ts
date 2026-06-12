@@ -12,8 +12,5 @@ export function withTimeout<T>(
             ms,
         );
     });
-    return Promise.race([
-        promise.finally(() => clearTimeout(timerId)),
-        timeoutPromise,
-    ]);
+    return Promise.race([promise.finally(() => clearTimeout(timerId)), timeoutPromise]);
 }

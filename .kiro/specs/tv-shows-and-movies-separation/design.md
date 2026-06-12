@@ -50,18 +50,17 @@ graph TD
 
 The architecture mirrors the existing TV shows pattern exactly. The `movies.ts` route file is a peer of `shows.ts`. The sync service gains a `syncMovies()` function alongside the existing show sync path.
 
-
 ---
 
 ## Components and Interfaces
 
 ### Renamed / Modified Components
 
-| Before | After | Change |
-|--------|-------|--------|
-| `ProgressPage.tsx` | `TVShowsPage.tsx` | File rename; route `/progress` → `/tv-shows` |
-| `TopNav` NAV array | Add Movies entry | Insert `{ to: '/movies', icon: Film, labelKey: 'nav.movies' }` after TV Shows |
-| `App.tsx` routes | Update paths | `/progress` → `/tv-shows`; add `/movies`, `/movies/:id` |
+| Before             | After             | Change                                                                        |
+| ------------------ | ----------------- | ----------------------------------------------------------------------------- |
+| `ProgressPage.tsx` | `TVShowsPage.tsx` | File rename; route `/progress` → `/tv-shows`                                  |
+| `TopNav` NAV array | Add Movies entry  | Insert `{ to: '/movies', icon: Film, labelKey: 'nav.movies' }` after TV Shows |
+| `App.tsx` routes   | Update paths      | `/progress` → `/tv-shows`; add `/movies`, `/movies/:id`                       |
 
 ### New Components
 
@@ -72,8 +71,8 @@ The architecture mirrors the existing TV shows pattern exactly. The `movies.ts` 
 interface MoviesPageProps {} // no props — reads from URL query params
 
 // Internal state
-const [filter, setFilter] = useState<'watched' | 'unwatched' | 'all'>('watched')
-const [search, setSearch] = useState('')
+const [filter, setFilter] = useState<"watched" | "unwatched" | "all">("watched");
+const [search, setSearch] = useState("");
 // Debounced search (280ms) — same pattern as TVShowsPage
 ```
 
@@ -84,8 +83,8 @@ Filter tabs: `watched` (icon: `Eye`), `unwatched` (icon: `EyeOff`), `all` (icon:
 ```typescript
 // apps/web/src/components/MovieCard.tsx
 interface MovieCardProps {
-  movie: MovieProgress   // from @trakt-dashboard/types
-  index: number          // for staggered animation delay
+    movie: MovieProgress; // from @trakt-dashboard/types
+    index: number; // for staggered animation delay
 }
 ```
 
@@ -106,35 +105,34 @@ Displays: poster image, title, watch count badge (`Watched N times` / `Not watch
 // New types to add to @trakt-dashboard/types
 
 export interface Movie {
-  id: number
-  tmdbId: number
-  imdbId: string | null
-  traktId: number | null
-  title: string
-  overview: string | null
-  releaseDate: string | null   // YYYY-MM-DD
-  runtime: number | null       // minutes
-  posterPath: string | null
-  backdropPath: string | null
-  genres: string[]
-  lastSyncedAt: string
-  createdAt: string
+    id: number;
+    tmdbId: number;
+    imdbId: string | null;
+    traktId: number | null;
+    title: string;
+    overview: string | null;
+    releaseDate: string | null; // YYYY-MM-DD
+    runtime: number | null; // minutes
+    posterPath: string | null;
+    backdropPath: string | null;
+    genres: string[];
+    lastSyncedAt: string;
+    createdAt: string;
 }
 
 export interface MovieProgress {
-  movie: Movie
-  watchCount: number
-  lastWatchedAt: string | null
+    movie: Movie;
+    watchCount: number;
+    lastWatchedAt: string | null;
 }
 
 export interface MovieWatchHistoryEntry {
-  id: number
-  movieId: number
-  watchedAt: string | null
-  source: string
+    id: number;
+    movieId: number;
+    watchedAt: string | null;
+    source: string;
 }
 ```
-
 
 ---
 
@@ -198,47 +196,60 @@ CREATE INDEX watch_history_movie_idx ON watch_history(movie_id);
 
 ```typescript
 // Extended watchHistory table
-export const watchHistory = pgTable('watch_history', {
-  // ... existing columns ...
-  episodeId: integer('episode_id').references(() => episodes.id, { onDelete: 'cascade' }),  // now nullable
-  movieId:   integer('movie_id').references(() => movies.id, { onDelete: 'cascade' }),      // new
-  mediaType: text('media_type').notNull().default('episode'),                                // new: 'episode' | 'movie'
-}, (t) => [
-  // ... existing indexes ...
-  index('watch_history_movie_idx').on(t.movieId),
-])
+export const watchHistory = pgTable(
+    "watch_history",
+    {
+        // ... existing columns ...
+        episodeId: integer("episode_id").references(() => episodes.id, { onDelete: "cascade" }), // now nullable
+        movieId: integer("movie_id").references(() => movies.id, { onDelete: "cascade" }), // new
+        mediaType: text("media_type").notNull().default("episode"), // new: 'episode' | 'movie'
+    },
+    (t) => [
+        // ... existing indexes ...
+        index("watch_history_movie_idx").on(t.movieId),
+    ],
+);
 
-export const movies = pgTable('movies', {
-  id:           serial('id').primaryKey(),
-  tmdbId:       integer('tmdb_id').notNull().unique(),
-  imdbId:       text('imdb_id'),
-  traktId:      integer('trakt_id'),
-  traktSlug:    text('trakt_slug'),
-  title:        text('title').notNull(),
-  overview:     text('overview'),
-  releaseDate:  text('release_date'),
-  runtime:      integer('runtime'),
-  posterPath:   text('poster_path'),
-  backdropPath: text('backdrop_path'),
-  genres:       jsonb('genres').$type<string[]>().notNull().default([]),
-  lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }).defaultNow().notNull(),
-  createdAt:    timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-}, (t) => [
-  index('movies_trakt_id_idx').on(t.traktId),
-  index('movies_imdb_id_idx').on(t.imdbId),
-])
+export const movies = pgTable(
+    "movies",
+    {
+        id: serial("id").primaryKey(),
+        tmdbId: integer("tmdb_id").notNull().unique(),
+        imdbId: text("imdb_id"),
+        traktId: integer("trakt_id"),
+        traktSlug: text("trakt_slug"),
+        title: text("title").notNull(),
+        overview: text("overview"),
+        releaseDate: text("release_date"),
+        runtime: integer("runtime"),
+        posterPath: text("poster_path"),
+        backdropPath: text("backdrop_path"),
+        genres: jsonb("genres").$type<string[]>().notNull().default([]),
+        lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }).defaultNow().notNull(),
+        createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    },
+    (t) => [index("movies_trakt_id_idx").on(t.traktId), index("movies_imdb_id_idx").on(t.imdbId)],
+);
 
-export const userMovieProgress = pgTable('user_movie_progress', {
-  id:            serial('id').primaryKey(),
-  userId:        integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  movieId:       integer('movie_id').notNull().references(() => movies.id, { onDelete: 'cascade' }),
-  watchCount:    integer('watch_count').notNull().default(0),
-  lastWatchedAt: timestamp('last_watched_at', { withTimezone: true }),
-  updatedAt:     timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-}, (t) => [
-  uniqueIndex('ump_user_movie_idx').on(t.userId, t.movieId),
-  index('ump_user_idx').on(t.userId),
-])
+export const userMovieProgress = pgTable(
+    "user_movie_progress",
+    {
+        id: serial("id").primaryKey(),
+        userId: integer("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
+        movieId: integer("movie_id")
+            .notNull()
+            .references(() => movies.id, { onDelete: "cascade" }),
+        watchCount: integer("watch_count").notNull().default(0),
+        lastWatchedAt: timestamp("last_watched_at", { withTimezone: true }),
+        updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    },
+    (t) => [
+        uniqueIndex("ump_user_movie_idx").on(t.userId, t.movieId),
+        index("ump_user_idx").on(t.userId),
+    ],
+);
 ```
 
 ### Data Invariants
@@ -246,7 +257,6 @@ export const userMovieProgress = pgTable('user_movie_progress', {
 - `watchHistory.episodeId` is non-null when `mediaType = 'episode'`
 - `watchHistory.movieId` is non-null when `mediaType = 'movie'`
 - `userMovieProgress.watchCount` equals the count of `watchHistory` rows where `movieId = movie_id AND userId = user_id AND mediaType = 'movie'`
-
 
 ---
 
@@ -256,13 +266,13 @@ All movie routes are defined in `apps/api/src/routes/movies.ts` and mounted at `
 
 ### Route Summary
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/movies/progress` | Paginated movie list with watch progress |
-| GET | `/api/movies/:id` | Single movie detail |
-| GET | `/api/movies/:id/history` | Watch history for a movie |
-| POST | `/api/movies/:id/watch` | Record a watch event |
-| DELETE | `/api/movies/:id/history/:historyId` | Remove a watch history record |
+| Method | Path                                 | Description                              |
+| ------ | ------------------------------------ | ---------------------------------------- |
+| GET    | `/api/movies/progress`               | Paginated movie list with watch progress |
+| GET    | `/api/movies/:id`                    | Single movie detail                      |
+| GET    | `/api/movies/:id/history`            | Watch history for a movie                |
+| POST   | `/api/movies/:id/watch`              | Record a watch event                     |
+| DELETE | `/api/movies/:id/history/:historyId` | Remove a watch history record            |
 
 ### GET `/api/movies/progress`
 
@@ -279,13 +289,14 @@ Query params: `filter` (`watched` | `unwatched` | `all`, default `watched`), `q`
 ```
 
 Filter logic (mirrors shows.ts pattern):
+
 ```typescript
 const whereClause = and(
-  eq(userMovieProgress.userId, userId),
-  search ? like(movies.title, `%${search}%`) : undefined,
-  filter === 'watched'   ? gt(userMovieProgress.watchCount, 0) : undefined,
-  filter === 'unwatched' ? eq(userMovieProgress.watchCount, 0) : undefined,
-)
+    eq(userMovieProgress.userId, userId),
+    search ? like(movies.title, `%${search}%`) : undefined,
+    filter === "watched" ? gt(userMovieProgress.watchCount, 0) : undefined,
+    filter === "unwatched" ? eq(userMovieProgress.watchCount, 0) : undefined,
+);
 ```
 
 ### GET `/api/movies/:id`
@@ -308,29 +319,30 @@ Verifies ownership (userId + movieId match), deletes the record, calls `recalcMo
 
 ```typescript
 async function recalcMovieProgress(userId: number, movieId: number) {
-  const db = getDb()
-  const [{ count, lastWatched }] = await db
-    .select({
-      count: sql<number>`count(*)`,
-      lastWatched: sql<Date | null>`max(watched_at)`,
-    })
-    .from(watchHistory)
-    .where(and(
-      eq(watchHistory.userId, userId),
-      eq(watchHistory.movieId, movieId),
-      eq(watchHistory.mediaType, 'movie'),
-    ))
+    const db = getDb();
+    const [{ count, lastWatched }] = await db
+        .select({
+            count: sql<number>`count(*)`,
+            lastWatched: sql<Date | null>`max(watched_at)`,
+        })
+        .from(watchHistory)
+        .where(
+            and(
+                eq(watchHistory.userId, userId),
+                eq(watchHistory.movieId, movieId),
+                eq(watchHistory.mediaType, "movie"),
+            ),
+        );
 
-  await db
-    .insert(userMovieProgress)
-    .values({ userId, movieId, watchCount: Number(count), lastWatchedAt: lastWatched })
-    .onConflictDoUpdate({
-      target: [userMovieProgress.userId, userMovieProgress.movieId],
-      set: { watchCount: Number(count), lastWatchedAt: lastWatched, updatedAt: new Date() },
-    })
+    await db
+        .insert(userMovieProgress)
+        .values({ userId, movieId, watchCount: Number(count), lastWatchedAt: lastWatched })
+        .onConflictDoUpdate({
+            target: [userMovieProgress.userId, userMovieProgress.movieId],
+            set: { watchCount: Number(count), lastWatchedAt: lastWatched, updatedAt: new Date() },
+        });
 }
 ```
-
 
 ---
 
@@ -355,15 +367,15 @@ async function recalcMovieProgress(userId: number, movieId: number) {
 ### Navigation (`TopNav.tsx`)
 
 ```typescript
-import { Tv2, Film, BarChart3, RefreshCw, Settings } from 'lucide-react'
+import { Tv2, Film, BarChart3, RefreshCw, Settings } from "lucide-react";
 
 const NAV = [
-  { to: '/tv-shows', icon: Tv2,      labelKey: 'nav.tvShows' },
-  { to: '/movies',   icon: Film,     labelKey: 'nav.movies' },
-  { to: '/stats',    icon: BarChart3, labelKey: 'nav.statistics' },
-  { to: '/sync',     icon: RefreshCw, labelKey: 'nav.sync' },
-  { to: '/settings', icon: Settings,  labelKey: 'nav.settings' },
-]
+    { to: "/tv-shows", icon: Tv2, labelKey: "nav.tvShows" },
+    { to: "/movies", icon: Film, labelKey: "nav.movies" },
+    { to: "/stats", icon: BarChart3, labelKey: "nav.statistics" },
+    { to: "/sync", icon: RefreshCw, labelKey: "nav.sync" },
+    { to: "/settings", icon: Settings, labelKey: "nav.settings" },
+];
 ```
 
 Active detection: `location.pathname.startsWith(to)` — unchanged logic.
@@ -394,54 +406,53 @@ movies: {
 
 ```typescript
 export function useMoviesProgress(filter: string, search: string, limit = 50, offset = 0) {
-  return useQuery<MovieProgress[]>({
-    queryKey: ['movies-progress', filter, search, limit, offset],
-    queryFn: () => api.movies.progress(filter, search, limit, offset).then(r => r.data),
-    staleTime: 1000 * 60,
-  })
+    return useQuery<MovieProgress[]>({
+        queryKey: ["movies-progress", filter, search, limit, offset],
+        queryFn: () => api.movies.progress(filter, search, limit, offset).then((r) => r.data),
+        staleTime: 1000 * 60,
+    });
 }
 
 export function useMovieDetail(id: number) {
-  return useQuery<MovieProgress>({
-    queryKey: ['movie-detail', id],
-    queryFn: () => api.movies.detail(id).then(r => r.data),
-    enabled: id > 0,
-  })
+    return useQuery<MovieProgress>({
+        queryKey: ["movie-detail", id],
+        queryFn: () => api.movies.detail(id).then((r) => r.data),
+        enabled: id > 0,
+    });
 }
 
 export function useMovieHistory(id: number) {
-  return useQuery<MovieWatchHistoryEntry[]>({
-    queryKey: ['movie-history', id],
-    queryFn: () => api.movies.history(id).then(r => r.data),
-    enabled: id > 0,
-  })
+    return useQuery<MovieWatchHistoryEntry[]>({
+        queryKey: ["movie-history", id],
+        queryFn: () => api.movies.history(id).then((r) => r.data),
+        enabled: id > 0,
+    });
 }
 
 export function useMarkMovieWatched(id: number) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (watchedAt: string | null) => api.movies.watch(id, watchedAt),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['movie-detail', id] })
-      qc.invalidateQueries({ queryKey: ['movie-history', id] })
-      qc.invalidateQueries({ queryKey: ['movies-progress'] })
-    },
-  })
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (watchedAt: string | null) => api.movies.watch(id, watchedAt),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["movie-detail", id] });
+            qc.invalidateQueries({ queryKey: ["movie-history", id] });
+            qc.invalidateQueries({ queryKey: ["movies-progress"] });
+        },
+    });
 }
 
 export function useDeleteMovieHistory(id: number) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (historyId: number) => api.movies.deleteHistory(id, historyId),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['movie-history', id] })
-      qc.invalidateQueries({ queryKey: ['movie-detail', id] })
-      qc.invalidateQueries({ queryKey: ['movies-progress'] })
-    },
-  })
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (historyId: number) => api.movies.deleteHistory(id, historyId),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["movie-history", id] });
+            qc.invalidateQueries({ queryKey: ["movie-detail", id] });
+            qc.invalidateQueries({ queryKey: ["movies-progress"] });
+        },
+    });
 }
 ```
-
 
 ---
 
@@ -474,59 +485,78 @@ sequenceDiagram
 
 ```typescript
 export async function syncMovies(userId: number): Promise<void> {
-  const trakt = getTraktClient()
-  const watchedMovies = await trakt.getWatchedMovies(userId)
-  // trakt.getWatchedMovies → GET /sync/watched/movies
-  // Returns: Array<{ movie: { title, ids: { trakt, tmdb, imdb, slug } }, plays, last_watched_at, watched_at }>
+    const trakt = getTraktClient();
+    const watchedMovies = await trakt.getWatchedMovies(userId);
+    // trakt.getWatchedMovies → GET /sync/watched/movies
+    // Returns: Array<{ movie: { title, ids: { trakt, tmdb, imdb, slug } }, plays, last_watched_at, watched_at }>
 
-  const limit = pLimit(SHOW_CONCURRENCY)  // reuse same concurrency constant
-  await Promise.all(watchedMovies.map(wm => limit(async () => {
-    const tmdbId = wm.movie.ids.tmdb
-    if (!tmdbId) return
+    const limit = pLimit(SHOW_CONCURRENCY); // reuse same concurrency constant
+    await Promise.all(
+        watchedMovies.map((wm) =>
+            limit(async () => {
+                const tmdbId = wm.movie.ids.tmdb;
+                if (!tmdbId) return;
 
-    // Fetch TMDB images
-    let posterPath: string | null = null
-    let backdropPath: string | null = null
-    try {
-      const tmdbMovie = await getTmdbMovie(tmdbId, userId)
-      posterPath = tmdbMovie.poster_path || null
-      backdropPath = tmdbMovie.backdrop_path || null
-    } catch { /* degrade gracefully */ }
+                // Fetch TMDB images
+                let posterPath: string | null = null;
+                let backdropPath: string | null = null;
+                try {
+                    const tmdbMovie = await getTmdbMovie(tmdbId, userId);
+                    posterPath = tmdbMovie.poster_path || null;
+                    backdropPath = tmdbMovie.backdrop_path || null;
+                } catch {
+                    /* degrade gracefully */
+                }
 
-    // Upsert movie record
-    const [movie] = await db.insert(movies).values({
-      tmdbId,
-      traktId: wm.movie.ids.trakt,
-      traktSlug: wm.movie.ids.slug,
-      imdbId: wm.movie.ids.imdb,
-      title: wm.movie.title,
-      // overview, runtime, releaseDate from Trakt movie detail
-      posterPath,
-      backdropPath,
-      lastSyncedAt: new Date(),
-    }).onConflictDoUpdate({ target: [movies.tmdbId], set: { /* all fields */ } })
-      .returning({ id: movies.id })
+                // Upsert movie record
+                const [movie] = await db
+                    .insert(movies)
+                    .values({
+                        tmdbId,
+                        traktId: wm.movie.ids.trakt,
+                        traktSlug: wm.movie.ids.slug,
+                        imdbId: wm.movie.ids.imdb,
+                        title: wm.movie.title,
+                        // overview, runtime, releaseDate from Trakt movie detail
+                        posterPath,
+                        backdropPath,
+                        lastSyncedAt: new Date(),
+                    })
+                    .onConflictDoUpdate({
+                        target: [movies.tmdbId],
+                        set: {
+                            /* all fields */
+                        },
+                    })
+                    .returning({ id: movies.id });
 
-    // Upsert progress summary
-    await db.insert(userMovieProgress).values({
-      userId,
-      movieId: movie.id,
-      watchCount: wm.plays,
-      lastWatchedAt: wm.last_watched_at ? new Date(wm.last_watched_at) : null,
-    }).onConflictDoUpdate({
-      target: [userMovieProgress.userId, userMovieProgress.movieId],
-      set: { watchCount: wm.plays, lastWatchedAt: wm.last_watched_at ? new Date(wm.last_watched_at) : null },
-    })
+                // Upsert progress summary
+                await db
+                    .insert(userMovieProgress)
+                    .values({
+                        userId,
+                        movieId: movie.id,
+                        watchCount: wm.plays,
+                        lastWatchedAt: wm.last_watched_at ? new Date(wm.last_watched_at) : null,
+                    })
+                    .onConflictDoUpdate({
+                        target: [userMovieProgress.userId, userMovieProgress.movieId],
+                        set: {
+                            watchCount: wm.plays,
+                            lastWatchedAt: wm.last_watched_at ? new Date(wm.last_watched_at) : null,
+                        },
+                    });
 
-    // Insert individual watch events (dedup by traktPlayId not available for movies — use upsert on userId+movieId+watchedAt)
-    // Trakt /sync/watched/movies does not return individual play timestamps beyond last_watched_at
-    // For per-play history, use /sync/history/movies which returns individual entries
-  })))
+                // Insert individual watch events (dedup by traktPlayId not available for movies — use upsert on userId+movieId+watchedAt)
+                // Trakt /sync/watched/movies does not return individual play timestamps beyond last_watched_at
+                // For per-play history, use /sync/history/movies which returns individual entries
+            }),
+        ),
+    );
 }
 ```
 
 **Note on play history granularity**: Trakt's `/sync/watched/movies` returns aggregate `plays` count and `last_watched_at`. For individual timestamps, the sync service should also call `/sync/history/movies` (same pattern as the incremental show sync using `/sync/history`). The `watchHistory` rows are deduplicated using a composite unique index on `(userId, movieId, watchedAt)`.
-
 
 ---
 
@@ -535,49 +565,50 @@ export async function syncMovies(userId: number): Promise<void> {
 ### New keys to add to both locale files
 
 **`zh-CN.json`**:
+
 ```json
 {
-  "nav": {
-    "tvShows": "电视节目",
-    "movies": "电影"
-  },
-  "movies": {
-    "watched": "已观看",
-    "unwatched": "未观看",
-    "watchCount": "观看次数",
-    "watchedNTimes": "已观看 {{count}} 次",
-    "notWatched": "未观看",
-    "lastWatched": "最后观看"
-  }
+    "nav": {
+        "tvShows": "电视节目",
+        "movies": "电影"
+    },
+    "movies": {
+        "watched": "已观看",
+        "unwatched": "未观看",
+        "watchCount": "观看次数",
+        "watchedNTimes": "已观看 {{count}} 次",
+        "notWatched": "未观看",
+        "lastWatched": "最后观看"
+    }
 }
 ```
 
 **`en-US.json`**:
+
 ```json
 {
-  "nav": {
-    "tvShows": "TV Shows",
-    "movies": "Movies"
-  },
-  "movies": {
-    "watched": "Watched",
-    "unwatched": "Unwatched",
-    "watchCount": "Watch Count",
-    "watchedNTimes": "Watched {{count}} times",
-    "notWatched": "Not watched",
-    "lastWatched": "Last watched"
-  }
+    "nav": {
+        "tvShows": "TV Shows",
+        "movies": "Movies"
+    },
+    "movies": {
+        "watched": "Watched",
+        "unwatched": "Unwatched",
+        "watchCount": "Watch Count",
+        "watchedNTimes": "Watched {{count}} times",
+        "notWatched": "Not watched",
+        "lastWatched": "Last watched"
+    }
 }
 ```
 
 The existing `nav.progress` key is kept for backward compatibility but no longer used in the nav. The `progress.*` keys remain unchanged for the TV Shows page filters.
 
-
 ---
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property Reflection
 
@@ -597,7 +628,7 @@ After reflection: 10 unique properties remain.
 
 ### Property 1: Movie filter predicate is always satisfied
 
-*For any* list of movies in the database and any filter value (`watched`, `unwatched`, `all`), every movie returned by `GET /api/movies/progress?filter=<value>` must satisfy the corresponding predicate: `watched` → `watchCount > 0`; `unwatched` → `watchCount = 0`; `all` → no constraint.
+_For any_ list of movies in the database and any filter value (`watched`, `unwatched`, `all`), every movie returned by `GET /api/movies/progress?filter=<value>` must satisfy the corresponding predicate: `watched` → `watchCount > 0`; `unwatched` → `watchCount = 0`; `all` → no constraint.
 
 **Validates: Requirements 4.2, 12.1, 12.2, 12.3**
 
@@ -605,7 +636,7 @@ After reflection: 10 unique properties remain.
 
 ### Property 2: Backend search returns only title-matching movies
 
-*For any* non-empty search string `q`, every movie returned by `GET /api/movies/progress?q=<q>` must have a title that contains `q` (case-insensitive SQL LIKE match).
+_For any_ non-empty search string `q`, every movie returned by `GET /api/movies/progress?q=<q>` must have a title that contains `q` (case-insensitive SQL LIKE match).
 
 **Validates: Requirements 13.3**
 
@@ -613,7 +644,7 @@ After reflection: 10 unique properties remain.
 
 ### Property 3: Pagination response size is bounded by limit
 
-*For any* valid `limit` value L (1 ≤ L ≤ 200) and `offset` value O (≥ 0), the `data` array in the response from `GET /api/movies/progress?limit=L&offset=O` must contain at most L items, and `total` must reflect the full count of matching movies regardless of pagination.
+_For any_ valid `limit` value L (1 ≤ L ≤ 200) and `offset` value O (≥ 0), the `data` array in the response from `GET /api/movies/progress?limit=L&offset=O` must contain at most L items, and `total` must reflect the full count of matching movies regardless of pagination.
 
 **Validates: Requirements 14.1, 14.2, 14.3**
 
@@ -621,7 +652,7 @@ After reflection: 10 unique properties remain.
 
 ### Property 4: Watch event round-trip — post then appears in history
 
-*For any* movie, after a successful `POST /api/movies/:id/watch`, the returned `historyId` must appear in the response of `GET /api/movies/:id/history`, and `watchCount` in `GET /api/movies/:id` must be greater than before the watch event.
+_For any_ movie, after a successful `POST /api/movies/:id/watch`, the returned `historyId` must appear in the response of `GET /api/movies/:id/history`, and `watchCount` in `GET /api/movies/:id` must be greater than before the watch event.
 
 **Validates: Requirements 4.5, 9.5**
 
@@ -629,7 +660,7 @@ After reflection: 10 unique properties remain.
 
 ### Property 5: Delete history removes the record
 
-*For any* watch history record created via `POST /api/movies/:id/watch`, after a successful `DELETE /api/movies/:id/history/:historyId`, that `historyId` must no longer appear in `GET /api/movies/:id/history`.
+_For any_ watch history record created via `POST /api/movies/:id/watch`, after a successful `DELETE /api/movies/:id/history/:historyId`, that `historyId` must no longer appear in `GET /api/movies/:id/history`.
 
 **Validates: Requirements 4.6**
 
@@ -637,7 +668,7 @@ After reflection: 10 unique properties remain.
 
 ### Property 6: Movie watch history entries always have mediaType = 'movie'
 
-*For any* watch event recorded for a movie (via sync or manual watch), the corresponding row in `watchHistory` must have `mediaType = 'movie'` and `movieId` set to the correct movie id, with `episodeId = null`.
+_For any_ watch event recorded for a movie (via sync or manual watch), the corresponding row in `watchHistory` must have `mediaType = 'movie'` and `movieId` set to the correct movie id, with `episodeId = null`.
 
 **Validates: Requirements 7.5, 9.4**
 
@@ -645,7 +676,7 @@ After reflection: 10 unique properties remain.
 
 ### Property 7: watchCount equals the number of watchHistory rows for that movie
 
-*For any* user and movie, `userMovieProgress.watchCount` must equal the count of rows in `watchHistory` where `userId = user_id AND movieId = movie_id AND mediaType = 'movie'`.
+_For any_ user and movie, `userMovieProgress.watchCount` must equal the count of rows in `watchHistory` where `userId = user_id AND movieId = movie_id AND mediaType = 'movie'`.
 
 **Validates: Requirements 9.5**
 
@@ -653,7 +684,7 @@ After reflection: 10 unique properties remain.
 
 ### Property 8: Synced movie is retrievable by traktId
 
-*For any* movie data returned by Trakt's `/sync/watched/movies`, after `upsertMovieFromTrakt` completes, querying the `movies` table by `traktId` must return exactly one record with a matching `title`.
+_For any_ movie data returned by Trakt's `/sync/watched/movies`, after `upsertMovieFromTrakt` completes, querying the `movies` table by `traktId` must return exactly one record with a matching `title`.
 
 **Validates: Requirements 9.3**
 
@@ -661,7 +692,7 @@ After reflection: 10 unique properties remain.
 
 ### Property 9: MovieCard renders all required fields for any movie
 
-*For any* `MovieProgress` object with a non-null `movie.title`, the rendered `MovieCard` component must contain: the movie title text, a watch count indicator (either the count or "not watched"), and a link whose `href` equals `/movies/{movie.id}`.
+_For any_ `MovieProgress` object with a non-null `movie.title`, the rendered `MovieCard` component must contain: the movie title text, a watch count indicator (either the count or "not watched"), and a link whose `href` equals `/movies/{movie.id}`.
 
 **Validates: Requirements 10.2, 10.3, 10.4, 10.5, 10.6**
 
@@ -669,27 +700,25 @@ After reflection: 10 unique properties remain.
 
 ### Property 10: Mutation hooks invalidate the correct query caches
 
-*For any* movie id, after `useMarkMovieWatched` or `useDeleteMovieHistory` mutation succeeds, the React Query cache keys `['movie-detail', id]`, `['movie-history', id]`, and `['movies-progress']` must all be marked as stale (invalidated).
+_For any_ movie id, after `useMarkMovieWatched` or `useDeleteMovieHistory` mutation succeeds, the React Query cache keys `['movie-detail', id]`, `['movie-history', id]`, and `['movies-progress']` must all be marked as stale (invalidated).
 
 **Validates: Requirements 6.6**
-
 
 ---
 
 ## Error Handling
 
-| Scenario | Handling |
-|----------|----------|
-| Trakt API unavailable during movie sync | Log error, mark movie as failed in `syncState.failedShows`, continue with remaining movies. Retry once after full pass (mirrors show sync pattern). |
-| TMDB unavailable for movie images | Degrade gracefully: store `posterPath = null`, `backdropPath = null`. Movie is still saved with Trakt metadata. |
-| `GET /api/movies/:id` — movie not found | Return `404 { error: 'Movie not found' }` |
-| `POST /api/movies/:id/watch` — invalid id | Return `400 { error: 'Invalid movie id' }` |
-| `DELETE /api/movies/:id/history/:historyId` — not owned by user | Return `404 { error: 'History record not found' }` (do not reveal existence to other users) |
-| Frontend: movies API error | Show error state with retry button — identical pattern to TVShowsPage error state |
-| Frontend: empty movies list | Show contextual empty state: "No movies here yet. Go to Sync to import your Trakt history." |
-| Invalid filter value in query param | Silently default to `watched` (mirrors shows.ts behavior) |
-| `limit` / `offset` out of bounds | Clamp to valid range via `parseBoundedInt` (reuse existing helper) |
-
+| Scenario                                                        | Handling                                                                                                                                            |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Trakt API unavailable during movie sync                         | Log error, mark movie as failed in `syncState.failedShows`, continue with remaining movies. Retry once after full pass (mirrors show sync pattern). |
+| TMDB unavailable for movie images                               | Degrade gracefully: store `posterPath = null`, `backdropPath = null`. Movie is still saved with Trakt metadata.                                     |
+| `GET /api/movies/:id` — movie not found                         | Return `404 { error: 'Movie not found' }`                                                                                                           |
+| `POST /api/movies/:id/watch` — invalid id                       | Return `400 { error: 'Invalid movie id' }`                                                                                                          |
+| `DELETE /api/movies/:id/history/:historyId` — not owned by user | Return `404 { error: 'History record not found' }` (do not reveal existence to other users)                                                         |
+| Frontend: movies API error                                      | Show error state with retry button — identical pattern to TVShowsPage error state                                                                   |
+| Frontend: empty movies list                                     | Show contextual empty state: "No movies here yet. Go to Sync to import your Trakt history."                                                         |
+| Invalid filter value in query param                             | Silently default to `watched` (mirrors shows.ts behavior)                                                                                           |
+| `limit` / `offset` out of bounds                                | Clamp to valid range via `parseBoundedInt` (reuse existing helper)                                                                                  |
 
 ---
 
@@ -736,4 +765,3 @@ Property-based testing is appropriate here because the feature includes pure fil
 - Trakt `/sync/watched/movies` endpoint returns expected shape (1–2 real or mocked calls)
 - Full sync flow: trigger sync → movies appear in DB → `GET /api/movies/progress` returns them
 - `watchHistory` rows created during sync have `mediaType = 'movie'`
-

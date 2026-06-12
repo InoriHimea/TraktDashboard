@@ -20,12 +20,8 @@ export const users = pgTable("users", {
     tokenExpiresAt: timestamp("token_expires_at", {
         withTimezone: true,
     }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-        .defaultNow()
-        .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-        .defaultNow()
-        .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 // ─── Shows ────────────────────────────────────────────────────────────────────
@@ -55,17 +51,10 @@ export const shows = pgTable(
         translatedName: text("translated_name"),
         translatedOverview: text("translated_overview"),
         displayLanguage: text("display_language"),
-        lastSyncedAt: timestamp("last_synced_at", { withTimezone: true })
-            .defaultNow()
-            .notNull(),
-        createdAt: timestamp("created_at", { withTimezone: true })
-            .defaultNow()
-            .notNull(),
+        lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }).defaultNow().notNull(),
+        createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     },
-    (t) => [
-        index("shows_trakt_id_idx").on(t.traktId),
-        index("shows_imdb_id_idx").on(t.imdbId),
-    ],
+    (t) => [index("shows_trakt_id_idx").on(t.traktId), index("shows_imdb_id_idx").on(t.imdbId)],
 );
 
 // ─── Seasons ─────────────────────────────────────────────────────────────────
@@ -83,9 +72,7 @@ export const seasons = pgTable(
         overview: text("overview"),
         posterPath: text("poster_path"),
     },
-    (t) => [
-        uniqueIndex("seasons_show_season_idx").on(t.showId, t.seasonNumber),
-    ],
+    (t) => [uniqueIndex("seasons_show_season_idx").on(t.showId, t.seasonNumber)],
 );
 
 // ─── Episodes ─────────────────────────────────────────────────────────────────
@@ -113,11 +100,7 @@ export const episodes = pgTable(
         tmdbId: integer("tmdb_id"),
     },
     (t) => [
-        uniqueIndex("episodes_show_s_e_idx").on(
-            t.showId,
-            t.seasonNumber,
-            t.episodeNumber,
-        ),
+        uniqueIndex("episodes_show_s_e_idx").on(t.showId, t.seasonNumber, t.episodeNumber),
         index("episodes_show_id_idx").on(t.showId),
         index("episodes_trakt_id_idx").on(t.traktId),
     ],
@@ -140,17 +123,10 @@ export const movies = pgTable(
         posterPath: text("poster_path"),
         backdropPath: text("backdrop_path"),
         genres: jsonb("genres").$type<string[]>().notNull().default([]),
-        lastSyncedAt: timestamp("last_synced_at", { withTimezone: true })
-            .defaultNow()
-            .notNull(),
-        createdAt: timestamp("created_at", { withTimezone: true })
-            .defaultNow()
-            .notNull(),
+        lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }).defaultNow().notNull(),
+        createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     },
-    (t) => [
-        index("movies_trakt_id_idx").on(t.traktId),
-        index("movies_imdb_id_idx").on(t.imdbId),
-    ],
+    (t) => [index("movies_trakt_id_idx").on(t.traktId), index("movies_imdb_id_idx").on(t.imdbId)],
 );
 
 // ─── Watch History ─────────────────────────────────────────────────────────────
@@ -178,6 +154,8 @@ export const watchHistory = pgTable(
         index("watch_history_episode_idx").on(t.episodeId),
         index("watch_history_watched_at_idx").on(t.watchedAt),
         index("watch_history_movie_idx").on(t.movieId),
+        // P3-T01: supports the next-episode NOT EXISTS anti-join (wh.user_id + wh.episode_id).
+        index("watch_history_user_episode_idx").on(t.userId, t.episodeId),
     ],
 );
 
@@ -195,15 +173,12 @@ export const userShowProgress = pgTable(
             .references(() => shows.id, { onDelete: "cascade" }),
         airedEpisodes: integer("aired_episodes").notNull().default(0),
         watchedEpisodes: integer("watched_episodes").notNull().default(0),
-        nextEpisodeId: integer("next_episode_id").references(
-            () => episodes.id,
-            { onDelete: "set null" },
-        ),
+        nextEpisodeId: integer("next_episode_id").references(() => episodes.id, {
+            onDelete: "set null",
+        }),
         lastWatchedAt: timestamp("last_watched_at", { withTimezone: true }),
         completed: boolean("completed").notNull().default(false),
-        updatedAt: timestamp("updated_at", { withTimezone: true })
-            .defaultNow()
-            .notNull(),
+        updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     },
     (t) => [
         uniqueIndex("usp_user_show_idx").on(t.userId, t.showId),
@@ -225,9 +200,7 @@ export const userMovieProgress = pgTable(
             .references(() => movies.id, { onDelete: "cascade" }),
         watchCount: integer("watch_count").notNull().default(0),
         lastWatchedAt: timestamp("last_watched_at", { withTimezone: true }),
-        updatedAt: timestamp("updated_at", { withTimezone: true })
-            .defaultNow()
-            .notNull(),
+        updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     },
     (t) => [
         uniqueIndex("ump_user_movie_idx").on(t.userId, t.movieId),
@@ -244,13 +217,9 @@ export const metadataCache = pgTable(
         source: text("source").notNull(),
         externalId: text("external_id").notNull(),
         data: jsonb("data").notNull(),
-        cachedAt: timestamp("cached_at", { withTimezone: true })
-            .defaultNow()
-            .notNull(),
+        cachedAt: timestamp("cached_at", { withTimezone: true }).defaultNow().notNull(),
     },
-    (t) => [
-        uniqueIndex("metadata_cache_source_id_idx").on(t.source, t.externalId),
-    ],
+    (t) => [uniqueIndex("metadata_cache_source_id_idx").on(t.source, t.externalId)],
 );
 
 // ─── Sync State ───────────────────────────────────────────────────────────────
@@ -281,9 +250,7 @@ export const syncState = pgTable("sync_state", {
         >()
         .notNull()
         .default([]),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-        .defaultNow()
-        .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 // ─── User Settings ────────────────────────────────────────────────────────────
@@ -297,9 +264,7 @@ export const userSettings = pgTable("user_settings", {
     displayLanguage: text("display_language").notNull().default("zh-CN"),
     syncIntervalMinutes: integer("sync_interval_minutes").notNull().default(60),
     httpProxy: text("http_proxy"),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-        .defaultNow()
-        .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 // ─── Watch Reset Cursors ───────────────────────────────────────────────────────
@@ -314,12 +279,8 @@ export const watchResetCursors = pgTable(
         showId: integer("show_id")
             .notNull()
             .references(() => shows.id, { onDelete: "cascade" }),
-        resetAt: timestamp("reset_at", { withTimezone: true })
-            .notNull()
-            .defaultNow(),
-        createdAt: timestamp("created_at", { withTimezone: true })
-            .defaultNow()
-            .notNull(),
+        resetAt: timestamp("reset_at", { withTimezone: true }).notNull().defaultNow(),
+        createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     },
     (t) => [
         index("wrc_user_show_idx").on(t.userId, t.showId),
@@ -342,9 +303,7 @@ export const watchlist = pgTable(
         movieId: integer("movie_id").references(() => movies.id, {
             onDelete: "cascade",
         }),
-        addedAt: timestamp("added_at", { withTimezone: true })
-            .notNull()
-            .defaultNow(),
+        addedAt: timestamp("added_at", { withTimezone: true }).notNull().defaultNow(),
         listedAt: timestamp("listed_at", { withTimezone: true }).notNull(),
         notes: text("notes"),
     },

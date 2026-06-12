@@ -4,9 +4,9 @@ import { setCookie, getCookie } from "hono/cookie";
 import { getDb, users, syncState } from "@trakt-dashboard/db";
 import { eq } from "drizzle-orm";
 import { signToken, verifyToken } from "../middleware/auth.js";
-import { getTraktClient } from "../services/trakt.js";
 import { triggerFullSync } from "../services/sync.js";
 import { registerUserSyncJob } from "../jobs/scheduler.js";
+import { apiError } from "../lib/response.js";
 
 export const authRoutes = new Hono();
 
@@ -29,12 +29,12 @@ authRoutes.get("/trakt", (c) => {
 // GET /auth/callback — handle OAuth callback
 authRoutes.get("/callback", async (c) => {
     const code = c.req.query("code");
-    if (!code) return c.json({ error: "Missing code" }, 400);
+    if (!code) return apiError(c, 400, "Missing code");
 
     const receivedState = c.req.query("state");
     const storedState = getCookie(c, "oauth_state");
     if (!receivedState || !storedState || receivedState !== storedState) {
-        return c.json({ error: "Invalid state parameter" }, 400);
+        return apiError(c, 400, "Invalid state parameter");
     }
     setCookie(c, "oauth_state", "", { maxAge: 0, path: "/" });
 
@@ -56,7 +56,7 @@ authRoutes.get("/callback", async (c) => {
     });
 
     if (!tokenRes.ok) {
-        return c.json({ error: "Token exchange failed" }, 400);
+        return apiError(c, 400, "Token exchange failed");
     }
 
     const tokens = (await tokenRes.json()) as {
@@ -73,9 +73,7 @@ authRoutes.get("/callback", async (c) => {
             "trakt-api-key": clientId,
         },
     });
-    const profile = profileRes.ok
-        ? ((await profileRes.json()) as { username: string })
-        : null;
+    const profile = profileRes.ok ? ((await profileRes.json()) as { username: string }) : null;
 
     const db = getDb();
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);

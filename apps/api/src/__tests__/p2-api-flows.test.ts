@@ -20,6 +20,7 @@ const dbMockState = vi.hoisted(() => ({
 const schedulerMock = vi.hoisted(() => ({
     registerUserSyncJob: vi.fn(),
     enqueueSyncNow: vi.fn(),
+    isQueueHealthy: vi.fn(),
     getRedis: vi.fn(() => null),
 }));
 
@@ -54,9 +55,7 @@ const tmdbMock = vi.hoisted(() => ({
 
 vi.mock("@trakt-dashboard/db", async () => {
     const actual =
-        await vi.importActual<typeof import("@trakt-dashboard/db")>(
-            "@trakt-dashboard/db",
-        );
+        await vi.importActual<typeof import("@trakt-dashboard/db")>("@trakt-dashboard/db");
     return {
         ...actual,
         getDb: () => dbMockState.db,
@@ -78,7 +77,9 @@ const { settingsRoutes } = await import("../routes/settings.js");
 const { watchlistRoutes } = await import("../routes/watchlist.js");
 const { showRoutes } = await import("../routes/shows.js");
 const { syncRoutes } = await import("../routes/sync.js");
-const { syncMovies, syncWatchlist } = await import("../services/sync.js");
+const { calendarRoutes } = await import("../routes/calendar.js");
+const { syncMovies, syncWatchlist, getPostResetWatchedEpisodeIds } =
+    await import("../services/sync.js");
 
 class SelectBuilder implements PromiseLike<SelectResult> {
     constructor(private readonly result: SelectResult) {}
@@ -116,9 +117,7 @@ class SelectBuilder implements PromiseLike<SelectResult> {
     }
 
     then<TResult1 = SelectResult, TResult2 = never>(
-        onfulfilled?:
-            | ((value: SelectResult) => TResult1 | PromiseLike<TResult1>)
-            | null,
+        onfulfilled?: ((value: SelectResult) => TResult1 | PromiseLike<TResult1>) | null,
         onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
     ): Promise<TResult1 | TResult2> {
         return Promise.resolve(this.result).then(onfulfilled, onrejected);
@@ -180,6 +179,7 @@ function createMockDb({
 
     const db = {
         select: vi.fn(() => new SelectBuilder(state.selectResults.shift() ?? [])),
+        selectDistinct: vi.fn(() => new SelectBuilder(state.selectResults.shift() ?? [])),
         insert: vi.fn(() => new InsertBuilder(state)),
         delete: vi.fn(() => new DeleteBuilder(state)),
         __state: state,
@@ -349,9 +349,32 @@ describe("settings routes", () => {
             httpProxy: "http://127.0.0.1:7890",
         });
         expect(db.__state.insertValues).toHaveLength(1);
-        expect(schedulerMock.registerUserSyncJob).toHaveBeenCalledWith(
-            TEST_USER_ID,
-        );
+        expect(schedulerMock.registerUserSyncJob).toHaveBeenCalledWith(TEST_USER_ID);
+    });
+
+    it("rejects an out-of-range syncIntervalMinutes (P2-T11)", async () => {
+        dbMockState.db = createMockDb({ selectResults: [[]] });
+        const app = testApp("/settings", settingsRoutes);
+
+        const res = await app.request("/settings", jsonRequest("PUT", { syncIntervalMinutes: 0 }));
+        expect(res.status).toBe(400);
+        expect(schedulerMock.registerUserSyncJob).not.toHaveBeenCalled();
+    });
+
+    it("rejects a non-http(s) httpProxy (P2-T11)", async () => {
+        dbMockState.db = createMockDb({ selectResults: [[]] });
+        const app = testApp("/settings", settingsRoutes);
+
+        const res = await app.request("/settings", jsonRequest("PUT", { httpProxy: "ftp://nope" }));
+        expect(res.status).toBe(400);
+    });
+
+    it("accepts an empty-string httpProxy as a clear (P2-T11)", async () => {
+        dbMockState.db = createMockDb({ selectResults: [[]] });
+        const app = testApp("/settings", settingsRoutes);
+
+        const res = await app.request("/settings", jsonRequest("PUT", { httpProxy: "" }));
+        expect(res.status).toBe(200);
     });
 });
 
@@ -384,11 +407,11 @@ describe("watchlist routes", () => {
 
         expect(res.status).toBe(200);
         expect(body.data).toMatchObject({ id: 77, showId: show.id });
-        expect(traktMock.client.addToWatchlist).toHaveBeenCalledWith(
-            TEST_USER_ID,
-            "shows",
-            { trakt: 5001, tmdb: 1001, imdb: "tt1001" },
-        );
+        expect(traktMock.client.addToWatchlist).toHaveBeenCalledWith(TEST_USER_ID, "shows", {
+            trakt: 5001,
+            tmdb: 1001,
+            imdb: "tt1001",
+        });
         expect(db.__state.insertValues).toEqual([
             expect.objectContaining({
                 userId: TEST_USER_ID,
@@ -428,11 +451,11 @@ describe("watchlist routes", () => {
 
         expect(res.status).toBe(200);
         expect(body).toEqual({ ok: true });
-        expect(traktMock.client.removeFromWatchlist).toHaveBeenCalledWith(
-            TEST_USER_ID,
-            "shows",
-            { trakt: 5001, tmdb: 1001, imdb: "tt1001" },
-        );
+        expect(traktMock.client.removeFromWatchlist).toHaveBeenCalledWith(TEST_USER_ID, "shows", {
+            trakt: 5001,
+            tmdb: 1001,
+            imdb: "tt1001",
+        });
         expect(db.__state.deleteWhereCalls).toHaveLength(1);
     });
 });
@@ -461,11 +484,11 @@ describe("watchlist T02 resilience", () => {
 
         expect(res.status).toBe(502);
         expect(body).toEqual({ error: "Failed to add to watchlist" });
-        expect(traktMock.client.addToWatchlist).toHaveBeenCalledWith(
-            TEST_USER_ID,
-            "shows",
-            { trakt: 5001, tmdb: 1001, imdb: "tt1001" },
-        );
+        expect(traktMock.client.addToWatchlist).toHaveBeenCalledWith(TEST_USER_ID, "shows", {
+            trakt: 5001,
+            tmdb: 1001,
+            imdb: "tt1001",
+        });
         // The route imports syncWatchlist directly, so verify the reconcile side effect.
         expect(traktMock.client.getWatchlistShows).toHaveBeenCalledWith(TEST_USER_ID);
         expect(traktMock.client.getWatchlistMovies).toHaveBeenCalledWith(TEST_USER_ID);
@@ -579,6 +602,148 @@ describe("sync routes", () => {
         expect(body.message).toBe("Sync already running");
         expect(schedulerMock.enqueueSyncNow).not.toHaveBeenCalled();
     });
+
+    it("returns 503 when the queue is unavailable instead of a fake success (P2-T14)", async () => {
+        const db = createMockDb({ selectResults: [[{ status: "idle" }]] });
+        dbMockState.db = db;
+        schedulerMock.enqueueSyncNow.mockRejectedValue(new Error("ECONNREFUSED"));
+        const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+        const app = testApp("/sync", syncRoutes);
+
+        const res = await app.request("/sync/trigger", { method: "POST" });
+        const body = await parseJson<{ ok: boolean; error: string }>(res);
+
+        expect(res.status).toBe(503);
+        expect(body.ok).toBe(false);
+        expect(body.error).toBe("queue_unavailable");
+        errSpy.mockRestore();
+    });
+
+    it("reports queue health via /sync/health (P2-T14)", async () => {
+        dbMockState.db = createMockDb();
+        const app = testApp("/sync", syncRoutes);
+
+        schedulerMock.isQueueHealthy.mockResolvedValueOnce(true);
+        const okRes = await app.request("/sync/health");
+        expect(okRes.status).toBe(200);
+        expect(await parseJson<{ data: { queueAvailable: boolean } }>(okRes)).toMatchObject({
+            data: { queueAvailable: true },
+        });
+
+        schedulerMock.isQueueHealthy.mockResolvedValueOnce(false);
+        const downRes = await app.request("/sync/health");
+        expect(downRes.status).toBe(503);
+        expect(await parseJson<{ data: { queueAvailable: boolean } }>(downRes)).toMatchObject({
+            data: { queueAvailable: false },
+        });
+    });
+});
+
+describe("getPostResetWatchedEpisodeIds (P2-T01 reset cursor)", () => {
+    it("returns only post-reset distinct episode ids, dropping nulls", async () => {
+        // 1st select → reset cursor; 2nd (selectDistinct) → post-reset watched ids
+        dbMockState.db = createMockDb({
+            selectResults: [
+                [{ resetAt: new Date("2026-06-01T00:00:00.000Z") }],
+                [{ id: 10 }, { id: 11 }, { id: null }],
+            ],
+        });
+
+        const ids = await getPostResetWatchedEpisodeIds(TEST_USER_ID, 1);
+        expect(ids).toEqual([10, 11]);
+    });
+
+    it("returns all distinct ids when the show was never reset", async () => {
+        dbMockState.db = createMockDb({
+            selectResults: [[], [{ id: 5 }]],
+        });
+
+        const ids = await getPostResetWatchedEpisodeIds(TEST_USER_ID, 1);
+        expect(ids).toEqual([5]);
+    });
+});
+
+describe("calendar route (P2-T10)", () => {
+    function calendarRow(overrides: Record<string, unknown> = {}) {
+        return {
+            episode: {
+                id: 207,
+                seasonNumber: 1,
+                episodeNumber: 7,
+                title: "Afterimage",
+                overview: "Next episode",
+                runtime: 45,
+                stillPath: "/still.jpg",
+                airDate: "2026-06-12",
+            },
+            show: {
+                id: 1,
+                title: "Neon Signal",
+                originalName: "Neon Signal",
+                translatedName: "Neon Signal CN",
+                posterPath: "/poster.jpg",
+                backdropPath: "/backdrop.jpg",
+                network: "HBO",
+                status: "returning series",
+            },
+            watched: false,
+            ...overrides,
+        };
+    }
+
+    it("returns an empty object when no episodes are in range", async () => {
+        dbMockState.db = createMockDb({ selectResults: [[]] });
+        const app = testApp("/calendar", calendarRoutes);
+
+        const res = await app.request("/calendar");
+        const body = await parseJson<{ ok: boolean; data: Record<string, unknown[]> }>(res);
+
+        expect(res.status).toBe(200);
+        expect(body.ok).toBe(true);
+        expect(body.data).toEqual({});
+    });
+
+    it("groups episodes by air date and surfaces the watched flag", async () => {
+        dbMockState.db = createMockDb({
+            selectResults: [
+                [
+                    calendarRow({ watched: true }),
+                    calendarRow({
+                        episode: {
+                            id: 208,
+                            seasonNumber: 1,
+                            episodeNumber: 8,
+                            title: "Echo",
+                            overview: "Later",
+                            runtime: 45,
+                            stillPath: null,
+                            airDate: "2026-06-13",
+                        },
+                        watched: false,
+                    }),
+                ],
+            ],
+        });
+        const app = testApp("/calendar", calendarRoutes);
+
+        const res = await app.request("/calendar?before=14&after=30");
+        const body = await parseJson<{
+            data: Record<string, Array<{ id: number; watched: boolean }>>;
+        }>(res);
+
+        expect(res.status).toBe(200);
+        expect(Object.keys(body.data).sort()).toEqual(["2026-06-12", "2026-06-13"]);
+        expect(body.data["2026-06-12"][0]).toMatchObject({ id: 207, watched: true });
+        expect(body.data["2026-06-13"][0]).toMatchObject({ id: 208, watched: false });
+    });
+
+    it("does not crash on out-of-range before/after params (clamped by parseBoundedInt)", async () => {
+        dbMockState.db = createMockDb({ selectResults: [[]] });
+        const app = testApp("/calendar", calendarRoutes);
+
+        const res = await app.request("/calendar?before=99999&after=-5");
+        expect(res.status).toBe(200);
+    });
 });
 
 describe("syncWatchlist", () => {
@@ -588,12 +753,7 @@ describe("syncWatchlist", () => {
         const show = makeShow({ id: 11, tmdbId: 1101 });
         const movie = makeMovie({ id: 22, tmdbId: 2202 });
         const db = createMockDb({
-            selectResults: [
-                [{ id: show.id }],
-                [],
-                [{ id: movie.id }],
-                [],
-            ],
+            selectResults: [[{ id: show.id }], [], [{ id: movie.id }], []],
         });
         dbMockState.db = db;
         traktMock.client.getWatchlistShows.mockResolvedValue([
@@ -641,21 +801,13 @@ describe("syncWatchlist", () => {
             expect.stringContaining('Show "No Tmdb Show" could not be resolved'),
         );
         expect(warnSpy).toHaveBeenCalledWith(
-            expect.stringContaining(
-                'Show "Missing Local Show" could not be resolved',
-            ),
+            expect.stringContaining('Show "Missing Local Show" could not be resolved'),
         );
         expect(warnSpy).toHaveBeenCalledWith(
-            expect.stringContaining(
-                'Movie "Missing Local Movie" could not be resolved',
-            ),
+            expect.stringContaining('Movie "Missing Local Movie" could not be resolved'),
         );
-        expect(warnSpy).toHaveBeenCalledWith(
-            expect.stringContaining("Skipping show cleanup"),
-        );
-        expect(warnSpy).toHaveBeenCalledWith(
-            expect.stringContaining("Skipping movie cleanup"),
-        );
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Skipping show cleanup"));
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Skipping movie cleanup"));
 
         warnSpy.mockRestore();
         logSpy.mockRestore();
@@ -717,14 +869,10 @@ describe("syncWatchlist", () => {
         expect(db.__state.deleteWhereCalls).toHaveLength(2);
         expect(warnSpy).not.toHaveBeenCalled();
         expect(logSpy).toHaveBeenCalledWith(
-            expect.stringContaining(
-                'Matched show "Fallback Show" by trakt fallback',
-            ),
+            expect.stringContaining('Matched show "Fallback Show" by trakt fallback'),
         );
         expect(logSpy).toHaveBeenCalledWith(
-            expect.stringContaining(
-                'Matched movie "Fallback Movie" by imdb fallback',
-            ),
+            expect.stringContaining('Matched movie "Fallback Movie" by imdb fallback'),
         );
 
         warnSpy.mockRestore();

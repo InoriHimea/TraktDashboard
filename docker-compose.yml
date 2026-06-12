@@ -81,8 +81,7 @@ services:
         ports:
             - "3001:3001"
         healthcheck:
-            test:
-                ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
+            test: ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
             interval: 15s
             timeout: 5s
             retries: 3
@@ -95,8 +94,20 @@ services:
         image: ${WEB_IMAGE:-ghcr.io/inorihimea/trakt-dashboard-web:latest}
         container_name: trakt-web
         restart: unless-stopped
+        # nginx proxies to the API at runtime, so it only needs the API process started
+        # (not healthy) before it comes up — keeps `docker compose up --wait` ordering sane.
+        depends_on:
+            api:
+                condition: service_started
         ports:
             - "80:80"
+        # P3-T04: healthcheck so `docker compose up --wait` knows when web is serving.
+        healthcheck:
+            test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost/ || exit 1"]
+            interval: 15s
+            timeout: 5s
+            retries: 3
+            start_period: 10s
 
 volumes:
     postgres_data:

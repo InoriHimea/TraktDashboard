@@ -6,9 +6,10 @@ REGISTRY="${REGISTRY:-ghcr.io/inorihimea}"
 PUSH="${PUSH:-false}"
 TARGET="${TARGET:-all}"   # all | api | web
 
-# Registry mirrors (use internal Nexus for local builds, upstream for CI)
-NPM_REGISTRY="${NPM_REGISTRY:-https://nexus.mellivora.com.cn:18082/repository/npm-group/}"
-APK_MIRROR="${APK_MIRROR:-https://artifact.mellivora.com.cn/alpine/apk-group}"
+# Registry mirrors default to public upstreams (P2-T09). Override NPM_REGISTRY /
+# APK_MIRROR via env to use an internal mirror for local builds.
+NPM_REGISTRY="${NPM_REGISTRY:-https://registry.npmjs.org/}"
+APK_MIRROR="${APK_MIRROR:-https://dl-cdn.alpinelinux.org/alpine}"
 VITE_API_BASE="${VITE_API_BASE:-}"
 
 # Resolve repo root regardless of where the script is called from

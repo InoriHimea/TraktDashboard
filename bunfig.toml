@@ -1,2 +1,4 @@
 [install]
-registry = "https://nexus.mellivora.com.cn:18082/repository/npm-group/"
+# Public npm registry (P2-T09). Override locally via the BUN_CONFIG_REGISTRY env var
+# or an untracked bunfig override if you need an internal mirror.
+registry = "https://registry.npmjs.org/"

@@ -1,3 +1,8 @@
+# Dependency resolution strategy (P1-T07):
+# We intentionally install with pnpm (matching pnpm-lock.yaml and CI) in a Node base,
+# then run on Bun. All runtime dependencies (hono, postgres, ioredis, bullmq, drizzle,
+# jose, zod, p-limit) are pure-JS and Bun-compatible, so there is no native-addon ABI
+# mismatch between the install and run stages. Bun is used only as the TS-native runtime.
 FROM node:22-alpine AS deps
 WORKDIR /app
 
@@ -16,8 +21,9 @@ COPY apps/api/package.json ./apps/api/
 RUN pnpm install --frozen-lockfile
 
 # ─── Production image ─────────────────────────────────────────────────────────
-# Bun runs TypeScript natively — no build step needed
-FROM oven/bun:1.1-alpine AS runner
+# Bun runs TypeScript natively — no build step needed.
+# Pinned to the 1.2 minor (matches the bun-types the workspace targets).
+FROM oven/bun:1.2-alpine AS runner
 WORKDIR /app
 
 # Build args for registry configuration
@@ -34,7 +40,7 @@ COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=deps /app/packages/db/node_modules ./packages/db/node_modules
 COPY packages/ ./packages/
 COPY apps/api/ ./apps/api/
-COPY packages/db/drizzle ./packages/db/drizzle
+# (packages/db/drizzle is already included by `COPY packages/ ./packages/` above)
 
 COPY apps/api/docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh

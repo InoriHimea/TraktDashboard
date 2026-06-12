@@ -1,86 +1,87 @@
-import { Hono } from 'hono'
-import { getDb, userSettings } from '@trakt-dashboard/db'
-import { eq } from 'drizzle-orm'
-import { registerUserSyncJob } from '../jobs/scheduler.js'
+import { Hono } from "hono";
+import { getDb, userSettings } from "@trakt-dashboard/db";
+import { eq } from "drizzle-orm";
+import { z } from "zod";
+import { registerUserSyncJob } from "../jobs/scheduler.js";
+import { validateBody } from "../lib/validate.js";
 
-export const settingsRoutes = new Hono<{ Variables: { userId: number } }>()
+export const settingsRoutes = new Hono<{ Variables: { userId: number } }>();
 
 const DEFAULTS = {
-  displayLanguage: 'zh-CN',
-  syncIntervalMinutes: 60,
-  httpProxy: null as string | null,
-}
+    displayLanguage: "zh-CN",
+    syncIntervalMinutes: 60,
+    httpProxy: null as string | null,
+};
+
+// P2-T11: declarative validation replaces the inline regex/integer checks.
+const updateSettingsSchema = z.object({
+    displayLanguage: z.string().min(1).max(32).optional(),
+    syncIntervalMinutes: z.number().int().min(1).max(10080).optional(),
+    httpProxy: z
+        .union([
+            z.string().regex(/^https?:\/\//i, "httpProxy must be a valid http:// or https:// URL"),
+            z.literal(""),
+            z.null(),
+        ])
+        .optional(),
+});
 
 // GET /api/settings
-settingsRoutes.get('/', async (c) => {
-  const userId = c.get('userId')
-  const db = getDb()
-  const [row] = await db.select().from(userSettings).where(eq(userSettings.userId, userId))
+settingsRoutes.get("/", async (c) => {
+    const userId = c.get("userId");
+    const db = getDb();
+    const [row] = await db.select().from(userSettings).where(eq(userSettings.userId, userId));
 
-  return c.json({
-    data: {
-      userId,
-      displayLanguage: row?.displayLanguage ?? DEFAULTS.displayLanguage,
-      syncIntervalMinutes: row?.syncIntervalMinutes ?? DEFAULTS.syncIntervalMinutes,
-      httpProxy: row?.httpProxy ?? DEFAULTS.httpProxy,
-    },
-  })
-})
+    return c.json({
+        data: {
+            userId,
+            displayLanguage: row?.displayLanguage ?? DEFAULTS.displayLanguage,
+            syncIntervalMinutes: row?.syncIntervalMinutes ?? DEFAULTS.syncIntervalMinutes,
+            httpProxy: row?.httpProxy ?? DEFAULTS.httpProxy,
+        },
+    });
+});
 
 // PUT /api/settings
-settingsRoutes.put('/', async (c) => {
-  const userId = c.get('userId')
-  const body = await c.req.json().catch(() => ({}))
+settingsRoutes.put("/", async (c) => {
+    const userId = c.get("userId");
 
-  const { displayLanguage, syncIntervalMinutes, httpProxy } = body as {
-    displayLanguage?: string
-    syncIntervalMinutes?: number
-    httpProxy?: string | null
-  }
+    const parsed = await validateBody(c, updateSettingsSchema);
+    if (parsed instanceof Response) return parsed;
+    const { displayLanguage, syncIntervalMinutes, httpProxy } = parsed.data;
 
-  // Validate syncIntervalMinutes
-  if (syncIntervalMinutes !== undefined) {
-    const n = Number(syncIntervalMinutes)
-    if (!Number.isInteger(n) || n < 1 || n > 10080) {
-      return c.json({ error: 'syncIntervalMinutes must be an integer between 1 and 10080' }, 400)
+    const db = getDb();
+    const [existing] = await db.select().from(userSettings).where(eq(userSettings.userId, userId));
+    const previousInterval = existing?.syncIntervalMinutes ?? DEFAULTS.syncIntervalMinutes;
+
+    const newValues = {
+        userId,
+        displayLanguage: displayLanguage ?? existing?.displayLanguage ?? DEFAULTS.displayLanguage,
+        syncIntervalMinutes:
+            syncIntervalMinutes ?? existing?.syncIntervalMinutes ?? DEFAULTS.syncIntervalMinutes,
+        httpProxy:
+            httpProxy !== undefined
+                ? httpProxy || null
+                : (existing?.httpProxy ?? DEFAULTS.httpProxy),
+        updatedAt: new Date(),
+    };
+
+    await db
+        .insert(userSettings)
+        .values(newValues)
+        .onConflictDoUpdate({
+            target: [userSettings.userId],
+            set: {
+                displayLanguage: newValues.displayLanguage,
+                syncIntervalMinutes: newValues.syncIntervalMinutes,
+                httpProxy: newValues.httpProxy,
+                updatedAt: newValues.updatedAt,
+            },
+        });
+
+    if (syncIntervalMinutes !== undefined && newValues.syncIntervalMinutes !== previousInterval) {
+        await registerUserSyncJob(userId);
     }
-  }
 
-  // Validate httpProxy
-  if (httpProxy !== undefined && httpProxy !== null && httpProxy !== '') {
-    if (!/^https?:\/\//i.test(httpProxy)) {
-      return c.json({ error: 'httpProxy must be a valid http:// or https:// URL' }, 400)
-    }
-  }
-
-  const db = getDb()
-  const [existing] = await db.select().from(userSettings).where(eq(userSettings.userId, userId))
-  const previousInterval = existing?.syncIntervalMinutes ?? DEFAULTS.syncIntervalMinutes
-
-  const newValues = {
-    userId,
-    displayLanguage: displayLanguage ?? existing?.displayLanguage ?? DEFAULTS.displayLanguage,
-    syncIntervalMinutes: syncIntervalMinutes ?? existing?.syncIntervalMinutes ?? DEFAULTS.syncIntervalMinutes,
-    httpProxy: httpProxy !== undefined ? (httpProxy || null) : (existing?.httpProxy ?? DEFAULTS.httpProxy),
-    updatedAt: new Date(),
-  }
-
-  await db.insert(userSettings).values(newValues).onConflictDoUpdate({
-    target: [userSettings.userId],
-    set: {
-      displayLanguage: newValues.displayLanguage,
-      syncIntervalMinutes: newValues.syncIntervalMinutes,
-      httpProxy: newValues.httpProxy,
-      updatedAt: newValues.updatedAt,
-    },
-  })
-
-  if (
-    syncIntervalMinutes !== undefined &&
-    newValues.syncIntervalMinutes !== previousInterval
-  ) {
-    await registerUserSyncJob(userId)
-  }
-
-  return c.json({ data: { ...newValues } })
-})
+    return c.json({ data: { ...newValues } });
+});

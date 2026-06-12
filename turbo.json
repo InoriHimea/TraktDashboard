@@ -17,8 +17,12 @@
             "outputs": []
         },
         "test": {
-            "dependsOn": ["^build"],
+            "dependsOn": ["^typecheck"],
             "outputs": []
+        },
+        "test:coverage": {
+            "dependsOn": ["^typecheck"],
+            "outputs": ["coverage/**"]
         },
         "lint": {
             "outputs": []
@@ -28,6 +32,7 @@
             "env": ["DATABASE_URL"]
         },
         "db:migrate": {
+            "dependsOn": ["db:generate"],
             "cache": false,
             "env": ["DATABASE_URL"]
         }

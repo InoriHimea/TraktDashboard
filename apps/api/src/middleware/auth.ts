@@ -17,9 +17,7 @@ function resolveAuthSecret(): Uint8Array {
     }
 
     const devFallback = "dev-only-secret-change-before-production-1234567890";
-    console.warn(
-        "[auth] API_SECRET is missing or too short, using development fallback secret",
-    );
+    console.warn("[auth] API_SECRET is missing or too short, using development fallback secret");
     return new TextEncoder().encode(devFallback);
 }
 

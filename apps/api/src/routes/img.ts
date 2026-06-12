@@ -40,12 +40,7 @@ imgRoutes.get("/:size/:filename{.+}", async (c) => {
     const [cached] = await db
         .select()
         .from(metadataCache)
-        .where(
-            and(
-                eq(metadataCache.source, "tmdb_img"),
-                eq(metadataCache.externalId, cacheKey),
-            ),
-        );
+        .where(and(eq(metadataCache.source, "tmdb_img"), eq(metadataCache.externalId, cacheKey)));
 
     if (cached) {
         const age = Date.now() - new Date(cached.cachedAt).getTime();
@@ -63,7 +58,7 @@ imgRoutes.get("/:size/:filename{.+}", async (c) => {
                         "X-Cache": "HIT",
                     },
                 });
-            } catch (e) {
+            } catch {
                 // Invalid cache data, delete it and fall through to fetch
                 await db
                     .delete(metadataCache)
@@ -89,7 +84,7 @@ imgRoutes.get("/:size/:filename{.+}", async (c) => {
     let upstream: Response;
     try {
         upstream = await fetch(url, fetchOptions);
-    } catch (e) {
+    } catch {
         return c.json({ error: "Failed to fetch image" }, 502);
     }
 

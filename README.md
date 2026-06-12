@@ -29,14 +29,14 @@
 
 ## 🏗️ Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · Framer Motion · TanStack Query |
-| **Backend** | Bun · Hono · BullMQ |
-| **Database** | PostgreSQL 16 · Drizzle ORM |
-| **Queue** | Redis 7 |
-| **Proxy** | Nginx |
-| **Container** | Docker Compose |
+| Layer         | Technology                                                           |
+| ------------- | -------------------------------------------------------------------- |
+| **Frontend**  | React 19 · Vite 8 · Tailwind CSS v4 · Framer Motion · TanStack Query |
+| **Backend**   | Bun · Hono · BullMQ                                                  |
+| **Database**  | PostgreSQL 16 · Drizzle ORM                                          |
+| **Queue**     | Redis 7                                                              |
+| **Proxy**     | Nginx                                                                |
+| **Container** | Docker Compose                                                       |
 
 ## 🚀 Quick Start
 
@@ -121,6 +121,7 @@ trakt-dashboard/
 ### How Syncing Works
 
 **Initial Sync** (triggered on first login):
+
 1. Fetches all watched shows from Trakt API
 2. Retrieves detailed episode progress for each show
 3. Enriches metadata from TMDB (posters, backdrops, episode stills)
@@ -128,6 +129,7 @@ trakt-dashboard/
 5. Calculates progress summaries
 
 **Incremental Sync** (runs every 15 minutes by default, or the interval saved in Settings):
+
 1. Fetches only new watch history since last sync
 2. Updates affected shows' progress
 3. Refreshes stale metadata if cache expired
@@ -170,21 +172,21 @@ GET  /api/stats/overview       Watch statistics and charts
 
 ### Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `TRAKT_CLIENT_ID` | ✅ | — | Trakt OAuth app client ID |
-| `TRAKT_CLIENT_SECRET` | ✅ | — | Trakt OAuth app client secret |
-| `TRAKT_REDIRECT_URI` | ✅ | — | Must match Trakt app settings |
-| `TMDB_API_KEY` | ✅ | — | TMDB v3 API key |
-| `TVDB_API_KEY` | — | — | TVDB API key (optional) |
-| `API_SECRET` | ✅ | — | JWT signing secret (32+ chars) |
-| `POSTGRES_USER` | — | `trakt` | Database username |
-| `POSTGRES_PASSWORD` | — | `trakt` | Database password |
-| `POSTGRES_DB` | — | `trakt_dashboard` | Database name |
-| `SYNC_INTERVAL_MINUTES` | — | `15` | Auto-sync frequency |
-| `FRONTEND_URL` | — | `http://localhost` | Used for CORS and OAuth |
-| `VITE_API_BASE` | — | `http://localhost:3001` | Frontend dev/build API target |
-| `HTTP_PROXY` / `HTTPS_PROXY` | — | — | Optional fallback proxy for TMDB and Trakt requests |
+| Variable                     | Required | Default                 | Description                                         |
+| ---------------------------- | -------- | ----------------------- | --------------------------------------------------- |
+| `TRAKT_CLIENT_ID`            | ✅       | —                       | Trakt OAuth app client ID                           |
+| `TRAKT_CLIENT_SECRET`        | ✅       | —                       | Trakt OAuth app client secret                       |
+| `TRAKT_REDIRECT_URI`         | ✅       | —                       | Must match Trakt app settings                       |
+| `TMDB_API_KEY`               | ✅       | —                       | TMDB v3 API key                                     |
+| `TVDB_API_KEY`               | —        | —                       | TVDB API key (optional)                             |
+| `API_SECRET`                 | ✅       | —                       | JWT signing secret (32+ chars)                      |
+| `POSTGRES_USER`              | —        | `trakt`                 | Database username                                   |
+| `POSTGRES_PASSWORD`          | —        | `trakt`                 | Database password                                   |
+| `POSTGRES_DB`                | —        | `trakt_dashboard`       | Database name                                       |
+| `SYNC_INTERVAL_MINUTES`      | —        | `15`                    | Auto-sync frequency                                 |
+| `FRONTEND_URL`               | —        | `http://localhost`      | Used for CORS and OAuth                             |
+| `VITE_API_BASE`              | —        | `http://localhost:3001` | Frontend dev/build API target                       |
+| `HTTP_PROXY` / `HTTPS_PROXY` | —        | —                       | Optional fallback proxy for TMDB and Trakt requests |
 
 ## 🛠️ Development
 

@@ -103,6 +103,8 @@ export interface CalendarEpisode {
     runtime: number | null;
     stillPath: string | null;
     airDate: string | null;
+    /** Whether the current user has any watch-history entry for this episode (P1-T13). */
+    watched: boolean;
     show: {
         id: number;
         title: string;
@@ -189,16 +191,32 @@ export interface SyncDebugState {
  *   | { success: false; error: string; data?: never }
  */
 export interface ApiResponse<T> {
+    ok?: true;
     data: T;
     error?: string;
 }
 
 export interface PaginatedResponse<T> {
+    ok?: true;
     data: T[];
     total: number;
     limit: number;
     offset: number;
 }
+
+/** Error envelope returned by the `apiError` helper (P1-T10). */
+export interface ApiErrorResponse {
+    ok: false;
+    error: string;
+    details?: unknown;
+}
+
+/**
+ * Canonical discriminated union (P1-T10). Use for callers that handle both
+ * outcomes explicitly; `ApiResponse<T>` remains the success-unwrap shape used by
+ * the typed web client.
+ */
+export type ApiResult<T> = { ok: true; data: T } | ApiErrorResponse;
 
 // ─── Stats ────────────────────────────────────────────────────────────────────
 
@@ -327,61 +345,61 @@ export interface WatchResetCursor {
 // ─── Movie ────────────────────────────────────────────────────────────────────
 
 export interface Movie {
-  id: number
-  tmdbId: number
-  imdbId: string | null
-  traktId: number | null
-  traktSlug: string | null
-  title: string
-  overview: string | null
-  releaseDate: string | null   // YYYY-MM-DD
-  runtime: number | null       // minutes
-  posterPath: string | null
-  backdropPath: string | null
-  genres: string[]
-  lastSyncedAt: string
-  createdAt: string
+    id: number;
+    tmdbId: number;
+    imdbId: string | null;
+    traktId: number | null;
+    traktSlug: string | null;
+    title: string;
+    overview: string | null;
+    releaseDate: string | null; // YYYY-MM-DD
+    runtime: number | null; // minutes
+    posterPath: string | null;
+    backdropPath: string | null;
+    genres: string[];
+    lastSyncedAt: string;
+    createdAt: string;
 }
 
 export interface MovieProgress {
-  movie: Movie
-  watchCount: number
-  lastWatchedAt: string | null
+    movie: Movie;
+    watchCount: number;
+    lastWatchedAt: string | null;
 }
 
 export interface MovieWatchHistoryEntry {
-  id: number
-  movieId: number
-  watchedAt: string | null
-  source: string
+    id: number;
+    movieId: number;
+    watchedAt: string | null;
+    source: string;
 }
 
 // ─── Watchlist ────────────────────────────────────────────────────────────────
 
 export interface WatchlistItem {
-  id: number
-  userId: number
-  showId: number | null
-  movieId: number | null
-  addedAt: string
-  listedAt: string
-  notes: string | null
+    id: number;
+    userId: number;
+    showId: number | null;
+    movieId: number | null;
+    addedAt: string;
+    listedAt: string;
+    notes: string | null;
 }
 
 export interface WatchlistShowItem {
-  id: number
-  show: Show
-  addedAt: string
-  listedAt: string
-  notes: string | null
+    id: number;
+    show: Show;
+    addedAt: string;
+    listedAt: string;
+    notes: string | null;
 }
 
 export interface WatchlistMovieItem {
-  id: number
-  movie: Movie
-  addedAt: string
-  listedAt: string
-  notes: string | null
+    id: number;
+    movie: Movie;
+    addedAt: string;
+    listedAt: string;
+    notes: string | null;
 }
 
-export type WatchlistItemWithMedia = WatchlistShowItem | WatchlistMovieItem
+export type WatchlistItemWithMedia = WatchlistShowItem | WatchlistMovieItem;

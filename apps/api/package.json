@@ -1,20 +1,27 @@
 {
     "name": "@trakt-dashboard/api",
-    "version": "0.40.0",
+    "version": "0.41.0",
     "private": true,
     "type": "module",
+    "exports": {
+        "./app-type": {
+            "types": "./src/index.ts"
+        }
+    },
     "scripts": {
         "build": "tsc -p tsconfig.json --noEmit",
         "typecheck": "tsc -p tsconfig.json --noEmit",
         "dev": "bun --watch src/index.ts",
         "start": "bun src/index.ts",
         "test": "vitest --run",
+        "test:coverage": "vitest --run --coverage",
         "lint": "tsc -p tsconfig.json --noEmit",
         "db:generate": "cd ../../packages/db && pnpm db:generate",
         "db:migrate": "bun src/migrate.ts"
     },
     "dependencies": {
         "@trakt-dashboard/db": "workspace:*",
+        "@trakt-dashboard/i18n": "workspace:*",
         "@trakt-dashboard/types": "workspace:*",
         "bullmq": "^5.78.0",
         "dayjs": "^1.11.20",
@@ -29,6 +36,7 @@
     "devDependencies": {
         "@types/bun": "latest",
         "@types/node": "^22.10.2",
+        "@vitest/coverage-v8": "^4.1.8",
         "fast-check": "^3.23.2",
         "vitest": "^4.1.8"
     }

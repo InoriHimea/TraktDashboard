@@ -45,7 +45,12 @@ api.route("/trakt", traktRoutes);
 api.route("/watchlist", watchlistRoutes);
 api.route("/calendar", calendarRoutes);
 
-app.route("/api", api);
+const routes = app.route("/api", api);
+
+// Exported for the typed Hono RPC client (`hc<AppType>`) on the web side (P1-T12).
+// NOTE: full RPC type inference additionally requires the individual route files to
+// method-chain their handlers; that per-route migration is intentionally incremental.
+export type AppType = typeof routes;
 
 // 404
 app.notFound((c) => c.json({ error: "not found" }, 404));
@@ -64,5 +69,7 @@ console.log(`🚀 API running on http://localhost:${port}`);
 
 export default {
     port,
-    fetch: app.fetch,
+    // `routes` is the same app instance with the `/api` mount captured in its type;
+    // using it here (not `app`) keeps the binding a real value, not type-only.
+    fetch: routes.fetch,
 };

@@ -29,14 +29,14 @@
 
 ## 🏗️ 技术栈
 
-| 层级 | 技术 |
-|------|------|
-| **前端** | React 19 · Vite 8 · Tailwind CSS v4 · Framer Motion · TanStack Query |
-| **后端** | Bun · Hono · BullMQ |
-| **数据库** | PostgreSQL 16 · Drizzle ORM |
-| **队列** | Redis 7 |
-| **代理** | Nginx |
-| **容器** | Docker Compose |
+| 层级       | 技术                                                                 |
+| ---------- | -------------------------------------------------------------------- |
+| **前端**   | React 19 · Vite 8 · Tailwind CSS v4 · Framer Motion · TanStack Query |
+| **后端**   | Bun · Hono · BullMQ                                                  |
+| **数据库** | PostgreSQL 16 · Drizzle ORM                                          |
+| **队列**   | Redis 7                                                              |
+| **代理**   | Nginx                                                                |
+| **容器**   | Docker Compose                                                       |
 
 ## 🚀 快速开始
 
@@ -121,6 +121,7 @@ trakt-dashboard/
 ### 同步机制
 
 **初始同步**（首次登录时触发）：
+
 1. 从 Trakt API 获取所有已观看的剧集
 2. 检索每部剧集的详细剧集进度
 3. 从 TMDB 丰富元数据（海报、背景图、剧集截图）
@@ -128,6 +129,7 @@ trakt-dashboard/
 5. 计算进度摘要
 
 **增量同步**（默认每 15 分钟运行一次，或使用设置页保存的间隔）：
+
 1. 仅获取自上次同步以来的新观看历史
 2. 更新受影响剧集的进度
 3. 如果缓存过期则刷新陈旧的元数据
@@ -170,21 +172,21 @@ GET  /api/stats/overview       观看统计和图表
 
 ### 环境变量
 
-| 变量 | 必需 | 默认值 | 描述 |
-|------|------|--------|------|
-| `TRAKT_CLIENT_ID` | ✅ | — | Trakt OAuth 应用客户端 ID |
-| `TRAKT_CLIENT_SECRET` | ✅ | — | Trakt OAuth 应用客户端密钥 |
-| `TRAKT_REDIRECT_URI` | ✅ | — | 必须与 Trakt 应用设置匹配 |
-| `TMDB_API_KEY` | ✅ | — | TMDB v3 API 密钥 |
-| `TVDB_API_KEY` | — | — | TVDB API 密钥（可选）|
-| `API_SECRET` | ✅ | — | JWT 签名密钥（32+ 字符）|
-| `POSTGRES_USER` | — | `trakt` | 数据库用户名 |
-| `POSTGRES_PASSWORD` | — | `trakt` | 数据库密码 |
-| `POSTGRES_DB` | — | `trakt_dashboard` | 数据库名称 |
-| `SYNC_INTERVAL_MINUTES` | — | `15` | 自动同步频率 |
-| `FRONTEND_URL` | — | `http://localhost` | 用于 CORS 和 OAuth |
-| `VITE_API_BASE` | — | `http://localhost:3001` | 前端开发/构建时的 API 目标 |
-| `HTTP_PROXY` / `HTTPS_PROXY` | — | — | TMDB 和 Trakt 请求的可选回退代理 |
+| 变量                         | 必需 | 默认值                  | 描述                             |
+| ---------------------------- | ---- | ----------------------- | -------------------------------- |
+| `TRAKT_CLIENT_ID`            | ✅   | —                       | Trakt OAuth 应用客户端 ID        |
+| `TRAKT_CLIENT_SECRET`        | ✅   | —                       | Trakt OAuth 应用客户端密钥       |
+| `TRAKT_REDIRECT_URI`         | ✅   | —                       | 必须与 Trakt 应用设置匹配        |
+| `TMDB_API_KEY`               | ✅   | —                       | TMDB v3 API 密钥                 |
+| `TVDB_API_KEY`               | —    | —                       | TVDB API 密钥（可选）            |
+| `API_SECRET`                 | ✅   | —                       | JWT 签名密钥（32+ 字符）         |
+| `POSTGRES_USER`              | —    | `trakt`                 | 数据库用户名                     |
+| `POSTGRES_PASSWORD`          | —    | `trakt`                 | 数据库密码                       |
+| `POSTGRES_DB`                | —    | `trakt_dashboard`       | 数据库名称                       |
+| `SYNC_INTERVAL_MINUTES`      | —    | `15`                    | 自动同步频率                     |
+| `FRONTEND_URL`               | —    | `http://localhost`      | 用于 CORS 和 OAuth               |
+| `VITE_API_BASE`              | —    | `http://localhost:3001` | 前端开发/构建时的 API 目标       |
+| `HTTP_PROXY` / `HTTPS_PROXY` | —    | —                       | TMDB 和 Trakt 请求的可选回退代理 |
 
 ## 🛠️ 开发
 

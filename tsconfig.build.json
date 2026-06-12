@@ -1,0 +1,9 @@
+{
+    "//": "P2-T13: TypeScript project-reference graph for `tsc -b`. Builds the composite leaf packages (types/db/i18n) in dependency order with incremental caching. The per-package turbo `typecheck` remains the primary CI gate; this is an additive, faster incremental build.",
+    "files": [],
+    "references": [
+        { "path": "./packages/types/tsconfig.build.json" },
+        { "path": "./packages/db/tsconfig.build.json" },
+        { "path": "./packages/i18n/tsconfig.build.json" }
+    ]
+}

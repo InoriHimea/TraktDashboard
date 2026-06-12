@@ -17,9 +17,7 @@ describe("parseBoundedInt", () => {
 
 describe("withTimeout", () => {
     it("resolves the wrapped promise", async () => {
-        await expect(withTimeout(Promise.resolve("ok"), 100, "fast")).resolves.toBe(
-            "ok",
-        );
+        await expect(withTimeout(Promise.resolve("ok"), 100, "fast")).resolves.toBe("ok");
     });
 
     it("rejects with an optional prefix when the timeout wins", async () => {
@@ -27,9 +25,7 @@ describe("withTimeout", () => {
         const promise = withTimeout(new Promise(() => {}), 100, "slow", {
             prefix: "tmdb",
         });
-        const expectation = expect(promise).rejects.toThrow(
-            "[tmdb] Timeout after 100ms: slow",
-        );
+        const expectation = expect(promise).rejects.toThrow("[tmdb] Timeout after 100ms: slow");
 
         await vi.advanceTimersByTimeAsync(100);
         await expectation;

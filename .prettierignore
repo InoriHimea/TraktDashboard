@@ -1,0 +1,11 @@
+node_modules
+dist
+coverage
+.turbo
+.codegraph
+.agents
+pnpm-lock.yaml
+packages/db/drizzle
+apps/web/public
+**/*.min.js
+**/*.min.css
