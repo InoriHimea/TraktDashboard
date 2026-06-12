@@ -7,10 +7,15 @@ planning/optimization checklists.
 
 - **`requirement.md`** — the current feature set, constraints, and non-functional
   requirements. Update it when scope changes.
-- **Optimization / upgrade plans** — staged checklists named `plan-<YYYYMMDD>.md`. The active
-  plan currently lives at the repo root (`plan-20260608.md`) for historical reasons; new plans
-  should be added here. Each tracked task checks off its box and bumps the root version before
-  commit (see README "Version Cadence").
+- **Optimization / upgrade plans** — staged checklists named `plan-<YYYYMMDD>.md`. All plans
+  live here. Each tracked task checks off its box and bumps the root version before commit
+  (see README "Version Cadence").
+
+## Plans
+
+| 文件                                 | 日期       | 状态                 |
+| ------------------------------------ | ---------- | -------------------- |
+| [plan-20260608.md](plan-20260608.md) | 2026-06-08 | ✅ 全部完成（P0–P3） |
 
 ## Status legend
 
