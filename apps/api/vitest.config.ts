@@ -18,13 +18,12 @@ export default defineConfig({
                 "src/migrate.ts",
                 "src/load-env.ts",
             ],
-            // Initial floor (P1-T05) set just below current coverage so CI fails on
-            // regression. Ratchet upward as coverage grows (current ~29% lines).
+            // N3-T02: ratcheted up from initial P1-T05 floor (~29% lines → 40%).
             thresholds: {
-                lines: 28,
-                functions: 28,
-                statements: 28,
-                branches: 16,
+                lines: 40,
+                functions: 40,
+                statements: 39,
+                branches: 30,
             },
         },
     },
