@@ -28,13 +28,12 @@ export default defineConfig({
                 "src/main.tsx",
                 "src/vite-env.d.ts",
             ],
-            // Initial floor (P1-T05) set just below current coverage so CI fails on
-            // regression. Ratchet upward as coverage grows (current ~14% lines).
+            // N3-T02: ratcheted up from initial P1-T05 floor (~14% lines → 20%).
             thresholds: {
-                lines: 13,
-                functions: 9,
-                statements: 12,
-                branches: 9,
+                lines: 20,
+                functions: 13,
+                statements: 19,
+                branches: 15,
             },
         },
     },

@@ -8,6 +8,8 @@ import {
     recordError,
     getLastRunMetrics,
     getCurrentRunMetrics,
+    getCurrentRunId,
+    withPhase,
 } from "../lib/observability.js";
 
 describe("sync observability (P2-T05)", () => {
@@ -41,6 +43,28 @@ describe("sync observability (P2-T05)", () => {
             recordRetry();
         }).not.toThrow();
         expect(getCurrentRunMetrics()).toBeNull();
+    });
+
+    it("getCurrentRunId returns the active runId or null", () => {
+        expect(getCurrentRunId()).toBeNull();
+        const run = startSyncRun();
+        expect(getCurrentRunId()).toBe(run.runId);
+        endSyncRun();
+        expect(getCurrentRunId()).toBeNull();
+    });
+
+    it("withPhase records the phase duration on active run", async () => {
+        startSyncRun();
+        await withPhase("fetch", async () => {
+            await new Promise((r) => setTimeout(r, 2));
+        });
+        const m = getCurrentRunMetrics();
+        expect(m?.phases["fetch"]).toBeGreaterThanOrEqual(0);
+        endSyncRun();
+    });
+
+    it("withPhase is a no-op when no run is active", async () => {
+        await expect(withPhase("noop", async () => "ok")).resolves.toBe("ok");
     });
 
     it("finalizes a run into lastRun with a duration", () => {

@@ -1,0 +1,17 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": ["config:base"],
+    "schedule": ["before 9am on Monday"],
+    "packageRules": [
+        {
+            "description": "Group patch and minor updates into a single PR",
+            "matchUpdateTypes": ["patch", "minor"],
+            "groupName": "patch-minor"
+        },
+        {
+            "description": "Bun runtime upgrades are high-risk; handle manually",
+            "matchPackageNames": ["bun"],
+            "enabled": false
+        }
+    ]
+}

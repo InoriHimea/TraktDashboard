@@ -4,7 +4,11 @@ import { eq, sql } from "drizzle-orm";
 import { getSyncStatus, triggerFullSync } from "../services/sync.js";
 import { enqueueSyncNow, isQueueHealthy } from "../jobs/scheduler.js";
 import { toIsoOrNull } from "../lib/datetime.js";
-import { getLastRunMetrics, getCurrentRunMetrics } from "../lib/observability.js";
+import {
+    getLastRunMetrics,
+    getCurrentRunMetrics,
+    getRecentSyncRuns,
+} from "../lib/observability.js";
 
 export const syncRoutes = new Hono<{ Variables: { userId: number } }>();
 
@@ -82,15 +86,20 @@ syncRoutes.get("/debug", async (c) => {
     });
 });
 
-// GET /api/sync/health — queue/Redis availability + last-run diagnostics (P2-T14, P2-T05)
+// GET /api/sync/health — queue/Redis availability + last-run diagnostics (P2-T14, N4-T03)
 syncRoutes.get("/health", async (c) => {
-    const queueAvailable = await isQueueHealthy();
+    const userId = c.get("userId");
+    const [queueAvailable, lastRuns] = await Promise.all([
+        isQueueHealthy(),
+        getRecentSyncRuns(userId, 5),
+    ]);
     return c.json(
         {
             data: {
                 queueAvailable,
                 currentRun: getCurrentRunMetrics(),
                 lastRun: getLastRunMetrics(),
+                lastRuns,
             },
         },
         queueAvailable ? 200 : 503,

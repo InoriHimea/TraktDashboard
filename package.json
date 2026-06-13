@@ -1,6 +1,6 @@
 {
     "name": "trakt-dashboard",
-    "version": "0.43.0",
+    "version": "0.44.0",
     "private": true,
     "scripts": {
         "dev": "turbo run dev",
@@ -12,6 +12,7 @@
         "lint": "eslint . && prettier --check .",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
+        "test:e2e": "playwright test",
         "ci": "pnpm lint && pnpm typecheck && pnpm build && pnpm test:coverage",
         "audit": "pnpm audit --audit-level=moderate",
         "commitlint": "commitlint --edit",
@@ -25,6 +26,7 @@
         "@commitlint/cli": "^21.0.2",
         "@commitlint/config-conventional": "^21.0.2",
         "@eslint/js": "^9.39.4",
+        "@playwright/test": "^1.60.0",
         "eslint": "^9.39.4",
         "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-jsx-a11y": "^6.10.2",

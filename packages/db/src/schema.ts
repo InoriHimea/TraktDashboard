@@ -8,6 +8,7 @@ import {
     jsonb,
     uniqueIndex,
     index,
+    bigint,
 } from "drizzle-orm/pg-core";
 
 // ─── Users ────────────────────────────────────────────────────────────────────
@@ -312,5 +313,34 @@ export const watchlist = pgTable(
         uniqueIndex("watchlist_user_movie_idx").on(t.userId, t.movieId),
         index("watchlist_user_id_idx").on(t.userId),
         index("watchlist_added_at_idx").on(t.addedAt),
+    ],
+);
+
+// ─── Sync Runs (N4-T03) ───────────────────────────────────────────────────────
+// Persists sync run summaries for diagnostics. Process-memory metrics are
+// written here on finalization. Retains the most recent 100 rows; older rows
+// are pruned inside finalizeSyncRun().
+
+export const syncRuns = pgTable(
+    "sync_runs",
+    {
+        id: serial("id").primaryKey(),
+        userId: integer("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
+        startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+        finishedAt: timestamp("finished_at", { withTimezone: true }),
+        type: text("type").notNull().default("full"), // "full" | "incremental"
+        status: text("status").notNull().default("completed"), // "completed" | "error"
+        tmdbRequests: integer("tmdb_requests").notNull().default(0),
+        traktRequests: integer("trakt_requests").notNull().default(0),
+        retryCount: integer("retry_count").notNull().default(0),
+        errorCount: integer("error_count").notNull().default(0),
+        durationMs: bigint("duration_ms", { mode: "number" }),
+        createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    },
+    (t) => [
+        index("sync_runs_user_id_idx").on(t.userId),
+        index("sync_runs_started_at_idx").on(t.startedAt),
     ],
 );

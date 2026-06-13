@@ -64,6 +64,13 @@
       "when": 1781251397070,
       "tag": "0008_ordinary_millenium_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1749823200000,
+      "tag": "0009_sync_runs",
+      "breakpoints": true
     }
   ]
 }
