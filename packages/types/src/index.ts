@@ -247,6 +247,9 @@ export interface StatsOverview {
         posterPath: string | null;
         watchedAt: string;
     }>;
+    yearComparison: { thisYear: number; lastYear: number };
+    longestStreakDays: number;
+    avgDailyWatches30d: number;
 }
 
 // ─── Now Playing ─────────────────────────────────────────────────────────────

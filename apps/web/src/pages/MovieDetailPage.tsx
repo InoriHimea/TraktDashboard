@@ -27,6 +27,7 @@ import { useToast } from "../lib/toast";
 import { getLocale, t } from "../lib/i18n";
 import { Button } from "../components/ui/Button";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
+import { DateTimePickerModal } from "../components/DateTimePickerModal";
 import { Tag } from "../components/ui/Tag";
 import { OverviewText } from "../components/ui/OverviewText";
 import { WatchedBadge } from "../components/ui/WatchedBadge";
@@ -105,7 +106,7 @@ export default function MovieDetailPage() {
 
     const [activeTab, setActiveTab] = useState<"details" | "history">("details");
     const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
-    const [markWatchedConfirmOpen, setMarkWatchedConfirmOpen] = useState(false);
+    const [datePickerOpen, setDatePickerOpen] = useState(false);
     const [imgError, setImgError] = useState(false);
     const [backdropError, setBackdropError] = useState(false);
 
@@ -180,10 +181,10 @@ export default function MovieDetailPage() {
         return `${(minutes / 60).toFixed(minutes >= 600 ? 0 : 1)}h`;
     };
 
-    const handleMarkWatched = async () => {
+    const handleMarkWatched = async (watchedAt: string) => {
         try {
-            await markWatched.mutateAsync(new Date().toISOString());
-            setMarkWatchedConfirmOpen(false);
+            await markWatched.mutateAsync(watchedAt);
+            setDatePickerOpen(false);
         } catch {
             // mutation error is surfaced via markWatched.isError; keep dialog open
         }
@@ -312,9 +313,11 @@ export default function MovieDetailPage() {
                                 size="md"
                                 loading={markWatched.isPending}
                                 icon={<Eye size={15} />}
-                                onClick={() => setMarkWatchedConfirmOpen(true)}
+                                onClick={() => setDatePickerOpen(true)}
                             >
-                                {t("movieDetail.markWatched")}
+                                {watchCount > 0
+                                    ? t("movieDetail.watchAgain")
+                                    : t("movieDetail.markWatched")}
                             </Button>
                             <Button
                                 type="button"
@@ -560,18 +563,10 @@ export default function MovieDetailPage() {
                     </AnimatePresence>
                 </section>
             </div>
-            <ConfirmDialog
-                isOpen={markWatchedConfirmOpen}
-                title={t("movieDetail.markWatchedTitle")}
-                description={t("movieDetail.markWatchedDesc")}
-                confirmText={t("movieDetail.markWatchedConfirm")}
-                confirmColor="violet"
-                cancelText={t("common.cancel")}
-                isLoading={markWatched.isPending}
-                onConfirm={() => {
-                    handleMarkWatched();
-                }}
-                onCancel={() => setMarkWatchedConfirmOpen(false)}
+            <DateTimePickerModal
+                open={datePickerOpen}
+                onClose={() => setDatePickerOpen(false)}
+                onConfirm={handleMarkWatched}
             />
             <ConfirmDialog
                 isOpen={deleteConfirmId !== null}

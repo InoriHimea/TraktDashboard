@@ -9,6 +9,9 @@ import {
     Loader2,
     Repeat2,
     Target,
+    TrendingUp,
+    Zap,
+    Activity,
 } from "lucide-react";
 import { useStats } from "../../hooks";
 import { t } from "../../lib/i18n";
@@ -105,6 +108,14 @@ export default function StatsPage() {
     const monthlyAverage = Math.round(totalEntries / Math.max(activeMonths.length, 1));
     const movieRewatchRatio =
         stats.totalMoviesWatched > 0 ? (movieWatches / stats.totalMoviesWatched).toFixed(1) : "0.0";
+    const yearPctChange =
+        (stats.yearComparison?.lastYear ?? 0) > 0
+            ? Math.round(
+                  ((stats.yearComparison.thisYear - stats.yearComparison.lastYear) /
+                      stats.yearComparison.lastYear) *
+                      100,
+              )
+            : null;
     const signalMetrics: SignalMetric[] = [
         {
             label: t("stats.metricPeakMonth"),
@@ -133,6 +144,33 @@ export default function StatsPage() {
             detail: t("stats.metricCompletionDetail", { n: completionRate }),
             icon: Target,
             color: COLORS.emerald,
+        },
+        {
+            label: t("stats.metricYearCompare"),
+            value:
+                yearPctChange !== null
+                    ? `${yearPctChange > 0 ? "+" : ""}${yearPctChange}%`
+                    : `${stats.yearComparison?.thisYear ?? 0}`,
+            detail: t("stats.metricYearCompareDetail", {
+                thisYear: stats.yearComparison?.thisYear ?? 0,
+                lastYear: stats.yearComparison?.lastYear ?? 0,
+            }),
+            icon: TrendingUp,
+            color: (yearPctChange ?? 0) >= 0 ? COLORS.teal : COLORS.rose,
+        },
+        {
+            label: t("stats.metricStreak"),
+            value: `${stats.longestStreakDays ?? 0}`,
+            detail: t("stats.metricStreakDetail"),
+            icon: Zap,
+            color: COLORS.amber,
+        },
+        {
+            label: t("stats.metricAvgDaily"),
+            value: `${stats.avgDailyWatches30d ?? 0}`,
+            detail: t("stats.metricAvgDailyDetail"),
+            icon: Activity,
+            color: COLORS.sky,
         },
     ];
 

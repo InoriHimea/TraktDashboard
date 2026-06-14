@@ -41,7 +41,6 @@ type ColorToken = {
     hoverBg: string;
     border: string;
     hoverBorder: string;
-    ring: string;
 };
 
 const COLOR_MAP: Record<Color, ColorToken> = {
@@ -54,7 +53,6 @@ const COLOR_MAP: Record<Color, ColorToken> = {
         hoverBg: "var(--action-cyan-surface-hover)",
         border: "var(--action-cyan-border)",
         hoverBorder: "var(--action-cyan-border-hover)",
-        ring: "focus-visible:ring-cyan-300",
     },
     violet: {
         grad: "linear-gradient(135deg, var(--action-violet-solid) 0%, color-mix(in srgb, var(--action-violet-solid), white 28%) 100%)",
@@ -65,7 +63,6 @@ const COLOR_MAP: Record<Color, ColorToken> = {
         hoverBg: "var(--action-violet-surface-hover)",
         border: "var(--action-violet-border)",
         hoverBorder: "var(--action-violet-border-hover)",
-        ring: "focus-visible:ring-violet-400",
     },
     emerald: {
         grad: "linear-gradient(135deg, var(--action-emerald-solid) 0%, color-mix(in srgb, var(--action-emerald-solid), white 26%) 100%)",
@@ -76,7 +73,6 @@ const COLOR_MAP: Record<Color, ColorToken> = {
         hoverBg: "var(--action-emerald-surface-hover)",
         border: "var(--action-emerald-border)",
         hoverBorder: "var(--action-emerald-border-hover)",
-        ring: "focus-visible:ring-emerald-300",
     },
     rose: {
         grad: "linear-gradient(135deg, var(--action-rose-solid) 0%, color-mix(in srgb, var(--action-rose-solid), white 22%) 100%)",
@@ -87,7 +83,6 @@ const COLOR_MAP: Record<Color, ColorToken> = {
         hoverBg: "var(--action-rose-surface-hover)",
         border: "var(--action-rose-border)",
         hoverBorder: "var(--action-rose-border-hover)",
-        ring: "focus-visible:ring-rose-400",
     },
     amber: {
         grad: "linear-gradient(135deg, var(--action-amber-solid) 0%, color-mix(in srgb, var(--action-amber-solid), white 24%) 100%)",
@@ -98,7 +93,6 @@ const COLOR_MAP: Record<Color, ColorToken> = {
         hoverBg: "var(--action-amber-surface-hover)",
         border: "var(--action-amber-border)",
         hoverBorder: "var(--action-amber-border-hover)",
-        ring: "focus-visible:ring-amber-300",
     },
     sky: {
         grad: "linear-gradient(135deg, var(--action-sky-solid) 0%, color-mix(in srgb, var(--action-sky-solid), white 28%) 100%)",
@@ -109,7 +103,6 @@ const COLOR_MAP: Record<Color, ColorToken> = {
         hoverBg: "var(--action-sky-surface-hover)",
         border: "var(--action-sky-border)",
         hoverBorder: "var(--action-sky-border-hover)",
-        ring: "focus-visible:ring-sky-300",
     },
     slate: {
         grad: "linear-gradient(135deg, var(--action-slate-solid) 0%, color-mix(in srgb, var(--action-slate-solid), white 34%) 100%)",
@@ -120,7 +113,6 @@ const COLOR_MAP: Record<Color, ColorToken> = {
         hoverBg: "var(--action-slate-surface-hover)",
         border: "var(--action-slate-border)",
         hoverBorder: "var(--action-slate-border-hover)",
-        ring: "focus-visible:ring-slate-300",
     },
 };
 

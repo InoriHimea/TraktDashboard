@@ -55,5 +55,7 @@ export const queryKeys = {
             limit: number,
             offset: number,
         ) => ["history", mediaType, startDate, endDate, limit, offset] as const,
+        infinite: (mediaType: string, startDate: string | undefined, endDate: string | undefined) =>
+            ["history-infinite", mediaType, startDate, endDate] as const,
     },
 } as const;

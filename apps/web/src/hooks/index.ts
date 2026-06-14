@@ -1,5 +1,5 @@
 // Task 9.3: Update hooks with concrete return types
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "../lib/queryKeys";
 import type {
     AuthStatus,
@@ -310,17 +310,24 @@ export function useMarkSeasonWatched(showId: number) {
 
 // ─── History Hooks ────────────────────────────────────────────────────────────
 
-export function useHistory(
+const HISTORY_PAGE_SIZE = 50;
+
+export function useInfiniteHistory(
     mediaType: "all" | "episode" | "movie" = "all",
     startDate?: string,
     endDate?: string,
-    limit = 50,
-    offset = 0,
 ) {
-    return useQuery<HistoryPage>({
-        queryKey: queryKeys.history.list(mediaType, startDate, endDate, limit, offset),
-        queryFn: () =>
-            api.history.list(mediaType, startDate, endDate, limit, offset).then((r) => r.data),
+    return useInfiniteQuery<HistoryPage>({
+        queryKey: queryKeys.history.infinite(mediaType, startDate, endDate),
+        queryFn: ({ pageParam }) =>
+            api.history
+                .list(mediaType, startDate, endDate, HISTORY_PAGE_SIZE, pageParam as number)
+                .then((r) => r.data),
+        getNextPageParam: (lastPage, allPages) => {
+            const loaded = allPages.flatMap((p) => p.entries).length;
+            return loaded < lastPage.total ? loaded : undefined;
+        },
+        initialPageParam: 0,
         staleTime: 1000 * 60,
     });
 }

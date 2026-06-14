@@ -151,6 +151,71 @@ statsRoutes.get("/overview", async (c) => {
         10,
     );
 
+    // D1 — trend metrics
+    const now = new Date();
+    const thisYearStart = new Date(now.getFullYear(), 0, 1);
+    const lastYearStart = new Date(now.getFullYear() - 1, 0, 1);
+    const sameDayLastYear = new Date(
+        now.getFullYear() - 1,
+        now.getMonth(),
+        now.getDate(),
+        23,
+        59,
+        59,
+    );
+
+    const [[yearCurrentRow], [yearLastRow], watchDates, [avg30Row]] = await Promise.all([
+        db
+            .select({ count: sql<number>`count(*)` })
+            .from(watchHistory)
+            .where(
+                and(eq(watchHistory.userId, userId), gte(watchHistory.watchedAt, thisYearStart)),
+            ),
+        db
+            .select({ count: sql<number>`count(*)` })
+            .from(watchHistory)
+            .where(
+                and(
+                    eq(watchHistory.userId, userId),
+                    gte(watchHistory.watchedAt, lastYearStart),
+                    sql`${watchHistory.watchedAt} <= ${sameDayLastYear}`,
+                ),
+            ),
+        db
+            .selectDistinct({ day: sql<string>`DATE(${watchHistory.watchedAt})::text` })
+            .from(watchHistory)
+            .where(and(eq(watchHistory.userId, userId), sql`${watchHistory.watchedAt} IS NOT NULL`))
+            .orderBy(sql`DATE(${watchHistory.watchedAt})`),
+        db
+            .select({ count: sql<number>`count(*)` })
+            .from(watchHistory)
+            .where(
+                and(
+                    eq(watchHistory.userId, userId),
+                    gte(watchHistory.watchedAt, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)),
+                ),
+            ),
+    ]);
+
+    let longestStreakDays = 0;
+    let currentStreak = 0;
+    let prevDay: string | null = null;
+    for (const { day } of watchDates) {
+        if (prevDay) {
+            const diffDays = Math.round(
+                (new Date(day).getTime() - new Date(prevDay).getTime()) / (1000 * 60 * 60 * 24),
+            );
+            currentStreak = diffDays === 1 ? currentStreak + 1 : 1;
+            longestStreakDays = Math.max(longestStreakDays, currentStreak);
+        } else {
+            currentStreak = 1;
+        }
+        prevDay = day;
+    }
+    longestStreakDays = Math.max(longestStreakDays, currentStreak);
+
+    const avgDailyWatches30d = Math.round((Number(avg30Row?.count || 0) / 30) * 10) / 10;
+
     return c.json({
         data: {
             totalEpisodesWatched: Number(totals?.totalWatched || 0),
@@ -170,6 +235,12 @@ statsRoutes.get("/overview", async (c) => {
             topGenres,
             recentlyWatched,
             recentlyWatchedMovies,
+            yearComparison: {
+                thisYear: Number(yearCurrentRow?.count || 0),
+                lastYear: Number(yearLastRow?.count || 0),
+            },
+            longestStreakDays,
+            avgDailyWatches30d,
         },
     });
 });

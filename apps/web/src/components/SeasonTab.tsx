@@ -32,7 +32,7 @@ export function SeasonTab({ season, isActive, onClick }: SeasonTabProps) {
             <div className="relative overflow-visible">
                 <motion.div
                     className={[
-                        "halo halo-hover rounded-lg overflow-hidden transition-shadow duration-200",
+                        "halo halo-hover rounded-lg transition-shadow duration-200",
                         isActive
                             ? "is-selected"
                             : "group-hover:shadow-md group-hover:shadow-black/30",
@@ -45,20 +45,22 @@ export function SeasonTab({ season, isActive, onClick }: SeasonTabProps) {
                         transformOrigin: "top center",
                     }}
                 >
-                    {showImg ? (
-                        <img
-                            src={posterUrl}
-                            alt={`Season ${season.seasonNumber}`}
-                            className="w-full h-full object-cover"
-                            onError={() => setImgError(true)}
-                        />
-                    ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center border border-white/5">
-                            <span className="text-2xl text-white/40 font-black tracking-wider">
-                                {season.seasonNumber === 0 ? "SP" : `S${season.seasonNumber}`}
-                            </span>
-                        </div>
-                    )}
+                    <div className="overflow-hidden rounded-lg w-full h-full">
+                        {showImg ? (
+                            <img
+                                src={posterUrl}
+                                alt={`Season ${season.seasonNumber}`}
+                                className="w-full h-full object-cover"
+                                onError={() => setImgError(true)}
+                            />
+                        ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center border border-white/5">
+                                <span className="text-2xl text-white/40 font-black tracking-wider">
+                                    {season.seasonNumber === 0 ? "SP" : `S${season.seasonNumber}`}
+                                </span>
+                            </div>
+                        )}
+                    </div>
                 </motion.div>
 
                 {/* 完成徽章 — 在 overflow:hidden 外面，不被裁剪 */}

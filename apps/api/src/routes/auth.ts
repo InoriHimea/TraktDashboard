@@ -7,6 +7,7 @@ import { signToken, verifyToken } from "../middleware/auth.js";
 import { triggerFullSync } from "../services/sync.js";
 import { registerUserSyncJob } from "../jobs/scheduler.js";
 import { apiError } from "../lib/response.js";
+import { encryptToken } from "../lib/encrypt.js";
 
 export const authRoutes = new Hono();
 
@@ -83,11 +84,12 @@ authRoutes.get("/callback", async (c) => {
 
     let userId: number;
     if (existing.length > 0) {
+        const secret = process.env.API_SECRET!;
         await db
             .update(users)
             .set({
-                traktAccessToken: tokens.access_token,
-                traktRefreshToken: tokens.refresh_token,
+                traktAccessToken: encryptToken(tokens.access_token, secret),
+                traktRefreshToken: encryptToken(tokens.refresh_token, secret),
                 tokenExpiresAt: expiresAt,
                 traktUsername: profile?.username || null,
                 updatedAt: new Date(),
@@ -100,11 +102,12 @@ authRoutes.get("/callback", async (c) => {
         // Re-register repeat job in case it was lost after restart
         await registerUserSyncJob(userId);
     } else {
+        const secret = process.env.API_SECRET!;
         const [newUser] = await db
             .insert(users)
             .values({
-                traktAccessToken: tokens.access_token,
-                traktRefreshToken: tokens.refresh_token,
+                traktAccessToken: encryptToken(tokens.access_token, secret),
+                traktRefreshToken: encryptToken(tokens.refresh_token, secret),
                 tokenExpiresAt: expiresAt,
                 traktUsername: profile?.username || null,
             })

@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Tv2, Film, LayoutGrid, Clock, Download, Loader2, ChevronDown } from "lucide-react";
-import { useHistory } from "../hooks";
+import { useInfiniteHistory } from "../hooks";
 import type { HistoryEntry } from "@trakt-dashboard/types";
 import { tmdbImage } from "../lib/utils";
 import { getLocale, t } from "../lib/i18n";
@@ -15,8 +15,6 @@ const FILTERS: { key: MediaFilter; labelKey: string; icon: typeof Tv2 }[] = [
     { key: "episode", labelKey: "history.episodes", icon: Tv2 },
     { key: "movie", labelKey: "history.movies", icon: Film },
 ];
-
-const PAGE_SIZE = 50;
 
 function formatWatchedAt(iso: string | null | undefined): string {
     if (!iso) return t("common.unknown");
@@ -145,7 +143,7 @@ function HistoryPosterCard({ entry, index }: { entry: HistoryEntry; index: numbe
                     </div>
 
                     {/* Footer info */}
-                    <div className="p-[10px_12px_12px]">
+                    <div className="p-[10px_12px_12px] min-h-[54px]">
                         <h3
                             className="truncate text-[12px] font-semibold text-[var(--color-text)] leading-tight"
                             title={title}
@@ -160,11 +158,6 @@ function HistoryPosterCard({ entry, index }: { entry: HistoryEntry; index: numbe
                                 {episodeTitle}
                             </p>
                         )}
-                        {!episodeTitle && isEpisode && (
-                            <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5 opacity-0 select-none">
-                                &nbsp;
-                            </p>
-                        )}
                     </div>
                 </motion.div>
             </Link>
@@ -176,44 +169,12 @@ export default function HistoryPage() {
     const [filter, setFilter] = useState<MediaFilter>("all");
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
-    const [offset, setOffset] = useState(0);
 
-    // Accumulated entries across pages
-    const [loadedEntries, setLoadedEntries] = useState<HistoryEntry[]>([]);
-    const lastFetchedOffsetRef = useRef<number>(-1);
+    const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage, error, refetch } =
+        useInfiniteHistory(filter, startDate || undefined, endDate || undefined);
 
-    // Reset accumulated list and pagination when filters change
-    useEffect(() => {
-        setOffset(0);
-        setLoadedEntries([]);
-        lastFetchedOffsetRef.current = -1;
-    }, [filter, startDate, endDate]);
-
-    const { data, isLoading, isFetching, error, refetch } = useHistory(
-        filter,
-        startDate || undefined,
-        endDate || undefined,
-        PAGE_SIZE,
-        offset,
-    );
-
-    // Append new page data without replacing existing entries
-    useEffect(() => {
-        if (!isLoading && data?.entries && lastFetchedOffsetRef.current !== offset) {
-            lastFetchedOffsetRef.current = offset;
-            if (offset === 0) {
-                setLoadedEntries(data.entries);
-            } else {
-                setLoadedEntries((prev) => {
-                    const existingIds = new Set(prev.map((e) => e.id));
-                    return [...prev, ...data.entries.filter((e) => !existingIds.has(e.id))];
-                });
-            }
-        }
-    }, [data?.entries, isLoading, offset]);
-
-    const total = data?.total ?? loadedEntries.length;
-    const hasMore = loadedEntries.length < total;
+    const loadedEntries = data?.pages.flatMap((p) => p.entries) ?? [];
+    const total = data?.pages.at(-1)?.total ?? 0;
     const groups = groupByDate(loadedEntries);
 
     const exportUrl = api.history.export(
@@ -301,7 +262,7 @@ export default function HistoryPage() {
                 </div>
 
                 {/* Content */}
-                {isLoading && loadedEntries.length === 0 ? (
+                {isLoading ? (
                     <div className="flex items-center justify-center py-20 text-[var(--color-text-muted)]">
                         <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                         {t("history.loading")}
@@ -324,56 +285,63 @@ export default function HistoryPage() {
                     </div>
                 ) : (
                     <div className="flex flex-col gap-8">
-                        {groups.map(([dateKey, groupEntries], gi) => (
-                            <motion.section
-                                key={dateKey}
-                                initial={{ opacity: 0, y: 12 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: gi * 0.04 }}
-                            >
-                                <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-[var(--color-text-muted)]">
-                                    {dateKey === "unknown"
-                                        ? t("common.unknown")
-                                        : formatDateGroup(dateKey)}
-                                    <span className="ml-2 font-normal opacity-50">
-                                        ({groupEntries.length})
-                                    </span>
-                                </h2>
-                                <div
-                                    className="grid gap-3"
-                                    style={{
-                                        gridTemplateColumns:
-                                            "repeat(auto-fill, minmax(130px, 1fr))",
-                                    }}
-                                >
-                                    {groupEntries.map((entry, i) => (
-                                        <HistoryPosterCard
-                                            key={entry.id}
-                                            entry={entry}
-                                            index={gi * 20 + i}
-                                        />
-                                    ))}
-                                </div>
-                            </motion.section>
-                        ))}
+                        {(() => {
+                            let cardCursor = 0;
+                            return groups.map(([dateKey, groupEntries], gi) => {
+                                const startIdx = cardCursor;
+                                cardCursor += groupEntries.length;
+                                return (
+                                    <motion.section
+                                        key={dateKey}
+                                        initial={{ opacity: 0, y: 12 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: gi * 0.04 }}
+                                    >
+                                        <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-[var(--color-text-muted)]">
+                                            {dateKey === "unknown"
+                                                ? t("common.unknown")
+                                                : formatDateGroup(dateKey)}
+                                            <span className="ml-2 font-normal opacity-50">
+                                                ({groupEntries.length})
+                                            </span>
+                                        </h2>
+                                        <div
+                                            className="grid gap-3"
+                                            style={{
+                                                gridTemplateColumns:
+                                                    "repeat(auto-fill, minmax(130px, 1fr))",
+                                            }}
+                                        >
+                                            {groupEntries.map((entry, i) => (
+                                                <HistoryPosterCard
+                                                    key={entry.id}
+                                                    entry={entry}
+                                                    index={startIdx + i}
+                                                />
+                                            ))}
+                                        </div>
+                                    </motion.section>
+                                );
+                            });
+                        })()}
 
                         {/* Load more */}
-                        {(hasMore || isFetching) && (
+                        {(hasNextPage || isFetchingNextPage) && (
                             <div className="flex justify-center mt-2">
-                                {isFetching && offset > 0 ? (
+                                {isFetchingNextPage ? (
                                     <div className="inline-flex items-center gap-2 px-6 py-2.5 text-sm text-[var(--color-text-muted)]">
                                         <Loader2 className="h-4 w-4 animate-spin" />
                                         {t("history.loading")}
                                     </div>
-                                ) : hasMore ? (
+                                ) : (
                                     <button
-                                        onClick={() => setOffset((o) => o + PAGE_SIZE)}
+                                        onClick={() => fetchNextPage()}
                                         className="inline-flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-2.5 text-sm text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-accent)] hover:text-[var(--color-text)]"
                                     >
                                         <ChevronDown className="h-4 w-4" />
                                         {t("history.loadMore")}
                                     </button>
-                                ) : null}
+                                )}
                             </div>
                         )}
                     </div>

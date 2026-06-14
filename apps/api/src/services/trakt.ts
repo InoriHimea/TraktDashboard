@@ -4,6 +4,7 @@ import { eq, and } from "drizzle-orm";
 import { getRedis } from "../jobs/scheduler.js";
 import { providerFetch, sleep } from "../lib/http.js";
 import { getProviderRateLimiter } from "../lib/rate-limit.js";
+import { encryptToken, decryptToken } from "../lib/encrypt.js";
 
 const FETCH_TIMEOUT_MS = 12000;
 const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
@@ -246,7 +247,8 @@ async function refreshToken(userId: number): Promise<string> {
 
         if (!acquired) {
             const user = await readUserTokens(userId);
-            if (!tokenExpiresSoon(user.tokenExpiresAt)) return user.traktAccessToken;
+            if (!tokenExpiresSoon(user.tokenExpiresAt))
+                return decryptToken(user.traktAccessToken, process.env.API_SECRET!);
             const backoffMs = Math.min(250 * 2 ** attempt, 2_000) + Math.floor(Math.random() * 100);
             attempt++;
             await sleep(backoffMs);
@@ -265,7 +267,10 @@ async function refreshToken(userId: number): Promise<string> {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        refresh_token: user.traktRefreshToken,
+                        refresh_token: decryptToken(
+                            user.traktRefreshToken,
+                            process.env.API_SECRET!,
+                        ),
                         client_id: process.env.TRAKT_CLIENT_ID,
                         client_secret: process.env.TRAKT_CLIENT_SECRET,
                         redirect_uri: process.env.TRAKT_REDIRECT_URI,
@@ -289,11 +294,12 @@ async function refreshToken(userId: number): Promise<string> {
                 expires_in: number;
             };
 
+            const apiSecret = process.env.API_SECRET!;
             const updated = await getDb()
                 .update(users)
                 .set({
-                    traktAccessToken: data.access_token,
-                    traktRefreshToken: data.refresh_token,
+                    traktAccessToken: encryptToken(data.access_token, apiSecret),
+                    traktRefreshToken: encryptToken(data.refresh_token, apiSecret),
                     tokenExpiresAt: new Date(Date.now() + data.expires_in * 1000),
                     updatedAt: new Date(),
                 })
@@ -304,7 +310,8 @@ async function refreshToken(userId: number): Promise<string> {
 
             if (updated.length === 0) {
                 const latest = await readUserTokens(userId);
-                if (!tokenExpiresSoon(latest.tokenExpiresAt)) return latest.traktAccessToken;
+                if (!tokenExpiresSoon(latest.tokenExpiresAt))
+                    return decryptToken(latest.traktAccessToken, process.env.API_SECRET!);
                 throw new Error(`Token refresh lost update race for user ${userId}`);
             }
 
@@ -315,7 +322,8 @@ async function refreshToken(userId: number): Promise<string> {
     }
 
     const user = await readUserTokens(userId);
-    if (!tokenExpiresSoon(user.tokenExpiresAt)) return user.traktAccessToken;
+    if (!tokenExpiresSoon(user.tokenExpiresAt))
+        return decryptToken(user.traktAccessToken, process.env.API_SECRET!);
 
     throw new Error(`Token refresh lock timed out for user ${userId}`);
 }
@@ -372,7 +380,7 @@ export function getTraktClient() {
         const [user] = await db.select().from(users).where(eq(users.id, userId));
         if (!user) throw new Error("User not found");
 
-        let token = user.traktAccessToken;
+        let token = decryptToken(user.traktAccessToken, process.env.API_SECRET!);
 
         if (tokenExpiresSoon(user.tokenExpiresAt)) {
             token = await refreshToken(userId);

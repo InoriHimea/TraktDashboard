@@ -29,6 +29,7 @@ export function MovieCard({ movie, index }: MovieCardProps) {
 
     return (
         <motion.div
+            data-testid="movie-card"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{
