@@ -257,7 +257,8 @@ async function refreshToken(userId: number): Promise<string> {
 
         try {
             const user = await readUserTokens(userId);
-            if (!tokenExpiresSoon(user.tokenExpiresAt)) return user.traktAccessToken;
+            if (!tokenExpiresSoon(user.tokenExpiresAt))
+                return decryptToken(user.traktAccessToken, process.env.API_SECRET!);
 
             const tokenUrl = "https://api.trakt.tv/oauth/token";
             const proxyUrl = await getProxyUrl();
