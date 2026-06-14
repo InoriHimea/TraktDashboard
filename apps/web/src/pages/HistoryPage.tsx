@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Tv2, Film, LayoutGrid, Clock, Download, Loader2, ChevronDown } from "lucide-react";
@@ -50,62 +50,125 @@ function groupByDate(entries: HistoryEntry[]): [string, HistoryEntry[]][] {
     return [...map.entries()];
 }
 
-function HistoryCard({ entry }: { entry: HistoryEntry }) {
+function HistoryPosterCard({ entry, index }: { entry: HistoryEntry; index: number }) {
     const isEpisode = entry.mediaType === "episode";
+    const [imgError, setImgError] = useState(false);
     const poster = isEpisode
-        ? tmdbImage(entry.show?.posterPath ?? null, "w185")
-        : tmdbImage(entry.movie?.posterPath ?? null, "w185");
+        ? tmdbImage(entry.show?.posterPath ?? null, "w342")
+        : tmdbImage(entry.movie?.posterPath ?? null, "w342");
     const href = isEpisode ? `/shows/${entry.show?.id}` : `/movies/${entry.movie?.id}`;
-    const title = isEpisode ? (entry.show?.title ?? "—") : (entry.movie?.title ?? "—");
-    const subtitle = isEpisode
-        ? entry.episode
-            ? `S${String(entry.episode.seasonNumber).padStart(2, "0")} · E${String(entry.episode.episodeNumber).padStart(2, "0")}${entry.episode.title ? ` · ${entry.episode.title}` : ""}`
-            : null
-        : null;
+    const title = isEpisode
+        ? (entry.show?.translatedName ?? entry.show?.title ?? "—")
+        : (entry.movie?.title ?? "—");
+    const episodeCode =
+        isEpisode && entry.episode
+            ? `S${String(entry.episode.seasonNumber).padStart(2, "0")}·E${String(entry.episode.episodeNumber).padStart(2, "0")}`
+            : null;
+    const episodeTitle = isEpisode ? (entry.episode?.title ?? null) : null;
 
     return (
-        <Link
-            to={href}
-            className="flex items-center gap-3 rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-3 py-2.5 transition-colors hover:border-[var(--color-accent)] hover:bg-[var(--color-surface-2)]"
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+                duration: 0.25,
+                delay: Math.min(index * 0.02, 0.35),
+                ease: [0.16, 1, 0.3, 1],
+            }}
         >
-            <div className="h-12 w-8 shrink-0 overflow-hidden rounded-md bg-[var(--color-surface-3)]">
-                {poster ? (
-                    <img src={poster} alt={title} className="h-full w-full object-cover" />
-                ) : (
-                    <div className="flex h-full w-full items-center justify-center">
-                        {isEpisode ? (
-                            <Tv2 className="h-4 w-4 text-[var(--color-text-muted)]" />
+            <Link to={href} className="block no-underline">
+                <motion.div
+                    whileHover={{ y: -3, boxShadow: "0 12px 40px rgba(0,0,0,0.5)" }}
+                    transition={{ duration: 0.15 }}
+                    className="overflow-hidden rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] cursor-pointer"
+                    style={{ boxShadow: "var(--shadow-media-card)" }}
+                >
+                    {/* Poster 2:3 */}
+                    <div className="relative aspect-[2/3] bg-[var(--color-surface-3)]">
+                        {poster && !imgError ? (
+                            <img
+                                src={poster}
+                                alt={title}
+                                onError={() => setImgError(true)}
+                                className="w-full h-full object-cover block"
+                                loading="lazy"
+                            />
                         ) : (
-                            <Film className="h-4 w-4 text-[var(--color-text-muted)]" />
+                            <div className="w-full h-full flex items-center justify-center">
+                                {isEpisode ? (
+                                    <Tv2
+                                        size={28}
+                                        className="text-[var(--color-text-muted)] opacity-30"
+                                    />
+                                ) : (
+                                    <Film
+                                        size={28}
+                                        className="text-[var(--color-text-muted)] opacity-30"
+                                    />
+                                )}
+                            </div>
+                        )}
+
+                        {/* Media type badge */}
+                        <div className="absolute top-2 right-2">
+                            <span
+                                className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold backdrop-blur-sm"
+                                style={{
+                                    background: isEpisode
+                                        ? "rgba(99,102,241,0.75)"
+                                        : "rgba(16,185,129,0.75)",
+                                    color: "#fff",
+                                }}
+                            >
+                                {isEpisode ? <Tv2 size={8} /> : <Film size={8} />}
+                                {isEpisode ? "EP" : "FILM"}
+                            </span>
+                        </div>
+
+                        {/* Bottom gradient overlay */}
+                        <div
+                            className="absolute bottom-0 left-0 right-0 px-2.5 pt-8 pb-2"
+                            style={{
+                                background:
+                                    "linear-gradient(to top, rgba(0,0,0,0.82) 0%, transparent 100%)",
+                            }}
+                        >
+                            {episodeCode && (
+                                <p className="text-[10px] font-bold text-white/90 leading-tight mb-0.5">
+                                    {episodeCode}
+                                </p>
+                            )}
+                            <p className="text-[9px] text-white/60 leading-tight">
+                                {formatWatchedAt(entry.watchedAt)}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Footer info */}
+                    <div className="p-[10px_12px_12px]">
+                        <h3
+                            className="truncate text-[12px] font-semibold text-[var(--color-text)] leading-tight"
+                            title={title}
+                        >
+                            {title}
+                        </h3>
+                        {episodeTitle && (
+                            <p
+                                className="truncate text-[10px] text-[var(--color-text-muted)] mt-0.5"
+                                title={episodeTitle}
+                            >
+                                {episodeTitle}
+                            </p>
+                        )}
+                        {!episodeTitle && isEpisode && (
+                            <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5 opacity-0 select-none">
+                                &nbsp;
+                            </p>
                         )}
                     </div>
-                )}
-            </div>
-
-            <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-[var(--color-text)]">{title}</p>
-                {subtitle && (
-                    <p className="truncate text-xs text-[var(--color-text-muted)]">{subtitle}</p>
-                )}
-            </div>
-
-            <div className="flex shrink-0 flex-col items-end gap-1">
-                <span
-                    className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                    style={{
-                        background: isEpisode ? "rgba(124,106,247,0.15)" : "rgba(16,185,129,0.15)",
-                        color: isEpisode ? "var(--color-accent)" : "#10b981",
-                    }}
-                >
-                    {isEpisode
-                        ? t("history.episodes").slice(0, -1)
-                        : t("history.movies").slice(0, -1)}
-                </span>
-                <span className="text-[11px] text-[var(--color-text-muted)]">
-                    {formatWatchedAt(entry.watchedAt)}
-                </span>
-            </div>
-        </Link>
+                </motion.div>
+            </Link>
+        </motion.div>
     );
 }
 
@@ -115,12 +178,18 @@ export default function HistoryPage() {
     const [endDate, setEndDate] = useState("");
     const [offset, setOffset] = useState(0);
 
-    // Reset pagination when filters change
+    // Accumulated entries across pages
+    const [loadedEntries, setLoadedEntries] = useState<HistoryEntry[]>([]);
+    const lastFetchedOffsetRef = useRef<number>(-1);
+
+    // Reset accumulated list and pagination when filters change
     useEffect(() => {
         setOffset(0);
+        setLoadedEntries([]);
+        lastFetchedOffsetRef.current = -1;
     }, [filter, startDate, endDate]);
 
-    const { data, isLoading, error, refetch } = useHistory(
+    const { data, isLoading, isFetching, error, refetch } = useHistory(
         filter,
         startDate || undefined,
         endDate || undefined,
@@ -128,10 +197,24 @@ export default function HistoryPage() {
         offset,
     );
 
-    const entries = data?.entries ?? [];
-    const total = data?.total ?? 0;
-    const hasMore = offset + PAGE_SIZE < total;
-    const groups = groupByDate(entries);
+    // Append new page data without replacing existing entries
+    useEffect(() => {
+        if (!isLoading && data?.entries && lastFetchedOffsetRef.current !== offset) {
+            lastFetchedOffsetRef.current = offset;
+            if (offset === 0) {
+                setLoadedEntries(data.entries);
+            } else {
+                setLoadedEntries((prev) => {
+                    const existingIds = new Set(prev.map((e) => e.id));
+                    return [...prev, ...data.entries.filter((e) => !existingIds.has(e.id))];
+                });
+            }
+        }
+    }, [data?.entries, isLoading, offset]);
+
+    const total = data?.total ?? loadedEntries.length;
+    const hasMore = loadedEntries.length < total;
+    const groups = groupByDate(loadedEntries);
 
     const exportUrl = api.history.export(
         filter,
@@ -218,7 +301,7 @@ export default function HistoryPage() {
                 </div>
 
                 {/* Content */}
-                {isLoading ? (
+                {isLoading && loadedEntries.length === 0 ? (
                     <div className="flex items-center justify-center py-20 text-[var(--color-text-muted)]">
                         <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                         {t("history.loading")}
@@ -233,43 +316,65 @@ export default function HistoryPage() {
                             {t("common.retry")}
                         </button>
                     </div>
-                ) : entries.length === 0 ? (
+                ) : loadedEntries.length === 0 ? (
                     <div className="flex flex-col items-center gap-2 py-20 text-[var(--color-text-muted)]">
                         <Clock className="h-10 w-10 opacity-30" />
                         <p className="font-medium">{t("history.empty")}</p>
                         <p className="text-sm">{t("history.emptyHint")}</p>
                     </div>
                 ) : (
-                    <div className="flex flex-col gap-6">
+                    <div className="flex flex-col gap-8">
                         {groups.map(([dateKey, groupEntries], gi) => (
-                            <motion.div
+                            <motion.section
                                 key={dateKey}
                                 initial={{ opacity: 0, y: 12 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: gi * 0.04 }}
                             >
-                                <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest text-[var(--color-text-muted)]">
+                                <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-[var(--color-text-muted)]">
                                     {dateKey === "unknown"
                                         ? t("common.unknown")
                                         : formatDateGroup(dateKey)}
+                                    <span className="ml-2 font-normal opacity-50">
+                                        ({groupEntries.length})
+                                    </span>
                                 </h2>
-                                <div className="flex flex-col gap-1.5">
-                                    {groupEntries.map((entry) => (
-                                        <HistoryCard key={entry.id} entry={entry} />
+                                <div
+                                    className="grid gap-3"
+                                    style={{
+                                        gridTemplateColumns:
+                                            "repeat(auto-fill, minmax(130px, 1fr))",
+                                    }}
+                                >
+                                    {groupEntries.map((entry, i) => (
+                                        <HistoryPosterCard
+                                            key={entry.id}
+                                            entry={entry}
+                                            index={gi * 20 + i}
+                                        />
                                     ))}
                                 </div>
-                            </motion.div>
+                            </motion.section>
                         ))}
 
                         {/* Load more */}
-                        {hasMore && (
-                            <button
-                                onClick={() => setOffset((o) => o + PAGE_SIZE)}
-                                className="mx-auto mt-2 inline-flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-2.5 text-sm text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-accent)] hover:text-[var(--color-text)]"
-                            >
-                                <ChevronDown className="h-4 w-4" />
-                                {t("history.loadMore")}
-                            </button>
+                        {(hasMore || isFetching) && (
+                            <div className="flex justify-center mt-2">
+                                {isFetching && offset > 0 ? (
+                                    <div className="inline-flex items-center gap-2 px-6 py-2.5 text-sm text-[var(--color-text-muted)]">
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        {t("history.loading")}
+                                    </div>
+                                ) : hasMore ? (
+                                    <button
+                                        onClick={() => setOffset((o) => o + PAGE_SIZE)}
+                                        className="inline-flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-2.5 text-sm text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-accent)] hover:text-[var(--color-text)]"
+                                    >
+                                        <ChevronDown className="h-4 w-4" />
+                                        {t("history.loadMore")}
+                                    </button>
+                                ) : null}
+                            </div>
                         )}
                     </div>
                 )}
