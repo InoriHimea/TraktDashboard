@@ -88,11 +88,11 @@ export function MediaListPage<T>({
                                     <button
                                         key={key}
                                         onClick={() => onFilterChange(key)}
-                                        className="inline-flex h-8 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-semibold transition-colors"
+                                        className={`halo halo-hover inline-flex h-8 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-semibold transition-colors${active ? " is-selected" : ""}`}
                                         style={{
                                             color: active ? color : "var(--color-text-secondary)",
                                             background: active ? `${color}18` : "transparent",
-                                            borderColor: active ? `${color}40` : "transparent",
+                                            borderColor: "transparent",
                                         }}
                                     >
                                         <Icon

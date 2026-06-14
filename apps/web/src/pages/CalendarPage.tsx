@@ -294,10 +294,10 @@ export default function CalendarPage() {
                                                 aria-current={active ? "date" : undefined}
                                                 onClick={() => setSelectedDate(group.date)}
                                                 className={cn(
-                                                    "flex min-w-[76px] flex-col items-center rounded-[var(--radius-md)] border px-3 py-3 text-center transition",
+                                                    "halo halo-hover flex min-w-[76px] flex-col items-center rounded-[var(--radius-md)] border border-transparent px-3 py-3 text-center transition",
                                                     active
-                                                        ? "border-[var(--action-cyan-border-hover)] bg-[var(--color-surface-3)] text-[var(--color-text)] shadow-[var(--shadow-media-card-hover)]"
-                                                        : "border-[var(--color-border-subtle)] bg-[var(--color-surface)]/80 text-[var(--color-text-secondary)] hover:border-[var(--action-cyan-border)] hover:bg-[var(--color-surface-hover)]",
+                                                        ? "is-selected bg-[var(--color-surface-3)] text-[var(--color-text)]"
+                                                        : "bg-[var(--color-surface)]/80 text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]",
                                                 )}
                                             >
                                                 <span className="text-sm font-bold">

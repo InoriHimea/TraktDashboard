@@ -254,7 +254,7 @@ export default function ShowDetailPage() {
                                         role="tab"
                                         aria-selected={isActive}
                                         onClick={() => setActiveSeason(s.seasonNumber)}
-                                        className="inline-flex h-8 items-center rounded-full border px-4 text-sm font-semibold transition-colors"
+                                        className={`halo halo-hover inline-flex h-8 items-center rounded-full border px-4 text-sm font-semibold transition-colors${isActive ? " is-selected" : ""}`}
                                         style={{
                                             color: isActive
                                                 ? "var(--color-accent-light)"
@@ -262,9 +262,7 @@ export default function ShowDetailPage() {
                                             background: isActive
                                                 ? "var(--color-accent-dim)"
                                                 : "transparent",
-                                            border: isActive
-                                                ? "1px solid var(--color-border-focus)"
-                                                : "1px solid transparent",
+                                            border: "1px solid transparent",
                                         }}
                                     >
                                         {s.seasonNumber === 0

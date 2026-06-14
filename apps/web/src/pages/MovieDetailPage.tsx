@@ -386,7 +386,7 @@ export default function MovieDetailPage() {
                             <button
                                 key={key as string}
                                 onClick={() => setActiveTab(key as "details" | "history")}
-                                className="inline-flex h-9 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors"
+                                className={`halo halo-hover inline-flex h-9 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors${activeTab === key ? " is-selected" : ""}`}
                                 style={{
                                     color:
                                         activeTab === key
@@ -396,10 +396,7 @@ export default function MovieDetailPage() {
                                         activeTab === key
                                             ? "var(--action-violet-surface)"
                                             : "transparent",
-                                    border:
-                                        activeTab === key
-                                            ? "1px solid var(--action-violet-border)"
-                                            : "1px solid transparent",
+                                    border: "1px solid transparent",
                                 }}
                             >
                                 <Icon size={14} /> {label as string}

@@ -119,11 +119,11 @@ export function EpisodeSeasonStrip({
                                     )
                                 }
                                 className={cn(
-                                    "group rounded-[var(--radius-lg)] border p-1.5 text-left transition duration-200 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)]",
+                                    "halo halo-hover group rounded-[var(--radius-lg)] border border-transparent p-1.5 text-left transition duration-200 hover:-translate-y-1 focus-visible:outline-none",
                                     watched && "w-[286px] flex-none snap-center sm:w-[320px]",
                                     isCurrent
-                                        ? "border-[var(--color-accent)]/70 bg-[var(--color-accent)]/12 shadow-[0_0_0_1px_rgba(37,244,238,0.16),0_18px_42px_rgba(37,244,238,0.08)]"
-                                        : "border-border/35 bg-[var(--color-surface-2)]/38 hover:border-[var(--color-accent)]/35 hover:bg-[var(--color-surface-2)]/72",
+                                        ? "is-selected bg-[var(--color-accent)]/12"
+                                        : "bg-[var(--color-surface-2)]/38 hover:bg-[var(--color-surface-2)]/72",
                                     isUnaired && "opacity-60",
                                 )}
                             >

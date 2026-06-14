@@ -146,8 +146,12 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
                                     key={to}
                                     to={to}
                                     aria-current={active ? "page" : undefined}
-                                    className="top-nav-link"
-                                    style={{ textDecoration: "none" }}
+                                    className="top-nav-link halo"
+                                    style={{
+                                        textDecoration: "none",
+                                        display: "inline-flex",
+                                        borderRadius: "var(--radius-md)",
+                                    }}
                                 >
                                     <motion.div
                                         className="top-nav-item"

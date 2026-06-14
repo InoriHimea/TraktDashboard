@@ -536,6 +536,74 @@ html[data-theme="light"] .cyber-grid-overlay {
         poster-border-hue 6s linear infinite;
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+   Unified selection / focus halo — one visual language across the whole app,
+   derived from the TV-show detail poster shimmer.
+     · .halo             ring scaffold (hidden); keyboard focus = animated shimmer
+     · .halo.halo-hover  hover also triggers the animated shimmer
+     · .halo.is-selected persistent selection = calm static ring + soft glow
+   The ring is painted on ::after and masked to a border band, so it works even
+   inside overflow:hidden containers (unlike the poster's outset sibling ring).
+   ────────────────────────────────────────────────────────────────────────── */
+.halo {
+    position: relative;
+}
+.halo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 2px;
+    background: conic-gradient(
+        from var(--shimmer-angle),
+        transparent 0%,
+        transparent 55%,
+        hsl(var(--shimmer-hue), 90%, 66%, 0.5) 72%,
+        hsl(var(--shimmer-hue), 100%, 85%, 1) 86%,
+        hsl(var(--shimmer-hue), 90%, 66%, 0.5) 95%,
+        transparent 100%
+    );
+    -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    pointer-events: none;
+    z-index: 3;
+}
+/* persistent selected: calm static ring + soft outer glow */
+.halo.is-selected::after {
+    opacity: 1;
+    animation: none;
+    background: conic-gradient(
+        from 130deg,
+        hsl(255, 92%, 72%),
+        hsl(200, 95%, 66%),
+        hsl(315, 90%, 72%),
+        hsl(255, 92%, 72%)
+    );
+}
+.halo.is-selected {
+    box-shadow:
+        0 0 0 1px hsl(255 92% 66% / 0.2),
+        0 8px 26px -10px hsl(255 90% 62% / 0.55);
+}
+/* transient: opt-in hover + keyboard focus → animated rainbow shimmer.
+   Declared after .is-selected so it wins when an element is both selected and
+   hovered/focused (then it animates). */
+.halo:focus-visible {
+    outline: none;
+}
+.halo.halo-hover:hover::after,
+.halo:focus-visible::after {
+    opacity: 1;
+    animation:
+        poster-border-spin 2.4s linear infinite,
+        poster-border-hue 6s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -547,7 +615,8 @@ html[data-theme="light"] .cyber-grid-overlay {
     }
 
     .poster-shimmer-border,
-    .cyber-grid-overlay::after {
+    .cyber-grid-overlay::after,
+    .halo::after {
         animation: none !important;
     }
 }

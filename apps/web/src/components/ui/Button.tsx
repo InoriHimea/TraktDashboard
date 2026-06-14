@@ -174,38 +174,27 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ) => {
         const activeColor = variant === "danger" ? "rose" : color;
         const token = COLOR_MAP[activeColor];
-        const { grad, glow, ring: ringClass } = token;
+        const { grad, glow } = token;
         const shadows = makeShadows(glow);
         const currentShadows = shadows[variant];
 
         const commonClass = cn(
-            "inline-flex items-center justify-center gap-2 font-semibold select-none cursor-pointer will-change-transform",
+            "halo inline-flex items-center justify-center gap-2 font-semibold select-none cursor-pointer will-change-transform",
             "transition-[color,background-color,border-color,box-shadow,transform] duration-150 ease-out",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+            "focus-visible:outline-none",
             "disabled:opacity-35 disabled:cursor-not-allowed disabled:pointer-events-none",
         );
 
         const variantClasses: Record<Variant, string> = {
-            primary: cn(
-                "border border-[var(--button-border)]",
-                ringClass,
-                "focus-visible:ring-offset-[var(--color-bg)]",
-            ),
-            danger: cn(
-                "border border-[var(--button-border)] text-white",
-                `focus-visible:ring-rose-400 focus-visible:ring-offset-[var(--color-bg)]`,
-            ),
+            primary: "border border-[var(--button-border)]",
+            danger: "border border-[var(--button-border)] text-white",
             secondary: cn(
                 "border border-[var(--button-border)] bg-[var(--button-bg)]",
                 "hover:border-[var(--button-hover-border)] hover:bg-[var(--button-hover-bg)]",
-                ringClass,
-                "focus-visible:ring-offset-[var(--color-bg)]",
             ),
             ghost: cn(
                 "border border-[var(--button-border)] bg-transparent",
                 "hover:border-[var(--button-hover-border)] hover:bg-[var(--button-hover-bg)]",
-                ringClass,
-                "focus-visible:ring-offset-[var(--color-bg)]",
             ),
         };
 

@@ -1,5 +1,5 @@
 /**
- * SeasonTab — 竖版海报卡片，选中时有 layoutId 滑动高亮动画
+ * SeasonTab — 竖版海报卡片，选中时显示统一的 .halo 光圈环
  */
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -32,9 +32,9 @@ export function SeasonTab({ season, isActive, onClick }: SeasonTabProps) {
             <div className="relative overflow-visible">
                 <motion.div
                     className={[
-                        "rounded-lg overflow-hidden transition-shadow duration-200",
+                        "halo halo-hover rounded-lg overflow-hidden transition-shadow duration-200",
                         isActive
-                            ? "shadow-lg shadow-[var(--color-accent)]/30"
+                            ? "is-selected"
                             : "group-hover:shadow-md group-hover:shadow-black/30",
                     ].join(" ")}
                     animate={{ scale: isActive ? 1.03 : 1 }}
@@ -58,19 +58,6 @@ export function SeasonTab({ season, isActive, onClick }: SeasonTabProps) {
                                 {season.seasonNumber === 0 ? "SP" : `S${season.seasonNumber}`}
                             </span>
                         </div>
-                    )}
-
-                    {/* 选中时的紫色边框 overlay */}
-                    {isActive && (
-                        <motion.div
-                            layoutId="season-active-ring"
-                            className="absolute inset-0 rounded-lg ring-2 ring-[var(--color-accent)]"
-                            transition={{
-                                type: "spring",
-                                stiffness: 400,
-                                damping: 30,
-                            }}
-                        />
                     )}
                 </motion.div>
 
