@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import { t } from "../lib/i18n";
 
 interface SlidingPanelProps {
     open: boolean;
@@ -152,7 +153,7 @@ export function SlidingPanel({
                                     el.style.boxShadow =
                                         "inset 0 1px 0 rgba(255,255,255,0.12), 0 1px 3px rgba(0,0,0,0.08)";
                                 }}
-                                aria-label="关闭"
+                                aria-label={t("common.close")}
                             >
                                 <X size={16} />
                             </button>

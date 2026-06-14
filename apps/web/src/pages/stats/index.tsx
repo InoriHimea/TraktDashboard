@@ -11,6 +11,7 @@ import {
     Target,
 } from "lucide-react";
 import { useStats } from "../../hooks";
+import { t } from "../../lib/i18n";
 import { CARD_BG, CARD_BDR, T1, T2, T3, COLORS } from "./tokens";
 import { StatCard } from "./StatCard";
 import { ActivityChart } from "./ActivityChart";
@@ -42,7 +43,7 @@ export default function StatsPage() {
                     }}
                 >
                     <Loader2 size={24} color={COLORS.violet.base} className="animate-spin" />
-                    <p style={{ fontSize: "13px", color: T3 }}>正在加载统计数据…</p>
+                    <p style={{ fontSize: "13px", color: T3 }}>{t("stats.loading")}</p>
                 </div>
             </div>
         );
@@ -56,7 +57,7 @@ export default function StatsPage() {
                     minHeight: "60vh",
                 }}
             >
-                <p style={{ color: "#f87171", fontSize: "14px" }}>统计数据加载失败，请稍后重试。</p>
+                <p style={{ color: "#f87171", fontSize: "14px" }}>{t("stats.loadFailed")}</p>
             </div>
         );
 
@@ -75,8 +76,8 @@ export default function StatsPage() {
             : 0;
     const movieWatches = stats.totalMovieWatches ?? 0;
     const mediaBreakdown = [
-        { label: "剧集", value: stats.totalEpisodesWatched, color: COLORS.cyan },
-        { label: "电影", value: stats.totalMovieWatches ?? 0, color: COLORS.rose },
+        { label: t("stats.legendEpisodes"), value: stats.totalEpisodesWatched, color: COLORS.cyan },
+        { label: t("stats.legendMovies"), value: stats.totalMovieWatches ?? 0, color: COLORS.rose },
     ];
     const maxMedia = Math.max(...mediaBreakdown.map((d) => d.value), 1);
 
@@ -88,7 +89,7 @@ export default function StatsPage() {
             const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
             const found = stats.monthlyActivity?.find((m) => m.month === key);
             months.push({
-                month: `${d.getMonth() + 1}月`,
+                month: t("stats.monthShort", { n: d.getMonth() + 1 }),
                 count: found ? Number(found.count) : 0,
             });
         }
@@ -99,37 +100,37 @@ export default function StatsPage() {
     const activeMonths = chartData.filter((d) => d.count > 0);
     const peakMonth = chartData.reduce(
         (best, item) => (item.count > best.count ? item : best),
-        chartData[0] ?? { month: "暂无", count: 0 },
+        chartData[0] ?? { month: t("stats.noData"), count: 0 },
     );
     const monthlyAverage = Math.round(totalEntries / Math.max(activeMonths.length, 1));
     const movieRewatchRatio =
         stats.totalMoviesWatched > 0 ? (movieWatches / stats.totalMoviesWatched).toFixed(1) : "0.0";
     const signalMetrics: SignalMetric[] = [
         {
-            label: "月峰值",
+            label: t("stats.metricPeakMonth"),
             value: peakMonth.count.toLocaleString("zh-CN"),
-            detail: `${peakMonth.month} 触发最高观看量`,
+            detail: t("stats.metricPeakDetail", { month: peakMonth.month }),
             icon: Flame,
             color: COLORS.rose,
         },
         {
-            label: "月均",
+            label: t("stats.metricAvgMonth"),
             value: monthlyAverage.toLocaleString("zh-CN"),
-            detail: `${activeMonths.length || 0} 个活跃月份`,
+            detail: t("stats.metricAvgDetail", { n: activeMonths.length || 0 }),
             icon: Gauge,
             color: COLORS.cyan,
         },
         {
-            label: "复看倍率",
+            label: t("stats.metricReplay"),
             value: `${movieRewatchRatio}x`,
-            detail: `${movieWatches.toLocaleString("zh-CN")} 次电影播放`,
+            detail: t("stats.metricReplayDetail", { n: movieWatches.toLocaleString("zh-CN") }),
             icon: Repeat2,
             color: COLORS.amber,
         },
         {
-            label: "完成剧库",
+            label: t("stats.metricCompletion"),
             value: `${stats.totalShowsCompleted}`,
-            detail: `${completionRate}% 完成率`,
+            detail: t("stats.metricCompletionDetail", { n: completionRate }),
             icon: Target,
             color: COLORS.emerald,
         },
@@ -149,9 +150,9 @@ export default function StatsPage() {
                 style={{
                     position: "relative",
                     zIndex: 1,
-                    maxWidth: "1400px",
+                    maxWidth: "1920px",
                     margin: "0 auto",
-                    padding: "40px 24px 80px",
+                    padding: "40px 32px 80px",
                     background: "var(--color-bg)", // Ensure background is captured
                 }}
             >
@@ -178,9 +179,9 @@ export default function StatsPage() {
                                 marginBottom: "6px",
                             }}
                         >
-                            数据统计
+                            {t("stats.title")}
                         </h2>
-                        <p style={{ color: T3, fontSize: "14px" }}>您的观看历史概览</p>
+                        <p style={{ color: T3, fontSize: "14px" }}>{t("stats.subtitle")}</p>
                     </div>
                     <button
                         onClick={async () => {
@@ -201,7 +202,7 @@ export default function StatsPage() {
                                 link.click();
                             } catch (err) {
                                 console.error("Export failed", err);
-                                alert("导出失败，请重试");
+                                alert(t("stats.exportFailed"));
                             }
                         }}
                         style={{
@@ -225,7 +226,7 @@ export default function StatsPage() {
                             (e.currentTarget.style.background = "var(--color-surface-2)")
                         }
                     >
-                        导出图片
+                        {t("stats.exportImage")}
                     </button>
                 </motion.div>
 
@@ -240,9 +241,7 @@ export default function StatsPage() {
                             marginBottom: "24px",
                         }}
                     >
-                        <p style={{ color: T2, fontSize: "14px" }}>
-                            暂无统计数据。请先在同步页面触发一次同步，完成后这里将显示您的观看趋势。
-                        </p>
+                        <p style={{ color: T2, fontSize: "14px" }}>{t("stats.empty")}</p>
                     </div>
                 )}
 
@@ -272,7 +271,7 @@ export default function StatsPage() {
                             }}
                         >
                             <StatCard
-                                label="剧集"
+                                label={t("stats.cardEpisodes")}
                                 value={stats.totalEpisodesWatched.toLocaleString("zh-CN")}
                                 icon={Tv2}
                                 sub={`${episodeHours.toLocaleString("zh-CN")}h`}
@@ -281,28 +280,34 @@ export default function StatsPage() {
                                 signal="EP"
                             />
                             <StatCard
-                                label="电影"
+                                label={t("stats.cardMovies")}
                                 value={(stats.totalMoviesWatched ?? 0).toLocaleString("zh-CN")}
                                 icon={Film}
-                                sub={`${(stats.totalMovieWatches ?? 0).toLocaleString("zh-CN")} 次 · ${movieHours.toLocaleString("zh-CN")}h`}
+                                sub={t("stats.cardMoviesSub", {
+                                    count: (stats.totalMovieWatches ?? 0).toLocaleString("zh-CN"),
+                                    hours: movieHours.toLocaleString("zh-CN"),
+                                })}
                                 delay={0.05}
                                 color={COLORS.rose}
                                 signal={`${movieRewatchRatio}x`}
                             />
                             <StatCard
-                                label="时长"
+                                label={t("stats.cardRuntime")}
                                 value={`${totalHours.toLocaleString("zh-CN")}h`}
                                 icon={Clock}
-                                sub={`${totalDays} 天`}
+                                sub={t("stats.cardRuntimeSub", { days: totalDays })}
                                 delay={0.1}
                                 color={COLORS.amber}
                                 signal="TIME"
                             />
                             <StatCard
-                                label="完成率"
+                                label={t("stats.cardCompletion")}
                                 value={`${completionRate}%`}
                                 icon={CheckCircle2}
-                                sub={`${stats.totalShowsCompleted}/${stats.totalShowsWatched} 部剧`}
+                                sub={t("stats.cardCompletionSub", {
+                                    completed: stats.totalShowsCompleted,
+                                    total: stats.totalShowsWatched,
+                                })}
                                 delay={0.15}
                                 color={COLORS.emerald}
                                 signal="DONE"

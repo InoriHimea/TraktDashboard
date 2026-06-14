@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { t } from "../../lib/i18n";
 import { CARD_BG, CARD_BDR, CARD_SHD, T1, T2, T3, GENRE_COLORS } from "./tokens";
 
 export function TopGenres({ topGenres }: { topGenres: { name: string; count: number }[] }) {
@@ -25,7 +26,7 @@ export function TopGenres({ topGenres }: { topGenres: { name: string; count: num
                     marginBottom: "20px",
                 }}
             >
-                常看流派
+                {t("stats.topGenres")}
             </h3>
             <div
                 style={{

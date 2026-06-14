@@ -15,7 +15,7 @@ import { Button } from "./ui/Button";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
 import { Tag } from "./ui/Tag";
 import { useMarkWatched, useEpisodeHistory, useDeleteHistory } from "../hooks";
-import { fmtAirDate, fmtRuntime } from "../lib/i18n";
+import { fmtAirDate, fmtRuntime, t } from "../lib/i18n";
 import { cn, formatEpisode } from "../lib/utils";
 
 interface EpisodeInfoCardProps {
@@ -72,7 +72,10 @@ type LinkPillStyle = CSSProperties & {
 function formatDirectors(directors: string[]) {
     if (directors.length === 0) return null;
     if (directors.length <= 2) return directors.join(" / ");
-    return `${directors.slice(0, 2).join(" / ")} 等 ${directors.length} 人`;
+    return t("episode.directorsEtc", {
+        names: directors.slice(0, 2).join(" / "),
+        n: directors.length,
+    });
 }
 
 function EpisodeMetaItem({
@@ -118,7 +121,7 @@ function ExternalLinkPill({
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={`打开 ${label}`}
+            aria-label={t("episode.openLink", { label })}
             className={cn(
                 "group inline-flex h-9 items-center gap-2 rounded-full border border-[var(--link-border)] bg-[var(--link-bg)] px-3 text-xs font-bold text-[var(--link-text)] shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--link-hover-border)] hover:bg-[var(--link-hover-bg)] hover:shadow-lg active:translate-y-0",
             )}
@@ -144,13 +147,17 @@ function DeleteHistoryModal({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <button
                 type="button"
-                aria-label="关闭"
+                aria-label={t("common.close")}
                 className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                 onClick={onClose}
             />
             <div className="hud-panel-strong relative z-10 w-[420px] max-w-[90vw] rounded-[var(--radius-lg)] p-6 shadow-2xl">
-                <h3 className="mb-1 text-base font-bold text-foreground">删除观看记录</h3>
-                <p className="mb-4 text-sm text-muted-foreground">请选择要删除的观看记录：</p>
+                <h3 className="mb-1 text-base font-bold text-foreground">
+                    {t("episode.deleteRecordTitle")}
+                </h3>
+                <p className="mb-4 text-sm text-muted-foreground">
+                    {t("episode.selectRecordToDelete")}
+                </p>
                 <div className="flex max-h-64 flex-col gap-2 overflow-y-auto">
                     {entries.map((entry) => {
                         const label = entry.watchedAt
@@ -161,7 +168,7 @@ function DeleteHistoryModal({
                                   hour: "2-digit",
                                   minute: "2-digit",
                               })
-                            : "未知时间";
+                            : t("common.unknownTime");
                         return (
                             <Button
                                 key={entry.id}
@@ -188,7 +195,7 @@ function DeleteHistoryModal({
                     onClick={onClose}
                     className="mt-4 w-full"
                 >
-                    取消
+                    {t("common.cancel")}
                 </Button>
             </div>
         </div>
@@ -266,24 +273,27 @@ export function EpisodeInfoCard({
 
     const metaItems = [
         {
-            label: "季集",
-            value: `第 ${data.seasonNumber} 季 / 第 ${data.episodeNumber} 集`,
+            label: t("episode.fieldSeasonEpisode"),
+            value: t("episode.valueSeasonEpisode", {
+                season: data.seasonNumber,
+                episode: data.episodeNumber,
+            }),
             icon: <CalendarDays className="size-3.5" />,
         },
         {
-            label: "首播",
-            value: data.airDate ? fmtAirDate(data.airDate) : "未知",
+            label: t("episode.fieldFirstAir"),
+            value: data.airDate ? fmtAirDate(data.airDate) : t("common.unknown"),
             icon: <Clock className="size-3.5" />,
         },
         {
-            label: "时长",
-            value: runtimeLabel || "未知",
+            label: t("episode.fieldRuntime"),
+            value: runtimeLabel || t("common.unknown"),
             icon: <Timer className="size-3.5" />,
         },
         ...(directorLabel
             ? [
                   {
-                      label: "导演",
+                      label: t("episode.fieldDirector"),
                       value: directorLabel,
                       icon: <UserRound className="size-3.5" />,
                   },
@@ -348,7 +358,7 @@ export function EpisodeInfoCard({
                                 <span className="ml-0.5 text-xs text-muted-foreground">%</span>
                             </p>
                             <p className="mt-1 text-[10px] font-bold uppercase text-muted-foreground">
-                                Trakt 评分
+                                {t("episode.traktRating")}
                             </p>
                         </div>
                     </div>
@@ -369,7 +379,7 @@ export function EpisodeInfoCard({
 
             <div className="mb-7 max-w-3xl">
                 <p className="line-clamp-6 whitespace-pre-line text-base font-medium leading-8 text-muted-foreground/88 sm:text-lg">
-                    {overview?.trim() || "暂无简介"}
+                    {overview?.trim() || t("episode.noOverview")}
                 </p>
             </div>
 
@@ -397,11 +407,11 @@ export function EpisodeInfoCard({
                             ? () => setConfirmUnwatchOpen(true)
                             : () => setConfirmWatchOpen(true)
                     }
-                    aria-label={isWatched ? "取消观看" : "标记为已观看"}
-                    title={isWatched ? "点击删除观看记录" : "标记为已观看"}
+                    aria-label={isWatched ? t("episode.unwatch") : t("episode.markWatched")}
+                    title={isWatched ? t("episode.clickToDelete") : t("episode.markWatched")}
                     className="w-full sm:w-[156px]"
                 >
-                    {isWatched ? "已观看" : "标记已观看"}
+                    {isWatched ? t("common.watched") : t("episode.markWatchedShort")}
                 </Button>
 
                 <Button
@@ -411,11 +421,11 @@ export function EpisodeInfoCard({
                     size="md"
                     icon={<Clock className="size-4" />}
                     onClick={onHistoryClick}
-                    aria-label="观看历史"
-                    title="观看历史"
+                    aria-label={t("episode.watchHistory")}
+                    title={t("episode.watchHistory")}
                     className="w-full sm:w-[156px]"
                 >
-                    观看历史
+                    {t("episode.watchHistory")}
                 </Button>
             </div>
 
@@ -435,11 +445,11 @@ export function EpisodeInfoCard({
 
             <ConfirmDialog
                 isOpen={confirmWatchOpen}
-                title="标记为已观看"
-                description="确认将此集标记为已观看？你可以在下一步选择观看时间。"
-                confirmText="继续"
+                title={t("episode.markWatched")}
+                description={t("episode.markWatchedDesc")}
+                confirmText={t("episode.continue")}
                 confirmColor="violet"
-                cancelText="取消"
+                cancelText={t("common.cancel")}
                 onConfirm={() => {
                     setConfirmWatchOpen(false);
                     setDatePickerOpen(true);
@@ -449,11 +459,11 @@ export function EpisodeInfoCard({
 
             <ConfirmDialog
                 isOpen={pendingDeleteId !== null}
-                title="删除观看记录"
-                description="确认删除这条观看记录？此操作不可撤销。"
-                confirmText="删除"
+                title={t("episode.deleteRecordTitle")}
+                description={t("episode.deleteRecordDesc")}
+                confirmText={t("common.delete")}
                 confirmColor="rose"
-                cancelText="取消"
+                cancelText={t("common.cancel")}
                 isLoading={deleteHistory.isPending}
                 onConfirm={async () => {
                     if (pendingDeleteId !== null) {
@@ -465,11 +475,11 @@ export function EpisodeInfoCard({
 
             <ConfirmDialog
                 isOpen={confirmUnwatchOpen}
-                title="取消观看记录"
-                description="确认删除此集的观看记录？此操作不可撤销。"
-                confirmText="删除"
+                title={t("episode.unwatchTitle")}
+                description={t("episode.unwatchDesc")}
+                confirmText={t("common.delete")}
                 confirmColor="rose"
-                cancelText="取消"
+                cancelText={t("common.cancel")}
                 isLoading={deleteHistory.isPending}
                 onConfirm={async () => {
                     try {

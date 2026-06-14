@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertTriangle } from "lucide-react";
 import { Button, type Color } from "./Button";
+import { t } from "../../lib/i18n";
 
 export interface ConfirmDialogProps {
     isOpen: boolean;
@@ -28,8 +29,8 @@ export function ConfirmDialog({
     isOpen,
     title,
     description,
-    confirmText = "确认",
-    cancelText = "取消",
+    confirmText = t("common.confirm"),
+    cancelText = t("common.cancel"),
     confirmColor = "rose",
     onConfirm,
     onCancel,

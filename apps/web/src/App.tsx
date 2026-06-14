@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { AlertTriangle, WifiOff } from "lucide-react";
 import { useAuth } from "./hooks";
 import Layout from "./components/Layout";
+import { t } from "./lib/i18n";
 
 const TVShowsPage = React.lazy(() => import("./pages/TVShowsPage"));
 const MoviesPage = React.lazy(() => import("./pages/MoviesPage"));
@@ -46,7 +47,7 @@ class ErrorBoundary extends React.Component<
                         </div>
                         <div className="space-y-3">
                             <h2 className="text-[var(--color-text-base)] text-xl font-semibold tracking-tight">
-                                应用出错
+                                {t("app.error")}
                             </h2>
                             <p className="text-[var(--color-text-secondary)] text-sm leading-relaxed">
                                 {this.state.error?.message || "An unexpected error occurred"}
@@ -56,7 +57,7 @@ class ErrorBoundary extends React.Component<
                             onClick={() => window.location.reload()}
                             className="mt-2 px-6 py-3 rounded-xl bg-[var(--color-accent)] text-white text-sm font-semibold border-none cursor-pointer shadow-lg shadow-[var(--color-accent-glow)] hover:shadow-xl hover:shadow-[var(--color-accent-glow)] hover:scale-[1.02] active:scale-[0.98] transition-all"
                         >
-                            刷新页面
+                            {t("app.refresh")}
                         </button>
                     </div>
                 </div>
@@ -107,10 +108,10 @@ export default function App() {
                     </div>
                     <div className="space-y-3">
                         <h2 className="text-[var(--color-text-base)] text-xl font-semibold tracking-tight">
-                            连接失败
+                            {t("app.connectionFailed")}
                         </h2>
                         <p className="text-[var(--color-text-secondary)] text-sm leading-relaxed">
-                            认证服务暂时不可用。请检查您的网络连接，然后刷新页面重试。
+                            {t("app.authUnavailable")}
                         </p>
                     </div>
                     <motion.button
@@ -119,7 +120,7 @@ export default function App() {
                         whileTap={{ scale: 0.98 }}
                         className="mt-2 px-6 py-3 rounded-xl bg-[var(--color-accent)] text-white text-sm font-semibold border-none cursor-pointer shadow-lg shadow-[var(--color-accent-glow)] hover:shadow-xl hover:shadow-[var(--color-accent-glow)] transition-all"
                     >
-                        刷新页面
+                        {t("app.refresh")}
                     </motion.button>
                 </motion.div>
             </div>

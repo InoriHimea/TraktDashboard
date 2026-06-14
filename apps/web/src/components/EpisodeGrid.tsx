@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, MoreVertical } from "lucide-react";
-import { resolveEpisodeTitle } from "../lib/i18n";
+import { resolveEpisodeTitle, t } from "../lib/i18n";
 import { resolveEpisodeStill, resolveBackdropFallback } from "../lib/image";
 import { EpisodePlaceholder } from "./ui/EpisodePlaceholder";
 import type { EpisodeProgress } from "@trakt-dashboard/types";
@@ -128,7 +128,7 @@ function EpisodeThumbnail({
                 {episode.runtime && (
                     <div className="absolute bottom-1.5 left-1.5">
                         <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-sm leading-none">
-                            {episode.runtime}分钟
+                            {t("common.minutes", { n: episode.runtime })}
                         </span>
                     </div>
                 )}
@@ -158,7 +158,7 @@ function EpisodeThumbnail({
                 {isUnaired && (
                     <div className="absolute inset-0 flex items-center justify-center">
                         <span className="text-[9px] font-medium px-2 py-0.5 rounded-full bg-black/60 border border-white/10 text-white/50">
-                            未播出
+                            {t("common.notAired")}
                         </span>
                     </div>
                 )}
@@ -167,7 +167,7 @@ function EpisodeThumbnail({
                 {!isUnaired && (
                     <button
                         className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white/70 hover:text-white"
-                        aria-label="更多选项"
+                        aria-label={t("episode.moreOptions")}
                         onClick={(e) => e.stopPropagation()}
                     >
                         <MoreVertical size={10} />

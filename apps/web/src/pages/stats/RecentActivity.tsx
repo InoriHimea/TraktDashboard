@@ -3,7 +3,7 @@ import { Tv2, Film, CheckCircle2 } from "lucide-react";
 import type { StatsOverview } from "@trakt-dashboard/types";
 import { CARD_BG, CARD_BDR, CARD_SHD, T1, T2, T3, COLORS } from "./tokens";
 import { tmdbImage } from "../../lib/utils";
-import { fmtDateZh } from "../../lib/i18n";
+import { fmtDateZh, t } from "../../lib/i18n";
 
 export function RecentActivity({
     recentlyWatched,
@@ -35,7 +35,7 @@ export function RecentActivity({
                             marginBottom: "20px",
                         }}
                     >
-                        最近动态
+                        {t("stats.recentActivity")}
                     </h3>
                     <div
                         style={{
@@ -186,7 +186,7 @@ export function RecentActivity({
                                                   minute: "2-digit",
                                                   hour12: false,
                                               })
-                                            : "未知时间"}
+                                            : t("common.unknownTime")}
                                     </span>
                                 </div>
                             </motion.div>
@@ -216,7 +216,7 @@ export function RecentActivity({
                             marginBottom: "20px",
                         }}
                     >
-                        最近电影
+                        {t("stats.recentMovies")}
                     </h3>
                     <div
                         style={{

@@ -142,7 +142,7 @@ export default function HistoryPage() {
 
     return (
         <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-[var(--color-bg)] text-[var(--color-text)]">
-            <div className="mx-auto w-full max-w-4xl px-[3vw] py-8">
+            <div className="app-container py-8">
                 {/* Header */}
                 <div className="mb-7 flex items-end justify-between gap-4">
                     <div>

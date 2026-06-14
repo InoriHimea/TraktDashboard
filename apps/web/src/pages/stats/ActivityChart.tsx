@@ -10,6 +10,7 @@ import {
     Cell,
 } from "recharts";
 import { TrendingUp } from "lucide-react";
+import { t } from "../../lib/i18n";
 import { CARD_BG, CARD_BDR, CARD_SHD, T1, T2, T3, COLORS, barColor } from "./tokens";
 
 type ActivityDatum = {
@@ -49,7 +50,9 @@ const CustomTooltip = ({
                 }}
             >
                 {payload[0].value}{" "}
-                <span style={{ fontSize: "11px", fontWeight: 400, color: T2 }}>集</span>
+                <span style={{ fontSize: "11px", fontWeight: 400, color: T2 }}>
+                    {t("stats.chartUnit")}
+                </span>
             </p>
         </div>
     );
@@ -90,7 +93,7 @@ export function ActivityChart({
                         color: T1,
                     }}
                 >
-                    月度活跃度
+                    {t("stats.chartTitle")}
                 </h3>
                 <span
                     style={{
@@ -101,7 +104,8 @@ export function ActivityChart({
                         color: T3,
                     }}
                 >
-                    <TrendingUp size={13} color={COLORS.cyan.base} aria-hidden /> 过去 12 个月
+                    <TrendingUp size={13} color={COLORS.cyan.base} aria-hidden />{" "}
+                    {t("stats.chartSubtitle")}
                 </span>
             </div>
             <ResponsiveContainer width="100%" height={200}>

@@ -82,7 +82,7 @@ export default function SettingsPage() {
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : t("settings.saveFailed");
             toast(message, "error", {
-                label: "重试",
+                label: t("common.retry"),
                 onClick: () => handleSave(),
             });
         }

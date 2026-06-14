@@ -29,6 +29,7 @@ import { Button } from "../components/ui/Button";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { Tag } from "../components/ui/Tag";
 import { OverviewText } from "../components/ui/OverviewText";
+import { WatchedBadge } from "../components/ui/WatchedBadge";
 
 function DetailRow({ label, value }: { label: string; value: string }) {
     return (
@@ -64,8 +65,8 @@ function MetricTile({
 
 function PageSkeleton() {
     return (
-        <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-[var(--color-bg)] px-[3vw] py-8 text-[var(--color-text)]">
-            <div className="flex w-full max-w-none flex-col gap-8 animate-pulse">
+        <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-[var(--color-bg)] text-[var(--color-text)]">
+            <div className="app-container flex flex-col gap-8 py-8 animate-pulse">
                 <div className="h-10 w-24 rounded-lg bg-[var(--color-surface-3)]" />
                 <div className="flex flex-col gap-10 lg:flex-row">
                     <div className="w-[240px] max-w-full aspect-[2/3] rounded-2xl bg-[var(--color-surface-3)]" />
@@ -124,7 +125,7 @@ export default function MovieDetailPage() {
         return (
             <div className="flex min-h-[calc(100svh-var(--app-nav-height))] items-center justify-center bg-[var(--color-bg)] px-6 text-[var(--color-text)]">
                 <div className="flex flex-col items-center gap-4 text-center">
-                    <p className="text-sm text-[var(--color-error)]">加载失败，请重试</p>
+                    <p className="text-sm text-[var(--color-error)]">{t("common.loadFailed")}</p>
                     <Button
                         type="button"
                         variant="ghost"
@@ -133,7 +134,7 @@ export default function MovieDetailPage() {
                         icon={<RefreshCw size={14} />}
                         onClick={() => refetch()}
                     >
-                        重新加载
+                        {t("common.reload")}
                     </Button>
                 </div>
             </div>
@@ -175,7 +176,7 @@ export default function MovieDetailPage() {
     const totalWatchMinutes = movie.runtime && watchCount > 0 ? movie.runtime * watchCount : null;
     const formatMinutes = (minutes: number | null) => {
         if (!minutes) return "—";
-        if (minutes < 60) return `${minutes} 分钟`;
+        if (minutes < 60) return t("common.minutes", { n: minutes });
         return `${(minutes / 60).toFixed(minutes >= 600 ? 0 : 1)}h`;
     };
 
@@ -212,7 +213,7 @@ export default function MovieDetailPage() {
                 </div>
             )}
 
-            <div className="relative flex w-full max-w-none flex-col gap-8 px-[3vw] py-8">
+            <div className="app-container relative flex flex-col gap-8 py-8">
                 <Button
                     type="button"
                     variant="ghost"
@@ -230,7 +231,7 @@ export default function MovieDetailPage() {
                         initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                        className="relative w-[240px] max-w-full shrink-0 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] shadow-2xl shadow-black/40"
+                        className="relative mx-auto w-[240px] max-w-full shrink-0 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] shadow-2xl shadow-black/40 lg:mx-0"
                     >
                         <div className="aspect-[2/3]">
                             {poster && !imgError ? (
@@ -249,6 +250,11 @@ export default function MovieDetailPage() {
                                 </div>
                             )}
                         </div>
+                        {watchCount > 0 && (
+                            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center pb-4">
+                                <WatchedBadge size="md" />
+                            </div>
+                        )}
                     </motion.div>
 
                     <motion.div
@@ -270,7 +276,8 @@ export default function MovieDetailPage() {
                                 )}
                                 {movie.runtime && (
                                     <span className="inline-flex items-center gap-1.5">
-                                        <Clock size={14} /> {movie.runtime} 分钟
+                                        <Clock size={14} />{" "}
+                                        {t("common.minutes", { n: movie.runtime })}
                                     </span>
                                 )}
                                 {watchCount > 0 && (
@@ -307,7 +314,7 @@ export default function MovieDetailPage() {
                                 icon={<Eye size={15} />}
                                 onClick={() => setMarkWatchedConfirmOpen(true)}
                             >
-                                标记为已观看
+                                {t("movieDetail.markWatched")}
                             </Button>
                             <Button
                                 type="button"
@@ -327,7 +334,7 @@ export default function MovieDetailPage() {
                                                 toast(t("watchlist.removeSuccess"), "success"),
                                             onError: () =>
                                                 toast(t("watchlist.removeFailed"), "error", {
-                                                    label: "重试",
+                                                    label: t("common.retry"),
                                                     onClick: () =>
                                                         removeFromWatchlist.mutate(
                                                             watchlistItem.id,
@@ -339,23 +346,32 @@ export default function MovieDetailPage() {
                                             { type: "movie", id: movieId },
                                             {
                                                 onSuccess: () =>
-                                                    toast("已添加到待看列表", "success"),
+                                                    toast(
+                                                        t("movieDetail.addedToWatchlist"),
+                                                        "success",
+                                                    ),
                                                 onError: () =>
-                                                    toast("添加失败", "error", {
-                                                        label: "重试",
-                                                        onClick: () =>
-                                                            addToWatchlist.mutate({
-                                                                type: "movie",
-                                                                id: movieId,
-                                                            }),
-                                                    }),
+                                                    toast(
+                                                        t("movieDetail.addToWatchlistFailed"),
+                                                        "error",
+                                                        {
+                                                            label: t("common.retry"),
+                                                            onClick: () =>
+                                                                addToWatchlist.mutate({
+                                                                    type: "movie",
+                                                                    id: movieId,
+                                                                }),
+                                                        },
+                                                    ),
                                             },
                                         );
                                     }
                                 }}
                                 disabled={isWatchlistPending}
                             >
-                                {inWatchlist ? "已在待看" : "加入待看"}
+                                {inWatchlist
+                                    ? t("common.inWatchlist")
+                                    : t("common.addToWatchlistShort")}
                             </Button>
                         </div>
                     </motion.div>
@@ -364,7 +380,7 @@ export default function MovieDetailPage() {
                 <section className="border-t border-[var(--color-border-subtle)] pt-7">
                     <div className="mb-5 inline-flex rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 shadow-lg shadow-black/10">
                         {[
-                            ["details", "资料", Film],
+                            ["details", t("movieDetail.tabProfile"), Film],
                             ["history", t("watchHistory.showTitle"), History],
                         ].map(([key, label, Icon]) => (
                             <button
@@ -402,26 +418,26 @@ export default function MovieDetailPage() {
                             >
                                 <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-5 shadow-lg shadow-black/10">
                                     <div className="mb-4 text-xs uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
-                                        影片档案
+                                        {t("movieDetail.profileMovie")}
                                     </div>
                                     <div className="grid gap-3 text-sm">
                                         <DetailRow
-                                            label="上映日期"
+                                            label={t("movieDetail.fieldReleaseDate")}
                                             value={
                                                 formatDateOnly(movie.releaseDate) ??
                                                 t("common.unknown")
                                             }
                                         />
                                         <DetailRow
-                                            label="片长"
+                                            label={t("movieDetail.fieldRuntime")}
                                             value={
                                                 movie.runtime
-                                                    ? `${movie.runtime} 分钟`
+                                                    ? t("common.minutes", { n: movie.runtime })
                                                     : t("common.unknown")
                                             }
                                         />
                                         <DetailRow
-                                            label="类型"
+                                            label={t("movieDetail.fieldGenres")}
                                             value={
                                                 movie.genres.length
                                                     ? movie.genres.join(" / ")
@@ -429,7 +445,7 @@ export default function MovieDetailPage() {
                                             }
                                         />
                                         <DetailRow
-                                            label="同步时间"
+                                            label={t("movieDetail.fieldSyncedAt")}
                                             value={
                                                 formatDate(movie.lastSyncedAt) ??
                                                 t("common.unknown")
@@ -439,28 +455,31 @@ export default function MovieDetailPage() {
                                 </div>
                                 <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-5 shadow-lg shadow-black/10">
                                     <div className="mb-4 text-xs uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
-                                        观看档案
+                                        {t("movieDetail.profileWatch")}
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
                                         <MetricTile
-                                            label="观看次数"
+                                            label={t("movieDetail.metricWatchCount")}
                                             value={String(watchCount)}
                                             tone="text-[var(--color-watched)]"
                                         />
                                         <MetricTile
-                                            label="累计时长"
+                                            label={t("movieDetail.metricTotalRuntime")}
                                             value={formatMinutes(totalWatchMinutes)}
                                         />
                                         <MetricTile
-                                            label="最近观看"
-                                            value={formatDate(lastWatchedAt) ?? "未观看"}
+                                            label={t("movieDetail.metricLastWatched")}
+                                            value={
+                                                formatDate(lastWatchedAt) ??
+                                                t("movieDetail.notWatchedYet")
+                                            }
                                             wide
                                         />
                                     </div>
                                 </div>
                                 <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-5 shadow-lg shadow-black/10">
                                     <div className="mb-4 text-xs uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
-                                        外部数据
+                                        {t("movieDetail.profileExternal")}
                                     </div>
                                     <div className="grid gap-3 text-sm">
                                         <DetailRow label="TMDB" value={`#${movie.tmdbId}`} />
@@ -546,11 +565,11 @@ export default function MovieDetailPage() {
             </div>
             <ConfirmDialog
                 isOpen={markWatchedConfirmOpen}
-                title="标记为已观看"
-                description="确认将这部电影标记为已观看？观看时间将使用当前时间。"
-                confirmText="标记"
+                title={t("movieDetail.markWatchedTitle")}
+                description={t("movieDetail.markWatchedDesc")}
+                confirmText={t("movieDetail.markWatchedConfirm")}
                 confirmColor="violet"
-                cancelText="取消"
+                cancelText={t("common.cancel")}
                 isLoading={markWatched.isPending}
                 onConfirm={() => {
                     handleMarkWatched();
@@ -559,11 +578,11 @@ export default function MovieDetailPage() {
             />
             <ConfirmDialog
                 isOpen={deleteConfirmId !== null}
-                title="删除观看记录"
-                description="确认删除这条观看记录？此操作不可撤销。"
-                confirmText="删除"
+                title={t("movieDetail.deleteHistoryTitle")}
+                description={t("movieDetail.deleteHistoryDesc")}
+                confirmText={t("common.delete")}
                 confirmColor="rose"
-                cancelText="取消"
+                cancelText={t("common.cancel")}
                 isLoading={deleteHistory.isPending}
                 onConfirm={() => {
                     if (deleteConfirmId !== null) {

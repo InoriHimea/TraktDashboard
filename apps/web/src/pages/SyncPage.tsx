@@ -10,6 +10,7 @@ import {
     Database,
 } from "lucide-react";
 import { useSyncStatus, useTriggerSync, useTriggerFullSync } from "../hooks";
+import { t } from "../lib/i18n";
 
 export default function SyncPage() {
     const { data: sync, isLoading } = useSyncStatus();
@@ -26,14 +27,16 @@ export default function SyncPage() {
     const handleTriggerSync = () => {
         setSyncError(null);
         triggerSync(undefined, {
-            onError: (err) => setSyncError(err instanceof Error ? err.message : "触发同步失败"),
+            onError: (err) =>
+                setSyncError(err instanceof Error ? err.message : t("sync.triggerFailed")),
         });
     };
 
     const handleTriggerFull = () => {
         setSyncError(null);
         triggerFull(undefined, {
-            onError: (err) => setSyncError(err instanceof Error ? err.message : "触发全量同步失败"),
+            onError: (err) =>
+                setSyncError(err instanceof Error ? err.message : t("sync.triggerFullFailed")),
         });
     };
 
@@ -57,7 +60,7 @@ export default function SyncPage() {
                         marginBottom: "6px",
                     }}
                 >
-                    同步
+                    {t("sync.title")}
                 </h2>
                 <p
                     style={{
@@ -65,7 +68,7 @@ export default function SyncPage() {
                         fontSize: "14px",
                     }}
                 >
-                    将 Trakt 观看记录与 TMDB 元数据同步到本地。
+                    {t("sync.subtitle")}
                 </p>
             </div>
 
@@ -100,7 +103,7 @@ export default function SyncPage() {
                                 color: "var(--color-text-secondary)",
                             }}
                         >
-                            正在加载同步状态…
+                            {t("sync.loadingStatus")}
                         </span>
                     </div>
                 ) : isRunning ? (
@@ -134,7 +137,10 @@ export default function SyncPage() {
                                     color: "var(--color-text)",
                                 }}
                             >
-                                同步中… {sync.progress}/{sync.total}
+                                {t("sync.syncingProgress", {
+                                    current: sync.progress,
+                                    total: sync.total,
+                                })}
                             </span>
                             <span
                                 style={{
@@ -226,10 +232,10 @@ export default function SyncPage() {
                                 }}
                             >
                                 {sync?.status === "error"
-                                    ? "同步失败"
+                                    ? t("sync.statusFailed")
                                     : sync?.status === "completed"
-                                      ? "同步完成"
-                                      : "准备就绪"}
+                                      ? t("sync.statusDone")
+                                      : t("sync.statusReady")}
                             </span>
                         </div>
 
@@ -260,7 +266,7 @@ export default function SyncPage() {
                                 }}
                             >
                                 <Clock size={13} />
-                                上次同步：
+                                {t("sync.lastSync")}
                                 {new Date(sync.lastSyncAt).toLocaleString("zh-CN")}
                             </div>
                         )}
@@ -316,7 +322,7 @@ export default function SyncPage() {
                                                 marginBottom: "4px",
                                             }}
                                         >
-                                            增量同步
+                                            {t("sync.incremental")}
                                         </p>
                                         <p
                                             style={{
@@ -325,8 +331,7 @@ export default function SyncPage() {
                                                 lineHeight: 1.6,
                                             }}
                                         >
-                                            仅同步上次以来的新观看记录，速度快。同时会拉取 TMDB
-                                            的本地化标题（根据设置中的显示语言）。
+                                            {t("sync.incrementalDesc")}
                                         </p>
                                     </div>
                                     <motion.button
@@ -365,7 +370,7 @@ export default function SyncPage() {
                                             size={14}
                                             className={syncing ? "animate-spin" : ""}
                                         />
-                                        {syncing ? "排队中…" : "立即同步"}
+                                        {syncing ? t("sync.queued") : t("sync.syncNow")}
                                     </motion.button>
                                 </div>
                             </div>
@@ -396,7 +401,7 @@ export default function SyncPage() {
                                                 marginBottom: "4px",
                                             }}
                                         >
-                                            全量同步
+                                            {t("sync.fullSync")}
                                         </p>
                                         <p
                                             style={{
@@ -405,8 +410,7 @@ export default function SyncPage() {
                                                 lineHeight: 1.6,
                                             }}
                                         >
-                                            重新同步全部历史记录，并强制刷新所有剧集的 TMDB
-                                            元数据（含本地化标题、简介）。耗时较长，适合首次使用或修复数据。
+                                            {t("sync.fullDesc")}
                                         </p>
                                     </div>
                                     <motion.button
@@ -448,7 +452,7 @@ export default function SyncPage() {
                                             size={14}
                                             className={fullSyncing ? "animate-spin" : ""}
                                         />
-                                        {fullSyncing ? "同步中…" : "全量同步"}
+                                        {fullSyncing ? t("sync.syncing") : t("sync.fullSync")}
                                     </motion.button>
                                 </div>
                             </div>
@@ -485,7 +489,7 @@ export default function SyncPage() {
                                 color: "var(--color-text)",
                             }}
                         >
-                            {failedShows.length} 部剧集同步失败
+                            {t("sync.failedShows", { n: failedShows.length })}
                         </h3>
                     </div>
                     <div
@@ -552,7 +556,7 @@ export default function SyncPage() {
                             marginBottom: "16px",
                         }}
                     >
-                        同步统计
+                        {t("sync.summary")}
                     </h3>
                     <div
                         style={{
@@ -586,7 +590,7 @@ export default function SyncPage() {
                                         color: "#10b981",
                                     }}
                                 >
-                                    成功
+                                    {t("sync.success")}
                                 </span>
                             </div>
                             <p
@@ -606,7 +610,7 @@ export default function SyncPage() {
                                     marginTop: "4px",
                                 }}
                             >
-                                部剧集已同步
+                                {t("sync.showsSynced")}
                             </p>
                         </div>
 
@@ -643,7 +647,7 @@ export default function SyncPage() {
                                         color: failedShows.length > 0 ? "#ef4444" : "#6b7280",
                                     }}
                                 >
-                                    失败
+                                    {t("sync.failed")}
                                 </span>
                             </div>
                             <p
@@ -663,7 +667,7 @@ export default function SyncPage() {
                                     marginTop: "4px",
                                 }}
                             >
-                                部剧集同步失败
+                                {t("sync.showsFailed")}
                             </p>
                         </div>
                     </div>

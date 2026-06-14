@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
-import { ArrowLeft, Check, RefreshCw } from "lucide-react";
+import { ArrowLeft, RefreshCw } from "lucide-react";
 import { useEpisodeDetail } from "../hooks";
 import { EpisodeInfoCard } from "../components/EpisodeInfoCard";
 import { EpisodeSeasonStrip } from "../components/EpisodeSeasonStrip";
@@ -8,6 +8,7 @@ import { WatchHistoryPanel } from "../components/WatchHistoryPanel";
 import { Button } from "../components/ui/Button";
 import { EpisodePlaceholder } from "../components/ui/EpisodePlaceholder";
 import { Tag } from "../components/ui/Tag";
+import { WatchedBadge } from "../components/ui/WatchedBadge";
 import { resolveEpisodeStillLarge, resolveBackdropFallback } from "../lib/image";
 import { t } from "../lib/i18n";
 import { formatEpisode } from "../lib/utils";
@@ -26,7 +27,7 @@ function EpisodeDetailState({ message, action }: { message: string; action?: Rea
 function EpisodeDetailSkeleton() {
     return (
         <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-background text-foreground">
-            <div className="mx-auto flex w-full max-w-[1440px] animate-pulse flex-col gap-10 px-4 py-8 sm:px-6 lg:px-8">
+            <div className="app-container flex animate-pulse flex-col gap-10 py-8">
                 <div className="h-10 w-28 rounded-full bg-muted/70" />
                 <div className="grid items-center gap-8 lg:grid-cols-[minmax(360px,0.74fr)_minmax(0,1fr)] lg:gap-12">
                     <div className="aspect-video w-full rounded-[var(--radius-xl)] bg-muted/70" />
@@ -135,7 +136,7 @@ export default function EpisodeDetailPage() {
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(37,244,238,0.14),transparent_34%),radial-gradient(circle_at_82%_8%,rgba(255,61,129,0.10),transparent_30%)]" />
             </div>
 
-            <main className="relative z-10 mx-auto flex w-full max-w-[1440px] flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+            <main className="app-container relative z-10 flex flex-col gap-8 py-6 lg:py-10">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <Button
                         type="button"
@@ -184,17 +185,7 @@ export default function EpisodeDetailPage() {
                                 >
                                     {episodeCode}
                                 </Tag>
-                                {isWatched && (
-                                    <Tag
-                                        color="emerald"
-                                        variant="3d"
-                                        size="sm"
-                                        icon={<Check className="size-3.5" strokeWidth={4} />}
-                                        className="rounded-full px-3 py-1"
-                                    >
-                                        已观看
-                                    </Tag>
-                                )}
+                                {isWatched && <WatchedBadge size="sm" />}
                             </div>
                             <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3">
                                 <p className="line-clamp-2 text-sm font-semibold text-white/90 sm:text-base">

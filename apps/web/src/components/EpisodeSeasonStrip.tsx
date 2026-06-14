@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Check, Clock } from "lucide-react";
 import { cn, formatEpisode } from "../lib/utils";
 import { resolveEpisodeStill } from "../lib/image";
-import { resolveEpisodeTitle } from "../lib/i18n";
+import { resolveEpisodeTitle, t } from "../lib/i18n";
 import { EpisodePlaceholder } from "./ui/EpisodePlaceholder";
 import { Tag } from "./ui/Tag";
 import type { EpisodeProgress } from "@trakt-dashboard/types";
@@ -50,11 +50,13 @@ export function EpisodeSeasonStrip({
                         <div className="h-px w-16 bg-gradient-to-r from-[var(--color-accent)]/60 to-transparent" />
                     </div>
                     <p className="text-sm font-medium text-muted-foreground">
-                        {episodes.length} 集
+                        {t("episode.episodesCount", { n: episodes.length })}
                         {episodes.length > 0 && (
                             <span className="text-muted-foreground/50">
-                                {" "}
-                                / 当前 {formatEpisode(seasonNumber, currentEpisodeNumber)}
+                                {" / "}
+                                {t("episode.current", {
+                                    code: formatEpisode(seasonNumber, currentEpisodeNumber),
+                                })}
                             </span>
                         )}
                     </p>
@@ -68,7 +70,7 @@ export function EpisodeSeasonStrip({
                             size="sm"
                             className="rounded-full px-3 py-1"
                         >
-                            {watchedCount} 已看
+                            {t("episode.watchedCount", { n: watchedCount })}
                         </Tag>
                     )}
                     {episodes.length > watchedCount && (
@@ -78,7 +80,7 @@ export function EpisodeSeasonStrip({
                             size="sm"
                             className="rounded-full px-3 py-1"
                         >
-                            {episodes.length - watchedCount} 未看
+                            {t("episode.unwatchedCount", { n: episodes.length - watchedCount })}
                         </Tag>
                     )}
                 </div>
@@ -86,7 +88,7 @@ export function EpisodeSeasonStrip({
 
             {episodes.length === 0 ? (
                 <div className="rounded-[var(--radius-lg)] border border-border/45 bg-[var(--color-surface-2)]/60 px-5 py-10 text-center text-sm font-medium text-muted-foreground">
-                    暂无本季剧集
+                    {t("episode.noSeasonEpisodes")}
                 </div>
             ) : (
                 <div
@@ -156,7 +158,7 @@ export function EpisodeSeasonStrip({
                                                 icon={<Check className="size-3" strokeWidth={4} />}
                                                 className="rounded-full px-2 py-0.5 shadow-lg shadow-emerald-500/20"
                                             >
-                                                已看
+                                                {t("common.watchedShort")}
                                             </Tag>
                                         )}
                                         {isUnaired && (
@@ -166,14 +168,14 @@ export function EpisodeSeasonStrip({
                                                 size="sm"
                                                 className="rounded-full px-2 py-0.5"
                                             >
-                                                未播
+                                                {t("episode.notAiredShort")}
                                             </Tag>
                                         )}
                                     </div>
                                     {episode.runtime && (
                                         <div className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-full border border-white/20 bg-[var(--color-panel-glass-strong)] px-2 py-1 text-[10px] font-bold text-foreground backdrop-blur-md">
                                             <Clock className="size-3" />
-                                            {episode.runtime}分钟
+                                            {t("common.minutes", { n: episode.runtime })}
                                         </div>
                                     )}
                                 </div>
@@ -189,7 +191,7 @@ export function EpisodeSeasonStrip({
                                         {title}
                                     </h3>
                                     <p className="mt-1 text-xs font-medium text-muted-foreground/70">
-                                        第 {episode.episodeNumber} 集
+                                        {t("episode.episodeFallback", { n: episode.episodeNumber })}
                                     </p>
                                 </div>
                             </button>

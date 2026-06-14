@@ -19,6 +19,10 @@ import { EpisodePlaceholder } from "../components/ui/EpisodePlaceholder";
 import { useCalendar } from "../hooks";
 import { resolveBackdropFallback, tmdbImage } from "../lib/image";
 import { cn, formatEpisode } from "../lib/utils";
+import { getLocale, t } from "../lib/i18n";
+
+const isZh = () => getLocale().startsWith("zh");
+const djsLocale = () => (isZh() ? "zh-cn" : "en");
 
 dayjs.extend(isToday);
 dayjs.extend(isTomorrow);
@@ -37,29 +41,35 @@ function dateKeyFrom(value: string | null | undefined, fallback: string) {
 
 function formatDateTitle(dateStr: string) {
     const d = dayjs(dateStr);
-    if (d.isToday()) return "今天";
-    if (d.isTomorrow()) return "明天";
-    if (d.isYesterday()) return "昨天";
-    return d.format("M月D日 dddd");
+    if (d.isToday()) return t("calendar.today");
+    if (d.isTomorrow()) return t("calendar.tomorrow");
+    if (d.isYesterday()) return t("calendar.yesterday");
+    return isZh() ? d.locale("zh-cn").format("M月D日 dddd") : d.locale("en").format("dddd, MMM D");
 }
 
 function formatAirTime(dateStr: string | null) {
     if (!dateStr || !/[T\s]\d{1,2}:\d{2}/.test(dateStr)) {
-        return "时间待定";
+        return t("calendar.tbd");
     }
 
     const d = dayjs(dateStr);
-    if (!d.isValid()) return "时间待定";
+    if (!d.isValid()) return t("calendar.tbd");
+
+    if (!isZh()) return d.locale("en").format("h:mm A");
 
     const hour = d.hour();
     const minute = String(d.minute()).padStart(2, "0");
-    const period = hour < 12 ? "上午" : "下午";
+    const period = hour < 12 ? t("calendar.morning") : t("calendar.afternoon");
     const displayHour = hour % 12 || 12;
     return `${period} ${displayHour}:${minute}`;
 }
 
+function monthLabel(dateStr: string) {
+    return isZh() ? dayjs(dateStr).format("M月") : dayjs(dateStr).locale("en").format("MMM");
+}
+
 function weekday(dateStr: string) {
-    return dayjs(dateStr).format("ddd");
+    return dayjs(dateStr).locale(djsLocale()).format("ddd");
 }
 
 function groupCalendarData(data: Record<string, CalendarEpisode[]>): CalendarDayGroup[] {
@@ -90,7 +100,7 @@ function groupCalendarData(data: Record<string, CalendarEpisode[]>): CalendarDay
 }
 
 function episodeTitle(episode: CalendarEpisode) {
-    return episode.title?.trim() || `第 ${episode.episodeNumber} 集`;
+    return episode.title?.trim() || t("episode.episodeFallback", { n: episode.episodeNumber });
 }
 
 function showTitle(episode: CalendarEpisode) {
@@ -120,7 +130,7 @@ function CalendarEpisodeArtwork({ episode }: { episode: CalendarEpisode }) {
                 {isEpisodeUnaired(episode) && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                         <span className="rounded-full border border-white/10 bg-black/50 px-2.5 py-1 text-[10px] font-bold text-white/55 backdrop-blur-sm">
-                            未播出
+                            {t("common.notAired")}
                         </span>
                     </div>
                 )}
@@ -141,7 +151,7 @@ function CalendarEpisodeArtwork({ episode }: { episode: CalendarEpisode }) {
 
 function CalendarSkeleton() {
     return (
-        <div className="mx-auto flex min-h-[calc(100svh-var(--app-nav-height))] w-full max-w-[1440px] animate-pulse flex-col gap-8 px-4 py-8 text-[var(--color-text)] sm:px-6 lg:px-8">
+        <div className="app-container flex min-h-[calc(100svh-var(--app-nav-height))] animate-pulse flex-col gap-8 py-8 text-[var(--color-text)]">
             <div className="flex items-center gap-3">
                 <div className="size-11 rounded-xl bg-[var(--color-surface-3)]" />
                 <div className="h-8 w-40 rounded-lg bg-[var(--color-surface-3)]" />
@@ -199,7 +209,7 @@ export default function CalendarPage() {
     if (error || !data) {
         return (
             <div className="flex min-h-[calc(100svh-var(--app-nav-height))] items-center justify-center bg-[var(--color-bg)] px-6 text-[var(--color-text)]">
-                <p className="text-[var(--color-error)]">加载失败，请重试</p>
+                <p className="text-[var(--color-error)]">{t("common.loadFailed")}</p>
             </div>
         );
     }
@@ -219,18 +229,26 @@ export default function CalendarPage() {
 
     return (
         <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-[var(--color-bg)] text-[var(--color-text)]">
-            <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
+            <div className="app-container flex flex-col gap-8 py-8">
                 <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                     <div className="flex items-center gap-3">
                         <div className="flex size-11 items-center justify-center rounded-xl border border-[var(--action-cyan-border)] bg-[var(--action-cyan-surface)] text-[var(--action-cyan-text)]">
                             <Calendar className="size-5" />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-bold tracking-tight">播出日历</h1>
+                            <h1 className="text-3xl font-bold tracking-tight">
+                                {t("calendar.title")}
+                            </h1>
                             <p className="mt-1 text-sm text-[var(--color-text-muted)]">
                                 {dayGroups.length > 0
-                                    ? `${dayGroups.length} 个播出日 · ${dayGroups.reduce((count, group) => count + group.episodes.length, 0)} 集`
-                                    : "没有近期播出的剧集"}
+                                    ? t("calendar.summary", {
+                                          days: dayGroups.length,
+                                          episodes: dayGroups.reduce(
+                                              (count, group) => count + group.episodes.length,
+                                              0,
+                                          ),
+                                      })
+                                    : t("calendar.noUpcoming")}
                             </p>
                         </div>
                     </div>
@@ -239,14 +257,14 @@ export default function CalendarPage() {
                         <div className="text-sm font-medium text-[var(--color-text-secondary)]">
                             {formatDateTitle(selectedGroup.date)}
                             <span className="mx-2 text-[var(--color-text-muted)]">/</span>
-                            {selectedGroup.episodes.length} 集
+                            {t("calendar.episodesCount", { n: selectedGroup.episodes.length })}
                         </div>
                     )}
                 </div>
 
                 {dayGroups.length === 0 ? (
                     <div className="rounded-[var(--radius-xl)] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-6 py-20 text-center text-[var(--color-text-muted)]">
-                        没有近期播出的剧集
+                        {t("calendar.noUpcoming")}
                     </div>
                 ) : (
                     <>
@@ -255,7 +273,7 @@ export default function CalendarPage() {
                             <div className="relative flex items-center gap-2">
                                 <button
                                     type="button"
-                                    aria-label="前一天"
+                                    aria-label={t("calendar.prevDay")}
                                     disabled={selectedIndex <= 0}
                                     onClick={() => moveDate(-1)}
                                     className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--action-slate-border)] bg-[var(--action-slate-surface)] text-[var(--action-slate-text)] transition hover:border-[var(--action-slate-border-hover)] hover:bg-[var(--action-slate-surface-hover)] disabled:cursor-not-allowed disabled:opacity-35"
@@ -283,7 +301,7 @@ export default function CalendarPage() {
                                                 )}
                                             >
                                                 <span className="text-sm font-bold">
-                                                    {dayjs(group.date).format("M月")}
+                                                    {monthLabel(group.date)}
                                                 </span>
                                                 <span className="mt-1 text-lg font-black leading-none tabular-nums">
                                                     {dayjs(group.date).format("D")}
@@ -313,7 +331,7 @@ export default function CalendarPage() {
 
                                 <button
                                     type="button"
-                                    aria-label="后一天"
+                                    aria-label={t("calendar.nextDay")}
                                     disabled={selectedIndex >= dayGroups.length - 1}
                                     onClick={() => moveDate(1)}
                                     className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--action-slate-border)] bg-[var(--action-slate-surface)] text-[var(--action-slate-text)] transition hover:border-[var(--action-slate-border-hover)] hover:bg-[var(--action-slate-surface-hover)] disabled:cursor-not-allowed disabled:opacity-35"
@@ -327,7 +345,7 @@ export default function CalendarPage() {
                                     onClick={() => todayGroup && setSelectedDate(todayGroup.date)}
                                     className="hidden h-9 shrink-0 rounded-full border border-[var(--action-slate-border)] bg-[var(--action-slate-surface)] px-4 text-sm font-bold text-[var(--action-slate-text)] transition hover:border-[var(--action-slate-border-hover)] hover:bg-[var(--action-slate-surface-hover)] disabled:cursor-not-allowed disabled:opacity-35 sm:inline-flex sm:items-center"
                                 >
-                                    今天
+                                    {t("calendar.today")}
                                 </button>
                             </div>
                         </section>
@@ -340,8 +358,10 @@ export default function CalendarPage() {
                                             {formatDateTitle(selectedGroup.date)}
                                         </h2>
                                         <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                                            {dayjs(selectedGroup.date).format("YYYY-MM-DD")} · 同日{" "}
-                                            {selectedGroup.episodes.length} 集
+                                            {dayjs(selectedGroup.date).format("YYYY-MM-DD")} ·{" "}
+                                            {t("calendar.sameDay", {
+                                                n: selectedGroup.episodes.length,
+                                            })}
                                         </p>
                                     </div>
                                 </div>
@@ -377,7 +397,7 @@ export default function CalendarPage() {
                                                     {episode.watched && (
                                                         <div className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/20 px-2.5 py-1 text-[11px] font-bold text-emerald-100 shadow-lg backdrop-blur-md">
                                                             <CheckCircle2 className="size-3" />
-                                                            已观看
+                                                            {t("common.watched")}
                                                         </div>
                                                     )}
                                                 </div>
@@ -393,11 +413,12 @@ export default function CalendarPage() {
                                                     </div>
                                                     <div className="mt-auto flex items-center justify-between gap-3 text-xs text-[var(--color-text-muted)]">
                                                         <span>
-                                                            {episode.show.network || "未知平台"}
+                                                            {episode.show.network ||
+                                                                t("calendar.unknownNetwork")}
                                                         </span>
                                                         <span className="inline-flex items-center gap-1 text-[var(--action-cyan-text)]">
                                                             <PlayCircle className="size-3.5" />
-                                                            详情
+                                                            {t("common.details")}
                                                         </span>
                                                     </div>
                                                 </div>

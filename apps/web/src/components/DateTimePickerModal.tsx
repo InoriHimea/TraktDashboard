@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, X } from "lucide-react";
 import { Button } from "./ui/Button";
+import { t } from "../lib/i18n";
 
 interface DateTimePickerModalProps {
     open: boolean;
@@ -74,12 +75,12 @@ export function DateTimePickerModal({
                         {/* Header */}
                         <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-border)]">
                             <h3 className="text-lg font-semibold text-[var(--color-text)]">
-                                选择观看时间
+                                {t("watchAction.selectWatchTime")}
                             </h3>
                             <button
                                 onClick={onClose}
                                 className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-2)] transition-colors"
-                                aria-label="关闭"
+                                aria-label={t("common.close")}
                             >
                                 <X size={18} />
                             </button>
@@ -92,7 +93,7 @@ export function DateTimePickerModal({
                                     htmlFor="datetime-picker-input"
                                     className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2"
                                 >
-                                    日期和时间
+                                    {t("watchAction.dateAndTime")}
                                 </label>
                                 <div className="relative">
                                     {/* Decorative calendar icon */}
@@ -115,7 +116,7 @@ export function DateTimePickerModal({
                         {/* Footer */}
                         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[var(--color-border)]">
                             <Button variant="ghost" size="md" onClick={onClose}>
-                                取消
+                                {t("common.cancel")}
                             </Button>
                             <Button
                                 variant="primary"
@@ -123,7 +124,7 @@ export function DateTimePickerModal({
                                 onClick={handleConfirm}
                                 disabled={!dateTimeValue}
                             >
-                                标记为已观看
+                                {t("episode.markWatched")}
                             </Button>
                         </div>
                     </motion.div>

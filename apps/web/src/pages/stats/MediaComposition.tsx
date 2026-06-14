@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { t } from "../../lib/i18n";
 import { CARD_BG, CARD_BDR, CARD_SHD, T1, T2, T3 } from "./tokens";
 import type { ChartColor } from "./tokens";
 
@@ -39,10 +40,10 @@ export function MediaComposition({
                         color: T1,
                     }}
                 >
-                    媒体构成
+                    {t("stats.composition")}
                 </h3>
                 <span style={{ fontSize: "12px", color: T3 }}>
-                    共 {totalEntries.toLocaleString("zh-CN")} 条
+                    {t("stats.compositionTotal", { n: totalEntries.toLocaleString("zh-CN") })}
                 </span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>

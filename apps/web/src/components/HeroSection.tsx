@@ -5,11 +5,12 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { History, Info, RotateCcw, Tv2, RefreshCw, Bookmark } from "lucide-react";
-import { resolveTitle, resolveOverview, statusZh, statusColor, fmtDateZh } from "../lib/i18n";
+import { resolveTitle, resolveOverview, statusZh, statusColor, fmtDateZh, t } from "../lib/i18n";
 import { resolveShowPoster } from "../lib/image";
 import { Button } from "./ui/Button";
 import { Tag } from "./ui/Tag";
 import { OverviewText } from "./ui/OverviewText";
+import { WatchedBadge } from "./ui/WatchedBadge";
 import type { ShowProgress } from "@trakt-dashboard/types";
 
 interface HeroSectionProps {
@@ -78,12 +79,12 @@ export function HeroSection({
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-                    className="relative group cursor-pointer shrink-0"
+                    className="relative group cursor-pointer shrink-0 mx-auto lg:mx-0"
                     style={{ width: "260px" }}
                     onClick={onWatchClick}
                     role="button"
                     tabIndex={0}
-                    aria-label="继续观看"
+                    aria-label={t("showDetail.continueWatching")}
                     onKeyDown={(e) => e.key === "Enter" && onWatchClick?.()}
                 >
                     <div className="absolute -inset-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-[18px] pointer-events-none poster-shimmer-border" />
@@ -107,59 +108,10 @@ export function HeroSection({
                         </div>
                         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent pointer-events-none" />
 
-                        {/* Watched badge — inside poster, bottom-center, double-groove border */}
+                        {/* Watched badge — inside poster, bottom-center (shared component) */}
                         {isAllWatched && (
                             <div className="absolute bottom-0 left-0 right-0 flex justify-center pb-10 pointer-events-none">
-                                <div
-                                    style={{
-                                        display: "inline-flex",
-                                        alignItems: "center",
-                                        gap: "6px",
-                                        padding: "6px 14px",
-                                        borderRadius: "99px",
-                                        background: "rgba(0,0,0,0.55)",
-                                        backdropFilter: "blur(12px)",
-                                        WebkitBackdropFilter: "blur(12px)",
-                                        boxShadow:
-                                            "0 0 0 1px rgba(52,211,153,0.55), 0 0 0 3px rgba(52,211,153,0.12), inset 0 1px 0 rgba(255,255,255,0.15), 0 4px 12px rgba(0,0,0,0.4)",
-                                        border: "1px solid rgba(52,211,153,0.7)",
-                                    }}
-                                >
-                                    {/* Double checkmark */}
-                                    <svg
-                                        width="15"
-                                        height="11"
-                                        viewBox="0 0 30 22"
-                                        fill="none"
-                                        style={{ color: "#34d399", flexShrink: 0 }}
-                                    >
-                                        <path
-                                            d="M2 11L8 17L18 6"
-                                            stroke="currentColor"
-                                            strokeWidth="2.8"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                        />
-                                        <path
-                                            d="M11 11L17 17L27 6"
-                                            stroke="currentColor"
-                                            strokeWidth="2.8"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                        />
-                                    </svg>
-                                    <span
-                                        style={{
-                                            fontSize: "10px",
-                                            fontWeight: 700,
-                                            letterSpacing: "0.12em",
-                                            color: "#34d399",
-                                            textTransform: "uppercase",
-                                        }}
-                                    >
-                                        Watched
-                                    </span>
-                                </div>
+                                <WatchedBadge size="md" />
                             </div>
                         )}
                     </div>
@@ -365,7 +317,7 @@ export function HeroSection({
                                 onClick={onResetClick}
                                 className="rounded-full"
                             >
-                                再看一遍...
+                                {t("showDetail.watchAgain")}
                             </Button>
                         )}
                         {onHistoryClick && (
@@ -378,7 +330,7 @@ export function HeroSection({
                                 onClick={onHistoryClick}
                                 className="rounded-full"
                             >
-                                观看历史
+                                {t("showDetail.watchHistory")}
                             </Button>
                         )}
                         {onForceSyncClick && (
@@ -397,7 +349,7 @@ export function HeroSection({
                                 disabled={isForceSyncing}
                                 className="rounded-full"
                             >
-                                刷新元数据
+                                {t("showDetail.refreshMetadata")}
                             </Button>
                         )}
                         {onToggleWatchlist && (
@@ -416,7 +368,9 @@ export function HeroSection({
                                 disabled={isWatchlistPending}
                                 className="rounded-full"
                             >
-                                {inWatchlist ? "已在待看" : "加入待看"}
+                                {inWatchlist
+                                    ? t("common.inWatchlist")
+                                    : t("common.addToWatchlistShort")}
                             </Button>
                         )}
                     </div>
@@ -457,7 +411,8 @@ export function HeroSection({
                             {sLabel}
                         </Tag>
                         <span className="text-[12px] font-medium text-[var(--color-text-muted)]">
-                            上次：{fmtDateZh(lastWatchedAt)}
+                            {t("showDetail.lastWatchedPrefix")}
+                            {fmtDateZh(lastWatchedAt)}
                         </span>
                     </div>
 
@@ -472,18 +427,21 @@ export function HeroSection({
                     >
                         {[
                             {
-                                value: `${show.totalSeasons}S · ${show.totalEpisodes}集`,
-                                label: "总集数",
+                                value: t("showDetail.totalCount", {
+                                    seasons: show.totalSeasons,
+                                    episodes: show.totalEpisodes,
+                                }),
+                                label: t("showDetail.statTotalEpisodes"),
                             },
                             {
                                 value: show.network || show.status || "—",
-                                label: "平台",
+                                label: t("showDetail.statNetwork"),
                             },
                             {
                                 value: show.firstAired
                                     ? String(new Date(show.firstAired).getFullYear())
                                     : "—",
-                                label: "首播年份",
+                                label: t("showDetail.statFirstAiredYear"),
                             },
                         ].map(({ value, label }) => (
                             <div
@@ -571,7 +529,7 @@ export function HeroSection({
                                 >
                                     <div className="flex justify-between items-end">
                                         <span className="text-[13px] font-medium text-[var(--color-text-muted)] mb-1">
-                                            总观看进度
+                                            {t("showDetail.overallProgress")}
                                         </span>
                                         <div
                                             className="flex items-baseline"
@@ -595,7 +553,10 @@ export function HeroSection({
                                             </span>
 
                                             <span className="text-[13px] font-medium text-[var(--color-text-muted)]">
-                                                · {remaining}集未看
+                                                ·{" "}
+                                                {t("showDetail.episodesRemaining", {
+                                                    n: remaining,
+                                                })}
                                             </span>
                                         </div>
                                     </div>
@@ -606,7 +567,10 @@ export function HeroSection({
                                         colorTo="#FF738F"
                                         trackRgb="255,46,84"
                                         height={28}
-                                        labelLeft={`${totalWatched} / ${totalEpisodes} 集`}
+                                        labelLeft={t("showDetail.progressLabel", {
+                                            watched: totalWatched,
+                                            total: totalEpisodes,
+                                        })}
                                     />
                                 </div>
                             );
@@ -623,7 +587,7 @@ export function HeroSection({
                                 }}
                             >
                                 <span className="text-[13px] font-medium text-[var(--color-text-muted)]">
-                                    各季进度
+                                    {t("showDetail.seasonProgress")}
                                 </span>
                                 <div
                                     style={{
@@ -643,10 +607,17 @@ export function HeroSection({
                                         const pal = SEASON_PALETTES[i % SEASON_PALETTES.length];
                                         const statusText =
                                             pct === 100
-                                                ? `${totalSeasonEpisodes}集 · 全部看完`
+                                                ? t("showDetail.seasonAllWatched", {
+                                                      total: totalSeasonEpisodes,
+                                                  })
                                                 : s.watchedCount === 0
-                                                  ? `${totalSeasonEpisodes}集 · 未开始`
-                                                  : `${totalSeasonEpisodes}集 · 已看 ${s.watchedCount}集`;
+                                                  ? t("showDetail.seasonNotStarted", {
+                                                        total: totalSeasonEpisodes,
+                                                    })
+                                                  : t("showDetail.seasonPartial", {
+                                                        total: totalSeasonEpisodes,
+                                                        watched: s.watchedCount,
+                                                    });
                                         return (
                                             <div
                                                 key={s.seasonNumber}

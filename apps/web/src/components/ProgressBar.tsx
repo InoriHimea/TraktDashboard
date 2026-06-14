@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { cn } from "../lib/utils";
+import { t } from "../lib/i18n";
 
 interface ProgressBarProps {
     watched: number;
@@ -29,11 +30,11 @@ export function ProgressBar({
                 <div className="flex items-center justify-between mb-2">
                     <span className="text-[12px] text-[var(--color-text-muted)] tabular-nums">
                         <span className="text-[var(--color-accent)] font-semibold">{watched}</span>
-                        <span> / {aired} 已播出</span>
+                        <span> / {t("episode.airedCount", { n: aired })}</span>
                         {unairedPct > 0 && total > aired && (
                             <span className="text-[var(--color-text-muted)] opacity-60">
-                                {" "}
-                                · {total - aired} 未播
+                                {" · "}
+                                {t("episode.unairedCountNum", { n: total - aired })}
                             </span>
                         )}
                     </span>

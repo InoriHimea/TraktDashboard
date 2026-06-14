@@ -587,6 +587,16 @@ html[data-theme="light"] .cyber-grid-overlay {
         /* 背景和字体通过 body 继承了你的噪点设计 */
     }
 
+    /*
+     * 全站统一内容容器 —— 唯一的左右留白基准。
+     * 以「电视节目」列表页 (MediaListPage) 为准：max-w-[1920px] + 居中 + px-8。
+     * 所有页面的主内容外层都应使用此类，确保「空白 | 内容 | 空白」在跨页导航时不抖动。
+     * 纵向内边距 (py-*) 由各页自行附加。
+     */
+    .app-container {
+        @apply mx-auto w-full max-w-[1920px] px-8;
+    }
+
     /* 统一宽度的约束容器：设置最大的两边留白 */
     .trakt-bound {
         @apply max-w-[1400px] mx-auto px-6 md:px-12 lg:px-20 w-full;

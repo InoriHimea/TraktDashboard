@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Tv2, CheckCircle2, PlayCircle } from "lucide-react";
+import { Tv2, PlayCircle } from "lucide-react";
 import type { ShowProgress } from "@trakt-dashboard/types";
 import { ProgressBar } from "./ProgressBar";
+import { WatchedBadge } from "./ui/WatchedBadge";
 import { tmdbImage, formatEpisode } from "../lib/utils";
 
 interface ShowCardProps {
@@ -68,11 +69,10 @@ export function ShowCard({ progress, index }: ShowCardProps) {
                             </div>
                         )}
 
-                        {/* Completion badge */}
+                        {/* Watched badge (shared, Trakt double-check) */}
                         {completed && (
-                            <div className="absolute top-2 right-2 bg-black/70 rounded-full px-2 py-0.5 flex items-center gap-1 backdrop-blur-sm">
-                                <CheckCircle2 size={11} className="text-[var(--color-watched)]" />
-                                <span className="text-[11px] text-white font-semibold">完结</span>
+                            <div className="absolute top-2 right-2">
+                                <WatchedBadge size="sm" />
                             </div>
                         )}
 

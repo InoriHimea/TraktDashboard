@@ -79,7 +79,7 @@ export function MediaListPage<T>({
     return (
         <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-[var(--color-bg)]">
             <div className="sticky top-[var(--app-nav-height)] z-30 bg-[var(--color-bg)] border-b border-[var(--color-border-subtle)] backdrop-blur-xl">
-                <div className="max-w-[1920px] mx-auto px-8 py-3 flex items-center gap-3 flex-wrap">
+                <div className="app-container py-3 flex items-center gap-3 flex-wrap">
                     {!hideFilters && (
                         <div className="flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] p-1 shadow-lg shadow-black/10">
                             {filters.map(({ key, labelKey, icon: Icon, color }) => {
@@ -160,7 +160,7 @@ export function MediaListPage<T>({
                 </div>
             </div>
 
-            <div className="max-w-[1920px] mx-auto px-8 py-6">
+            <div className="app-container py-6">
                 {isLoading ? (
                     <motion.div
                         initial={{ opacity: 0 }}

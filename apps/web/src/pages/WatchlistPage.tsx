@@ -141,7 +141,7 @@ export default function WatchlistPage() {
             toast(t("watchlist.removeSuccess"), "success");
         } catch {
             toast(t("watchlist.removeFailed"), "error", {
-                label: "重试",
+                label: t("common.retry"),
                 onClick: () => handleRemove(id),
             });
         } finally {
@@ -151,7 +151,7 @@ export default function WatchlistPage() {
 
     return (
         <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-[var(--color-bg)] text-[var(--color-text)]">
-            <div className="mx-auto w-full max-w-none px-[3vw] py-8">
+            <div className="app-container py-8">
                 {/* Header */}
                 <div className="mb-7 flex flex-col gap-2">
                     <h1 className="text-[clamp(28px,4vw,52px)] font-bold leading-none tracking-[-0.045em] text-[var(--color-text)]">

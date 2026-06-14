@@ -25,7 +25,7 @@ import { useToast } from "../lib/toast";
 function PageSkeleton() {
     return (
         <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-[var(--color-bg)]">
-            <div className="max-w-[1100px] mx-auto px-6 lg:px-8 py-8">
+            <div className="app-container py-8">
                 <div className="flex gap-8 items-start animate-pulse">
                     {/* 主栏 */}
                     <div className="flex-1 min-w-0 flex flex-col gap-6">
@@ -68,14 +68,14 @@ function PageError({ onRetry }: { onRetry: () => void }) {
                 <div className="w-14 h-14 rounded-xl bg-red-950/40 border border-red-500/15 flex items-center justify-center">
                     <span className="text-xl">⚠</span>
                 </div>
-                <p className="text-[var(--color-text-muted)] text-sm">加载失败，请重试</p>
+                <p className="text-[var(--color-text-muted)] text-sm">{t("common.loadFailed")}</p>
                 <Button
                     variant="secondary"
                     size="md"
                     icon={<RefreshCw size={13} />}
                     onClick={onRetry}
                 >
-                    重新加载
+                    {t("common.reload")}
                 </Button>
             </div>
         </div>
@@ -119,14 +119,16 @@ export default function ShowDetailPage() {
         return (
             <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-[var(--color-bg)] flex items-center justify-center">
                 <div className="text-center flex flex-col items-center gap-3">
-                    <p className="text-[var(--color-text-muted)] text-base">未找到该剧集</p>
+                    <p className="text-[var(--color-text-muted)] text-base">
+                        {t("showDetail.notFound")}
+                    </p>
                     <Button
                         variant="ghost"
                         size="sm"
                         icon={<ArrowLeft size={13} />}
                         onClick={() => navigate(-1)}
                     >
-                        返回
+                        {t("common.back")}
                     </Button>
                 </div>
             </div>
@@ -148,7 +150,7 @@ export default function ShowDetailPage() {
             await resetProgress.mutateAsync();
             setResetConfirmOpen(false);
         } catch (err) {
-            setResetError(err instanceof Error ? err.message : "重置失败，请重试");
+            setResetError(err instanceof Error ? err.message : t("showDetail.resetFailed"));
         }
     };
 
@@ -161,7 +163,7 @@ export default function ShowDetailPage() {
 
     return (
         <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-[var(--color-bg)] text-[var(--color-text)]">
-            <div className="relative flex w-full max-w-none flex-col gap-8 px-[3vw] py-8">
+            <div className="app-container relative flex flex-col gap-8 py-8">
                 <Button
                     type="button"
                     variant="ghost"
@@ -181,12 +183,16 @@ export default function ShowDetailPage() {
                     onResetClick={isComplete ? () => setResetConfirmOpen(true) : undefined}
                     onForceSyncClick={() => {
                         forceSync.mutate(undefined, {
-                            onSuccess: () => toast("已触发元数据刷新", "success"),
+                            onSuccess: () => toast(t("showDetail.metadataRefreshed"), "success"),
                             onError: (err) =>
-                                toast(`刷新失败: ${err.message}`, "error", {
-                                    label: "重试",
-                                    onClick: () => forceSync.mutate(undefined),
-                                }),
+                                toast(
+                                    t("showDetail.metadataRefreshFailed", { error: err.message }),
+                                    "error",
+                                    {
+                                        label: t("common.retry"),
+                                        onClick: () => forceSync.mutate(undefined),
+                                    },
+                                ),
                         });
                     }}
                     onToggleWatchlist={() => {
@@ -195,7 +201,7 @@ export default function ShowDetailPage() {
                                 onSuccess: () => toast(t("watchlist.removeSuccess"), "success"),
                                 onError: () =>
                                     toast(t("watchlist.removeFailed"), "error", {
-                                        label: "重试",
+                                        label: t("common.retry"),
                                         onClick: () => removeFromWatchlist.mutate(watchlistItem.id),
                                     }),
                             });
@@ -203,10 +209,11 @@ export default function ShowDetailPage() {
                             addToWatchlist.mutate(
                                 { type: "show", id: showId },
                                 {
-                                    onSuccess: () => toast("已添加到待看列表", "success"),
+                                    onSuccess: () =>
+                                        toast(t("showDetail.addedToWatchlist"), "success"),
                                     onError: () =>
-                                        toast("添加失败", "error", {
-                                            label: "重试",
+                                        toast(t("showDetail.addToWatchlistFailed"), "error", {
+                                            label: t("common.retry"),
                                             onClick: () =>
                                                 addToWatchlist.mutate({ type: "show", id: showId }),
                                         }),
@@ -235,7 +242,7 @@ export default function ShowDetailPage() {
                         <div
                             className="mb-6 inline-flex max-w-full flex-wrap rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] p-1 shadow-lg shadow-black/10"
                             role="tablist"
-                            aria-label="选择季度"
+                            aria-label={t("showDetail.selectSeason")}
                         >
                             {seasons.map((s) => {
                                 const isActive = s.seasonNumber === currentSeasonNumber;
@@ -282,7 +289,7 @@ export default function ShowDetailPage() {
                                 scrollbarWidth: "none",
                             }}
                             role="tablist"
-                            aria-label="选择季度"
+                            aria-label={t("showDetail.selectSeason")}
                         >
                             {seasons.map((s) => (
                                 <SeasonTab
@@ -332,7 +339,7 @@ export default function ShowDetailPage() {
                                                         t("shows.markSeasonWatchedError"),
                                                         "error",
                                                         {
-                                                            label: "重试",
+                                                            label: t("common.retry"),
                                                             onClick: () =>
                                                                 markSeasonWatched.mutate({
                                                                     season: currentSeason.seasonNumber,
@@ -372,7 +379,7 @@ export default function ShowDetailPage() {
                                     animate={{ opacity: 1 }}
                                     className="text-[var(--color-text-muted)] text-sm py-10 text-center"
                                 >
-                                    暂无剧集数据
+                                    {t("showDetail.noEpisodes")}
                                 </motion.p>
                             )}
                         </AnimatePresence>
@@ -387,11 +394,11 @@ export default function ShowDetailPage() {
             )}
             <ConfirmDialog
                 isOpen={resetConfirmOpen}
-                title="再看一遍？"
-                description="这将重置观看进度，但所有历史记录会完整保留。你可以随时在观看历史中查看之前的记录。"
-                confirmText="确认重置"
+                title={t("showDetail.resetTitle")}
+                description={t("showDetail.resetDescription")}
+                confirmText={t("showDetail.resetConfirm")}
                 confirmColor="amber"
-                cancelText="取消"
+                cancelText={t("common.cancel")}
                 isLoading={resetProgress.isPending}
                 onConfirm={handleResetConfirm}
                 onCancel={() => {

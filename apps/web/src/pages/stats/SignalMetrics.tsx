@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import type { ComponentType } from "react";
+import { t } from "../../lib/i18n";
 import { CARD_BG, CARD_BDR, CARD_SHD, T1, T2, T3, COLORS } from "./tokens";
 import type { ChartColor } from "./tokens";
 
@@ -36,7 +37,9 @@ export function SignalMetrics({ metrics }: { metrics: SignalMetric[] }) {
                     gap: "12px",
                 }}
             >
-                <h3 style={{ fontSize: "15px", fontWeight: 700, color: T1 }}>信号指标</h3>
+                <h3 style={{ fontSize: "15px", fontWeight: 700, color: T1 }}>
+                    {t("stats.signalMetrics")}
+                </h3>
                 <span
                     style={{
                         border: `1px solid ${COLORS.cyan.base}33`,
