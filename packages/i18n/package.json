@@ -1,6 +1,6 @@
 {
     "name": "@trakt-dashboard/i18n",
-    "version": "0.45.0",
+    "version": "0.45.1",
     "private": true,
     "main": "./src/index.ts",
     "types": "./src/index.ts",
