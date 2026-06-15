@@ -6,7 +6,7 @@ import { test, expect } from "@playwright/test";
 test.describe("T01 — Authentication flow", () => {
     test("unauthenticated visit redirects to login page", async ({ page }) => {
         // Stub auth endpoint to return unauthenticated
-        await page.route("**/api/auth/me", (route) =>
+        await page.route("**/auth/me", (route) =>
             route.fulfill({
                 status: 200,
                 contentType: "application/json",
@@ -20,7 +20,7 @@ test.describe("T01 — Authentication flow", () => {
     });
 
     test("login page renders the Trakt login button", async ({ page }) => {
-        await page.route("**/api/auth/me", (route) =>
+        await page.route("**/auth/me", (route) =>
             route.fulfill({
                 status: 200,
                 contentType: "application/json",
@@ -40,7 +40,7 @@ test.describe("T01 — Authentication flow", () => {
     });
 
     test("authenticated user is not redirected to login", async ({ page }) => {
-        await page.route("**/api/auth/me", (route) =>
+        await page.route("**/auth/me", (route) =>
             route.fulfill({
                 status: 200,
                 contentType: "application/json",

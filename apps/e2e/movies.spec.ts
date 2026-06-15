@@ -32,7 +32,7 @@ const MOVIE_PROGRESS = {
 
 test.describe("T04 — Movie path", () => {
     test.beforeEach(async ({ page }) => {
-        await page.route("**/api/auth/me", (route) =>
+        await page.route("**/auth/me", (route) =>
             route.fulfill({
                 status: 200,
                 contentType: "application/json",

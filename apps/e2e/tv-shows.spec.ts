@@ -42,7 +42,7 @@ function makeShow(overrides = {}) {
 
 test.describe("T02 — TV Shows list", () => {
     test.beforeEach(async ({ page }) => {
-        await page.route("**/api/auth/me", (route) =>
+        await page.route("**/auth/me", (route) =>
             route.fulfill({
                 status: 200,
                 contentType: "application/json",

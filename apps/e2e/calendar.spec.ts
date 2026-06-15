@@ -10,23 +10,31 @@ const AUTH_OK = {
 function makeCalendarEp(overrides = {}) {
     return {
         id: 101,
-        showId: 1,
-        showTitle: "霓虹信号",
-        showPosterPath: null,
-        showTraktSlug: "neon-signal",
         seasonNumber: 1,
         episodeNumber: 5,
         title: "The Fifth Wave",
-        translatedTitle: "第五浪",
+        overview: null,
+        runtime: 45,
+        stillPath: null,
         airDate: new Date(Date.now() + 86400000 * 2).toISOString().slice(0, 10),
         watched: false,
+        show: {
+            id: 1,
+            title: "Neon Signal",
+            originalName: "Neon Signal",
+            translatedName: "霓虹信号",
+            posterPath: null,
+            backdropPath: null,
+            network: "HBO",
+            status: "returning series",
+        },
         ...overrides,
     };
 }
 
 test.describe("T05 — Calendar page", () => {
     test.beforeEach(async ({ page }) => {
-        await page.route("**/api/auth/me", (route) =>
+        await page.route("**/auth/me", (route) =>
             route.fulfill({
                 status: 200,
                 contentType: "application/json",

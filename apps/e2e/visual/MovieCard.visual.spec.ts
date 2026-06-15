@@ -27,8 +27,13 @@ const MOVIE_PROGRESS = {
 };
 
 test.describe("MovieCard visual regression", () => {
+    // Visual baselines are platform-specific (font rendering differs across OSes), so this
+    // is opt-in: run `RUN_VISUAL=1 pnpm test:e2e` after generating a baseline with
+    // `--update-snapshots` on the target platform. Skipped by default to keep CI deterministic.
+    test.skip(!process.env.RUN_VISUAL, "Set RUN_VISUAL=1 to run visual regression");
+
     test.beforeEach(async ({ page }) => {
-        await page.route("**/api/auth/me", (route) =>
+        await page.route("**/auth/me", (route) =>
             route.fulfill({
                 status: 200,
                 contentType: "application/json",

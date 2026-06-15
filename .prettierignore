@@ -9,3 +9,5 @@ packages/db/drizzle
 apps/web/public
 **/*.min.js
 **/*.min.css
+test-results
+playwright-report

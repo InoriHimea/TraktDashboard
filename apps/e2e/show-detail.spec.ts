@@ -27,12 +27,13 @@ const SHOW = {
     createdAt: "2026-01-01T00:00:00.000Z",
 };
 
+// Matches the real ShowProgress shape returned by GET /api/shows/:id, including
+// the nested `seasons` array the detail page reads (no separate seasons fetch).
 const SHOW_DETAIL = {
     data: {
         show: SHOW,
         watchedEpisodes: 1,
         airedEpisodes: 2,
-        totalEpisodes: 3,
         nextEpisode: {
             id: 102,
             seasonNumber: 1,
@@ -45,56 +46,53 @@ const SHOW_DETAIL = {
         lastWatchedAt: "2026-05-28T00:00:00.000Z",
         percentage: 33,
         completed: false,
-        resetAt: null,
+        seasons: [
+            {
+                seasonNumber: 1,
+                episodeCount: 3,
+                airedCount: 2,
+                watchedCount: 1,
+                posterPath: null,
+                episodes: [
+                    {
+                        id: 101,
+                        seasonNumber: 1,
+                        episodeNumber: 1,
+                        title: "Pilot",
+                        translatedTitle: null,
+                        overview: "First episode",
+                        translatedOverview: null,
+                        airDate: "2026-05-01",
+                        watched: true,
+                        watchedAt: "2026-05-28T00:00:00.000Z",
+                        aired: true,
+                        stillPath: null,
+                        runtime: 45,
+                    },
+                    {
+                        id: 102,
+                        seasonNumber: 1,
+                        episodeNumber: 2,
+                        title: "The Signal",
+                        translatedTitle: null,
+                        overview: "Second episode",
+                        translatedOverview: null,
+                        airDate: "2026-06-01",
+                        watched: false,
+                        watchedAt: null,
+                        aired: true,
+                        stillPath: null,
+                        runtime: 45,
+                    },
+                ],
+            },
+        ],
     },
-};
-
-const SEASONS = {
-    data: [
-        {
-            season: { id: 10, showId: 1, seasonNumber: 1, episodeCount: 3 },
-            episodes: [
-                {
-                    id: 101,
-                    seasonNumber: 1,
-                    episodeNumber: 1,
-                    title: "Pilot",
-                    translatedTitle: null,
-                    airDate: "2026-05-01",
-                    stillPath: null,
-                    runtime: 45,
-                    overview: "First episode",
-                    translatedOverview: null,
-                    traktId: 9101,
-                    tmdbId: 8101,
-                    watchedIds: [201],
-                    watchedCount: 1,
-                },
-                {
-                    id: 102,
-                    seasonNumber: 1,
-                    episodeNumber: 2,
-                    title: "The Signal",
-                    translatedTitle: null,
-                    airDate: "2026-06-01",
-                    stillPath: null,
-                    runtime: 45,
-                    overview: "Second episode",
-                    translatedOverview: null,
-                    traktId: 9102,
-                    tmdbId: 8102,
-                    watchedIds: [],
-                    watchedCount: 0,
-                },
-            ],
-            watchedCount: 1,
-        },
-    ],
 };
 
 test.describe("T03 — Show detail page", () => {
     test.beforeEach(async ({ page }) => {
-        await page.route("**/api/auth/me", (route) =>
+        await page.route("**/auth/me", (route) =>
             route.fulfill({
                 status: 200,
                 contentType: "application/json",
@@ -106,13 +104,6 @@ test.describe("T03 — Show detail page", () => {
                 status: 200,
                 contentType: "application/json",
                 body: JSON.stringify(SHOW_DETAIL),
-            }),
-        );
-        await page.route("**/api/shows/1/seasons**", (route) =>
-            route.fulfill({
-                status: 200,
-                contentType: "application/json",
-                body: JSON.stringify(SEASONS),
             }),
         );
     });

@@ -9,6 +9,11 @@ coverage
 .codegraph
 *.tsbuildinfo
 
+# Playwright E2E artifacts
+test-results
+playwright-report
+.last-run.json
+
 # Compiled TypeScript artifacts — should never appear in src/
 # (web uses noEmit:true, api outputs to dist/)
 apps/web/src/**/*.js
