@@ -5,6 +5,7 @@ import { getRedis } from "../jobs/scheduler.js";
 import { providerFetch, sleep } from "../lib/http.js";
 import { getProviderRateLimiter } from "../lib/rate-limit.js";
 import { encryptToken, decryptToken } from "../lib/encrypt.js";
+import { resolveApiSecret } from "../lib/secret.js";
 
 const FETCH_TIMEOUT_MS = 12000;
 const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
@@ -248,7 +249,7 @@ async function refreshToken(userId: number): Promise<string> {
         if (!acquired) {
             const user = await readUserTokens(userId);
             if (!tokenExpiresSoon(user.tokenExpiresAt))
-                return decryptToken(user.traktAccessToken, process.env.API_SECRET!);
+                return decryptToken(user.traktAccessToken, resolveApiSecret());
             const backoffMs = Math.min(250 * 2 ** attempt, 2_000) + Math.floor(Math.random() * 100);
             attempt++;
             await sleep(backoffMs);
@@ -258,7 +259,7 @@ async function refreshToken(userId: number): Promise<string> {
         try {
             const user = await readUserTokens(userId);
             if (!tokenExpiresSoon(user.tokenExpiresAt))
-                return decryptToken(user.traktAccessToken, process.env.API_SECRET!);
+                return decryptToken(user.traktAccessToken, resolveApiSecret());
 
             const tokenUrl = "https://api.trakt.tv/oauth/token";
             const proxyUrl = await getProxyUrl();
@@ -268,10 +269,7 @@ async function refreshToken(userId: number): Promise<string> {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        refresh_token: decryptToken(
-                            user.traktRefreshToken,
-                            process.env.API_SECRET!,
-                        ),
+                        refresh_token: decryptToken(user.traktRefreshToken, resolveApiSecret()),
                         client_id: process.env.TRAKT_CLIENT_ID,
                         client_secret: process.env.TRAKT_CLIENT_SECRET,
                         redirect_uri: process.env.TRAKT_REDIRECT_URI,
@@ -295,7 +293,7 @@ async function refreshToken(userId: number): Promise<string> {
                 expires_in: number;
             };
 
-            const apiSecret = process.env.API_SECRET!;
+            const apiSecret = resolveApiSecret();
             const updated = await getDb()
                 .update(users)
                 .set({
@@ -312,7 +310,7 @@ async function refreshToken(userId: number): Promise<string> {
             if (updated.length === 0) {
                 const latest = await readUserTokens(userId);
                 if (!tokenExpiresSoon(latest.tokenExpiresAt))
-                    return decryptToken(latest.traktAccessToken, process.env.API_SECRET!);
+                    return decryptToken(latest.traktAccessToken, resolveApiSecret());
                 throw new Error(`Token refresh lost update race for user ${userId}`);
             }
 
@@ -324,7 +322,7 @@ async function refreshToken(userId: number): Promise<string> {
 
     const user = await readUserTokens(userId);
     if (!tokenExpiresSoon(user.tokenExpiresAt))
-        return decryptToken(user.traktAccessToken, process.env.API_SECRET!);
+        return decryptToken(user.traktAccessToken, resolveApiSecret());
 
     throw new Error(`Token refresh lock timed out for user ${userId}`);
 }
@@ -381,7 +379,7 @@ export function getTraktClient() {
         const [user] = await db.select().from(users).where(eq(users.id, userId));
         if (!user) throw new Error("User not found");
 
-        let token = decryptToken(user.traktAccessToken, process.env.API_SECRET!);
+        let token = decryptToken(user.traktAccessToken, resolveApiSecret());
 
         if (tokenExpiresSoon(user.tokenExpiresAt)) {
             token = await refreshToken(userId);

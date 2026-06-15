@@ -82,12 +82,7 @@ test.describe("T05 — Calendar page", () => {
         );
 
         await page.goto("/calendar");
-        // The watched badge/checkmark should appear somewhere
-        const watchedBadge = page
-            .getByText(/已看|watched|✓/i)
-            .or(page.locator("[data-watched='true']"))
-            .or(page.locator(".watched-badge"));
-        // Just verify no crash; badge rendering is UI-detail dependent
+        // Badge rendering is a UI detail; just verify the page renders without crashing.
         await page.waitForTimeout(2000);
     });
 });

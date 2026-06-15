@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { getDb, syncRuns } from "@trakt-dashboard/db";
-import { desc, eq, lt, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 
 // Structured sync observability (N4-T03).
 //

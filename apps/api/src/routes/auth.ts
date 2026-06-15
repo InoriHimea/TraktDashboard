@@ -8,6 +8,7 @@ import { triggerFullSync } from "../services/sync.js";
 import { registerUserSyncJob } from "../jobs/scheduler.js";
 import { apiError } from "../lib/response.js";
 import { encryptToken } from "../lib/encrypt.js";
+import { resolveApiSecret } from "../lib/secret.js";
 
 export const authRoutes = new Hono();
 
@@ -84,7 +85,7 @@ authRoutes.get("/callback", async (c) => {
 
     let userId: number;
     if (existing.length > 0) {
-        const secret = process.env.API_SECRET!;
+        const secret = resolveApiSecret();
         await db
             .update(users)
             .set({
@@ -102,7 +103,7 @@ authRoutes.get("/callback", async (c) => {
         // Re-register repeat job in case it was lost after restart
         await registerUserSyncJob(userId);
     } else {
-        const secret = process.env.API_SECRET!;
+        const secret = resolveApiSecret();
         const [newUser] = await db
             .insert(users)
             .values({

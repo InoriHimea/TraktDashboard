@@ -29,6 +29,17 @@ export default tseslint.config(
         },
     },
     {
+        // Browser-side public scripts (e.g. service-worker registration) run in the
+        // browser, not Node — give them browser + service-worker globals.
+        files: ["apps/web/public/**/*.js"],
+        languageOptions: {
+            globals: {
+                ...globals.browser,
+                ...globals.serviceworker,
+            },
+        },
+    },
+    {
         // Shared TypeScript rules (P3-T06): apply to every package regardless of runtime.
         files: ["**/*.{ts,tsx}"],
         rules: {

@@ -15,7 +15,11 @@ export function encryptToken(plaintext: string, secret: string): string {
 
 export function decryptToken(ciphertext: string, secret: string): string {
     if (!ciphertext.startsWith("v1:")) return ciphertext; // backward compat with plaintext tokens
-    const [, ivHex, dataHex, tagHex] = ciphertext.split(":");
+    const parts = ciphertext.split(":");
+    if (parts.length !== 4) {
+        throw new Error("Malformed encrypted token (expected v1:iv:data:tag)");
+    }
+    const [, ivHex, dataHex, tagHex] = parts;
     const key = deriveKey(secret);
     const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(ivHex, "hex"));
     decipher.setAuthTag(Buffer.from(tagHex, "hex"));
