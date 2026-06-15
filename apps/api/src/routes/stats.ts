@@ -9,6 +9,7 @@ import {
     userMovieProgress,
 } from "@trakt-dashboard/db";
 import { eq, and, sql, desc, gte } from "drizzle-orm";
+import { longestConsecutiveDays } from "../lib/streak.js";
 
 export const statsRoutes = new Hono<{ Variables: { userId: number } }>();
 
@@ -197,22 +198,7 @@ statsRoutes.get("/overview", async (c) => {
             ),
     ]);
 
-    let longestStreakDays = 0;
-    let currentStreak = 0;
-    let prevDay: string | null = null;
-    for (const { day } of watchDates) {
-        if (prevDay) {
-            const diffDays = Math.round(
-                (new Date(day).getTime() - new Date(prevDay).getTime()) / (1000 * 60 * 60 * 24),
-            );
-            currentStreak = diffDays === 1 ? currentStreak + 1 : 1;
-            longestStreakDays = Math.max(longestStreakDays, currentStreak);
-        } else {
-            currentStreak = 1;
-        }
-        prevDay = day;
-    }
-    longestStreakDays = Math.max(longestStreakDays, currentStreak);
+    const longestStreakDays = longestConsecutiveDays(watchDates.map((d) => d.day));
 
     const avgDailyWatches30d = Math.round((Number(avg30Row?.count || 0) / 30) * 10) / 10;
 
