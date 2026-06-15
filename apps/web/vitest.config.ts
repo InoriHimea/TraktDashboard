@@ -30,10 +30,10 @@ export default defineConfig({
             ],
             // N3-T02: ratcheted up from initial P1-T05 floor (~14% lines → 20%).
             thresholds: {
-                lines: 20,
-                functions: 13,
-                statements: 19,
-                branches: 15,
+                lines: 28,
+                functions: 17,
+                statements: 27,
+                branches: 22,
             },
         },
     },
