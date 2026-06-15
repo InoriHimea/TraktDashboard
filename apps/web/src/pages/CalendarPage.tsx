@@ -178,23 +178,21 @@ export default function CalendarPage() {
     const dateKeys = dayGroups.map((group) => group.date).join("|");
     const todayKey = dayjs().format("YYYY-MM-DD");
 
-    useEffect(() => {
-        if (dayGroups.length === 0) {
-            setSelectedDate(null);
-            return;
-        }
-
+    // Re-derive the selected date when the set of days changes, during render
+    // (React's "adjust state when a prop changes" pattern) rather than in an effect.
+    const [syncedKeys, setSyncedKeys] = useState<string | null>(null);
+    if (dateKeys !== syncedKeys) {
+        setSyncedKeys(dateKeys);
         setSelectedDate((current) => {
-            if (current && dayGroups.some((group) => group.date === current)) {
-                return current;
-            }
+            if (dayGroups.length === 0) return null;
+            if (current && dayGroups.some((group) => group.date === current)) return current;
 
             const todayGroup = dayGroups.find((group) => group.date === todayKey);
             if (todayGroup) return todayGroup.date;
 
             return dayGroups.find((group) => group.date >= todayKey)?.date ?? dayGroups[0].date;
         });
-    }, [dateKeys, dayGroups, todayKey]);
+    }
 
     useEffect(() => {
         selectedDateRef.current?.scrollIntoView({

@@ -11,6 +11,16 @@ interface DateTimePickerModalProps {
     defaultValue?: Date;
 }
 
+// Format a date to the `YYYY-MM-DDTHH:mm` shape a datetime-local input expects.
+function formatDateTimeLocal(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
 export function DateTimePickerModal({
     open,
     onClose,
@@ -18,19 +28,14 @@ export function DateTimePickerModal({
     defaultValue,
 }: DateTimePickerModalProps) {
     const [dateTimeValue, setDateTimeValue] = useState("");
+    const [wasOpen, setWasOpen] = useState(false);
 
-    useEffect(() => {
-        if (open) {
-            const date = defaultValue || new Date();
-            // Format to datetime-local input format: YYYY-MM-DDTHH:mm
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, "0");
-            const day = String(date.getDate()).padStart(2, "0");
-            const hours = String(date.getHours()).padStart(2, "0");
-            const minutes = String(date.getMinutes()).padStart(2, "0");
-            setDateTimeValue(`${year}-${month}-${day}T${hours}:${minutes}`);
-        }
-    }, [open, defaultValue]);
+    // Seed the input when the modal transitions to open, during render
+    // (avoids a setState-in-effect cascade).
+    if (open !== wasOpen) {
+        setWasOpen(open);
+        if (open) setDateTimeValue(formatDateTimeLocal(defaultValue || new Date()));
+    }
 
     const handleConfirm = () => {
         if (!dateTimeValue) return;

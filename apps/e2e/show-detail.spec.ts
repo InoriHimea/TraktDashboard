@@ -55,7 +55,7 @@ const SHOW_DETAIL = {
                 posterPath: null,
                 episodes: [
                     {
-                        id: 101,
+                        episodeId: 101,
                         seasonNumber: 1,
                         episodeNumber: 1,
                         title: "Pilot",
@@ -70,7 +70,7 @@ const SHOW_DETAIL = {
                         runtime: 45,
                     },
                     {
-                        id: 102,
+                        episodeId: 102,
                         seasonNumber: 1,
                         episodeNumber: 2,
                         title: "The Signal",

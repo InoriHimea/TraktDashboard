@@ -15,6 +15,7 @@ import { calendarRoutes } from "./routes/calendar.js";
 import { historyRoutes } from "./routes/history.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { startScheduler } from "./jobs/scheduler.js";
+import { encryptLegacyTokensAtRest } from "./lib/token-migration.js";
 
 const app = new Hono();
 
@@ -66,6 +67,12 @@ const port = parseInt(process.env.API_PORT || "3001");
 startScheduler().catch((err) => {
     console.error("[scheduler] Failed to start:", err);
 });
+
+encryptLegacyTokensAtRest()
+    .then((n) => {
+        if (n > 0) console.log(`[security] Encrypted ${n} legacy plaintext token row(s) at rest`);
+    })
+    .catch((err) => console.error("[security] Token at-rest migration failed:", err));
 
 console.log(`🚀 API running on http://localhost:${port}`);
 

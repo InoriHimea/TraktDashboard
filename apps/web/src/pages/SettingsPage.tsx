@@ -37,15 +37,21 @@ export default function SettingsPage() {
     const { toast } = useToast();
     const [theme, setTheme] = useState<Theme>(loadTheme);
 
+    // Seed the editable form from fetched settings, during render (re-seeds only
+    // when the settings object reference changes, mirroring the prior effect).
+    const [syncedSettings, setSyncedSettings] = useState(settings);
+    if (settings && settings !== syncedSettings) {
+        setSyncedSettings(settings);
+        setDisplayLanguage(settings.displayLanguage);
+        setSyncIntervalMinutes(settings.syncIntervalMinutes);
+        setHttpProxy(settings.httpProxy ?? "");
+    }
+
+    // Apply the saved display language to the UI locale (a real side effect).
+    const settingsLanguage = settings?.displayLanguage;
     useEffect(() => {
-        if (settings) {
-            setDisplayLanguage(settings.displayLanguage);
-            setSyncIntervalMinutes(settings.syncIntervalMinutes);
-            setHttpProxy(settings.httpProxy ?? "");
-            // Update UI locale based on settings
-            setLocale(settings.displayLanguage);
-        }
-    }, [settings]);
+        if (settingsLanguage) setLocale(settingsLanguage);
+    }, [settingsLanguage]);
 
     async function handleSave(e?: React.FormEvent) {
         if (e) e.preventDefault();

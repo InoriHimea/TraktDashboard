@@ -95,11 +95,13 @@ export function NowPlayingPopup({
 }: NowPlayingPopupProps) {
     const cardRef = useRef<HTMLDivElement>(null);
     const [posterError, setPosterError] = useState(false);
+    const [trackedPoster, setTrackedPoster] = useState(data?.show.posterPath);
 
-    // Reset poster error when data changes
-    useEffect(() => {
+    // Reset the poster error when the poster changes, during render.
+    if (data?.show.posterPath !== trackedPoster) {
+        setTrackedPoster(data?.show.posterPath);
         setPosterError(false);
-    }, [data?.show.posterPath]);
+    }
 
     // Click-outside handler — excludes the trigger button to prevent immediate close
     useEffect(() => {
@@ -128,18 +130,23 @@ export function NowPlayingPopup({
     const [remainingMinutes, setRemainingMinutes] = useState<number>(() =>
         data ? computeRemainingMinutes(data.expiresAt) : 0,
     );
+    const [trackedExpiry, setTrackedExpiry] = useState(data?.expiresAt);
 
+    // Re-sync the countdown when the air-time changes, during render.
+    if (data?.expiresAt !== trackedExpiry) {
+        setTrackedExpiry(data?.expiresAt);
+        setRemainingMinutes(data ? computeRemainingMinutes(data.expiresAt) : 0);
+    }
+
+    // Tick the countdown every minute while a session is active (interval-only
+    // setState is not flagged, unlike a synchronous set in the effect body).
     useEffect(() => {
-        if (!data) {
-            setRemainingMinutes(0);
-            return;
-        }
-        setRemainingMinutes(computeRemainingMinutes(data.expiresAt));
+        if (!data) return;
         const timer = setInterval(() => {
             setRemainingMinutes(computeRemainingMinutes(data.expiresAt));
         }, 60_000);
         return () => clearInterval(timer);
-    }, [data?.expiresAt]);
+    }, [data]);
 
     const progressPct = data ? computeProgressPct(data.runtime, remainingMinutes) : 0;
 
