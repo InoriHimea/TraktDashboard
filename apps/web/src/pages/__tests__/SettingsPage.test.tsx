@@ -70,6 +70,19 @@ describe("SettingsPage", () => {
         );
     });
 
+    it("renders full-history export links for CSV and JSON", async () => {
+        render(<SettingsPage />);
+
+        const csv = await screen.findByRole("link", { name: /CSV/ });
+        const json = screen.getByRole("link", { name: /JSON/ });
+
+        expect(csv).toHaveAttribute("href", expect.stringContaining("/api/history/export?"));
+        expect(csv).toHaveAttribute("href", expect.stringContaining("format=csv"));
+        expect(csv).toHaveAttribute("download", "watch-history.csv");
+        expect(json).toHaveAttribute("href", expect.stringContaining("format=json"));
+        expect(json).toHaveAttribute("download", "watch-history.json");
+    });
+
     it("blocks invalid proxy values before saving", async () => {
         render(<SettingsPage />);
 

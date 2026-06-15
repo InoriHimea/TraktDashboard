@@ -1,10 +1,26 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Save } from "lucide-react";
+import { Save, Download } from "lucide-react";
 import { useSettings, useUpdateSettings } from "../hooks";
+import { api } from "../lib/api";
 import { loadTheme, applyTheme, persistTheme, Theme } from "../lib/theme";
 import { t, setLocale } from "../lib/i18n";
 import { useToast } from "../lib/toast";
+
+const exportButtonStyle: React.CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "9px 16px",
+    borderRadius: "var(--radius-md)",
+    background: "var(--color-surface-3)",
+    border: "1px solid var(--color-border)",
+    color: "var(--color-text)",
+    fontSize: "13px",
+    fontWeight: 500,
+    textDecoration: "none",
+    transition: "border-color 0.15s",
+};
 
 // Move styles outside component to avoid recreation on every render
 const inputStyle: React.CSSProperties = {
@@ -302,6 +318,47 @@ export default function SettingsPage() {
                                 }}
                             >
                                 {t("settings.httpProxyHint")}
+                            </p>
+                        </div>
+
+                        {/* Divider */}
+                        <div
+                            style={{
+                                height: "1px",
+                                background: "var(--color-border-subtle)",
+                            }}
+                        />
+
+                        {/* Data export */}
+                        <div>
+                            <span style={labelStyle}>{t("settings.dataExport")}</span>
+                            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                                <a
+                                    href={api.history.export("all", "csv")}
+                                    download="watch-history.csv"
+                                    style={exportButtonStyle}
+                                >
+                                    <Download size={14} />
+                                    {t("settings.exportHistoryCsv")}
+                                </a>
+                                <a
+                                    href={api.history.export("all", "json")}
+                                    download="watch-history.json"
+                                    style={exportButtonStyle}
+                                >
+                                    <Download size={14} />
+                                    {t("settings.exportHistoryJson")}
+                                </a>
+                            </div>
+                            <p
+                                style={{
+                                    fontSize: "12px",
+                                    color: "var(--color-text-muted)",
+                                    marginTop: "6px",
+                                    lineHeight: 1.5,
+                                }}
+                            >
+                                {t("settings.dataExportHint")}
                             </p>
                         </div>
                     </div>
