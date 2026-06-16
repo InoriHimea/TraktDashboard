@@ -201,4 +201,18 @@ export const api = {
                 method: "DELETE",
             }),
     },
+    notifications: {
+        vapidPublicKey: () =>
+            request<ApiResponse<{ publicKey: string }>>("/notifications/vapid-public-key"),
+        subscribe: (subscription: PushSubscriptionJSON) =>
+            request<{ ok: boolean }>("/notifications/subscribe", {
+                method: "POST",
+                body: JSON.stringify(subscription),
+            }),
+        unsubscribe: (endpoint: string) =>
+            request<{ ok: boolean }>("/notifications/unsubscribe", {
+                method: "POST",
+                body: JSON.stringify({ endpoint }),
+            }),
+    },
 };

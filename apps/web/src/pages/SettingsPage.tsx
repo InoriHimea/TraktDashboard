@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Save, Download } from "lucide-react";
+import { Save, Download, Bell } from "lucide-react";
 import { useSettings, useUpdateSettings } from "../hooks";
 import { api } from "../lib/api";
+import { isPushSupported, getExistingSubscription, enablePush, disablePush } from "../lib/push";
 import { loadTheme, applyTheme, persistTheme, Theme } from "../lib/theme";
 import { t, setLocale } from "../lib/i18n";
 import { useToast } from "../lib/toast";
@@ -68,6 +69,39 @@ export default function SettingsPage() {
     useEffect(() => {
         if (settingsLanguage) setLocale(settingsLanguage);
     }, [settingsLanguage]);
+
+    // Web Push (N2-T05). Support is derived during render; the async existing-
+    // subscription lookup runs in an effect (setState only in the async callback).
+    const pushSupported = isPushSupported();
+    const [pushEnabled, setPushEnabled] = useState(false);
+    const [pushBusy, setPushBusy] = useState(false);
+
+    useEffect(() => {
+        if (!pushSupported) return;
+        getExistingSubscription()
+            .then((sub) => setPushEnabled(!!sub))
+            .catch(() => {});
+    }, [pushSupported]);
+
+    async function togglePush() {
+        setPushBusy(true);
+        try {
+            if (pushEnabled) {
+                await disablePush();
+                setPushEnabled(false);
+                toast(t("settings.pushDisabled"), "success");
+            } else {
+                await enablePush();
+                setPushEnabled(true);
+                toast(t("settings.pushEnabled"), "success");
+            }
+        } catch (err) {
+            const denied = err instanceof Error && err.message === "permission-denied";
+            toast(denied ? t("settings.pushPermissionDenied") : t("settings.pushFailed"), "error");
+        } finally {
+            setPushBusy(false);
+        }
+    }
 
     async function handleSave(e?: React.FormEvent) {
         if (e) e.preventDefault();
@@ -318,6 +352,44 @@ export default function SettingsPage() {
                                 }}
                             >
                                 {t("settings.httpProxyHint")}
+                            </p>
+                        </div>
+
+                        {/* Divider */}
+                        <div
+                            style={{
+                                height: "1px",
+                                background: "var(--color-border-subtle)",
+                            }}
+                        />
+
+                        {/* Airing reminders (Web Push) */}
+                        <div>
+                            <span style={labelStyle}>{t("settings.notifications")}</span>
+                            <button
+                                type="button"
+                                onClick={togglePush}
+                                disabled={!pushSupported || pushBusy}
+                                style={{
+                                    ...exportButtonStyle,
+                                    opacity: !pushSupported || pushBusy ? 0.5 : 1,
+                                    cursor: !pushSupported || pushBusy ? "not-allowed" : "pointer",
+                                }}
+                            >
+                                <Bell size={14} />
+                                {pushEnabled ? t("settings.pushDisable") : t("settings.pushEnable")}
+                            </button>
+                            <p
+                                style={{
+                                    fontSize: "12px",
+                                    color: "var(--color-text-muted)",
+                                    marginTop: "6px",
+                                    lineHeight: 1.5,
+                                }}
+                            >
+                                {pushSupported
+                                    ? t("settings.notificationsHint")
+                                    : t("settings.pushUnsupported")}
                             </p>
                         </div>
 

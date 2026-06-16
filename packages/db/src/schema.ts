@@ -268,6 +268,27 @@ export const userSettings = pgTable("user_settings", {
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+// ─── Push Subscriptions (N2-T05) ──────────────────────────────────────────────
+// Web Push subscriptions for airing reminders. One row per browser endpoint.
+
+export const pushSubscriptions = pgTable(
+    "push_subscriptions",
+    {
+        id: serial("id").primaryKey(),
+        userId: integer("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
+        endpoint: text("endpoint").notNull(),
+        p256dh: text("p256dh").notNull(),
+        auth: text("auth").notNull(),
+        createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    },
+    (t) => [
+        uniqueIndex("push_subscriptions_endpoint_idx").on(t.endpoint),
+        index("push_subscriptions_user_id_idx").on(t.userId),
+    ],
+);
+
 // ─── Watch Reset Cursors ───────────────────────────────────────────────────────
 
 export const watchResetCursors = pgTable(

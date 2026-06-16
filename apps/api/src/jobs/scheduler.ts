@@ -115,6 +115,16 @@ export async function startScheduler() {
                 } catch (e) {
                     console.error(`[scheduler] Metadata cache cleanup failed:`, e);
                 }
+            } else if (job.name === "airing-reminders") {
+                try {
+                    const { runAiringReminders } = await import("./airing-reminders.js");
+                    const { sent, pruned } = await runAiringReminders();
+                    if (sent > 0 || pruned > 0) {
+                        console.log(`[scheduler] Airing reminders sent=${sent} pruned=${pruned}`);
+                    }
+                } catch (e) {
+                    console.error(`[scheduler] Airing reminders failed:`, e);
+                }
             }
         },
         { connection: redis, concurrency: 1 },
@@ -152,6 +162,29 @@ export async function startScheduler() {
         console.log(`[scheduler] Registered daily metadata cache cleanup job`);
     } catch (e) {
         console.error(`[scheduler] Failed to register cleanup job:`, e);
+    }
+
+    // Register daily airing-reminder digest job (N2-T05)
+    try {
+        const repeatableJobs = await queue.getRepeatableJobs();
+        const reminderJobId = "airing-reminders-daily";
+        const existing = repeatableJobs.find((j) => j.id === reminderJobId);
+        if (existing) {
+            await queue.removeRepeatableByKey(existing.key);
+        }
+        await queue.add(
+            "airing-reminders",
+            {},
+            {
+                jobId: reminderJobId,
+                repeat: { every: 24 * 60 * 60 * 1000 }, // Daily
+                removeOnComplete: 10,
+                removeOnFail: 5,
+            },
+        );
+        console.log(`[scheduler] Registered daily airing-reminder job`);
+    } catch (e) {
+        console.error(`[scheduler] Failed to register airing-reminder job:`, e);
     }
 
     console.log(`[scheduler] Scheduler started`);

@@ -13,6 +13,7 @@ import { traktRoutes } from "./routes/trakt.js";
 import { watchlistRoutes } from "./routes/watchlist.js";
 import { calendarRoutes } from "./routes/calendar.js";
 import { historyRoutes } from "./routes/history.js";
+import { notificationRoutes } from "./routes/notifications.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { startScheduler } from "./jobs/scheduler.js";
 import { encryptLegacyTokensAtRest } from "./lib/token-migration.js";
@@ -47,6 +48,7 @@ api.route("/trakt", traktRoutes);
 api.route("/watchlist", watchlistRoutes);
 api.route("/calendar", calendarRoutes);
 api.route("/history", historyRoutes);
+api.route("/notifications", notificationRoutes);
 
 const routes = app.route("/api", api);
 
