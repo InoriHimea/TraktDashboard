@@ -153,11 +153,14 @@ historyRoutes.get("/export", async (c) => {
     // CSV Injection defence (OWASP):
     // 1. Replace embedded CR/LF with a space — non-RFC-4180 parsers split on
     //    bare newlines even inside a quoted field, injecting a new row.
-    // 2. Tab-prefix cells whose first character is a formula trigger (=, +, -,
-    //    @, or tab) so spreadsheets treat the cell as text, not a formula.
+    // 2. Prefix with a single space when the effective first non-whitespace
+    //    character is a formula trigger (=, +, -, @). trimStart() is used for
+    //    detection so a leading space before "=" doesn't bypass the check.
+    //    Space is the prefix (not \t) because \t is itself treated as a trigger
+    //    by some parsers, which would make the defence circular.
     const sanitizeCsv = (v: string) => {
         const clean = v.replace(/[\r\n]/g, " ");
-        return /^[=+\-@\t]/.test(clean) ? `\t${clean}` : clean;
+        return /^[=+\-@]/.test(clean.trimStart()) ? ` ${clean}` : clean;
     };
 
     const lines = [

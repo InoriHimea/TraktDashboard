@@ -67,9 +67,15 @@ async function upsertRepeatableJob(
     data: Record<string, unknown>,
     repeatOpts: { pattern?: string; every?: number },
 ): Promise<void> {
-    const jobs = await queue.getRepeatableJobs();
-    const existing = jobs.find((j) => j.id === jobId);
-    if (existing) await queue.removeRepeatableByKey(existing.key);
+    // Best-effort removal: if listing/removing the old key fails, log a warning
+    // but always proceed to queue.add() so the job is never silently absent.
+    try {
+        const jobs = await queue.getRepeatableJobs();
+        const existing = jobs.find((j) => j.id === jobId);
+        if (existing) await queue.removeRepeatableByKey(existing.key);
+    } catch (e) {
+        console.warn(`[scheduler] Could not remove existing repeatable job "${jobId}":`, e);
+    }
     await queue.add(jobName, data, {
         jobId,
         repeat: repeatOpts,
@@ -138,6 +144,7 @@ export async function startScheduler() {
                     }
                 } catch (e) {
                     console.error(`[scheduler] Airing reminders failed:`, e);
+                    throw e;
                 }
             }
         },

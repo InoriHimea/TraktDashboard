@@ -11,10 +11,15 @@ vi.mock("@trakt-dashboard/db", async () => {
     return { ...actual, getDb: () => dbMockState.db };
 });
 
-function createMockDb() {
+function createMockDb(existingSubCount = 0) {
     const calls = { inserted: [] as unknown[], deleted: 0 };
     return {
         calls,
+        select: () => ({
+            from: () => ({
+                where: () => Promise.resolve([{ value: existingSubCount }]),
+            }),
+        }),
         insert: () => ({
             values: (v: unknown) => ({
                 onConflictDoUpdate: () => {
@@ -56,7 +61,7 @@ function setVapid() {
 }
 
 beforeEach(() => {
-    dbMockState.db = createMockDb();
+    dbMockState.db = createMockDb(0);
     delete process.env.VAPID_PUBLIC_KEY;
     delete process.env.VAPID_PRIVATE_KEY;
     delete process.env.VAPID_SUBJECT;
@@ -117,6 +122,30 @@ describe("notifications routes", () => {
             p256dh: "p256dh-key",
             auth: "auth-key",
         });
+    });
+
+    it("rejects subscribe when VAPID_SUBJECT is missing even if keys are set (503)", async () => {
+        process.env.VAPID_PUBLIC_KEY = "test-public-key";
+        process.env.VAPID_PRIVATE_KEY = "test-private-key";
+        // No VAPID_SUBJECT — isPushConfigured() requires all three.
+        const res = await app().request("/notifications/subscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(validSub),
+        });
+        expect(res.status).toBe(503);
+    });
+
+    it("rejects subscribe when user already has 10 subscriptions (429)", async () => {
+        setVapid();
+        dbMockState.db = createMockDb(10);
+        const res = await app().request("/notifications/subscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(validSub),
+        });
+        expect(res.status).toBe(429);
+        expect(dbMockState.db.calls.inserted).toHaveLength(0);
     });
 
     it("requires an endpoint to unsubscribe (400)", async () => {

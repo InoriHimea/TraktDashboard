@@ -81,6 +81,7 @@ export async function runAiringReminders(): Promise<{ sent: number; pruned: numb
             .where(eq(pushSubscriptions.userId, userId));
 
         const first = airing[0];
+        const distinctShows = new Set(airing.map((e) => e.showTitle));
         const payload =
             airing.length === 1
                 ? {
@@ -91,7 +92,8 @@ export async function runAiringReminders(): Promise<{ sent: number; pruned: numb
                       url: "/calendar",
                   }
                 : {
-                      title: `${first.showTitle} +${airing.length - 1}`,
+                      // +N reflects the number of additional *shows*, not episodes.
+                      title: `${first.showTitle} +${distinctShows.size - 1}`,
                       body: airing
                           .slice(0, 4)
                           .map(

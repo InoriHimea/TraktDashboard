@@ -4,8 +4,12 @@ const STATIC_EXTS = [".js", ".css", ".woff2", ".woff", ".ttf", ".png", ".svg", "
 
 self.addEventListener("install", (e) => {
     // Precache the app shell so navigations work offline.
-    e.waitUntil(caches.open(CACHE).then((cache) => cache.add(SHELL)));
-    self.skipWaiting();
+    // skipWaiting is chained inside waitUntil so the SW only activates after
+    // the cache is populated — avoids serving a broken offline shell if the
+    // network is unavailable at install time.
+    e.waitUntil(
+        caches.open(CACHE).then((cache) => cache.add(SHELL)).then(() => self.skipWaiting())
+    );
 });
 
 self.addEventListener("activate", (e) => {

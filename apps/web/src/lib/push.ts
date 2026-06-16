@@ -56,10 +56,17 @@ export async function enablePush(cachedKey?: string): Promise<void> {
     if (permission !== "granted") throw new Error("permission-denied");
 
     const reg = await navigator.serviceWorker.ready;
-    const subscription = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey),
-    });
+
+    // Re-use an existing browser subscription when one already exists so that
+    // rapid double-invocation (e.g. user clicks Enable twice) doesn't create
+    // duplicate endpoints and trigger duplicate daily notifications.
+    const existing = await reg.pushManager.getSubscription();
+    const subscription =
+        existing ??
+        (await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(publicKey),
+        }));
     await api.notifications.subscribe(subscription.toJSON() as PushSubscriptionJSON);
 }
 

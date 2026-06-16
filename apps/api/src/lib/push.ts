@@ -4,10 +4,11 @@ import webpush from "web-push";
 // the whole feature degrades gracefully (endpoints return 503, sends are no-ops)
 // so the app runs fine without push configured.
 
-// Track which key pair is currently loaded in the webpush module so that a
-// runtime key rotation (secrets manager hot-reload) is detected and applied.
+// Track the currently-configured VAPID details so runtime rotations
+// (secrets manager hot-reload) are detected and applied immediately.
 let configuredPublicKey: string | null = null;
 let configuredPrivateKey: string | null = null;
+let configuredSubject: string | null = null;
 
 function ensureVapid(): boolean {
     const publicKey = process.env.VAPID_PUBLIC_KEY;
@@ -24,11 +25,16 @@ function ensureVapid(): boolean {
         return false;
     }
 
-    // Re-configure when keys change (e.g. secret rotation without restart).
-    if (publicKey !== configuredPublicKey || privateKey !== configuredPrivateKey) {
+    // Re-configure whenever any of the three values changes (keys OR subject).
+    if (
+        publicKey !== configuredPublicKey ||
+        privateKey !== configuredPrivateKey ||
+        subject !== configuredSubject
+    ) {
         webpush.setVapidDetails(subject, publicKey, privateKey);
         configuredPublicKey = publicKey;
         configuredPrivateKey = privateKey;
+        configuredSubject = subject;
     }
 
     return true;
@@ -69,9 +75,14 @@ export async function sendPush(
         await webpush.sendNotification(
             { endpoint: target.endpoint, keys: target.keys },
             JSON.stringify(payload),
+            { TTL: 86400 },
         );
         return { ok: true };
     } catch (e) {
-        return { ok: false, statusCode: (e as { statusCode?: number }).statusCode };
+        const statusCode =
+            e != null && typeof e === "object" && "statusCode" in e
+                ? (e as { statusCode: number }).statusCode
+                : undefined;
+        return { ok: false, statusCode };
     }
 }

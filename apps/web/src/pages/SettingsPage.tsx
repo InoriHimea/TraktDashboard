@@ -89,10 +89,13 @@ export default function SettingsPage() {
 
     useEffect(() => {
         if (!pushBrowserSupported) return;
-        Promise.all([
-            fetchVapidPublicKey().then((key) => setVapidPublicKey(key)),
-            getExistingSubscription().then((sub) => setPushEnabled(!!sub)),
-        ]).catch(() => {});
+        // Run independently so one failure doesn't prevent the other from updating state.
+        fetchVapidPublicKey()
+            .then((key) => setVapidPublicKey(key))
+            .catch(() => {});
+        getExistingSubscription()
+            .then((sub) => setPushEnabled(!!sub))
+            .catch(() => {});
     }, [pushBrowserSupported]);
 
     async function togglePush() {
@@ -109,6 +112,13 @@ export default function SettingsPage() {
                 toast(t("settings.pushEnabled"), "success");
             }
         } catch (err) {
+            // If we were disabling, the browser subscription may have already been
+            // revoked before the backend call failed. Re-sync state from the browser.
+            if (pushEnabled) {
+                getExistingSubscription()
+                    .then((sub) => setPushEnabled(!!sub))
+                    .catch(() => {});
+            }
             if (err instanceof Error && err.message === "permission-denied") {
                 toast(t("settings.pushPermissionDenied"), "error");
             } else {

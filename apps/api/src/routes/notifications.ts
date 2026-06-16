@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { getDb, pushSubscriptions } from "@trakt-dashboard/db";
-import { and, eq } from "drizzle-orm";
+import { and, eq, count } from "drizzle-orm";
 import { apiOk, apiError } from "../lib/response.js";
 import { isPushConfigured, getVapidPublicKey } from "../lib/push.js";
 
@@ -26,7 +26,20 @@ notificationRoutes.post("/subscribe", async (c) => {
         return apiError(c, 400, "Invalid subscription");
     }
 
-    await getDb()
+    const db = getDb();
+
+    // Prevent a single user from registering an unbounded number of endpoints,
+    // which would fan out to thousands of push sends per daily reminder run.
+    const MAX_SUBSCRIPTIONS_PER_USER = 10;
+    const [{ value: existingCount }] = await db
+        .select({ value: count() })
+        .from(pushSubscriptions)
+        .where(eq(pushSubscriptions.userId, userId));
+    if (existingCount >= MAX_SUBSCRIPTIONS_PER_USER) {
+        return apiError(c, 429, "Too many push subscriptions");
+    }
+
+    await db
         .insert(pushSubscriptions)
         .values({
             userId,

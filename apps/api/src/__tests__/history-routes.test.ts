@@ -256,8 +256,9 @@ describe("GET /history/export", () => {
         expect(text).toContain("Test Movie");
     });
 
-    it("prefixes formula-trigger show titles with a tab (CSV injection defence)", async () => {
-        for (const trigger of ["=SUM(1)", "+cmd", "-1+1", "@SUM", "\t=formula"]) {
+    it("prefixes formula-trigger show titles with a space (CSV injection defence)", async () => {
+        // Plain triggers and leading-space-hidden triggers must all be neutralised.
+        for (const trigger of ["=SUM(1)", "+cmd", "-1+1", "@SUM", " =formula"]) {
             const row = makeHistoryRow({ show: { id: 5, title: trigger } });
             const db = createMockDb([[row]]);
             (dbMockState as { db: unknown }).db = db;
@@ -265,10 +266,11 @@ describe("GET /history/export", () => {
             const res = await app().request("/history/export");
             const text = await res.text();
             const dataLine = text.split("\r\n")[1];
-            // Cell must start with a tab prefix, not the raw trigger character.
-            expect(dataLine).toMatch(/"\t/);
-            // The original value is preserved after the prefix.
-            expect(dataLine).toContain(trigger.replace(/^[\t]/, ""));
+            // Cell must start with a space prefix, not the raw trigger character.
+            expect(dataLine).toMatch(/" /);
+            // The original value is preserved after the prefix (trimmed for detection
+            // but the full original value including its leading whitespace is kept).
+            expect(dataLine).toContain(trigger);
         }
     });
 
