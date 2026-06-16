@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import dayjs from "dayjs";
 
 const dbMockState = vi.hoisted(() => ({ db: null as any }));
 const pushMock = vi.hoisted(() => ({ send: vi.fn() }));
@@ -22,6 +23,14 @@ class SelectBuilder {
         return this;
     }
     where() {
+        // Apply date-range filtering on items with an airDate field (episode queries).
+        // Items without airDate (e.g. subscription rows) pass through untouched.
+        const today = dayjs().format("YYYY-MM-DD");
+        const tomorrow = dayjs().add(1, "day").format("YYYY-MM-DD");
+        this.result = (this.result as any[]).filter((item) => {
+            if (!("airDate" in item) || item.airDate == null) return true;
+            return item.airDate >= today && item.airDate < tomorrow;
+        });
         return this;
     }
     orderBy() {
@@ -52,7 +61,14 @@ function createMockDb(results: unknown[][]) {
 const { runAiringReminders } = await import("../airing-reminders.js");
 
 const sub = { id: 1, userId: 7, endpoint: "https://push/x", p256dh: "p", auth: "a" };
-const airingEp = { title: "Pilot", seasonNumber: 1, episodeNumber: 3, showTitle: "Test Show" };
+const airingEp = {
+    title: "Pilot",
+    seasonNumber: 1,
+    episodeNumber: 3,
+    showTitle: "Test Show",
+    airDate: dayjs().toISOString(), // today — matches the gte/lt range in production code
+};
+const staleEp = { ...airingEp, airDate: dayjs().subtract(1, "day").toISOString() };
 
 beforeEach(() => {
     pushMock.send.mockReset();
@@ -91,5 +107,22 @@ describe("runAiringReminders", () => {
         const result = await runAiringReminders();
         expect(result).toEqual({ sent: 0, pruned: 1 });
         expect(dbMockState.db.state.deleted).toBe(1);
+    });
+
+    it("skips episodes airing on a different date", async () => {
+        // staleEp.airDate is yesterday — the gte/lt range filter should exclude it
+        dbMockState.db = createMockDb([[sub], [staleEp]]);
+        pushMock.send.mockResolvedValue({ ok: true });
+        const result = await runAiringReminders();
+        expect(result).toEqual({ sent: 0, pruned: 0 });
+        expect(pushMock.send).not.toHaveBeenCalled();
+    });
+
+    it("does not push for episodes already watched today", async () => {
+        // DB returns [] because NOT EXISTS (watch_history) filtered out watched episodes
+        dbMockState.db = createMockDb([[sub], []]);
+        const result = await runAiringReminders();
+        expect(result).toEqual({ sent: 0, pruned: 0 });
+        expect(pushMock.send).not.toHaveBeenCalled();
     });
 });

@@ -1,5 +1,12 @@
-import { getDb, pushSubscriptions, episodes, shows, userShowProgress } from "@trakt-dashboard/db";
-import { and, eq, asc } from "drizzle-orm";
+import {
+    getDb,
+    pushSubscriptions,
+    episodes,
+    shows,
+    userShowProgress,
+    watchHistory,
+} from "@trakt-dashboard/db";
+import { and, eq, gte, lt, asc, sql } from "drizzle-orm";
 import dayjs from "dayjs";
 import { sendPush } from "../lib/push.js";
 
@@ -18,6 +25,7 @@ export async function runAiringReminders(): Promise<{ sent: number; pruned: numb
     if (subs.length === 0) return { sent: 0, pruned: 0 };
 
     const today = dayjs().format("YYYY-MM-DD");
+    const tomorrow = dayjs().add(1, "day").format("YYYY-MM-DD");
 
     const byUser = new Map<number, typeof subs>();
     for (const s of subs) {
@@ -40,7 +48,18 @@ export async function runAiringReminders(): Promise<{ sent: number; pruned: numb
             .from(episodes)
             .innerJoin(shows, eq(episodes.showId, shows.id))
             .innerJoin(userShowProgress, eq(shows.id, userShowProgress.showId))
-            .where(and(eq(userShowProgress.userId, userId), eq(episodes.airDate, today)))
+            .where(
+                and(
+                    eq(userShowProgress.userId, userId),
+                    gte(episodes.airDate, today),
+                    lt(episodes.airDate, tomorrow),
+                    sql`NOT EXISTS (
+                    SELECT 1 FROM ${watchHistory}
+                    WHERE ${watchHistory.episodeId} = ${episodes.id}
+                      AND ${watchHistory.userId} = ${userId}
+                )`,
+                ),
+            )
             .orderBy(asc(shows.title));
 
         if (airing.length === 0) continue;

@@ -150,6 +150,11 @@ historyRoutes.get("/export", async (c) => {
         });
     }
 
+    // Prevent CSV formula injection: prefix cells starting with formula-trigger
+    // characters (=, +, -, @, tab, CR) with a tab so spreadsheets treat them
+    // as text. OWASP recommendation for CSV Injection defence.
+    const sanitizeCsv = (v: string) => (/^[=+\-@\t\r]/.test(v) ? `\t${v}` : v);
+
     const lines = [
         "Type,Show / Movie,Season,Episode,Title,WatchedAt,Source",
         ...rows.map((row) => {
@@ -163,7 +168,7 @@ historyRoutes.get("/export", async (c) => {
                 toIsoOrNull(row.history.watchedAt) ?? "",
                 row.history.source,
             ]
-                .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+                .map((v) => `"${sanitizeCsv(String(v)).replace(/"/g, '""')}"`)
                 .join(",");
         }),
     ];

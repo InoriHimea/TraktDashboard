@@ -29,19 +29,36 @@ export async function getExistingSubscription(): Promise<PushSubscription | null
 }
 
 /**
- * Requests notification permission, subscribes via PushManager using the
- * server's VAPID key, and registers the subscription with the backend.
- * Throws "permission-denied" if the user declines.
+ * Checks whether the server has VAPID configured. Returns null when push is
+ * unavailable server-side (503), or the public key string on success.
+ */
+export async function fetchVapidPublicKey(): Promise<string | null> {
+    try {
+        const { data } = await api.notifications.vapidPublicKey();
+        return data.publicKey;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Subscribes via PushManager and registers with the backend.
+ * Fetches the VAPID key BEFORE requesting notification permission so the
+ * browser permission prompt is never shown when the server is unconfigured.
+ * Throws "permission-denied" if the user declines, "server-unconfigured" if
+ * VAPID is not set up.
  */
 export async function enablePush(): Promise<void> {
+    const publicKey = await fetchVapidPublicKey();
+    if (!publicKey) throw new Error("server-unconfigured");
+
     const permission = await Notification.requestPermission();
     if (permission !== "granted") throw new Error("permission-denied");
 
-    const { data } = await api.notifications.vapidPublicKey();
     const reg = await navigator.serviceWorker.ready;
     const subscription = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(data.publicKey),
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
     });
     await api.notifications.subscribe(subscription.toJSON() as PushSubscriptionJSON);
 }

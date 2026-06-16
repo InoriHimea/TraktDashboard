@@ -3,7 +3,13 @@ import { motion } from "framer-motion";
 import { Save, Download, Bell } from "lucide-react";
 import { useSettings, useUpdateSettings } from "../hooks";
 import { api } from "../lib/api";
-import { isPushSupported, getExistingSubscription, enablePush, disablePush } from "../lib/push";
+import {
+    isPushSupported,
+    getExistingSubscription,
+    enablePush,
+    disablePush,
+    fetchVapidPublicKey,
+} from "../lib/push";
 import { loadTheme, applyTheme, persistTheme, Theme } from "../lib/theme";
 import { t, setLocale } from "../lib/i18n";
 import { useToast } from "../lib/toast";
@@ -70,18 +76,23 @@ export default function SettingsPage() {
         if (settingsLanguage) setLocale(settingsLanguage);
     }, [settingsLanguage]);
 
-    // Web Push (N2-T05). Support is derived during render; the async existing-
-    // subscription lookup runs in an effect (setState only in the async callback).
-    const pushSupported = isPushSupported();
+    // Web Push (N2-T05). Browser capability check is synchronous; server-side
+    // VAPID config is probed asynchronously so we never show the permission
+    // dialog when the server isn't set up.
+    const pushBrowserSupported = isPushSupported();
+    const [pushServerConfigured, setPushServerConfigured] = useState(false);
     const [pushEnabled, setPushEnabled] = useState(false);
     const [pushBusy, setPushBusy] = useState(false);
 
+    const pushSupported = pushBrowserSupported && pushServerConfigured;
+
     useEffect(() => {
-        if (!pushSupported) return;
-        getExistingSubscription()
-            .then((sub) => setPushEnabled(!!sub))
-            .catch(() => {});
-    }, [pushSupported]);
+        if (!pushBrowserSupported) return;
+        Promise.all([
+            fetchVapidPublicKey().then((key) => setPushServerConfigured(!!key)),
+            getExistingSubscription().then((sub) => setPushEnabled(!!sub)),
+        ]).catch(() => {});
+    }, [pushBrowserSupported]);
 
     async function togglePush() {
         setPushBusy(true);
@@ -96,8 +107,13 @@ export default function SettingsPage() {
                 toast(t("settings.pushEnabled"), "success");
             }
         } catch (err) {
-            const denied = err instanceof Error && err.message === "permission-denied";
-            toast(denied ? t("settings.pushPermissionDenied") : t("settings.pushFailed"), "error");
+            if (err instanceof Error && err.message === "permission-denied") {
+                toast(t("settings.pushPermissionDenied"), "error");
+            } else if (err instanceof Error && err.message === "server-unconfigured") {
+                toast(t("settings.pushFailed"), "error");
+            } else {
+                toast(t("settings.pushFailed"), "error");
+            }
         } finally {
             setPushBusy(false);
         }

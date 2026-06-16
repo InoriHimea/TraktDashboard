@@ -76,14 +76,16 @@ self.addEventListener("notificationclick", (e) => {
     e.notification.close();
     const url = (e.notification.data && e.notification.data.url) || "/";
     e.waitUntil(
-        self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
-            for (const client of clients) {
-                if ("focus" in client) {
-                    client.navigate(url);
-                    return client.focus();
-                }
-            }
-            return self.clients.openWindow(url);
-        })
+        self.clients
+            .matchAll({ type: "window", includeUncontrolled: true })
+            .then((clients) => {
+                // Prefer a window already at the target path — focus it without
+                // navigating away unrelated tabs.
+                const match = clients.find(
+                    (c) => new URL(c.url, self.location.origin).pathname === url,
+                );
+                if (match && "focus" in match) return match.focus();
+                return self.clients.openWindow(url);
+            })
     );
 });
