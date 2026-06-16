@@ -1,6 +1,6 @@
 # Trakt Dashboard — Requirements
 
-Living spec of the current functional and non-functional requirements. Last reviewed: 2026-06-12.
+Living spec of the current functional and non-functional requirements. Last reviewed: 2026-06-16.
 
 ## Product
 
@@ -25,13 +25,17 @@ privacy-first (data stays on the user's server).
 ## Non-functional requirements
 
 - **Reliability** — per-user sync mutex; OAuth refresh concurrency-safe; provider HTTP retry
-  with backoff + Retry-After; per-provider rate limiting; queue health → 503 (no fake success).
+  with backoff + Retry-After; per-provider rate limiting; queue health → 503 (no fake success);
+  BullMQ jobs must re-throw on failure (not swallow) so failed status and retries apply;
+  repeatable-job upsert: remove step is best-effort, add step always executes;
+  Web Push TTL ≥ 86400 s so offline devices receive daily reminders.
 - **Correctness** — reset cursor applied consistently to count / next-episode / lastWatchedAt;
   null-safe timestamp serialization; required `userId` for episode creation.
 - **Performance** — stale-while-revalidate metadata cache with per-source TTLs; next-episode via
   `NOT EXISTS` anti-join; route-split web bundles.
 - **Security** — self-hosted; DB/Redis bound to loopback; nginx security headers + CSP
-  (report-only); secrets via env.
+  (report-only); secrets via env; CSV export sanitizes formula-injection triggers (space-prefix
+  after trimStart detection); push subscription capped at 10 per user (429 on overflow).
 - **Quality gates** — CI runs lint (eslint + prettier) + typecheck + build + coverage tests;
   coverage floors enforced.
 
@@ -66,8 +70,8 @@ privacy-first (data stays on the user's server).
 | N2-T02 | **观看历史时间轴** — 全局跨剧集/电影的倒序时间轴视图；支持按日期范围筛选、导出 CSV                               | 高     |
 | N2-T03 | **统计页增强** — 新增：播放平台/来源分布、连续追剧节奏分析、年度/月度对比、最长连续观看记录                      | 中     |
 | N2-T04 | **电影详情页 Watch Again 弹窗** — `MovieDetailPage` 缺少与 `EpisodeDetailPage` 对等的「再看一次」日期时间选择器  | 中     |
-| N2-T05 | **新番提醒** — 根据 Calendar 数据推送即将播出提醒（Web Push Notification / 邮件），需用户授权                    | 低     |
-| N2-T06 | **数据导出** — 导出观看历史为 JSON / CSV；自托管场景的隐私备份需求                                               | 低     |
+| N2-T05 | **新番提醒** ✅ — Web Push 播出提醒已实现（v0.50.x）；v0.50.3 修复 TTL/SUBJECT/状态同步等 13 项审查问题          | 已完成 |
+| N2-T06 | **数据导出** ✅ — CSV/JSON 导出已实现（v0.50.x）；v0.50.3 修复 CSV Injection sanitizer                           | 已完成 |
 
 ### N3 — 测试与质量
 
