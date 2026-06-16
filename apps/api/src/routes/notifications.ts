@@ -36,10 +36,10 @@ notificationRoutes.post("/subscribe", async (c) => {
         })
         .onConflictDoUpdate({
             target: pushSubscriptions.endpoint,
-            // userId is intentionally omitted: a push endpoint belongs to whoever
-            // first registered it. Overwriting would silently transfer the
-            // subscription away from the original user on a shared device.
-            set: { p256dh: body.keys.p256dh, auth: body.keys.auth },
+            // Re-bind the subscription to whoever is currently logged in.
+            // A shared device where user B logs in after user A should deliver
+            // reminders to user B, not keep them silently routed to user A.
+            set: { userId, p256dh: body.keys.p256dh, auth: body.keys.auth },
         });
 
     return apiOk(c, { ok: true });

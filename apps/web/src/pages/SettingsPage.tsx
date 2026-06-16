@@ -80,16 +80,17 @@ export default function SettingsPage() {
     // VAPID config is probed asynchronously so we never show the permission
     // dialog when the server isn't set up.
     const pushBrowserSupported = isPushSupported();
-    const [pushServerConfigured, setPushServerConfigured] = useState(false);
+    // Store the key itself so we can pass it to enablePush without a second fetch.
+    const [vapidPublicKey, setVapidPublicKey] = useState<string | null>(null);
     const [pushEnabled, setPushEnabled] = useState(false);
     const [pushBusy, setPushBusy] = useState(false);
 
-    const pushSupported = pushBrowserSupported && pushServerConfigured;
+    const pushSupported = pushBrowserSupported && vapidPublicKey !== null;
 
     useEffect(() => {
         if (!pushBrowserSupported) return;
         Promise.all([
-            fetchVapidPublicKey().then((key) => setPushServerConfigured(!!key)),
+            fetchVapidPublicKey().then((key) => setVapidPublicKey(key)),
             getExistingSubscription().then((sub) => setPushEnabled(!!sub)),
         ]).catch(() => {});
     }, [pushBrowserSupported]);
@@ -102,15 +103,14 @@ export default function SettingsPage() {
                 setPushEnabled(false);
                 toast(t("settings.pushDisabled"), "success");
             } else {
-                await enablePush();
+                // Pass the pre-fetched key to avoid a redundant network request.
+                await enablePush(vapidPublicKey ?? undefined);
                 setPushEnabled(true);
                 toast(t("settings.pushEnabled"), "success");
             }
         } catch (err) {
             if (err instanceof Error && err.message === "permission-denied") {
                 toast(t("settings.pushPermissionDenied"), "error");
-            } else if (err instanceof Error && err.message === "server-unconfigured") {
-                toast(t("settings.pushFailed"), "error");
             } else {
                 toast(t("settings.pushFailed"), "error");
             }

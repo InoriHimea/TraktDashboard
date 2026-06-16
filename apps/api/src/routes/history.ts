@@ -150,10 +150,15 @@ historyRoutes.get("/export", async (c) => {
         });
     }
 
-    // Prevent CSV formula injection: prefix cells starting with formula-trigger
-    // characters (=, +, -, @, tab, CR) with a tab so spreadsheets treat them
-    // as text. OWASP recommendation for CSV Injection defence.
-    const sanitizeCsv = (v: string) => (/^[=+\-@\t\r]/.test(v) ? `\t${v}` : v);
+    // CSV Injection defence (OWASP):
+    // 1. Replace embedded CR/LF with a space — non-RFC-4180 parsers split on
+    //    bare newlines even inside a quoted field, injecting a new row.
+    // 2. Tab-prefix cells whose first character is a formula trigger (=, +, -,
+    //    @, or tab) so spreadsheets treat the cell as text, not a formula.
+    const sanitizeCsv = (v: string) => {
+        const clean = v.replace(/[\r\n]/g, " ");
+        return /^[=+\-@\t]/.test(clean) ? `\t${clean}` : clean;
+    };
 
     const lines = [
         "Type,Show / Movie,Season,Episode,Title,WatchedAt,Source",

@@ -49,15 +49,23 @@ const validSub = {
     keys: { p256dh: "p256dh-key", auth: "auth-key" },
 };
 
+function setVapid() {
+    process.env.VAPID_PUBLIC_KEY = "k";
+    process.env.VAPID_PRIVATE_KEY = "k";
+    process.env.VAPID_SUBJECT = "mailto:test@test.example";
+}
+
 beforeEach(() => {
     dbMockState.db = createMockDb();
     delete process.env.VAPID_PUBLIC_KEY;
     delete process.env.VAPID_PRIVATE_KEY;
+    delete process.env.VAPID_SUBJECT;
 });
 
 afterEach(() => {
     delete process.env.VAPID_PUBLIC_KEY;
     delete process.env.VAPID_PRIVATE_KEY;
+    delete process.env.VAPID_SUBJECT;
 });
 
 describe("notifications routes", () => {
@@ -85,8 +93,7 @@ describe("notifications routes", () => {
     });
 
     it("rejects an invalid subscription body (400)", async () => {
-        process.env.VAPID_PUBLIC_KEY = "k";
-        process.env.VAPID_PRIVATE_KEY = "k";
+        setVapid();
         const res = await app().request("/notifications/subscribe", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -96,8 +103,7 @@ describe("notifications routes", () => {
     });
 
     it("stores a valid subscription", async () => {
-        process.env.VAPID_PUBLIC_KEY = "k";
-        process.env.VAPID_PRIVATE_KEY = "k";
+        setVapid();
         const res = await app().request("/notifications/subscribe", {
             method: "POST",
             headers: { "Content-Type": "application/json" },

@@ -255,6 +255,45 @@ describe("GET /history/export", () => {
         expect(text).toContain("movie");
         expect(text).toContain("Test Movie");
     });
+
+    it("prefixes formula-trigger show titles with a tab (CSV injection defence)", async () => {
+        for (const trigger of ["=SUM(1)", "+cmd", "-1+1", "@SUM", "\t=formula"]) {
+            const row = makeHistoryRow({ show: { id: 5, title: trigger } });
+            const db = createMockDb([[row]]);
+            (dbMockState as { db: unknown }).db = db;
+
+            const res = await app().request("/history/export");
+            const text = await res.text();
+            const dataLine = text.split("\r\n")[1];
+            // Cell must start with a tab prefix, not the raw trigger character.
+            expect(dataLine).toMatch(/"\t/);
+            // The original value is preserved after the prefix.
+            expect(dataLine).toContain(trigger.replace(/^[\t]/, ""));
+        }
+    });
+
+    it("replaces embedded newlines in titles to prevent row injection", async () => {
+        const row = makeHistoryRow({ show: { id: 5, title: "Show\nWith\r\nNewline" } });
+        const db = createMockDb([[row]]);
+        (dbMockState as { db: unknown }).db = db;
+
+        const res = await app().request("/history/export");
+        const text = await res.text();
+        // Result must be a single header + single data line (no injected extra rows).
+        expect(text.split("\r\n").length).toBe(2);
+        // The newlines should be replaced with spaces.
+        expect(text).toContain("Show With  Newline");
+    });
+
+    it("does not alter titles that are safe strings", async () => {
+        const row = makeHistoryRow({ show: { id: 5, title: "Normal Show Title" } });
+        const db = createMockDb([[row]]);
+        (dbMockState as { db: unknown }).db = db;
+
+        const res = await app().request("/history/export");
+        const text = await res.text();
+        expect(text).toContain('"Normal Show Title"');
+    });
 });
 
 describe("lib/validate helpers", () => {

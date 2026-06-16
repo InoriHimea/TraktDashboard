@@ -43,13 +43,13 @@ export async function fetchVapidPublicKey(): Promise<string | null> {
 
 /**
  * Subscribes via PushManager and registers with the backend.
- * Fetches the VAPID key BEFORE requesting notification permission so the
- * browser permission prompt is never shown when the server is unconfigured.
+ * Pass `cachedKey` when the caller already has the VAPID public key (e.g. from
+ * a previous `fetchVapidPublicKey` call) to avoid an extra round-trip.
  * Throws "permission-denied" if the user declines, "server-unconfigured" if
  * VAPID is not set up.
  */
-export async function enablePush(): Promise<void> {
-    const publicKey = await fetchVapidPublicKey();
+export async function enablePush(cachedKey?: string): Promise<void> {
+    const publicKey = cachedKey ?? (await fetchVapidPublicKey());
     if (!publicKey) throw new Error("server-unconfigured");
 
     const permission = await Notification.requestPermission();
@@ -66,6 +66,10 @@ export async function enablePush(): Promise<void> {
 export async function disablePush(): Promise<void> {
     const subscription = await getExistingSubscription();
     if (!subscription) return;
-    await api.notifications.unsubscribe(subscription.endpoint);
+    // Revoke in browser first. If this fails nothing is deleted from the backend
+    // and state stays consistent. If the subsequent backend call fails, the
+    // endpoint is already invalid so the airing-reminders job will auto-prune it
+    // on the next send attempt (404/410 response).
     await subscription.unsubscribe();
+    await api.notifications.unsubscribe(subscription.endpoint);
 }

@@ -83,7 +83,8 @@ describe("runAiringReminders", () => {
     });
 
     it("sends one push per subscription with airing episodes", async () => {
-        dbMockState.db = createMockDb([[sub], [airingEp]]);
+        // Query order: [userId probe] → [airing episodes] → [user subs for send]
+        dbMockState.db = createMockDb([[sub], [airingEp], [sub]]);
         pushMock.send.mockResolvedValue({ ok: true });
         const result = await runAiringReminders();
         expect(result).toEqual({ sent: 1, pruned: 0 });
@@ -95,6 +96,7 @@ describe("runAiringReminders", () => {
     });
 
     it("skips users with no episodes airing today", async () => {
+        // userId probe returns sub, episodes query returns empty — no third query needed.
         dbMockState.db = createMockDb([[sub], []]);
         const result = await runAiringReminders();
         expect(result).toEqual({ sent: 0, pruned: 0 });
@@ -102,7 +104,7 @@ describe("runAiringReminders", () => {
     });
 
     it("prunes dead subscriptions on 410 Gone", async () => {
-        dbMockState.db = createMockDb([[sub], [airingEp]]);
+        dbMockState.db = createMockDb([[sub], [airingEp], [sub]]);
         pushMock.send.mockResolvedValue({ ok: false, statusCode: 410 });
         const result = await runAiringReminders();
         expect(result).toEqual({ sent: 0, pruned: 1 });
@@ -110,7 +112,8 @@ describe("runAiringReminders", () => {
     });
 
     it("skips episodes airing on a different date", async () => {
-        // staleEp.airDate is yesterday — the gte/lt range filter should exclude it
+        // staleEp.airDate is yesterday — the gte/lt range filter should exclude it.
+        // Episodes query returns empty after filtering, so no third query needed.
         dbMockState.db = createMockDb([[sub], [staleEp]]);
         pushMock.send.mockResolvedValue({ ok: true });
         const result = await runAiringReminders();
@@ -119,7 +122,7 @@ describe("runAiringReminders", () => {
     });
 
     it("does not push for episodes already watched today", async () => {
-        // DB returns [] because NOT EXISTS (watch_history) filtered out watched episodes
+        // DB returns [] because NOT EXISTS (watch_history) filtered out watched episodes.
         dbMockState.db = createMockDb([[sub], []]);
         const result = await runAiringReminders();
         expect(result).toEqual({ sent: 0, pruned: 0 });

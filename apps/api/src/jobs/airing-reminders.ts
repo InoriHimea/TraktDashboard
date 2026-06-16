@@ -8,7 +8,10 @@ import {
 } from "@trakt-dashboard/db";
 import { and, eq, gte, lt, asc, sql } from "drizzle-orm";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc.js";
 import { sendPush } from "../lib/push.js";
+
+dayjs.extend(utc);
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -21,23 +24,29 @@ const pad = (n: number) => String(n).padStart(2, "0");
  */
 export async function runAiringReminders(): Promise<{ sent: number; pruned: number }> {
     const db = getDb();
-    const subs = await db.select().from(pushSubscriptions);
-    if (subs.length === 0) return { sent: 0, pruned: 0 };
 
-    const today = dayjs().format("YYYY-MM-DD");
-    const tomorrow = dayjs().add(1, "day").format("YYYY-MM-DD");
+    // Step 1: find all distinct userIds that have at least one subscription.
+    // Selecting only userId (not p256dh/auth) keeps this initial probe lightweight
+    // even when the total subscription count is large.
+    const userIdRows = await db
+        .select({ userId: pushSubscriptions.userId })
+        .from(pushSubscriptions);
+    if (userIdRows.length === 0) return { sent: 0, pruned: 0 };
 
-    const byUser = new Map<number, typeof subs>();
-    for (const s of subs) {
-        const list = byUser.get(s.userId) ?? [];
-        list.push(s);
-        byUser.set(s.userId, list);
-    }
+    const subscribedUserIds = [...new Set(userIdRows.map((r) => r.userId))];
+
+    // Step 2: use UTC so the date window is timezone-consistent regardless of
+    // which timezone the server process runs in.
+    const today = dayjs.utc().format("YYYY-MM-DD");
+    const tomorrow = dayjs.utc().add(1, "day").format("YYYY-MM-DD");
 
     let sent = 0;
     let pruned = 0;
 
-    for (const [userId, userSubs] of byUser) {
+    // Step 3: query airing episodes per user, then load subscriptions only for
+    // users that actually have episodes today. Sequential DB queries keep load
+    // predictable; push sends within a user are parallelised.
+    for (const userId of subscribedUserIds) {
         const airing = await db
             .select({
                 title: episodes.title,
@@ -64,6 +73,13 @@ export async function runAiringReminders(): Promise<{ sent: number; pruned: numb
 
         if (airing.length === 0) continue;
 
+        // Only fetch endpoint keys for this user after confirming they have
+        // airing episodes — avoids loading keys for inactive users.
+        const userSubs = await db
+            .select()
+            .from(pushSubscriptions)
+            .where(eq(pushSubscriptions.userId, userId));
+
         const first = airing[0];
         const payload =
             airing.length === 1
@@ -86,11 +102,17 @@ export async function runAiringReminders(): Promise<{ sent: number; pruned: numb
                       url: "/calendar",
                   };
 
-        for (const sub of userSubs) {
-            const res = await sendPush(
-                { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-                payload,
-            );
+        // Parallelise sends across subscriptions for this user.
+        const results = await Promise.all(
+            userSubs.map((sub) =>
+                sendPush(
+                    { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+                    payload,
+                ).then((res) => ({ sub, res })),
+            ),
+        );
+
+        for (const { sub, res } of results) {
             if (res.ok) {
                 sent++;
             } else if (res.statusCode === 404 || res.statusCode === 410) {

@@ -56,32 +56,46 @@ async function getUserSyncInterval(userId: number): Promise<number> {
     return parseInt(process.env.SYNC_INTERVAL_MINUTES || "60");
 }
 
+/**
+ * Upsert a repeatable job: removes the existing key (if any) then adds a fresh
+ * one. This prevents duplicate repeatable keys from accumulating across restarts.
+ */
+async function upsertRepeatableJob(
+    queue: Queue,
+    jobName: string,
+    jobId: string,
+    data: Record<string, unknown>,
+    repeatOpts: { pattern?: string; every?: number },
+): Promise<void> {
+    const jobs = await queue.getRepeatableJobs();
+    const existing = jobs.find((j) => j.id === jobId);
+    if (existing) await queue.removeRepeatableByKey(existing.key);
+    await queue.add(jobName, data, {
+        jobId,
+        repeat: repeatOpts,
+        removeOnComplete: 10,
+        removeOnFail: 5,
+    });
+}
+
 export async function registerUserSyncJob(userId: number) {
     const queue = getSyncQueue();
     const intervalMinutes = await getUserSyncInterval(userId);
     const jobId = `sync-user-${userId}`;
-
-    // Remove existing repeat job to prevent duplicates on restart
     try {
-        const repeatableJobs = await queue.getRepeatableJobs();
-        const existing = repeatableJobs.find((j) => j.id === jobId);
-        if (existing) {
-            await queue.removeRepeatableByKey(existing.key);
-        }
-    } catch (e) {
-        console.warn(`[scheduler] Could not remove existing repeat job for user ${userId}:`, e);
-    }
-
-    await queue.add(
-        "incremental-sync",
-        { userId },
-        {
+        await upsertRepeatableJob(
+            queue,
+            "incremental-sync",
             jobId,
-            repeat: { every: intervalMinutes * 60 * 1000 },
-            removeOnComplete: 10,
-            removeOnFail: 5,
-        },
-    );
+            { userId },
+            {
+                every: intervalMinutes * 60 * 1000,
+            },
+        );
+    } catch (e) {
+        console.warn(`[scheduler] Could not register sync job for user ${userId}:`, e);
+        return;
+    }
     console.log(
         `[scheduler] Registered sync job for user ${userId} every ${intervalMinutes} minutes`,
     );
@@ -141,22 +155,16 @@ export async function startScheduler() {
         await registerUserSyncJob(user.id);
     }
 
-    // Register daily metadata cache cleanup job
+    // Register daily metadata cache cleanup job — cron anchors the time to
+    // 03:00 UTC so it doesn't drift on every restart the way repeat.every would.
     try {
-        const repeatableJobs = await queue.getRepeatableJobs();
-        const cleanupJobId = "cleanup-metadata-cache";
-        const existingCleanup = repeatableJobs.find((j) => j.id === cleanupJobId);
-        if (existingCleanup) {
-            await queue.removeRepeatableByKey(existingCleanup.key);
-        }
-        await queue.add(
+        await upsertRepeatableJob(
+            queue,
             "cleanup-cache",
+            "cleanup-metadata-cache",
             {},
             {
-                jobId: cleanupJobId,
-                repeat: { every: 24 * 60 * 60 * 1000 }, // Daily
-                removeOnComplete: 10,
-                removeOnFail: 5,
+                pattern: "0 3 * * *",
             },
         );
         console.log(`[scheduler] Registered daily metadata cache cleanup job`);
@@ -164,22 +172,15 @@ export async function startScheduler() {
         console.error(`[scheduler] Failed to register cleanup job:`, e);
     }
 
-    // Register daily airing-reminder digest job (N2-T05)
+    // Register daily airing-reminder digest job (N2-T05) — 08:00 UTC daily.
     try {
-        const repeatableJobs = await queue.getRepeatableJobs();
-        const reminderJobId = "airing-reminders-daily";
-        const existing = repeatableJobs.find((j) => j.id === reminderJobId);
-        if (existing) {
-            await queue.removeRepeatableByKey(existing.key);
-        }
-        await queue.add(
+        await upsertRepeatableJob(
+            queue,
             "airing-reminders",
+            "airing-reminders-daily",
             {},
             {
-                jobId: reminderJobId,
-                repeat: { every: 24 * 60 * 60 * 1000 }, // Daily
-                removeOnComplete: 10,
-                removeOnFail: 5,
+                pattern: "0 8 * * *",
             },
         );
         console.log(`[scheduler] Registered daily airing-reminder job`);

@@ -74,7 +74,10 @@ self.addEventListener("push", (e) => {
 
 self.addEventListener("notificationclick", (e) => {
     e.notification.close();
-    const url = (e.notification.data && e.notification.data.url) || "/";
+    // Accept only same-origin relative paths. An absolute or cross-origin URL in
+    // the push payload would make openWindow throw a SecurityError.
+    const raw = (e.notification.data && e.notification.data.url) || "/";
+    const url = typeof raw === "string" && raw.startsWith("/") ? raw : "/";
     e.waitUntil(
         self.clients
             .matchAll({ type: "window", includeUncontrolled: true })

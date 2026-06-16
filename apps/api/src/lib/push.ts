@@ -4,25 +4,40 @@ import webpush from "web-push";
 // the whole feature degrades gracefully (endpoints return 503, sends are no-ops)
 // so the app runs fine without push configured.
 
-let vapidConfigured = false;
+// Track which key pair is currently loaded in the webpush module so that a
+// runtime key rotation (secrets manager hot-reload) is detected and applied.
+let configuredPublicKey: string | null = null;
+let configuredPrivateKey: string | null = null;
 
 function ensureVapid(): boolean {
     const publicKey = process.env.VAPID_PUBLIC_KEY;
     const privateKey = process.env.VAPID_PRIVATE_KEY;
+    const subject = process.env.VAPID_SUBJECT;
+
     if (!publicKey || !privateKey) return false;
-    if (!vapidConfigured) {
-        webpush.setVapidDetails(
-            process.env.VAPID_SUBJECT || "mailto:admin@example.com",
-            publicKey,
-            privateKey,
+
+    if (!subject) {
+        console.error(
+            "[push] VAPID_SUBJECT is not set. Push notifications will not be sent. " +
+                "Set it to a mailto: or https: URI for your application.",
         );
-        vapidConfigured = true;
+        return false;
     }
+
+    // Re-configure when keys change (e.g. secret rotation without restart).
+    if (publicKey !== configuredPublicKey || privateKey !== configuredPrivateKey) {
+        webpush.setVapidDetails(subject, publicKey, privateKey);
+        configuredPublicKey = publicKey;
+        configuredPrivateKey = privateKey;
+    }
+
     return true;
 }
 
 export function isPushConfigured(): boolean {
-    return Boolean(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
+    return Boolean(
+        process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY && process.env.VAPID_SUBJECT,
+    );
 }
 
 export function getVapidPublicKey(): string | null {
