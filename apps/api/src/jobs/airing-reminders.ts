@@ -91,18 +91,28 @@ export async function runAiringReminders(): Promise<{ sent: number; pruned: numb
                       }`,
                       url: "/calendar",
                   }
-                : {
-                      // +N reflects the number of additional *shows*, not episodes.
-                      title: `${first.showTitle} +${distinctShows.size - 1}`,
-                      body: airing
-                          .slice(0, 4)
-                          .map(
-                              (e) =>
-                                  `${e.showTitle} S${pad(e.seasonNumber)}E${pad(e.episodeNumber)}`,
-                          )
-                          .join(" · "),
-                      url: "/calendar",
-                  };
+                : distinctShows.size === 1
+                  ? {
+                        // Multiple episodes from the same show — omit redundant show prefix.
+                        title: first.showTitle,
+                        body: airing
+                            .slice(0, 4)
+                            .map((e) => `S${pad(e.seasonNumber)}E${pad(e.episodeNumber)}`)
+                            .join(" · "),
+                        url: "/calendar",
+                    }
+                  : {
+                        // Multiple shows — title shows first show + count of additional shows.
+                        title: `${first.showTitle} +${distinctShows.size - 1}`,
+                        body: airing
+                            .slice(0, 4)
+                            .map(
+                                (e) =>
+                                    `${e.showTitle} S${pad(e.seasonNumber)}E${pad(e.episodeNumber)}`,
+                            )
+                            .join(" · "),
+                        url: "/calendar",
+                    };
 
         // Parallelise sends across subscriptions for this user.
         const results = await Promise.all(

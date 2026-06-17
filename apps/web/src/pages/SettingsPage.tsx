@@ -87,15 +87,19 @@ export default function SettingsPage() {
 
     const pushSupported = pushBrowserSupported && vapidPublicKey !== null;
 
+    function syncPushState() {
+        getExistingSubscription()
+            .then((sub) => setPushEnabled(!!sub))
+            .catch(() => {});
+    }
+
     useEffect(() => {
         if (!pushBrowserSupported) return;
         // Run independently so one failure doesn't prevent the other from updating state.
         fetchVapidPublicKey()
             .then((key) => setVapidPublicKey(key))
             .catch(() => {});
-        getExistingSubscription()
-            .then((sub) => setPushEnabled(!!sub))
-            .catch(() => {});
+        syncPushState();
     }, [pushBrowserSupported]);
 
     async function togglePush() {
@@ -112,13 +116,10 @@ export default function SettingsPage() {
                 toast(t("settings.pushEnabled"), "success");
             }
         } catch (err) {
-            // If we were disabling, the browser subscription may have already been
-            // revoked before the backend call failed. Re-sync state from the browser.
-            if (pushEnabled) {
-                getExistingSubscription()
-                    .then((sub) => setPushEnabled(!!sub))
-                    .catch(() => {});
-            }
+            // Re-sync browser subscription state regardless of which direction failed.
+            // On the enable path, the browser may have created a subscription before
+            // the backend call threw; on the disable path, it may have already unsubscribed.
+            syncPushState();
             if (err instanceof Error && err.message === "permission-denied") {
                 toast(t("settings.pushPermissionDenied"), "error");
             } else {

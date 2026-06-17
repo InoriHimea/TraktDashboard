@@ -57,16 +57,29 @@ export async function enablePush(cachedKey?: string): Promise<void> {
 
     const reg = await navigator.serviceWorker.ready;
 
-    // Re-use an existing browser subscription when one already exists so that
-    // rapid double-invocation (e.g. user clicks Enable twice) doesn't create
-    // duplicate endpoints and trigger duplicate daily notifications.
+    const keyBytes = urlBase64ToUint8Array(publicKey);
     const existing = await reg.pushManager.getSubscription();
+
+    // Verify the existing subscription was created with the current VAPID key.
+    // A mismatch means the key was rotated — unsubscribe the stale entry so the
+    // push service can bind a new subscription to the new key.
+    const existingKeyMatches = (() => {
+        const k = existing?.options?.applicationServerKey;
+        if (!k) return false;
+        const a = new Uint8Array(k as ArrayBuffer);
+        return a.length === keyBytes.length && a.every((b, i) => b === keyBytes[i]);
+    })();
+
+    if (existing && !existingKeyMatches) await existing.unsubscribe();
+
     const subscription =
-        existing ??
-        (await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(publicKey),
-        }));
+        existing && existingKeyMatches
+            ? existing
+            : await reg.pushManager.subscribe({
+                  userVisibleOnly: true,
+                  applicationServerKey: keyBytes,
+              });
+
     await api.notifications.subscribe(subscription.toJSON() as PushSubscriptionJSON);
 }
 
