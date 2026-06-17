@@ -79,6 +79,7 @@
         "pushEnabled": "已启用播出提醒。",
         "pushDisabled": "已关闭播出提醒。",
         "pushPermissionDenied": "通知权限被拒绝，无法启用提醒。",
+        "pushRotationBlocked": "推送服务暂时不可用，请稍后几分钟再试。",
         "pushFailed": "操作失败，请稍后重试。",
         "pushUnsupported": "当前浏览器不支持 Web Push 通知。",
         "saveSuccess": "设置保存成功。",

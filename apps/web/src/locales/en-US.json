@@ -79,6 +79,7 @@
         "pushEnabled": "Airing reminders enabled.",
         "pushDisabled": "Airing reminders disabled.",
         "pushPermissionDenied": "Notification permission was denied.",
+        "pushRotationBlocked": "Push service temporarily unavailable. Please try again in a few minutes.",
         "pushFailed": "Something went wrong. Please try again.",
         "pushUnsupported": "This browser does not support Web Push notifications.",
         "saveSuccess": "Settings saved successfully.",

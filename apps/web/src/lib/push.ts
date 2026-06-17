@@ -76,15 +76,41 @@ export async function enablePush(cachedKey?: string): Promise<void> {
         try {
             await existing.unsubscribe();
         } catch {
-            // Unsubscribe failed (push service unreachable). Re-query to determine
-            // whether the browser retained the local subscription record — some
-            // implementations clean it up despite throwing.
-            // If the record persists, subscribe() with a different applicationServerKey
-            // would throw InvalidStateError per W3C Push §4.3 (Chrome/Firefox/Safari
-            // all enforce this), so surface a clear domain error instead.
-            const stillActive = await reg.pushManager.getSubscription();
-            if (stillActive) throw new Error("push-rotation-blocked");
-            // Browser cleaned up the local record; safe to proceed to subscribe().
+            // Unsubscribe failed (push service unreachable). Re-check browser state to
+            // determine whether the local subscription record was cleaned up despite the throw.
+            let stillActive: PushSubscription | null = null;
+            try {
+                stillActive = await reg.pushManager.getSubscription();
+            } catch {
+                // getSubscription() itself failed (degraded SW registration) — treat as cleaned up.
+            }
+            if (stillActive) {
+                // Determine if the current record already carries the new VAPID key.
+                // Handles two edge cases:
+                //   (a) Another tab concurrently subscribed with the correct new key.
+                //   (b) Firefox async IDB: deletion was queued but not yet committed
+                //       when getSubscription() ran, so the old record is still visible.
+                const k = stillActive.options?.applicationServerKey;
+                const activeKeyBytes = k
+                    ? k instanceof Uint8Array
+                        ? k
+                        : new Uint8Array(k as ArrayBuffer)
+                    : null;
+                const newKeyAlreadyActive =
+                    activeKeyBytes !== null &&
+                    activeKeyBytes.length === keyBytes.length &&
+                    activeKeyBytes.every((b, i) => b === keyBytes[i]);
+                if (newKeyAlreadyActive) {
+                    // New key is already live (concurrent tab or IDB false-positive).
+                    // Register the existing subscription with the backend and return.
+                    await api.notifications.subscribe(stillActive.toJSON() as PushSubscriptionJSON);
+                    return;
+                }
+                // Old key is still active. Calling subscribe() with a different
+                // applicationServerKey would throw InvalidStateError per W3C Push §4.3.
+                throw new Error("push-rotation-blocked");
+            }
+            // Browser cleaned up the local record despite throwing; safe to proceed.
         }
     }
 

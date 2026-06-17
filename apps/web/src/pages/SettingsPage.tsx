@@ -133,6 +133,8 @@ export default function SettingsPage() {
             }
             if (err instanceof Error && err.message === "permission-denied") {
                 toast(t("settings.pushPermissionDenied"), "error");
+            } else if (err instanceof Error && err.message === "push-rotation-blocked") {
+                toast(t("settings.pushRotationBlocked"), "error");
             } else {
                 toast(t("settings.pushFailed"), "error");
             }
