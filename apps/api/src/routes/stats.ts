@@ -8,7 +8,7 @@ import {
     movies,
     userMovieProgress,
 } from "@trakt-dashboard/db";
-import { eq, and, sql, desc, gte } from "drizzle-orm";
+import { eq, and, sql, desc, gte, lte } from "drizzle-orm";
 import { longestConsecutiveDays } from "../lib/streak.js";
 
 export const statsRoutes = new Hono<{ Variables: { userId: number } }>();
@@ -179,7 +179,7 @@ statsRoutes.get("/overview", async (c) => {
                 and(
                     eq(watchHistory.userId, userId),
                     gte(watchHistory.watchedAt, lastYearStart),
-                    sql`${watchHistory.watchedAt} <= ${sameDayLastYear}`,
+                    lte(watchHistory.watchedAt, sameDayLastYear),
                 ),
             ),
         db
