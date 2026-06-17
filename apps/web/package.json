@@ -1,6 +1,6 @@
 {
     "name": "@trakt-dashboard/web",
-    "version": "0.50.3",
+    "version": "0.50.9",
     "private": true,
     "type": "module",
     "scripts": {
