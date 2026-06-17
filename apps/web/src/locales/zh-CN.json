@@ -86,7 +86,18 @@
         "saveFailed": "保存设置失败。",
         "validationIntervalError": "同步间隔必须是 1 到 10080 之间的整数。",
         "validationLanguageError": "显示语言格式不正确，请使用 BCP 47 格式（如 zh-CN、en-US）。",
-        "validationProxyError": "代理地址必须以 http:// 或 https:// 开头。"
+        "validationProxyError": "代理地址必须以 http:// 或 https:// 开头。",
+        "jellyfinTitle": "Jellyfin 集成",
+        "jellyfinSubtitle": "连接 Jellyfin 媒体服务器，支持看完自动删除文件。",
+        "jellyfinUrl": "服务器地址",
+        "jellyfinUrlPlaceholder": "http://nas:8096",
+        "jellyfinApiKey": "Admin API Key",
+        "jellyfinApiKeyPlaceholder": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "jellyfinAutoDeleteLibraries": "自动删除媒体库",
+        "jellyfinAutoDeleteLibrariesHint": "看完后自动删除文件的媒体库（仅电视节目）。未选择的库仅支持手动删除。",
+        "jellyfinLoadLibrariesFailed": "无法加载媒体库，请检查服务器地址和 API Key",
+        "jellyfinLoadLibraries": "加载媒体库",
+        "jellyfinNotConfigured": "请先填写服务器地址和 API Key 后加载媒体库"
     },
     "progress": {
         "watching": "追剧中",
@@ -256,7 +267,12 @@
         "notAiredShort": "未播",
         "episodeFallback": "第 {{n}} 集",
         "airedCount": "{{n}} 已播出",
-        "unairedCountNum": "{{n}} 未播"
+        "unairedCountNum": "{{n}} 未播",
+        "deleteJellyfinFile": "删除文件",
+        "deleteJellyfinTitle": "从磁盘删除",
+        "deleteJellyfinDesc": "将从 Jellyfin 媒体库中删除此集的视频文件，此操作不可撤销。",
+        "deleteJellyfinSuccess": "文件已删除",
+        "deleteJellyfinFailed": "删除失败，请重试"
     },
     "watchAction": {
         "justNow": "刚刚",

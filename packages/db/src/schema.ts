@@ -265,6 +265,9 @@ export const userSettings = pgTable("user_settings", {
     displayLanguage: text("display_language").notNull().default("zh-CN"),
     syncIntervalMinutes: integer("sync_interval_minutes").notNull().default(60),
     httpProxy: text("http_proxy"),
+    jellyfinUrl: text("jellyfin_url"),
+    jellyfinApiKey: text("jellyfin_api_key"),
+    jellyfinAutoDeleteLibraryIds: text("jellyfin_auto_delete_library_ids"),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

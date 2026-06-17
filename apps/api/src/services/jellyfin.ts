@@ -1,0 +1,94 @@
+import type { JellyfinLibrary, JellyfinEpisode } from "@trakt-dashboard/types";
+
+export interface JellyfinConfig {
+    url: string;
+    apiKey: string;
+}
+
+function jellyfinFetch(cfg: JellyfinConfig, path: string, init?: RequestInit) {
+    const base = cfg.url.replace(/\/$/, "");
+    return fetch(`${base}${path}`, {
+        ...init,
+        headers: {
+            "X-Emby-Token": cfg.apiKey,
+            "Content-Type": "application/json",
+            ...(init?.headers ?? {}),
+        },
+    });
+}
+
+export async function fetchJellyfinLibraries(cfg: JellyfinConfig): Promise<JellyfinLibrary[]> {
+    const res = await jellyfinFetch(cfg, "/Library/VirtualFolders");
+    if (!res.ok) throw new Error(`Jellyfin libraries fetch failed: ${res.status}`);
+    const data = (await res.json()) as Array<{
+        ItemId: string;
+        Name: string;
+        CollectionType: string;
+    }>;
+    return data.map((lib) => ({
+        id: lib.ItemId,
+        name: lib.Name,
+        collectionType: lib.CollectionType ?? "",
+    }));
+}
+
+export async function findJellyfinEpisode(
+    cfg: JellyfinConfig,
+    showTmdbId: number,
+    seasonNumber: number,
+    episodeNumber: number,
+): Promise<JellyfinEpisode | null> {
+    const params = new URLSearchParams({
+        IncludeItemTypes: "Episode",
+        Recursive: "true",
+        Fields: "Path,ProviderIds",
+        AnyProviderIdEquals: `Tmdb.${showTmdbId}`,
+        ParentIndexNumber: String(seasonNumber),
+        IndexNumber: String(episodeNumber),
+    });
+    const res = await jellyfinFetch(cfg, `/Items?${params}`);
+    if (!res.ok) throw new Error(`Jellyfin episode lookup failed: ${res.status}`);
+    const data = (await res.json()) as {
+        Items: Array<{
+            Id: string;
+            Name: string;
+            SeriesName: string;
+            Path?: string;
+            ParentIndexNumber?: number;
+            IndexNumber?: number;
+        }>;
+    };
+    const item = data.Items?.[0] ?? null;
+    if (!item) return null;
+    return {
+        id: item.Id,
+        name: item.Name ?? "",
+        seriesName: item.SeriesName ?? "",
+        path: item.Path ?? null,
+    };
+}
+
+export async function deleteJellyfinItem(cfg: JellyfinConfig, itemId: string): Promise<void> {
+    const res = await jellyfinFetch(cfg, `/Items/${itemId}?deleteFiles=true`, {
+        method: "DELETE",
+    });
+    if (!res.ok) throw new Error(`Jellyfin delete failed: ${res.status}`);
+}
+
+export async function autoDeleteJellyfinEpisode(
+    cfg: JellyfinConfig,
+    autoDeleteLibraryIds: string[],
+    showTmdbId: number,
+    seasonNumber: number,
+    episodeNumber: number,
+): Promise<void> {
+    const libraries = await fetchJellyfinLibraries(cfg);
+    const allowedIds = new Set(autoDeleteLibraryIds);
+    const hasAutoDeleteLib = libraries.some((lib) => allowedIds.has(lib.id));
+    if (!hasAutoDeleteLib) return;
+
+    const episode = await findJellyfinEpisode(cfg, showTmdbId, seasonNumber, episodeNumber);
+    if (!episode) return;
+
+    await deleteJellyfinItem(cfg, episode.id);
+}

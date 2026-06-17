@@ -292,6 +292,24 @@ export interface UserSettings {
     displayLanguage: string;
     syncIntervalMinutes: number;
     httpProxy: string | null;
+    jellyfinUrl: string | null;
+    jellyfinApiKey: string | null;
+    jellyfinAutoDeleteLibraryIds: string[] | null;
+}
+
+// ─── Jellyfin ─────────────────────────────────────────────────────────────────
+
+export interface JellyfinLibrary {
+    id: string;
+    name: string;
+    collectionType: string;
+}
+
+export interface JellyfinEpisode {
+    id: string;
+    name: string;
+    seriesName: string;
+    path: string | null;
 }
 
 // ─── Episode Detail ───────────────────────────────────────────────────────────

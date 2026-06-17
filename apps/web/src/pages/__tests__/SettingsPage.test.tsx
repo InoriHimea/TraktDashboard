@@ -11,6 +11,9 @@ const settings: UserSettings = {
     displayLanguage: "zh-CN",
     syncIntervalMinutes: 60,
     httpProxy: "",
+    jellyfinUrl: null,
+    jellyfinApiKey: null,
+    jellyfinAutoDeleteLibraryIds: null,
 };
 
 vi.mock("../../hooks", () => ({

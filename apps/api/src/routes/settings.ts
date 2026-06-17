@@ -11,6 +11,9 @@ const DEFAULTS = {
     displayLanguage: "zh-CN",
     syncIntervalMinutes: 60,
     httpProxy: null as string | null,
+    jellyfinUrl: null as string | null,
+    jellyfinApiKey: null as string | null,
+    jellyfinAutoDeleteLibraryIds: null as string[] | null,
 };
 
 // P2-T11: declarative validation replaces the inline regex/integer checks.
@@ -24,6 +27,17 @@ const updateSettingsSchema = z.object({
             z.null(),
         ])
         .optional(),
+    jellyfinUrl: z
+        .union([
+            z
+                .string()
+                .regex(/^https?:\/\//i, "jellyfinUrl must be a valid http:// or https:// URL"),
+            z.literal(""),
+            z.null(),
+        ])
+        .optional(),
+    jellyfinApiKey: z.union([z.string(), z.null()]).optional(),
+    jellyfinAutoDeleteLibraryIds: z.union([z.array(z.string()), z.null()]).optional(),
 });
 
 // GET /api/settings
@@ -32,12 +46,20 @@ settingsRoutes.get("/", async (c) => {
     const db = getDb();
     const [row] = await db.select().from(userSettings).where(eq(userSettings.userId, userId));
 
+    const autoDeleteRaw = row?.jellyfinAutoDeleteLibraryIds;
+    const jellyfinAutoDeleteLibraryIds = autoDeleteRaw
+        ? (JSON.parse(autoDeleteRaw) as string[])
+        : DEFAULTS.jellyfinAutoDeleteLibraryIds;
+
     return c.json({
         data: {
             userId,
             displayLanguage: row?.displayLanguage ?? DEFAULTS.displayLanguage,
             syncIntervalMinutes: row?.syncIntervalMinutes ?? DEFAULTS.syncIntervalMinutes,
             httpProxy: row?.httpProxy ?? DEFAULTS.httpProxy,
+            jellyfinUrl: row?.jellyfinUrl ?? DEFAULTS.jellyfinUrl,
+            jellyfinApiKey: row?.jellyfinApiKey ?? DEFAULTS.jellyfinApiKey,
+            jellyfinAutoDeleteLibraryIds,
         },
     });
 });
@@ -48,11 +70,27 @@ settingsRoutes.put("/", async (c) => {
 
     const parsed = await validateBody(c, updateSettingsSchema);
     if (parsed instanceof Response) return parsed;
-    const { displayLanguage, syncIntervalMinutes, httpProxy } = parsed.data;
+    const {
+        displayLanguage,
+        syncIntervalMinutes,
+        httpProxy,
+        jellyfinUrl,
+        jellyfinApiKey,
+        jellyfinAutoDeleteLibraryIds,
+    } = parsed.data;
 
     const db = getDb();
     const [existing] = await db.select().from(userSettings).where(eq(userSettings.userId, userId));
     const previousInterval = existing?.syncIntervalMinutes ?? DEFAULTS.syncIntervalMinutes;
+
+    const existingAutoDeleteIds = existing?.jellyfinAutoDeleteLibraryIds
+        ? (JSON.parse(existing.jellyfinAutoDeleteLibraryIds) as string[])
+        : DEFAULTS.jellyfinAutoDeleteLibraryIds;
+
+    const newAutoDeleteIds =
+        jellyfinAutoDeleteLibraryIds !== undefined
+            ? jellyfinAutoDeleteLibraryIds
+            : existingAutoDeleteIds;
 
     const newValues = {
         userId,
@@ -63,6 +101,15 @@ settingsRoutes.put("/", async (c) => {
             httpProxy !== undefined
                 ? httpProxy || null
                 : (existing?.httpProxy ?? DEFAULTS.httpProxy),
+        jellyfinUrl:
+            jellyfinUrl !== undefined
+                ? jellyfinUrl || null
+                : (existing?.jellyfinUrl ?? DEFAULTS.jellyfinUrl),
+        jellyfinApiKey:
+            jellyfinApiKey !== undefined
+                ? jellyfinApiKey || null
+                : (existing?.jellyfinApiKey ?? DEFAULTS.jellyfinApiKey),
+        jellyfinAutoDeleteLibraryIds: newAutoDeleteIds ? JSON.stringify(newAutoDeleteIds) : null,
         updatedAt: new Date(),
     };
 
@@ -75,6 +122,9 @@ settingsRoutes.put("/", async (c) => {
                 displayLanguage: newValues.displayLanguage,
                 syncIntervalMinutes: newValues.syncIntervalMinutes,
                 httpProxy: newValues.httpProxy,
+                jellyfinUrl: newValues.jellyfinUrl,
+                jellyfinApiKey: newValues.jellyfinApiKey,
+                jellyfinAutoDeleteLibraryIds: newValues.jellyfinAutoDeleteLibraryIds,
                 updatedAt: newValues.updatedAt,
             },
         });
@@ -83,5 +133,10 @@ settingsRoutes.put("/", async (c) => {
         await registerUserSyncJob(userId);
     }
 
-    return c.json({ data: { ...newValues } });
+    return c.json({
+        data: {
+            ...newValues,
+            jellyfinAutoDeleteLibraryIds: newAutoDeleteIds,
+        },
+    });
 });

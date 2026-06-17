@@ -86,7 +86,18 @@
         "saveFailed": "Failed to save settings.",
         "validationIntervalError": "Sync interval must be an integer between 1 and 10080.",
         "validationLanguageError": "Display language format is incorrect, please use BCP 47 format (e.g. zh-CN, en-US).",
-        "validationProxyError": "Proxy address must start with http:// or https://."
+        "validationProxyError": "Proxy address must start with http:// or https://.",
+        "jellyfinTitle": "Jellyfin Integration",
+        "jellyfinSubtitle": "Connect to a Jellyfin media server to enable automatic file deletion after watching.",
+        "jellyfinUrl": "Server URL",
+        "jellyfinUrlPlaceholder": "http://nas:8096",
+        "jellyfinApiKey": "Admin API Key",
+        "jellyfinApiKeyPlaceholder": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "jellyfinAutoDeleteLibraries": "Auto-delete libraries",
+        "jellyfinAutoDeleteLibrariesHint": "Episode files in these libraries will be deleted automatically after watching. Unconfigured libraries support manual delete only.",
+        "jellyfinLoadLibrariesFailed": "Failed to load libraries. Check server URL and API Key.",
+        "jellyfinLoadLibraries": "Load libraries",
+        "jellyfinNotConfigured": "Enter the server URL and API Key first, then load libraries."
     },
     "progress": {
         "watching": "Watching",
@@ -256,7 +267,12 @@
         "notAiredShort": "Unaired",
         "episodeFallback": "Episode {{n}}",
         "airedCount": "{{n}} aired",
-        "unairedCountNum": "{{n}} unaired"
+        "unairedCountNum": "{{n}} unaired",
+        "deleteJellyfinFile": "Delete file",
+        "deleteJellyfinTitle": "Delete from disk",
+        "deleteJellyfinDesc": "This will permanently delete the episode file from the Jellyfin library. This cannot be undone.",
+        "deleteJellyfinSuccess": "File deleted",
+        "deleteJellyfinFailed": "Delete failed. Please try again."
     },
     "watchAction": {
         "justNow": "Just now",

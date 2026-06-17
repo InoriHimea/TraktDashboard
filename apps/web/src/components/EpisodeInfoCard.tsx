@@ -7,6 +7,7 @@ import {
     ExternalLink,
     Star,
     Timer,
+    Trash2,
     UserRound,
 } from "lucide-react";
 import type { EpisodeDetailData, WatchHistoryEntry } from "@trakt-dashboard/types";
@@ -14,9 +15,16 @@ import { DateTimePickerModal } from "./DateTimePickerModal";
 import { Button } from "./ui/Button";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
 import { Tag } from "./ui/Tag";
-import { useMarkWatched, useEpisodeHistory, useDeleteHistory } from "../hooks";
+import {
+    useMarkWatched,
+    useEpisodeHistory,
+    useDeleteHistory,
+    useJellyfinEpisode,
+    useDeleteJellyfinItem,
+} from "../hooks";
 import { fmtAirDate, fmtRuntime, t } from "../lib/i18n";
 import { cn, formatEpisode } from "../lib/utils";
+import { useToast } from "../lib/toast";
 
 interface EpisodeInfoCardProps {
     data: EpisodeDetailData;
@@ -227,6 +235,7 @@ export function EpisodeInfoCard({
     const runtimeLabel = fmtRuntime(data.runtime);
     const genres = show.genres?.slice(0, 3) ?? [];
 
+    const { toast } = useToast();
     const markWatched = useMarkWatched(data.showId, data.seasonNumber, data.episodeNumber);
     const { data: historyEntries = [] } = useEpisodeHistory(
         data.showId,
@@ -234,6 +243,23 @@ export function EpisodeInfoCard({
         data.episodeNumber,
     );
     const deleteHistory = useDeleteHistory(data.showId, data.seasonNumber, data.episodeNumber);
+    const { data: jellyfinEpisode = null } = useJellyfinEpisode(
+        data.show.tmdbId,
+        data.seasonNumber,
+        data.episodeNumber,
+    );
+    const deleteJellyfinItem = useDeleteJellyfinItem();
+    const [confirmJellyfinDeleteOpen, setConfirmJellyfinDeleteOpen] = useState(false);
+
+    async function handleJellyfinDelete() {
+        if (!jellyfinEpisode) return;
+        try {
+            await deleteJellyfinItem.mutateAsync(jellyfinEpisode.id);
+            toast(t("episode.deleteJellyfinSuccess"), "success");
+        } catch {
+            toast(t("episode.deleteJellyfinFailed"), "error");
+        }
+    }
 
     const handleMarkWatched = async (isoString: string) => {
         await markWatched.mutateAsync(isoString);
@@ -427,6 +453,23 @@ export function EpisodeInfoCard({
                 >
                     {t("episode.watchHistory")}
                 </Button>
+
+                {jellyfinEpisode && (
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        color="rose"
+                        size="md"
+                        icon={<Trash2 className="size-4" />}
+                        loading={deleteJellyfinItem.isPending}
+                        onClick={() => setConfirmJellyfinDeleteOpen(true)}
+                        aria-label={t("episode.deleteJellyfinFile")}
+                        title={t("episode.deleteJellyfinFile")}
+                        className="w-full sm:w-[156px]"
+                    >
+                        {t("episode.deleteJellyfinFile")}
+                    </Button>
+                )}
             </div>
 
             <DateTimePickerModal
@@ -471,6 +514,21 @@ export function EpisodeInfoCard({
                     }
                 }}
                 onCancel={() => setPendingDeleteId(null)}
+            />
+
+            <ConfirmDialog
+                isOpen={confirmJellyfinDeleteOpen}
+                title={t("episode.deleteJellyfinTitle")}
+                description={t("episode.deleteJellyfinDesc")}
+                confirmText={t("common.delete")}
+                confirmColor="rose"
+                cancelText={t("common.cancel")}
+                isLoading={deleteJellyfinItem.isPending}
+                onConfirm={async () => {
+                    await handleJellyfinDelete();
+                    setConfirmJellyfinDeleteOpen(false);
+                }}
+                onCancel={() => setConfirmJellyfinDeleteOpen(false)}
             />
 
             <ConfirmDialog

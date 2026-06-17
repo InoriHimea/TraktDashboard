@@ -15,6 +15,7 @@ import type {
     MovieWatchHistoryEntry,
     CalendarEpisode,
     HistoryPage,
+    JellyfinEpisode,
 } from "@trakt-dashboard/types";
 import { api } from "../lib/api";
 
@@ -359,5 +360,25 @@ export function useRemoveFromWatchlist() {
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: queryKeys.watchlist.all });
         },
+    });
+}
+
+export function useJellyfinEpisode(
+    showTmdbId: number | null | undefined,
+    season: number,
+    episode: number,
+) {
+    return useQuery<JellyfinEpisode | null>({
+        queryKey: ["jellyfin-episode", showTmdbId, season, episode],
+        queryFn: () => api.jellyfin.episode(showTmdbId!, season, episode).then((r) => r.data),
+        enabled: showTmdbId != null && showTmdbId > 0,
+        staleTime: 1000 * 60 * 10,
+        retry: false,
+    });
+}
+
+export function useDeleteJellyfinItem() {
+    return useMutation({
+        mutationFn: (jellyfinItemId: string) => api.jellyfin.deleteItem(jellyfinItemId),
     });
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Save, Download, Bell } from "lucide-react";
+import { Save, Download, Bell, Server } from "lucide-react";
+import type { JellyfinLibrary } from "@trakt-dashboard/types";
 import { useSettings, useUpdateSettings } from "../hooks";
 import { api } from "../lib/api";
 import {
@@ -57,6 +58,11 @@ export default function SettingsPage() {
     const [displayLanguage, setDisplayLanguage] = useState("zh-CN");
     const [syncIntervalMinutes, setSyncIntervalMinutes] = useState(60);
     const [httpProxy, setHttpProxy] = useState("");
+    const [jellyfinUrl, setJellyfinUrl] = useState("");
+    const [jellyfinApiKey, setJellyfinApiKey] = useState("");
+    const [jellyfinAutoDeleteIds, setJellyfinAutoDeleteIds] = useState<string[]>([]);
+    const [jellyfinLibraries, setJellyfinLibraries] = useState<JellyfinLibrary[]>([]);
+    const [jellyfinLibrariesLoading, setJellyfinLibrariesLoading] = useState(false);
     const { toast } = useToast();
     const [theme, setTheme] = useState<Theme>(loadTheme);
 
@@ -68,6 +74,9 @@ export default function SettingsPage() {
         setDisplayLanguage(settings.displayLanguage);
         setSyncIntervalMinutes(settings.syncIntervalMinutes);
         setHttpProxy(settings.httpProxy ?? "");
+        setJellyfinUrl(settings.jellyfinUrl ?? "");
+        setJellyfinApiKey(settings.jellyfinApiKey ?? "");
+        setJellyfinAutoDeleteIds(settings.jellyfinAutoDeleteLibraryIds ?? []);
     }
 
     // Apply the saved display language to the UI locale (a real side effect).
@@ -143,6 +152,28 @@ export default function SettingsPage() {
         }
     }
 
+    async function loadJellyfinLibraries() {
+        if (!jellyfinUrl.trim() || !jellyfinApiKey.trim()) {
+            toast(t("settings.jellyfinNotConfigured"), "error");
+            return;
+        }
+        setJellyfinLibrariesLoading(true);
+        try {
+            const res = await api.jellyfin.libraries();
+            setJellyfinLibraries(res.data);
+        } catch {
+            toast(t("settings.jellyfinLoadLibrariesFailed"), "error");
+        } finally {
+            setJellyfinLibrariesLoading(false);
+        }
+    }
+
+    function toggleJellyfinLibrary(id: string) {
+        setJellyfinAutoDeleteIds((prev) =>
+            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+        );
+    }
+
     async function handleSave(e?: React.FormEvent) {
         if (e) e.preventDefault();
 
@@ -172,6 +203,9 @@ export default function SettingsPage() {
                 displayLanguage: langTrimmed,
                 syncIntervalMinutes: interval,
                 httpProxy: proxyValue || null,
+                jellyfinUrl: jellyfinUrl.trim() || null,
+                jellyfinApiKey: jellyfinApiKey.trim() || null,
+                jellyfinAutoDeleteLibraryIds: jellyfinAutoDeleteIds,
             });
             setLocale(langTrimmed);
             toast(t("settings.saveSuccess"), "success");
@@ -434,6 +468,184 @@ export default function SettingsPage() {
                         </div>
 
                         {/* Divider */}
+                        <div
+                            style={{
+                                height: "1px",
+                                background: "var(--color-border-subtle)",
+                            }}
+                        />
+
+                        {/* Divider before Jellyfin */}
+                        <div
+                            style={{
+                                height: "1px",
+                                background: "var(--color-border-subtle)",
+                            }}
+                        />
+
+                        {/* Jellyfin Integration */}
+                        <div>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "8px",
+                                    marginBottom: "4px",
+                                }}
+                            >
+                                <Server
+                                    size={14}
+                                    style={{ color: "var(--color-text-secondary)" }}
+                                />
+                                <span
+                                    style={{
+                                        ...labelStyle,
+                                        marginBottom: 0,
+                                    }}
+                                >
+                                    {t("settings.jellyfinTitle")}
+                                </span>
+                            </div>
+                            <p
+                                style={{
+                                    fontSize: "12px",
+                                    color: "var(--color-text-muted)",
+                                    marginBottom: "16px",
+                                    lineHeight: 1.5,
+                                }}
+                            >
+                                {t("settings.jellyfinSubtitle")}
+                            </p>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                <div>
+                                    <label htmlFor="settings-jellyfin-url" style={labelStyle}>
+                                        {t("settings.jellyfinUrl")}
+                                    </label>
+                                    <input
+                                        id="settings-jellyfin-url"
+                                        type="url"
+                                        value={jellyfinUrl}
+                                        onChange={(e) => setJellyfinUrl(e.target.value)}
+                                        placeholder={t("settings.jellyfinUrlPlaceholder")}
+                                        style={inputStyle}
+                                        autoComplete="off"
+                                    />
+                                </div>
+                                <div>
+                                    <label htmlFor="settings-jellyfin-key" style={labelStyle}>
+                                        {t("settings.jellyfinApiKey")}
+                                    </label>
+                                    <input
+                                        id="settings-jellyfin-key"
+                                        type="password"
+                                        value={jellyfinApiKey}
+                                        onChange={(e) => setJellyfinApiKey(e.target.value)}
+                                        placeholder={t("settings.jellyfinApiKeyPlaceholder")}
+                                        style={inputStyle}
+                                        autoComplete="new-password"
+                                    />
+                                </div>
+                                <div>
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "space-between",
+                                            marginBottom: "8px",
+                                        }}
+                                    >
+                                        <span
+                                            style={{
+                                                ...labelStyle,
+                                                marginBottom: 0,
+                                            }}
+                                        >
+                                            {t("settings.jellyfinAutoDeleteLibraries")}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={loadJellyfinLibraries}
+                                            disabled={jellyfinLibrariesLoading}
+                                            style={{
+                                                fontSize: "12px",
+                                                padding: "4px 10px",
+                                                borderRadius: "var(--radius-sm)",
+                                                background: "var(--color-surface-3)",
+                                                border: "1px solid var(--color-border)",
+                                                color: "var(--color-text-secondary)",
+                                                cursor: jellyfinLibrariesLoading
+                                                    ? "not-allowed"
+                                                    : "pointer",
+                                            }}
+                                        >
+                                            {jellyfinLibrariesLoading
+                                                ? t("common.loading")
+                                                : t("settings.jellyfinLoadLibraries")}
+                                        </button>
+                                    </div>
+                                    <p
+                                        style={{
+                                            fontSize: "12px",
+                                            color: "var(--color-text-muted)",
+                                            marginBottom: "8px",
+                                            lineHeight: 1.5,
+                                        }}
+                                    >
+                                        {t("settings.jellyfinAutoDeleteLibrariesHint")}
+                                    </p>
+                                    {jellyfinLibraries.length > 0 && (
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                flexDirection: "column",
+                                                gap: "6px",
+                                                padding: "10px",
+                                                borderRadius: "var(--radius-md)",
+                                                background: "var(--color-surface-3)",
+                                                border: "1px solid var(--color-border)",
+                                            }}
+                                        >
+                                            {jellyfinLibraries.map((lib) => (
+                                                <label
+                                                    key={lib.id}
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: "8px",
+                                                        fontSize: "13px",
+                                                        color: "var(--color-text)",
+                                                        cursor: "pointer",
+                                                    }}
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={jellyfinAutoDeleteIds.includes(
+                                                            lib.id,
+                                                        )}
+                                                        onChange={() =>
+                                                            toggleJellyfinLibrary(lib.id)
+                                                        }
+                                                    />
+                                                    <span>{lib.name}</span>
+                                                    {lib.collectionType && (
+                                                        <span
+                                                            style={{
+                                                                fontSize: "11px",
+                                                                color: "var(--color-text-muted)",
+                                                            }}
+                                                        >
+                                                            ({lib.collectionType})
+                                                        </span>
+                                                    )}
+                                                </label>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Divider before data export */}
                         <div
                             style={{
                                 height: "1px",

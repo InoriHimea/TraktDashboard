@@ -16,6 +16,8 @@ import type {
     WatchlistItem,
     WatchlistItemWithMedia,
     HistoryPage,
+    JellyfinLibrary,
+    JellyfinEpisode,
 } from "@trakt-dashboard/types";
 
 const API_BASE = "/api";
@@ -213,6 +215,17 @@ export const api = {
             request<{ ok: boolean }>("/notifications/unsubscribe", {
                 method: "POST",
                 body: JSON.stringify({ endpoint }),
+            }),
+    },
+    jellyfin: {
+        libraries: () => request<ApiResponse<JellyfinLibrary[]>>("/jellyfin/libraries"),
+        episode: (showTmdbId: number, season: number, episode: number) =>
+            request<ApiResponse<JellyfinEpisode | null>>(
+                `/jellyfin/episode/${showTmdbId}/${season}/${episode}`,
+            ),
+        deleteItem: (jellyfinItemId: string) =>
+            request<{ ok: boolean }>(`/jellyfin/items/${jellyfinItemId}`, {
+                method: "DELETE",
             }),
     },
 };

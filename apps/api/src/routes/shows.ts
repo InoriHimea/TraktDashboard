@@ -7,8 +7,10 @@ import {
     watchHistory,
     userShowProgress,
     watchResetCursors,
+    userSettings,
 } from "@trakt-dashboard/db";
 import { eq, and, desc, asc, sql, like } from "drizzle-orm";
+import { autoDeleteJellyfinEpisode } from "../services/jellyfin.js";
 import type {
     ShowProgress,
     SeasonProgress,
@@ -447,6 +449,31 @@ showRoutes.post("/:showId/episodes/:season/:episode/watch", async (c) => {
 
     // Recalc progress
     await recalcShowProgress(userId, showId);
+
+    // Jellyfin auto-delete (fire-and-forget; never fails the watch record)
+    (async () => {
+        try {
+            const [cfg] = await db
+                .select()
+                .from(userSettings)
+                .where(eq(userSettings.userId, userId));
+            if (!cfg?.jellyfinUrl || !cfg?.jellyfinApiKey || !cfg?.jellyfinAutoDeleteLibraryIds)
+                return;
+            const autoDeleteIds = JSON.parse(cfg.jellyfinAutoDeleteLibraryIds) as string[];
+            if (autoDeleteIds.length === 0) return;
+            const [show] = await db.select().from(shows).where(eq(shows.id, showId));
+            if (!show?.tmdbId) return;
+            await autoDeleteJellyfinEpisode(
+                { url: cfg.jellyfinUrl, apiKey: cfg.jellyfinApiKey },
+                autoDeleteIds,
+                show.tmdbId,
+                ep.seasonNumber,
+                ep.episodeNumber,
+            );
+        } catch {
+            // Auto-delete errors are intentionally swallowed
+        }
+    })();
 
     return c.json({ ok: true, historyId: result.id }, 201);
 });
