@@ -12,9 +12,19 @@ export const jellyfinRoutes = new Hono<{ Variables: { userId: number } }>();
 
 async function getJellyfinConfig(userId: number) {
     const db = getDb();
-    const [row] = await db.select().from(userSettings).where(eq(userSettings.userId, userId));
-    if (!row?.jellyfinUrl || !row?.jellyfinApiKey) return null;
-    return { url: row.jellyfinUrl, apiKey: row.jellyfinApiKey };
+    try {
+        const [row] = await db
+            .select({
+                jellyfinUrl: userSettings.jellyfinUrl,
+                jellyfinApiKey: userSettings.jellyfinApiKey,
+            })
+            .from(userSettings)
+            .where(eq(userSettings.userId, userId));
+        if (!row?.jellyfinUrl || !row?.jellyfinApiKey) return null;
+        return { url: row.jellyfinUrl, apiKey: row.jellyfinApiKey };
+    } catch {
+        return null;
+    }
 }
 
 // GET /api/jellyfin/libraries
