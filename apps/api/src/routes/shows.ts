@@ -451,18 +451,41 @@ showRoutes.post("/:showId/episodes/:season/:episode/watch", async (c) => {
     await recalcShowProgress(userId, showId);
 
     // Jellyfin auto-delete (fire-and-forget; never fails the watch record)
+    // Conditions: show must be "ended" or "canceled" AND user has watched 100% (completed).
     (async () => {
         try {
             const [cfg] = await db
-                .select()
+                .select({
+                    jellyfinUrl: userSettings.jellyfinUrl,
+                    jellyfinApiKey: userSettings.jellyfinApiKey,
+                    jellyfinAutoDeleteLibraryIds: userSettings.jellyfinAutoDeleteLibraryIds,
+                })
                 .from(userSettings)
                 .where(eq(userSettings.userId, userId));
             if (!cfg?.jellyfinUrl || !cfg?.jellyfinApiKey || !cfg?.jellyfinAutoDeleteLibraryIds)
                 return;
             const autoDeleteIds = JSON.parse(cfg.jellyfinAutoDeleteLibraryIds) as string[];
             if (autoDeleteIds.length === 0) return;
-            const [show] = await db.select().from(shows).where(eq(shows.id, showId));
+
+            const [show] = await db
+                .select({ tmdbId: shows.tmdbId, status: shows.status })
+                .from(shows)
+                .where(eq(shows.id, showId));
             if (!show?.tmdbId) return;
+
+            // Only delete for ended/canceled shows
+            const endedStatuses = ["ended", "canceled"];
+            if (!show.status || !endedStatuses.includes(show.status.toLowerCase())) return;
+
+            // Only delete when the user has watched every episode (progress = 100%)
+            const [progress] = await db
+                .select({ completed: userShowProgress.completed })
+                .from(userShowProgress)
+                .where(
+                    and(eq(userShowProgress.userId, userId), eq(userShowProgress.showId, showId)),
+                );
+            if (!progress?.completed) return;
+
             await autoDeleteJellyfinEpisode(
                 { url: cfg.jellyfinUrl, apiKey: cfg.jellyfinApiKey },
                 autoDeleteIds,

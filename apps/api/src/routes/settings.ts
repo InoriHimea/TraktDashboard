@@ -44,9 +44,35 @@ const updateSettingsSchema = z.object({
 settingsRoutes.get("/", async (c) => {
     const userId = c.get("userId");
     const db = getDb();
-    const [row] = await db.select().from(userSettings).where(eq(userSettings.userId, userId));
 
-    const autoDeleteRaw = row?.jellyfinAutoDeleteLibraryIds;
+    // Try full select (requires migration 0011). If the Jellyfin columns don't exist
+    // yet (migration not applied), fall back to the pre-0011 column set.
+    type SettingsRow = {
+        displayLanguage: string;
+        syncIntervalMinutes: number;
+        httpProxy: string | null;
+        jellyfinUrl?: string | null;
+        jellyfinApiKey?: string | null;
+        jellyfinAutoDeleteLibraryIds?: string | null;
+    };
+    let row: SettingsRow | undefined;
+    try {
+        const [r] = await db.select().from(userSettings).where(eq(userSettings.userId, userId));
+        row = r;
+    } catch {
+        // Migration 0011 not yet applied — query only the original columns.
+        const [r] = await db
+            .select({
+                displayLanguage: userSettings.displayLanguage,
+                syncIntervalMinutes: userSettings.syncIntervalMinutes,
+                httpProxy: userSettings.httpProxy,
+            })
+            .from(userSettings)
+            .where(eq(userSettings.userId, userId));
+        row = r;
+    }
+
+    const autoDeleteRaw = row?.jellyfinAutoDeleteLibraryIds ?? null;
     const jellyfinAutoDeleteLibraryIds = autoDeleteRaw
         ? (JSON.parse(autoDeleteRaw) as string[])
         : DEFAULTS.jellyfinAutoDeleteLibraryIds;
