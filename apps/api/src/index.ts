@@ -69,9 +69,10 @@ app.onError((err, c) => {
 
 const port = parseInt(process.env.API_PORT || "3001");
 
-runMigrations()
-    .then(() => console.log("[db] Migrations up to date"))
-    .catch((err) => console.error("[db] Migration failed:", err));
+// Block startup until migrations complete — prevents schema/DB mismatch on first request.
+await runMigrations().catch((err) => {
+    console.error("[db] Migration failed:", err);
+});
 
 startScheduler().catch((err) => {
     console.error("[scheduler] Failed to start:", err);

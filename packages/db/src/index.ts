@@ -29,6 +29,8 @@ export async function runMigrations() {
     const db = drizzle(client, { schema });
     const __dirname = dirname(fileURLToPath(import.meta.url));
     const migrationsFolder = resolve(__dirname, "../drizzle");
+    console.log("[db] Running migrations from:", migrationsFolder);
     await migrate(db, { migrationsFolder });
     await client.end();
+    console.log("[db] Migrations complete");
 }
