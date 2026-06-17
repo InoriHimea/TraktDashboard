@@ -106,7 +106,44 @@ settingsRoutes.put("/", async (c) => {
     } = parsed.data;
 
     const db = getDb();
-    const [existing] = await db.select().from(userSettings).where(eq(userSettings.userId, userId));
+
+    // Try explicit select with Jellyfin columns; fall back if migration 0011 not applied.
+    type ExistingRow = {
+        displayLanguage: string;
+        syncIntervalMinutes: number;
+        httpProxy: string | null;
+        jellyfinUrl?: string | null;
+        jellyfinApiKey?: string | null;
+        jellyfinAutoDeleteLibraryIds?: string | null;
+    };
+    let existing: ExistingRow | undefined;
+    let jellyfinMigrated = true;
+    try {
+        const [r] = await db
+            .select({
+                displayLanguage: userSettings.displayLanguage,
+                syncIntervalMinutes: userSettings.syncIntervalMinutes,
+                httpProxy: userSettings.httpProxy,
+                jellyfinUrl: userSettings.jellyfinUrl,
+                jellyfinApiKey: userSettings.jellyfinApiKey,
+                jellyfinAutoDeleteLibraryIds: userSettings.jellyfinAutoDeleteLibraryIds,
+            })
+            .from(userSettings)
+            .where(eq(userSettings.userId, userId));
+        existing = r;
+    } catch {
+        jellyfinMigrated = false;
+        const [r] = await db
+            .select({
+                displayLanguage: userSettings.displayLanguage,
+                syncIntervalMinutes: userSettings.syncIntervalMinutes,
+                httpProxy: userSettings.httpProxy,
+            })
+            .from(userSettings)
+            .where(eq(userSettings.userId, userId));
+        existing = r;
+    }
+
     const previousInterval = existing?.syncIntervalMinutes ?? DEFAULTS.syncIntervalMinutes;
 
     const existingAutoDeleteIds = existing?.jellyfinAutoDeleteLibraryIds
@@ -118,7 +155,7 @@ settingsRoutes.put("/", async (c) => {
             ? jellyfinAutoDeleteLibraryIds
             : existingAutoDeleteIds;
 
-    const newValues = {
+    const baseValues = {
         userId,
         displayLanguage: displayLanguage ?? existing?.displayLanguage ?? DEFAULTS.displayLanguage,
         syncIntervalMinutes:
@@ -127,42 +164,72 @@ settingsRoutes.put("/", async (c) => {
             httpProxy !== undefined
                 ? httpProxy || null
                 : (existing?.httpProxy ?? DEFAULTS.httpProxy),
-        jellyfinUrl:
-            jellyfinUrl !== undefined
-                ? jellyfinUrl || null
-                : (existing?.jellyfinUrl ?? DEFAULTS.jellyfinUrl),
-        jellyfinApiKey:
-            jellyfinApiKey !== undefined
-                ? jellyfinApiKey || null
-                : (existing?.jellyfinApiKey ?? DEFAULTS.jellyfinApiKey),
-        jellyfinAutoDeleteLibraryIds: newAutoDeleteIds ? JSON.stringify(newAutoDeleteIds) : null,
         updatedAt: new Date(),
     };
 
-    await db
-        .insert(userSettings)
-        .values(newValues)
-        .onConflictDoUpdate({
-            target: [userSettings.userId],
-            set: {
-                displayLanguage: newValues.displayLanguage,
-                syncIntervalMinutes: newValues.syncIntervalMinutes,
-                httpProxy: newValues.httpProxy,
-                jellyfinUrl: newValues.jellyfinUrl,
-                jellyfinApiKey: newValues.jellyfinApiKey,
-                jellyfinAutoDeleteLibraryIds: newValues.jellyfinAutoDeleteLibraryIds,
-                updatedAt: newValues.updatedAt,
+    if (jellyfinMigrated) {
+        const newValues = {
+            ...baseValues,
+            jellyfinUrl:
+                jellyfinUrl !== undefined
+                    ? jellyfinUrl || null
+                    : (existing?.jellyfinUrl ?? DEFAULTS.jellyfinUrl),
+            jellyfinApiKey:
+                jellyfinApiKey !== undefined
+                    ? jellyfinApiKey || null
+                    : (existing?.jellyfinApiKey ?? DEFAULTS.jellyfinApiKey),
+            jellyfinAutoDeleteLibraryIds: newAutoDeleteIds
+                ? JSON.stringify(newAutoDeleteIds)
+                : null,
+        };
+        await db
+            .insert(userSettings)
+            .values(newValues)
+            .onConflictDoUpdate({
+                target: [userSettings.userId],
+                set: {
+                    displayLanguage: newValues.displayLanguage,
+                    syncIntervalMinutes: newValues.syncIntervalMinutes,
+                    httpProxy: newValues.httpProxy,
+                    jellyfinUrl: newValues.jellyfinUrl,
+                    jellyfinApiKey: newValues.jellyfinApiKey,
+                    jellyfinAutoDeleteLibraryIds: newValues.jellyfinAutoDeleteLibraryIds,
+                    updatedAt: newValues.updatedAt,
+                },
+            });
+        if (
+            syncIntervalMinutes !== undefined &&
+            newValues.syncIntervalMinutes !== previousInterval
+        ) {
+            await registerUserSyncJob(userId);
+        }
+        return c.json({ data: { ...newValues, jellyfinAutoDeleteLibraryIds: newAutoDeleteIds } });
+    } else {
+        await db
+            .insert(userSettings)
+            .values(baseValues)
+            .onConflictDoUpdate({
+                target: [userSettings.userId],
+                set: {
+                    displayLanguage: baseValues.displayLanguage,
+                    syncIntervalMinutes: baseValues.syncIntervalMinutes,
+                    httpProxy: baseValues.httpProxy,
+                    updatedAt: baseValues.updatedAt,
+                },
+            });
+        if (
+            syncIntervalMinutes !== undefined &&
+            baseValues.syncIntervalMinutes !== previousInterval
+        ) {
+            await registerUserSyncJob(userId);
+        }
+        return c.json({
+            data: {
+                ...baseValues,
+                jellyfinUrl: DEFAULTS.jellyfinUrl,
+                jellyfinApiKey: DEFAULTS.jellyfinApiKey,
+                jellyfinAutoDeleteLibraryIds: DEFAULTS.jellyfinAutoDeleteLibraryIds,
             },
         });
-
-    if (syncIntervalMinutes !== undefined && newValues.syncIntervalMinutes !== previousInterval) {
-        await registerUserSyncJob(userId);
     }
-
-    return c.json({
-        data: {
-            ...newValues,
-            jellyfinAutoDeleteLibraryIds: newAutoDeleteIds,
-        },
-    });
 });
