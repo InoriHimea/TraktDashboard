@@ -1,6 +1,7 @@
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
+import { sql } from "drizzle-orm";
 import { fileURLToPath } from "url";
 import { dirname, resolve } from "path";
 import * as schema from "./schema.js";
@@ -31,6 +32,14 @@ export async function runMigrations() {
     const migrationsFolder = resolve(__dirname, "../drizzle");
     console.log("[db] Running migrations from:", migrationsFolder);
     await migrate(db, { migrationsFolder });
+    // Belt-and-suspenders: if migration 0011 was previously recorded in
+    // __drizzle_migrations without the DDL executing, apply the columns here.
+    await db.execute(sql`
+        ALTER TABLE "user_settings"
+        ADD COLUMN IF NOT EXISTS "jellyfin_url" text,
+        ADD COLUMN IF NOT EXISTS "jellyfin_api_key" text,
+        ADD COLUMN IF NOT EXISTS "jellyfin_auto_delete_library_ids" text
+    `);
     await client.end();
     console.log("[db] Migrations complete");
 }
