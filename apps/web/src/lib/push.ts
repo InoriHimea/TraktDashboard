@@ -66,11 +66,22 @@ export async function enablePush(cachedKey?: string): Promise<void> {
     const existingKeyMatches = (() => {
         const k = existing?.options?.applicationServerKey;
         if (!k) return false;
-        const a = new Uint8Array(k as ArrayBuffer);
+        // Chrome exposes applicationServerKey as Uint8Array; the spec says ArrayBuffer.
+        // Handle both to avoid a wrong-type error from new Uint8Array(string).
+        const a = k instanceof Uint8Array ? k : new Uint8Array(k as ArrayBuffer);
         return a.length === keyBytes.length && a.every((b, i) => b === keyBytes[i]);
     })();
 
-    if (existing && !existingKeyMatches) await existing.unsubscribe();
+    if (existing && !existingKeyMatches) {
+        try {
+            await existing.unsubscribe();
+        } catch {
+            // Unsubscribe failed (push service unreachable or subscription already
+            // expired on the server). Proceed to subscribe with the new key so the
+            // user is not permanently wedged. The stale endpoint is auto-pruned on
+            // the next 404/410 from the airing-reminders job.
+        }
+    }
 
     const subscription =
         existing && existingKeyMatches

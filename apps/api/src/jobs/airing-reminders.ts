@@ -81,7 +81,6 @@ export async function runAiringReminders(): Promise<{ sent: number; pruned: numb
             .where(eq(pushSubscriptions.userId, userId));
 
         const first = airing[0];
-        const distinctShows = new Set(airing.map((e) => e.showTitle));
         const payload =
             airing.length === 1
                 ? {
@@ -91,36 +90,49 @@ export async function runAiringReminders(): Promise<{ sent: number; pruned: numb
                       }`,
                       url: "/calendar",
                   }
-                : distinctShows.size === 1
-                  ? {
-                        // Multiple episodes from the same show — omit redundant show prefix.
-                        title: first.showTitle,
-                        body: airing
-                            .slice(0, 4)
-                            .map((e) => `S${pad(e.seasonNumber)}E${pad(e.episodeNumber)}`)
-                            .join(" · "),
-                        url: "/calendar",
-                    }
-                  : {
-                        // Multiple shows — title shows first show + count of additional shows.
-                        title: `${first.showTitle} +${distinctShows.size - 1}`,
-                        body: airing
-                            .slice(0, 4)
-                            .map(
-                                (e) =>
-                                    `${e.showTitle} S${pad(e.seasonNumber)}E${pad(e.episodeNumber)}`,
-                            )
-                            .join(" · "),
-                        url: "/calendar",
-                    };
+                : (() => {
+                      // Compute only for multi-episode cases to avoid wasted allocation
+                      // when there is exactly one airing episode.
+                      const distinctShows = new Set(airing.map((e) => e.showTitle));
+                      const shown = airing.slice(0, 4);
+                      const overflow = airing.length - shown.length;
+                      const overflowSuffix = overflow > 0 ? ` +${overflow}` : "";
+                      if (distinctShows.size === 1) {
+                          // Multiple episodes from the same show — omit redundant show prefix.
+                          return {
+                              title: first.showTitle,
+                              body:
+                                  shown
+                                      .map((e) => `S${pad(e.seasonNumber)}E${pad(e.episodeNumber)}`)
+                                      .join(" · ") + overflowSuffix,
+                              url: "/calendar",
+                          };
+                      }
+                      // Multiple shows — title shows first show + count of additional shows.
+                      return {
+                          title: `${first.showTitle} +${distinctShows.size - 1}`,
+                          body:
+                              shown
+                                  .map(
+                                      (e) =>
+                                          `${e.showTitle} S${pad(e.seasonNumber)}E${pad(e.episodeNumber)}`,
+                                  )
+                                  .join(" · ") + overflowSuffix,
+                          url: "/calendar",
+                      };
+                  })();
 
-        // Parallelise sends across subscriptions for this user.
+        // Parallelise sends across subscriptions for this user. Each send is
+        // individually caught so an unexpected sendPush rejection (e.g. VAPID
+        // init error) does not abort the entire user's batch.
         const results = await Promise.all(
             userSubs.map((sub) =>
                 sendPush(
                     { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
                     payload,
-                ).then((res) => ({ sub, res })),
+                )
+                    .then((res) => ({ sub, res }))
+                    .catch(() => ({ sub, res: { ok: false as const, statusCode: undefined } })),
             ),
         );
 

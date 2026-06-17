@@ -30,7 +30,11 @@ privacy-first (data stays on the user's server).
   repeatable-job upsert: remove step is best-effort, add step always executes;
   Web Push TTL ≥ 86400 s so offline devices receive daily reminders;
   VAPID applicationServerKey compared on re-subscribe — stale subscription unsubscribed and
-  refreshed on key rotation so pushes do not silently fail.
+  refreshed on key rotation so pushes do not silently fail;
+  unsubscribe() failure during key rotation is swallowed so the user is never permanently
+  wedged — stale endpoint is auto-pruned on next 404/410 from airing-reminders;
+  airing-reminder Promise.all per-subscription sends individually caught so one sendPush
+  rejection does not abort the entire user batch.
 - **Correctness** — reset cursor applied consistently to count / next-episode / lastWatchedAt;
   null-safe timestamp serialization; required `userId` for episode creation.
 - **Performance** — stale-while-revalidate metadata cache with per-source TTLs; next-episode via
@@ -41,7 +45,13 @@ privacy-first (data stays on the user's server).
   push subscription capped at 10 per user (429 on overflow; same-endpoint re-subscribe
   excluded from count so VAPID-rotation re-register is never blocked);
   airing-reminder title correct for same-show multi-episode airings (no "+0");
-  SW clients.claim() inside waitUntil; SW install degrades gracefully when offline.
+  airing-reminder body overflow indicated with "+N" when episodes exceed 4-item display cap;
+  SW clients.claim() inside waitUntil, guaranteed even when cache cleanup fails;
+  SW install: cache failure causes install to fail (old SW stays active); skipWaiting
+  only fires after successful shell cache write;
+  SW navigate fetch cache.put is fire-and-forget with explicit error swallow;
+  push enable-path failure sets pushEnabled=false (not re-sync) so UI cannot show
+  "enabled" when the backend has no subscription record.
 - **Quality gates** — CI runs lint (eslint + prettier) + typecheck + build + coverage tests;
   coverage floors enforced.
 

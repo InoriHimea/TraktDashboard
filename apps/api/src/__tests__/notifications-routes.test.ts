@@ -11,6 +11,11 @@ vi.mock("@trakt-dashboard/db", async () => {
     return { ...actual, getDb: () => dbMockState.db };
 });
 
+// NOTE: This mock's where() ignores all arguments including Drizzle ne() filters.
+// `existingSubCount` should represent the count AS RETURNED by the DB after all
+// filters are applied (i.e. already excluding the submitted endpoint via ne()).
+// Tests using this mock verify that the route logic uses the returned count
+// correctly, but cannot verify that the ne() predicate itself is wired up.
 function createMockDb(existingSubCount = 0) {
     const calls = { inserted: [] as unknown[], deleted: 0 };
     return {

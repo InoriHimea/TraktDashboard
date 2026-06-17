@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Save, Download, Bell } from "lucide-react";
 import { useSettings, useUpdateSettings } from "../hooks";
@@ -87,11 +87,14 @@ export default function SettingsPage() {
 
     const pushSupported = pushBrowserSupported && vapidPublicKey !== null;
 
-    function syncPushState() {
+    // useCallback with [] is correct: getExistingSubscription is a stable module
+    // import and setPushEnabled is a stable React state setter, so this function
+    // never needs to re-bind. Wrapping it satisfies react-hooks/exhaustive-deps.
+    const syncPushState = useCallback(() => {
         getExistingSubscription()
             .then((sub) => setPushEnabled(!!sub))
             .catch(() => {});
-    }
+    }, []);
 
     useEffect(() => {
         if (!pushBrowserSupported) return;
@@ -100,7 +103,7 @@ export default function SettingsPage() {
             .then((key) => setVapidPublicKey(key))
             .catch(() => {});
         syncPushState();
-    }, [pushBrowserSupported]);
+    }, [pushBrowserSupported, syncPushState]);
 
     async function togglePush() {
         setPushBusy(true);
@@ -116,10 +119,18 @@ export default function SettingsPage() {
                 toast(t("settings.pushEnabled"), "success");
             }
         } catch (err) {
-            // Re-sync browser subscription state regardless of which direction failed.
-            // On the enable path, the browser may have created a subscription before
-            // the backend call threw; on the disable path, it may have already unsubscribed.
-            syncPushState();
+            if (!pushEnabled) {
+                // Was trying to enable but failed. The browser may have created a
+                // subscription before the backend call threw, so syncPushState()
+                // would incorrectly show "enabled". Force false to match backend
+                // state; the stale browser subscription is cleaned up on the next
+                // enablePush via VAPID key comparison.
+                setPushEnabled(false);
+            } else {
+                // Was trying to disable — unsubscribe may have partially succeeded;
+                // re-read the browser to show accurate state.
+                syncPushState();
+            }
             if (err instanceof Error && err.message === "permission-denied") {
                 toast(t("settings.pushPermissionDenied"), "error");
             } else {

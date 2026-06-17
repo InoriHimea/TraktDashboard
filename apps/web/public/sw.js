@@ -4,14 +4,13 @@ const STATIC_EXTS = [".js", ".css", ".woff2", ".woff", ".ttf", ".png", ".svg", "
 
 self.addEventListener("install", (e) => {
     // Precache the app shell so navigations work offline.
-    // skipWaiting is chained inside waitUntil so the SW only activates after
-    // the cache is populated — avoids serving a broken offline shell if the
-    // network is unavailable at install time.
+    // If the network is unavailable at install time, cache.add rejects and the
+    // install fails — the browser keeps the previous SW active, preserving
+    // offline support. skipWaiting runs only after a successful cache write.
     e.waitUntil(
         caches
             .open(CACHE)
             .then((cache) => cache.add(SHELL))
-            .catch(() => {})
             .then(() => self.skipWaiting())
     );
 });
@@ -23,6 +22,8 @@ self.addEventListener("activate", (e) => {
             .then((keys) =>
                 Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
             )
+            // Cache cleanup failure (e.g. quota error) must not prevent claim().
+            .catch(() => {})
             .then(() => self.clients.claim())
     );
 });
@@ -39,7 +40,13 @@ self.addEventListener("fetch", (e) => {
         e.respondWith(
             fetch(e.request)
                 .then((res) => {
-                    caches.open(CACHE).then((cache) => cache.put(SHELL, res.clone()));
+                    // Background cache update — fire-and-forget so the response
+                    // is not delayed. The .catch() prevents unhandled rejections
+                    // from storage quota or other cache errors.
+                    caches
+                        .open(CACHE)
+                        .then((cache) => cache.put(SHELL, res.clone()))
+                        .catch(() => {});
                     return res;
                 })
                 .catch(() => caches.match(SHELL).then((cached) => cached || Response.error()))
