@@ -186,7 +186,7 @@ statsRoutes.get("/overview", async (c) => {
             .selectDistinct({ day: sql<string>`DATE(${watchHistory.watchedAt})::text` })
             .from(watchHistory)
             .where(and(eq(watchHistory.userId, userId), sql`${watchHistory.watchedAt} IS NOT NULL`))
-            .orderBy(sql`DATE(${watchHistory.watchedAt})`),
+            .orderBy(sql`DATE(${watchHistory.watchedAt})::text`),
         db
             .select({ count: sql<number>`count(*)` })
             .from(watchHistory)
