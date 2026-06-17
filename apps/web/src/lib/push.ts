@@ -76,10 +76,15 @@ export async function enablePush(cachedKey?: string): Promise<void> {
         try {
             await existing.unsubscribe();
         } catch {
-            // Unsubscribe failed (push service unreachable or subscription already
-            // expired on the server). Proceed to subscribe with the new key so the
-            // user is not permanently wedged. The stale endpoint is auto-pruned on
-            // the next 404/410 from the airing-reminders job.
+            // Unsubscribe failed (push service unreachable). Re-query to determine
+            // whether the browser retained the local subscription record — some
+            // implementations clean it up despite throwing.
+            // If the record persists, subscribe() with a different applicationServerKey
+            // would throw InvalidStateError per W3C Push §4.3 (Chrome/Firefox/Safari
+            // all enforce this), so surface a clear domain error instead.
+            const stillActive = await reg.pushManager.getSubscription();
+            if (stillActive) throw new Error("push-rotation-blocked");
+            // Browser cleaned up the local record; safe to proceed to subscribe().
         }
     }
 

@@ -62,7 +62,10 @@ self.addEventListener("fetch", (e) => {
         caches.open(CACHE).then(async (cache) => {
             const cached = await cache.match(e.request);
             if (cached) return cached;
-            const res = await fetch(e.request);
+            // Explicit fallback: if network is unavailable on a cache-miss, return
+            // a clean error response instead of letting the rejection propagate.
+            const res = await fetch(e.request).catch(() => null);
+            if (!res) return Response.error();
             if (res.ok) cache.put(e.request, res.clone());
             return res;
         })

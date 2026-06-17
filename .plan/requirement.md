@@ -31,8 +31,11 @@ privacy-first (data stays on the user's server).
   Web Push TTL ≥ 86400 s so offline devices receive daily reminders;
   VAPID applicationServerKey compared on re-subscribe — stale subscription unsubscribed and
   refreshed on key rotation so pushes do not silently fail;
-  unsubscribe() failure during key rotation is swallowed so the user is never permanently
-  wedged — stale endpoint is auto-pruned on next 404/410 from airing-reminders;
+  unsubscribe() failure during key rotation re-checks getSubscription(): if the browser
+  retained the local record, throws "push-rotation-blocked" (UI shows retry prompt) rather
+  than calling subscribe() which would throw InvalidStateError per W3C Push §4.3;
+  if the browser cleaned up the record despite throwing, subscribe() proceeds normally;
+  stale endpoint auto-pruned on next 404/410 from airing-reminders;
   airing-reminder Promise.all per-subscription sends individually caught so one sendPush
   rejection does not abort the entire user batch.
 - **Correctness** — reset cursor applied consistently to count / next-episode / lastWatchedAt;
@@ -50,6 +53,7 @@ privacy-first (data stays on the user's server).
   SW install: cache failure causes install to fail (old SW stays active); skipWaiting
   only fires after successful shell cache write;
   SW navigate fetch cache.put is fire-and-forget with explicit error swallow;
+  SW static-asset cache-miss fetch has explicit offline fallback (Response.error()) instead of propagating unhandled rejection;
   push enable-path failure sets pushEnabled=false (not re-sync) so UI cannot show
   "enabled" when the backend has no subscription record.
 - **Quality gates** — CI runs lint (eslint + prettier) + typecheck + build + coverage tests;
