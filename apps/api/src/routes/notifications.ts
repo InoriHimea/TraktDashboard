@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { getDb, pushSubscriptions } from "@trakt-dashboard/db";
-import { and, eq, count } from "drizzle-orm";
+import { and, eq, count, ne } from "drizzle-orm";
 import { apiOk, apiError } from "../lib/response.js";
 import { isPushConfigured, getVapidPublicKey } from "../lib/push.js";
 
@@ -34,7 +34,14 @@ notificationRoutes.post("/subscribe", async (c) => {
     const [{ value: existingCount }] = await db
         .select({ value: count() })
         .from(pushSubscriptions)
-        .where(eq(pushSubscriptions.userId, userId));
+        .where(
+            and(
+                eq(pushSubscriptions.userId, userId),
+                // Exclude the submitted endpoint: re-registering the same device is a
+                // zero-net-new-row upsert and must not count against the cap.
+                ne(pushSubscriptions.endpoint, body.endpoint),
+            ),
+        );
     if (existingCount >= MAX_SUBSCRIPTIONS_PER_USER) {
         return apiError(c, 429, "Too many push subscriptions");
     }

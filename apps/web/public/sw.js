@@ -8,7 +8,11 @@ self.addEventListener("install", (e) => {
     // the cache is populated — avoids serving a broken offline shell if the
     // network is unavailable at install time.
     e.waitUntil(
-        caches.open(CACHE).then((cache) => cache.add(SHELL)).then(() => self.skipWaiting())
+        caches
+            .open(CACHE)
+            .then((cache) => cache.add(SHELL))
+            .catch(() => {})
+            .then(() => self.skipWaiting())
     );
 });
 
@@ -19,8 +23,8 @@ self.addEventListener("activate", (e) => {
             .then((keys) =>
                 Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
             )
+            .then(() => self.clients.claim())
     );
-    self.clients.claim();
 });
 
 self.addEventListener("fetch", (e) => {

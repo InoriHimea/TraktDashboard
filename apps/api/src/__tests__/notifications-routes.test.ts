@@ -148,6 +148,21 @@ describe("notifications routes", () => {
         expect(dbMockState.db.calls.inserted).toHaveLength(0);
     });
 
+    it("allows re-subscribe when user has 9 other endpoints at cap (same endpoint excluded from count)", async () => {
+        setVapid();
+        // The count query excludes the submitted endpoint via ne(), so even if the user
+        // has 10 total subscriptions, re-registering an existing endpoint returns 9 here
+        // and the zero-net-new-row upsert is allowed.
+        dbMockState.db = createMockDb(9);
+        const res = await app().request("/notifications/subscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(validSub),
+        });
+        expect(res.status).toBe(200);
+        expect(dbMockState.db.calls.inserted).toHaveLength(1);
+    });
+
     it("requires an endpoint to unsubscribe (400)", async () => {
         const res = await app().request("/notifications/unsubscribe", {
             method: "POST",
