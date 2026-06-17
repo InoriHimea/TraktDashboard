@@ -18,6 +18,7 @@ import { jellyfinRoutes } from "./routes/jellyfin.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { startScheduler } from "./jobs/scheduler.js";
 import { encryptLegacyTokensAtRest } from "./lib/token-migration.js";
+import { runMigrations } from "@trakt-dashboard/db";
 
 const app = new Hono();
 
@@ -67,6 +68,10 @@ app.onError((err, c) => {
 });
 
 const port = parseInt(process.env.API_PORT || "3001");
+
+runMigrations()
+    .then(() => console.log("[db] Migrations up to date"))
+    .catch((err) => console.error("[db] Migration failed:", err));
 
 startScheduler().catch((err) => {
     console.error("[scheduler] Failed to start:", err);
