@@ -69,6 +69,10 @@ async function upsertRepeatableJob(
 ): Promise<void> {
     // Best-effort removal: if listing/removing the old key fails, log a warning
     // but always proceed to queue.add() so the job is never silently absent.
+    // Known limitation: getRepeatableJobs() fetches ALL repeatable keys from Redis
+    // (O(n) per call); registering n users on startup is O(n²) round-trips. For
+    // typical single-user deployments this is negligible. At large scale, migrate to
+    // BullMQ v5's addJobScheduler/removeJobScheduler APIs which do O(1) direct removal.
     try {
         const jobs = await queue.getRepeatableJobs();
         const existing = jobs.find((j) => j.id === jobId);

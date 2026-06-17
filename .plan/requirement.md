@@ -28,14 +28,20 @@ privacy-first (data stays on the user's server).
   with backoff + Retry-After; per-provider rate limiting; queue health → 503 (no fake success);
   BullMQ jobs must re-throw on failure (not swallow) so failed status and retries apply;
   repeatable-job upsert: remove step is best-effort, add step always executes;
-  Web Push TTL ≥ 86400 s so offline devices receive daily reminders.
+  Web Push TTL ≥ 86400 s so offline devices receive daily reminders;
+  VAPID applicationServerKey compared on re-subscribe — stale subscription unsubscribed and
+  refreshed on key rotation so pushes do not silently fail.
 - **Correctness** — reset cursor applied consistently to count / next-episode / lastWatchedAt;
   null-safe timestamp serialization; required `userId` for episode creation.
 - **Performance** — stale-while-revalidate metadata cache with per-source TTLs; next-episode via
   `NOT EXISTS` anti-join; route-split web bundles.
 - **Security** — self-hosted; DB/Redis bound to loopback; nginx security headers + CSP
   (report-only); secrets via env; CSV export sanitizes formula-injection triggers (space-prefix
-  after trimStart detection); push subscription capped at 10 per user (429 on overflow).
+  when first char is =+-@, consistent detection and prefix on same string);
+  push subscription capped at 10 per user (429 on overflow; same-endpoint re-subscribe
+  excluded from count so VAPID-rotation re-register is never blocked);
+  airing-reminder title correct for same-show multi-episode airings (no "+0");
+  SW clients.claim() inside waitUntil; SW install degrades gracefully when offline.
 - **Quality gates** — CI runs lint (eslint + prettier) + typecheck + build + coverage tests;
   coverage floors enforced.
 
