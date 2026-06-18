@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import {
     fetchJellyfinLibraries,
     findJellyfinEpisode,
+    findJellyfinMovie,
     deleteJellyfinItem,
 } from "../services/jellyfin.js";
 import { parseBoundedInt } from "../lib/number.js";
@@ -58,6 +59,23 @@ jellyfinRoutes.get("/episode/:showTmdbId/:season/:episode", async (c) => {
     try {
         const ep = await findJellyfinEpisode(cfg, showTmdbId, season, episode);
         return c.json({ data: ep });
+    } catch (err) {
+        return c.json({ error: String(err) }, 502);
+    }
+});
+
+// GET /api/jellyfin/movie/:movieTmdbId
+jellyfinRoutes.get("/movie/:movieTmdbId", async (c) => {
+    const userId = c.get("userId");
+    const cfg = await getJellyfinConfig(userId);
+    if (!cfg) return c.json({ error: "Jellyfin not configured" }, 503);
+
+    const movieTmdbId = parseBoundedInt(c.req.param("movieTmdbId"), -1, 1, Number.MAX_SAFE_INTEGER);
+    if (movieTmdbId < 1) return c.json({ error: "Invalid parameters" }, 400);
+
+    try {
+        const movie = await findJellyfinMovie(cfg, movieTmdbId);
+        return c.json({ data: movie });
     } catch (err) {
         return c.json({ error: String(err) }, 502);
     }

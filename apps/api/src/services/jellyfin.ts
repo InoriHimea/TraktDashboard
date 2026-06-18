@@ -1,4 +1,4 @@
-import type { JellyfinLibrary, JellyfinEpisode } from "@trakt-dashboard/types";
+import type { JellyfinLibrary, JellyfinEpisode, JellyfinMovie } from "@trakt-dashboard/types";
 
 export interface JellyfinConfig {
     url: string;
@@ -66,6 +66,26 @@ export async function findJellyfinEpisode(
         seriesName: item.SeriesName ?? "",
         path: item.Path ?? null,
     };
+}
+
+export async function findJellyfinMovie(
+    cfg: JellyfinConfig,
+    movieTmdbId: number,
+): Promise<JellyfinMovie | null> {
+    const params = new URLSearchParams({
+        IncludeItemTypes: "Movie",
+        Recursive: "true",
+        Fields: "Path,ProviderIds",
+        AnyProviderIdEquals: `Tmdb.${movieTmdbId}`,
+    });
+    const res = await jellyfinFetch(cfg, `/Items?${params}`);
+    if (!res.ok) throw new Error(`Jellyfin movie lookup failed: ${res.status}`);
+    const data = (await res.json()) as {
+        Items: Array<{ Id: string; Name: string; Path?: string }>;
+    };
+    const item = data.Items?.[0] ?? null;
+    if (!item) return null;
+    return { id: item.Id, name: item.Name ?? "", path: item.Path ?? null };
 }
 
 export async function deleteJellyfinItem(cfg: JellyfinConfig, itemId: string): Promise<void> {

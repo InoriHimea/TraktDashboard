@@ -312,6 +312,12 @@ export interface JellyfinEpisode {
     path: string | null;
 }
 
+export interface JellyfinMovie {
+    id: string;
+    name: string;
+    path: string | null;
+}
+
 // ─── Episode Detail ───────────────────────────────────────────────────────────
 
 export interface EpisodeDetailData {

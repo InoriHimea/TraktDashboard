@@ -16,6 +16,7 @@ import type {
     CalendarEpisode,
     HistoryPage,
     JellyfinEpisode,
+    JellyfinMovie,
 } from "@trakt-dashboard/types";
 import { api } from "../lib/api";
 
@@ -372,6 +373,16 @@ export function useJellyfinEpisode(
         queryKey: ["jellyfin-episode", showTmdbId, season, episode],
         queryFn: () => api.jellyfin.episode(showTmdbId!, season, episode).then((r) => r.data),
         enabled: showTmdbId != null && showTmdbId > 0,
+        staleTime: 1000 * 60 * 10,
+        retry: false,
+    });
+}
+
+export function useJellyfinMovie(movieTmdbId: number | null | undefined) {
+    return useQuery<JellyfinMovie | null>({
+        queryKey: ["jellyfin-movie", movieTmdbId],
+        queryFn: () => api.jellyfin.movie(movieTmdbId!).then((r) => r.data),
+        enabled: movieTmdbId != null && movieTmdbId > 0,
         staleTime: 1000 * 60 * 10,
         retry: false,
     });

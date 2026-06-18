@@ -219,7 +219,12 @@
         "deleteHistoryTitle": "删除观看记录",
         "deleteHistoryDesc": "确认删除这条观看记录？此操作不可撤销。",
         "addedToWatchlist": "已添加到待看列表",
-        "addToWatchlistFailed": "添加失败"
+        "addToWatchlistFailed": "添加失败",
+        "deleteJellyfinFile": "删除文件",
+        "deleteJellyfinTitle": "从磁盘删除",
+        "deleteJellyfinDesc": "将从 Jellyfin 媒体库中删除此电影的视频文件，此操作不可撤销。",
+        "deleteJellyfinSuccess": "文件已删除",
+        "deleteJellyfinFailed": "删除失败，请重试"
     },
     "metadata": {
         "rating": "评分",

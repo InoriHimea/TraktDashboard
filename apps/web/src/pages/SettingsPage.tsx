@@ -66,18 +66,17 @@ export default function SettingsPage() {
     const { toast } = useToast();
     const [theme, setTheme] = useState<Theme>(loadTheme);
 
-    // Seed the editable form from fetched settings, during render (re-seeds only
-    // when the settings object reference changes, mirroring the prior effect).
-    const [syncedSettings, setSyncedSettings] = useState(settings);
-    if (settings && settings !== syncedSettings) {
-        setSyncedSettings(settings);
+    // Seed form from fetched settings. useEffect fires on mount (even with cached
+    // data) and whenever the settings object reference changes after a save.
+    useEffect(() => {
+        if (!settings) return;
         setDisplayLanguage(settings.displayLanguage);
         setSyncIntervalMinutes(settings.syncIntervalMinutes);
         setHttpProxy(settings.httpProxy ?? "");
         setJellyfinUrl(settings.jellyfinUrl ?? "");
         setJellyfinApiKey(settings.jellyfinApiKey ?? "");
         setJellyfinAutoDeleteIds(settings.jellyfinAutoDeleteLibraryIds ?? []);
-    }
+    }, [settings]);
 
     // Apply the saved display language to the UI locale (a real side effect).
     const settingsLanguage = settings?.displayLanguage;

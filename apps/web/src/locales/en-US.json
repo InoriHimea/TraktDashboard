@@ -219,7 +219,12 @@
         "deleteHistoryTitle": "Delete watch record",
         "deleteHistoryDesc": "Delete this watch record? This cannot be undone.",
         "addedToWatchlist": "Added to watchlist",
-        "addToWatchlistFailed": "Failed to add"
+        "addToWatchlistFailed": "Failed to add",
+        "deleteJellyfinFile": "Delete file",
+        "deleteJellyfinTitle": "Delete from disk",
+        "deleteJellyfinDesc": "This will delete the movie file from your Jellyfin library. This cannot be undone.",
+        "deleteJellyfinSuccess": "File deleted",
+        "deleteJellyfinFailed": "Delete failed, please retry"
     },
     "metadata": {
         "rating": "Rating",

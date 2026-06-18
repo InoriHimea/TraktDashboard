@@ -18,6 +18,7 @@ import type {
     HistoryPage,
     JellyfinLibrary,
     JellyfinEpisode,
+    JellyfinMovie,
 } from "@trakt-dashboard/types";
 
 const API_BASE = "/api";
@@ -223,6 +224,8 @@ export const api = {
             request<ApiResponse<JellyfinEpisode | null>>(
                 `/jellyfin/episode/${showTmdbId}/${season}/${episode}`,
             ),
+        movie: (movieTmdbId: number) =>
+            request<ApiResponse<JellyfinMovie | null>>(`/jellyfin/movie/${movieTmdbId}`),
         deleteItem: (jellyfinItemId: string) =>
             request<{ ok: boolean }>(`/jellyfin/items/${jellyfinItemId}`, {
                 method: "DELETE",

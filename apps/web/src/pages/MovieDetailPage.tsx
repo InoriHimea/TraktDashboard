@@ -21,6 +21,8 @@ import {
     useWatchlist,
     useAddToWatchlist,
     useRemoveFromWatchlist,
+    useJellyfinMovie,
+    useDeleteJellyfinItem,
 } from "../hooks";
 import { tmdbImage } from "../lib/utils";
 import { useToast } from "../lib/toast";
@@ -103,6 +105,10 @@ export default function MovieDetailPage() {
     const isWatchlistPending = addToWatchlist.isPending || removeFromWatchlist.isPending;
 
     const { toast } = useToast();
+
+    const { data: jellyfinMovie = null } = useJellyfinMovie(progress?.movie.tmdbId ?? null);
+    const deleteJellyfinItem = useDeleteJellyfinItem();
+    const [confirmJellyfinDeleteOpen, setConfirmJellyfinDeleteOpen] = useState(false);
 
     const [activeTab, setActiveTab] = useState<"details" | "history">("details");
     const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
@@ -306,7 +312,7 @@ export default function MovieDetailPage() {
                             />
                         )}
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-wrap items-center gap-3">
                             <Button
                                 type="button"
                                 variant="primary"
@@ -319,6 +325,19 @@ export default function MovieDetailPage() {
                                     ? t("movieDetail.watchAgain")
                                     : t("movieDetail.markWatched")}
                             </Button>
+                            {jellyfinMovie && (
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    color="rose"
+                                    size="md"
+                                    icon={<Trash2 size={15} />}
+                                    loading={deleteJellyfinItem.isPending}
+                                    onClick={() => setConfirmJellyfinDeleteOpen(true)}
+                                >
+                                    {t("movieDetail.deleteJellyfinFile")}
+                                </Button>
+                            )}
                             <Button
                                 type="button"
                                 variant={inWatchlist ? "primary" : "secondary"}
@@ -582,6 +601,26 @@ export default function MovieDetailPage() {
                     }
                 }}
                 onCancel={() => setDeleteConfirmId(null)}
+            />
+            <ConfirmDialog
+                isOpen={confirmJellyfinDeleteOpen}
+                title={t("movieDetail.deleteJellyfinTitle")}
+                description={t("movieDetail.deleteJellyfinDesc")}
+                confirmText={t("common.delete")}
+                confirmColor="rose"
+                cancelText={t("common.cancel")}
+                isLoading={deleteJellyfinItem.isPending}
+                onConfirm={async () => {
+                    if (!jellyfinMovie) return;
+                    try {
+                        await deleteJellyfinItem.mutateAsync(jellyfinMovie.id);
+                        toast(t("movieDetail.deleteJellyfinSuccess"), "success");
+                    } catch {
+                        toast(t("movieDetail.deleteJellyfinFailed"), "error");
+                    }
+                    setConfirmJellyfinDeleteOpen(false);
+                }}
+                onCancel={() => setConfirmJellyfinDeleteOpen(false)}
             />
         </div>
     );
