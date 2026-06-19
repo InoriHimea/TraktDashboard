@@ -1,6 +1,6 @@
 # Trakt Dashboard — Requirements
 
-Living spec of the current functional and non-functional requirements. Last reviewed: 2026-06-16.
+Living spec of the current functional and non-functional requirements. Last reviewed: 2026-06-19.
 
 ## Product
 
@@ -98,9 +98,19 @@ privacy-first (data stays on the user's server).
 | N2-T01 | **Watchlist 专属 UI 页面** — 当前 Watchlist API 已实现，缺少独立浏览页面；支持添加/移除、按类型（剧集/电影）筛选 | 高     |
 | N2-T02 | **观看历史时间轴** — 全局跨剧集/电影的倒序时间轴视图；支持按日期范围筛选、导出 CSV                               | 高     |
 | N2-T03 | **统计页增强** — 新增：播放平台/来源分布、连续追剧节奏分析、年度/月度对比、最长连续观看记录                      | 中     |
-| N2-T04 | **电影详情页 Watch Again 弹窗** — `MovieDetailPage` 缺少与 `EpisodeDetailPage` 对等的「再看一次」日期时间选择器  | 中     |
+| N2-T04 | **电影详情页 Watch Again 弹窗** ✅ — `MovieDetailPage.tsx:585` 已实现 DateTimePickerModal                        | 已完成 |
 | N2-T05 | **新番提醒** ✅ — Web Push 播出提醒已实现（v0.50.x）；v0.50.3 修复 TTL/SUBJECT/状态同步等 13 项审查问题          | 已完成 |
 | N2-T06 | **数据导出** ✅ — CSV/JSON 导出已实现（v0.50.x）；v0.50.3 修复 CSV Injection sanitizer                           | 已完成 |
+| N2-T07 | **播出提醒分级** — 首播(S1E1) / 回归季(SxE1) / 季终 三类事件可单独开关；detail: plan-20260619-001 F02            | 高     |
+| N2-T08 | **统计热力图 & 习惯分析** — GitHub 风格 52×7 观看热力图 + 星期分布图；detail: plan-20260619-001 F03              | 中     |
+| N2-T09 | **全局搜索 + 一键加入** — 顶栏搜索调 Trakt/TMDB，结果直接加 Watchlist；detail: plan-20260619-001 F04             | 高     |
+| N2-T10 | **接着看 / Up Next 面板** — 跨剧下一集队列，复用已算好的 nextEpisodeId；detail: plan-20260619-001 F05            | 高     |
+| N2-T11 | **我的评分写入 + 评分统计** — 写回 Trakt /sync/ratings，Stats 新增评分分布图；detail: plan-20260619-001 F06      | 中     |
+| N2-T12 | **Jellyfin 正在播放联动** — 读 Jellyfin Sessions，一键「追平进度」；detail: plan-20260619-001 F07                | 中     |
+| N2-T13 | **发现页（Trending / 推荐）** — Trakt trending + recommendations，卡片直接加 Watchlist；F08                      | 中     |
+| N2-T14 | **集级笔记** — 本地私人观后感，episodeId/movieId 绑定，支持导出；F09                                             | 低     |
+| N2-T15 | **自定义列表** — 双向同步 Trakt /users/me/lists；F10                                                             | 低     |
+| N2-T16 | **数据导入** — JSON 格式观看历史导入，与导出对称；F12                                                            | 低     |
 
 ### N3 — 测试与质量
 
@@ -115,7 +125,7 @@ privacy-first (data stays on the user's server).
 
 | 编号   | 描述                                                                                                           | 优先级 |
 | ------ | -------------------------------------------------------------------------------------------------------------- | ------ |
-| N4-T01 | **PWA 支持** — Service Worker + Web App Manifest，实现主屏安装与离线壳页（内容仍需在线）                       | 中     |
+| N4-T01 | **PWA 支持** — manifest.json + SW precache 壳页；detail: plan-20260619-001 F11                                 | 中     |
 | N4-T02 | **Docker 健康检查 smoke test** — 在 CI 中用 `docker compose up --wait` 验证容器启停（当前仅校验 compose 结构） | 中     |
 | N4-T03 | **Observability 持久化** — 当前同步指标存进程内存；引入轻量 SQLite 表或日志文件持久化 last-N 次同步摘要        | 低     |
 | N4-T04 | **依赖自动更新** — 接入 Renovate Bot，按主版本/次版本分组 PR，与 CI 门禁联动                                   | 低     |
