@@ -39,12 +39,21 @@ privacy-first (data stays on the user's server).
   airing-reminder Promise.all per-subscription sends individually caught so one sendPush
   rejection does not abort the entire user batch.
 - **Correctness** — reset cursor applied consistently to count / next-episode / lastWatchedAt;
-  null-safe timestamp serialization; required `userId` for episode creation.
+  null-safe timestamp serialization; required `userId` for episode creation;
+  air_date stored as full ISO timestamp — all SQL comparisons must use `LEFT(air_date, 10)`
+  to avoid today's episodes being excluded from progress/calendar due to timestamp > date-string ordering;
+  incremental sync cursor rollback covers both episode AND movie failures;
+  mark-watched `alreadyWatched` count scoped to the target season only;
+  Trakt pagination header validated with `Number.isFinite` guard before use.
 - **Performance** — stale-while-revalidate metadata cache with per-source TTLs; next-episode via
   `NOT EXISTS` anti-join; route-split web bundles.
 - **Security** — self-hosted; DB/Redis bound to loopback; nginx security headers + CSP
   (report-only); secrets via env; CSV export sanitizes formula-injection triggers (space-prefix
   when first char is =+-@, consistent detection and prefix on same string);
+  `jellyfinApiKey` encrypted at rest (AES-256-GCM via `encryptToken`) and masked as `"***"` in API responses;
+  `start` script sets `NODE_ENV=production` so missing `API_SECRET` causes a hard fail (no dev-fallback secret in prod);
+  `runMigrations()` failure exits the process rather than serving requests on a broken schema;
+  Jellyfin auto-delete scoped to configured library IDs via `AncestorIds` parameter — never touches other libraries;
   push subscription capped at 10 per user (429 on overflow; same-endpoint re-subscribe
   excluded from count so VAPID-rotation re-register is never blocked);
   airing-reminder title correct for same-show multi-episode airings (no "+0");

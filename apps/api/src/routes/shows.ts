@@ -9,7 +9,7 @@ import {
     watchResetCursors,
     userSettings,
 } from "@trakt-dashboard/db";
-import { eq, and, desc, asc, sql, like } from "drizzle-orm";
+import { eq, and, desc, asc, sql, like, inArray } from "drizzle-orm";
 import { autoDeleteJellyfinEpisode } from "../services/jellyfin.js";
 import type {
     ShowProgress,
@@ -699,11 +699,19 @@ showRoutes.post("/:showId/seasons/:season/mark-watched", async (c) => {
         return c.json({ error: "Season not found or has no episodes" }, 404);
     }
 
-    // Find already-watched episode IDs
+    const seasonEpisodeIds = seasonEpisodes.map((e) => e.id);
+
+    // Find already-watched episode IDs scoped to this season
     const alreadyWatched = await db
         .select({ episodeId: watchHistory.episodeId })
         .from(watchHistory)
-        .where(and(eq(watchHistory.userId, userId), eq(watchHistory.mediaType, "episode")));
+        .where(
+            and(
+                eq(watchHistory.userId, userId),
+                eq(watchHistory.mediaType, "episode"),
+                inArray(watchHistory.episodeId, seasonEpisodeIds),
+            ),
+        );
 
     const watchedSet = new Set(
         alreadyWatched.map((r) => r.episodeId).filter((id): id is number => id != null),

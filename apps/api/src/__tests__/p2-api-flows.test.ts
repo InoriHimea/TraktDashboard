@@ -309,6 +309,9 @@ describe("settings routes", () => {
                 displayLanguage: "zh-CN",
                 syncIntervalMinutes: 60,
                 httpProxy: null,
+                jellyfinUrl: null,
+                jellyfinApiKey: null,
+                jellyfinAutoDeleteLibraryIds: null,
             },
         });
     });

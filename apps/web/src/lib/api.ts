@@ -220,6 +220,11 @@ export const api = {
     },
     jellyfin: {
         libraries: () => request<ApiResponse<JellyfinLibrary[]>>("/jellyfin/libraries"),
+        testLibraries: (url: string, apiKey: string) =>
+            request<ApiResponse<JellyfinLibrary[]>>("/jellyfin/libraries", {
+                method: "POST",
+                body: JSON.stringify({ url, apiKey }),
+            }),
         episode: (showTmdbId: number, season: number, episode: number) =>
             request<ApiResponse<JellyfinEpisode | null>>(
                 `/jellyfin/episode/${showTmdbId}/${season}/${episode}`,

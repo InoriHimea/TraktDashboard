@@ -105,7 +105,11 @@ export default function StatsPage() {
         (best, item) => (item.count > best.count ? item : best),
         chartData[0] ?? { month: t("stats.noData"), count: 0 },
     );
-    const monthlyAverage = Math.round(totalEntries / Math.max(activeMonths.length, 1));
+    // monthlyActivity only tracks episodes; use episode-only numerator so the
+    // average stays consistent with the chart's episode axis.
+    const monthlyAverage = Math.round(
+        stats.totalEpisodesWatched / Math.max(activeMonths.length, 1),
+    );
     const movieRewatchRatio =
         stats.totalMoviesWatched > 0 ? (movieWatches / stats.totalMoviesWatched).toFixed(1) : "0.0";
     const yearPctChange =

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { Save, Download, Bell, Server } from "lucide-react";
 import type { JellyfinLibrary } from "@trakt-dashboard/types";
@@ -65,17 +65,21 @@ export default function SettingsPage() {
     const [jellyfinLibrariesLoading, setJellyfinLibrariesLoading] = useState(false);
     const { toast } = useToast();
     const [theme, setTheme] = useState<Theme>(loadTheme);
+    // Track whether the form has been seeded. Prevents window-focus refetches from
+    // clobbering unsaved edits. Reset to false after a successful save so fresh
+    // server values propagate.
+    const hasSeededRef = useRef(false);
 
-    // Seed form from fetched settings. useEffect fires on mount (even with cached
-    // data) and whenever the settings object reference changes after a save.
+    // Seed form from fetched settings on first load only.
     useEffect(() => {
-        if (!settings) return;
+        if (!settings || hasSeededRef.current) return;
         setDisplayLanguage(settings.displayLanguage);
         setSyncIntervalMinutes(settings.syncIntervalMinutes);
         setHttpProxy(settings.httpProxy ?? "");
         setJellyfinUrl(settings.jellyfinUrl ?? "");
         setJellyfinApiKey(settings.jellyfinApiKey ?? "");
         setJellyfinAutoDeleteIds(settings.jellyfinAutoDeleteLibraryIds ?? []);
+        hasSeededRef.current = true;
     }, [settings]);
 
     // Apply the saved display language to the UI locale (a real side effect).
@@ -152,13 +156,20 @@ export default function SettingsPage() {
     }
 
     async function loadJellyfinLibraries() {
-        if (!jellyfinUrl.trim() || !jellyfinApiKey.trim()) {
+        const url = jellyfinUrl.trim();
+        const key = jellyfinApiKey.trim();
+        if (!url || !key) {
             toast(t("settings.jellyfinNotConfigured"), "error");
             return;
         }
         setJellyfinLibrariesLoading(true);
         try {
-            const res = await api.jellyfin.libraries();
+            // "***" means the key is unchanged (server-masked). Use stored credentials.
+            // Otherwise use the typed credentials so the user can test before saving.
+            const res =
+                key === "***"
+                    ? await api.jellyfin.libraries()
+                    : await api.jellyfin.testLibraries(url, key);
             setJellyfinLibraries(res.data);
         } catch {
             toast(t("settings.jellyfinLoadLibrariesFailed"), "error");
@@ -206,6 +217,7 @@ export default function SettingsPage() {
                 jellyfinApiKey: jellyfinApiKey.trim() || null,
                 jellyfinAutoDeleteLibraryIds: jellyfinAutoDeleteIds,
             });
+            hasSeededRef.current = false;
             setLocale(langTrimmed);
             toast(t("settings.saveSuccess"), "success");
         } catch (err: unknown) {

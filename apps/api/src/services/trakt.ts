@@ -454,7 +454,12 @@ export function getTraktClient() {
                 );
                 all.push(...(data as TraktHistoryEntry[]));
 
-                const pageCount = parseInt(headers.get("X-Pagination-Page-Count") || "1");
+                const rawPageCount = parseInt(headers.get("X-Pagination-Page-Count") ?? "1", 10);
+                const pageCount =
+                    Number.isFinite(rawPageCount) && rawPageCount > 0 ? rawPageCount : 1;
+                if (!Number.isFinite(rawPageCount) || rawPageCount < 1) {
+                    console.warn("[trakt] Invalid X-Pagination-Page-Count, defaulting to 1");
+                }
                 if (page >= pageCount) break;
                 page++;
             }
@@ -473,7 +478,12 @@ export function getTraktClient() {
                 });
                 all.push(...(data as TraktMovieHistoryEntry[]));
 
-                const pageCount = parseInt(headers.get("X-Pagination-Page-Count") || "1");
+                const rawPageCount = parseInt(headers.get("X-Pagination-Page-Count") ?? "1", 10);
+                const pageCount =
+                    Number.isFinite(rawPageCount) && rawPageCount > 0 ? rawPageCount : 1;
+                if (!Number.isFinite(rawPageCount) || rawPageCount < 1) {
+                    console.warn("[trakt] Invalid X-Pagination-Page-Count, defaulting to 1");
+                }
                 if (page >= pageCount) break;
                 page++;
             }

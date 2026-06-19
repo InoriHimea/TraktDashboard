@@ -389,7 +389,12 @@ export function useJellyfinMovie(movieTmdbId: number | null | undefined) {
 }
 
 export function useDeleteJellyfinItem() {
+    const qc = useQueryClient();
     return useMutation({
         mutationFn: (jellyfinItemId: string) => api.jellyfin.deleteItem(jellyfinItemId),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["jellyfin-episode"] });
+            qc.invalidateQueries({ queryKey: ["jellyfin-movie"] });
+        },
     });
 }

@@ -78,6 +78,13 @@
       "when": 1781541334740,
       "tag": "0010_strong_red_wolf",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1750291200000,
+      "tag": "0011_jellyfin_settings",
+      "breakpoints": true
     }
   ]
 }

@@ -4,8 +4,20 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { registerUserSyncJob } from "../jobs/scheduler.js";
 import { validateBody } from "../lib/validate.js";
+import { encryptToken } from "../lib/encrypt.js";
+import { resolveApiSecret } from "../lib/secret.js";
 
 export const settingsRoutes = new Hono<{ Variables: { userId: number } }>();
+
+function resolveIncomingApiKey(
+    incoming: string | null | undefined,
+    existing: string | null,
+): string | null {
+    if (incoming === undefined) return existing;
+    if (incoming === null || incoming === "") return null;
+    if (incoming === "***") return existing;
+    return encryptToken(incoming, resolveApiSecret());
+}
 
 const DEFAULTS = {
     displayLanguage: "zh-CN",
@@ -73,9 +85,14 @@ settingsRoutes.get("/", async (c) => {
     }
 
     const autoDeleteRaw = row?.jellyfinAutoDeleteLibraryIds ?? null;
-    const jellyfinAutoDeleteLibraryIds = autoDeleteRaw
-        ? (JSON.parse(autoDeleteRaw) as string[])
-        : DEFAULTS.jellyfinAutoDeleteLibraryIds;
+    let jellyfinAutoDeleteLibraryIds: string[] | null = DEFAULTS.jellyfinAutoDeleteLibraryIds;
+    if (autoDeleteRaw) {
+        try {
+            jellyfinAutoDeleteLibraryIds = JSON.parse(autoDeleteRaw) as string[];
+        } catch {
+            jellyfinAutoDeleteLibraryIds = [];
+        }
+    }
 
     return c.json({
         data: {
@@ -84,7 +101,7 @@ settingsRoutes.get("/", async (c) => {
             syncIntervalMinutes: row?.syncIntervalMinutes ?? DEFAULTS.syncIntervalMinutes,
             httpProxy: row?.httpProxy ?? DEFAULTS.httpProxy,
             jellyfinUrl: row?.jellyfinUrl ?? DEFAULTS.jellyfinUrl,
-            jellyfinApiKey: row?.jellyfinApiKey ?? DEFAULTS.jellyfinApiKey,
+            jellyfinApiKey: row?.jellyfinApiKey ? "***" : null,
             jellyfinAutoDeleteLibraryIds,
         },
     });
@@ -146,9 +163,14 @@ settingsRoutes.put("/", async (c) => {
 
     const previousInterval = existing?.syncIntervalMinutes ?? DEFAULTS.syncIntervalMinutes;
 
-    const existingAutoDeleteIds = existing?.jellyfinAutoDeleteLibraryIds
-        ? (JSON.parse(existing.jellyfinAutoDeleteLibraryIds) as string[])
-        : DEFAULTS.jellyfinAutoDeleteLibraryIds;
+    let existingAutoDeleteIds: string[] | null = DEFAULTS.jellyfinAutoDeleteLibraryIds;
+    if (existing?.jellyfinAutoDeleteLibraryIds) {
+        try {
+            existingAutoDeleteIds = JSON.parse(existing.jellyfinAutoDeleteLibraryIds) as string[];
+        } catch {
+            existingAutoDeleteIds = [];
+        }
+    }
 
     const newAutoDeleteIds =
         jellyfinAutoDeleteLibraryIds !== undefined
@@ -174,10 +196,7 @@ settingsRoutes.put("/", async (c) => {
                 jellyfinUrl !== undefined
                     ? jellyfinUrl || null
                     : (existing?.jellyfinUrl ?? DEFAULTS.jellyfinUrl),
-            jellyfinApiKey:
-                jellyfinApiKey !== undefined
-                    ? jellyfinApiKey || null
-                    : (existing?.jellyfinApiKey ?? DEFAULTS.jellyfinApiKey),
+            jellyfinApiKey: resolveIncomingApiKey(jellyfinApiKey, existing?.jellyfinApiKey ?? null),
             jellyfinAutoDeleteLibraryIds: newAutoDeleteIds
                 ? JSON.stringify(newAutoDeleteIds)
                 : null,
@@ -203,7 +222,13 @@ settingsRoutes.put("/", async (c) => {
         ) {
             await registerUserSyncJob(userId);
         }
-        return c.json({ data: { ...newValues, jellyfinAutoDeleteLibraryIds: newAutoDeleteIds } });
+        return c.json({
+            data: {
+                ...newValues,
+                jellyfinApiKey: newValues.jellyfinApiKey ? "***" : null,
+                jellyfinAutoDeleteLibraryIds: newAutoDeleteIds,
+            },
+        });
     } else {
         await db
             .insert(userSettings)

@@ -70,8 +70,10 @@ app.onError((err, c) => {
 const port = parseInt(process.env.API_PORT || "3001");
 
 // Block startup until migrations complete — prevents schema/DB mismatch on first request.
+// Exit on failure rather than serving requests against a broken schema.
 await runMigrations().catch((err) => {
-    console.error("[db] Migration failed:", err);
+    console.error("[db] Migration failed — shutting down to prevent schema mismatch:", err);
+    process.exit(1);
 });
 
 startScheduler().catch((err) => {

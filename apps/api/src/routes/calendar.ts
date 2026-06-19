@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { getDb, episodes, shows, userShowProgress, watchHistory } from "@trakt-dashboard/db";
-import { eq, and, gte, lte, asc, sql } from "drizzle-orm";
+import { eq, and, asc, sql } from "drizzle-orm";
 import dayjs from "dayjs";
 import { apiOk } from "../lib/response.js";
 import { parseBoundedInt } from "../lib/number.js";
@@ -34,8 +34,8 @@ calendarRoutes.get("/", async (c) => {
         .where(
             and(
                 eq(userShowProgress.userId, userId),
-                gte(episodes.airDate, startDate),
-                lte(episodes.airDate, endDate),
+                sql`LEFT(${episodes.airDate}, 10) >= ${startDate}`,
+                sql`LEFT(${episodes.airDate}, 10) <= ${endDate}`,
             ),
         )
         .orderBy(asc(episodes.airDate));

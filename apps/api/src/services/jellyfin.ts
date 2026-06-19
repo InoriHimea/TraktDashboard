@@ -37,6 +37,7 @@ export async function findJellyfinEpisode(
     showTmdbId: number,
     seasonNumber: number,
     episodeNumber: number,
+    ancestorIds?: string[],
 ): Promise<JellyfinEpisode | null> {
     const params = new URLSearchParams({
         IncludeItemTypes: "Episode",
@@ -46,6 +47,9 @@ export async function findJellyfinEpisode(
         ParentIndexNumber: String(seasonNumber),
         IndexNumber: String(episodeNumber),
     });
+    if (ancestorIds && ancestorIds.length > 0) {
+        params.set("AncestorIds", ancestorIds.join(","));
+    }
     const res = await jellyfinFetch(cfg, `/Items?${params}`);
     if (!res.ok) throw new Error(`Jellyfin episode lookup failed: ${res.status}`);
     const data = (await res.json()) as {
@@ -102,12 +106,17 @@ export async function autoDeleteJellyfinEpisode(
     seasonNumber: number,
     episodeNumber: number,
 ): Promise<void> {
-    const libraries = await fetchJellyfinLibraries(cfg);
-    const allowedIds = new Set(autoDeleteLibraryIds);
-    const hasAutoDeleteLib = libraries.some((lib) => allowedIds.has(lib.id));
-    if (!hasAutoDeleteLib) return;
+    if (autoDeleteLibraryIds.length === 0) return;
 
-    const episode = await findJellyfinEpisode(cfg, showTmdbId, seasonNumber, episodeNumber);
+    // Restrict search to the configured auto-delete libraries via AncestorIds so we
+    // never touch media in libraries the user didn't opt into.
+    const episode = await findJellyfinEpisode(
+        cfg,
+        showTmdbId,
+        seasonNumber,
+        episodeNumber,
+        autoDeleteLibraryIds,
+    );
     if (!episode) return;
 
     await deleteJellyfinItem(cfg, episode.id);

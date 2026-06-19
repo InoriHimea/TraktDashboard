@@ -521,6 +521,14 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
                                 `[sync:incr] Error on movie trakt:${movieTraktId}:`,
                                 toErrorMessage(e),
                             );
+                            // Mirror the show-loop cursor-rollback logic: record the earliest
+                            // failed watched_at so the next incremental sync re-fetches the gap.
+                            for (const entry of entries) {
+                                const t = new Date(entry.watched_at);
+                                if (!failedEntryMinWatchedAt || t < failedEntryMinWatchedAt) {
+                                    failedEntryMinWatchedAt = t;
+                                }
+                            }
                         }
                     }),
                 ),
@@ -1270,7 +1278,10 @@ export async function recalcShowProgress(userId: number, showId: number): Promis
         .select({ count: sql<number>`count(*)` })
         .from(episodes)
         .where(
-            and(eq(episodes.showId, showId), sql`air_date IS NOT NULL AND air_date <= ${today}`),
+            and(
+                eq(episodes.showId, showId),
+                sql`air_date IS NOT NULL AND LEFT(air_date, 10) <= ${today}`,
+            ),
         );
     const airedEpisodes = Number(airedResult?.count || 0);
 
@@ -1313,7 +1324,7 @@ export async function recalcShowProgress(userId: number, showId: number): Promis
             .where(
                 and(
                     eq(episodes.showId, showId),
-                    sql`air_date IS NOT NULL AND air_date <= ${today}`,
+                    sql`air_date IS NOT NULL AND LEFT(air_date, 10) <= ${today}`,
                     sql`NOT EXISTS (SELECT 1 FROM ${watchHistory} WHERE ${watchHistory.episodeId} = ${episodes.id} AND ${watchHistory.userId} = ${userId}${cursorClause})`,
                 ),
             )

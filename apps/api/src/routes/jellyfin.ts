@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { getDb, userSettings } from "@trakt-dashboard/db";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 import {
     fetchJellyfinLibraries,
     findJellyfinEpisode,
@@ -8,6 +9,9 @@ import {
     deleteJellyfinItem,
 } from "../services/jellyfin.js";
 import { parseBoundedInt } from "../lib/number.js";
+import { decryptToken } from "../lib/encrypt.js";
+import { resolveApiSecret } from "../lib/secret.js";
+import { validateBody } from "../lib/validate.js";
 
 export const jellyfinRoutes = new Hono<{ Variables: { userId: number } }>();
 
@@ -22,13 +26,14 @@ async function getJellyfinConfig(userId: number) {
             .from(userSettings)
             .where(eq(userSettings.userId, userId));
         if (!row?.jellyfinUrl || !row?.jellyfinApiKey) return null;
-        return { url: row.jellyfinUrl, apiKey: row.jellyfinApiKey };
+        const apiKey = decryptToken(row.jellyfinApiKey, resolveApiSecret());
+        return { url: row.jellyfinUrl, apiKey };
     } catch {
         return null;
     }
 }
 
-// GET /api/jellyfin/libraries
+// GET /api/jellyfin/libraries — uses stored (encrypted) credentials
 jellyfinRoutes.get("/libraries", async (c) => {
     const userId = c.get("userId");
     const cfg = await getJellyfinConfig(userId);
@@ -38,7 +43,26 @@ jellyfinRoutes.get("/libraries", async (c) => {
         const libraries = await fetchJellyfinLibraries(cfg);
         return c.json({ data: libraries });
     } catch (err) {
-        return c.json({ error: String(err) }, 502);
+        return c.json({ error: "Failed to fetch Jellyfin libraries" }, 502);
+    }
+});
+
+const testLibrariesSchema = z.object({
+    url: z.string().regex(/^https?:\/\//i, "url must be a valid http:// or https:// URL"),
+    apiKey: z.string().min(1),
+});
+
+// POST /api/jellyfin/libraries — test arbitrary credentials (before saving to DB)
+jellyfinRoutes.post("/libraries", async (c) => {
+    const parsed = await validateBody(c, testLibrariesSchema);
+    if (parsed instanceof Response) return parsed;
+    const { url, apiKey } = parsed.data;
+
+    try {
+        const libraries = await fetchJellyfinLibraries({ url, apiKey });
+        return c.json({ data: libraries });
+    } catch (err) {
+        return c.json({ error: "Failed to fetch Jellyfin libraries" }, 502);
     }
 });
 
