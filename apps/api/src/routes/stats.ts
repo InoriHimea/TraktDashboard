@@ -165,38 +165,82 @@ statsRoutes.get("/overview", async (c) => {
         59,
     );
 
-    const [[yearCurrentRow], [yearLastRow], watchDates, [avg30Row]] = await Promise.all([
-        db
-            .select({ count: sql<number>`count(*)` })
-            .from(watchHistory)
-            .where(
-                and(eq(watchHistory.userId, userId), gte(watchHistory.watchedAt, thisYearStart)),
-            ),
-        db
-            .select({ count: sql<number>`count(*)` })
-            .from(watchHistory)
-            .where(
-                and(
-                    eq(watchHistory.userId, userId),
-                    gte(watchHistory.watchedAt, lastYearStart),
-                    lte(watchHistory.watchedAt, sameDayLastYear),
+    const [[yearCurrentRow], [yearLastRow], watchDates, [avg30Row], heatmapRows, weekdayRows] =
+        await Promise.all([
+            db
+                .select({ count: sql<number>`count(*)` })
+                .from(watchHistory)
+                .where(
+                    and(
+                        eq(watchHistory.userId, userId),
+                        gte(watchHistory.watchedAt, thisYearStart),
+                    ),
                 ),
-            ),
-        db
-            .selectDistinct({ day: sql<string>`DATE(${watchHistory.watchedAt})::text` })
-            .from(watchHistory)
-            .where(and(eq(watchHistory.userId, userId), sql`${watchHistory.watchedAt} IS NOT NULL`))
-            .orderBy(sql`DATE(${watchHistory.watchedAt})::text`),
-        db
-            .select({ count: sql<number>`count(*)` })
-            .from(watchHistory)
-            .where(
-                and(
-                    eq(watchHistory.userId, userId),
-                    gte(watchHistory.watchedAt, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)),
+            db
+                .select({ count: sql<number>`count(*)` })
+                .from(watchHistory)
+                .where(
+                    and(
+                        eq(watchHistory.userId, userId),
+                        gte(watchHistory.watchedAt, lastYearStart),
+                        lte(watchHistory.watchedAt, sameDayLastYear),
+                    ),
                 ),
-            ),
-    ]);
+            db
+                .selectDistinct({ day: sql<string>`DATE(${watchHistory.watchedAt})::text` })
+                .from(watchHistory)
+                .where(
+                    and(
+                        eq(watchHistory.userId, userId),
+                        sql`${watchHistory.watchedAt} IS NOT NULL`,
+                    ),
+                )
+                .orderBy(sql`DATE(${watchHistory.watchedAt})::text`),
+            db
+                .select({ count: sql<number>`count(*)` })
+                .from(watchHistory)
+                .where(
+                    and(
+                        eq(watchHistory.userId, userId),
+                        gte(
+                            watchHistory.watchedAt,
+                            new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+                        ),
+                    ),
+                ),
+            db
+                .select({
+                    date: sql<string>`DATE(${watchHistory.watchedAt})::text`,
+                    count: sql<number>`count(*)`,
+                })
+                .from(watchHistory)
+                .where(
+                    and(
+                        eq(watchHistory.userId, userId),
+                        gte(
+                            watchHistory.watchedAt,
+                            new Date(Date.now() - 365 * 24 * 60 * 60 * 1000),
+                        ),
+                        sql`${watchHistory.watchedAt} IS NOT NULL`,
+                    ),
+                )
+                .groupBy(sql`DATE(${watchHistory.watchedAt})`)
+                .orderBy(sql`DATE(${watchHistory.watchedAt})`),
+            db
+                .select({
+                    weekday: sql<number>`EXTRACT(DOW FROM ${watchHistory.watchedAt})::integer`,
+                    count: sql<number>`count(*)`,
+                })
+                .from(watchHistory)
+                .where(
+                    and(
+                        eq(watchHistory.userId, userId),
+                        sql`${watchHistory.watchedAt} IS NOT NULL`,
+                    ),
+                )
+                .groupBy(sql`EXTRACT(DOW FROM ${watchHistory.watchedAt})`)
+                .orderBy(sql`EXTRACT(DOW FROM ${watchHistory.watchedAt})`),
+        ]);
 
     const longestStreakDays = longestConsecutiveDays(watchDates.map((d) => d.day));
 
@@ -227,6 +271,14 @@ statsRoutes.get("/overview", async (c) => {
             },
             longestStreakDays,
             avgDailyWatches30d,
+            heatmap: heatmapRows.map((r) => ({ date: r.date, count: Number(r.count) })),
+            weekdayDistribution: (() => {
+                const wdMap = new Map(weekdayRows.map((r) => [Number(r.weekday), Number(r.count)]));
+                return Array.from({ length: 7 }, (_, i) => ({
+                    weekday: i,
+                    count: wdMap.get(i) ?? 0,
+                }));
+            })(),
         },
     });
 });

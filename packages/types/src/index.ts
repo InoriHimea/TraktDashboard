@@ -250,6 +250,8 @@ export interface StatsOverview {
     yearComparison: { thisYear: number; lastYear: number };
     longestStreakDays: number;
     avgDailyWatches30d: number;
+    heatmap: Array<{ date: string; count: number }>;
+    weekdayDistribution: Array<{ weekday: number; count: number }>;
 }
 
 // ─── Now Playing ─────────────────────────────────────────────────────────────

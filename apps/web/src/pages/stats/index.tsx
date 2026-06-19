@@ -23,6 +23,8 @@ import { TopGenres } from "./TopGenres";
 import { RecentActivity } from "./RecentActivity";
 import { SignalMetrics } from "./SignalMetrics";
 import type { SignalMetric } from "./SignalMetrics";
+import { WatchHeatmap } from "./WatchHeatmap";
+import { WatchPatterns } from "./WatchPatterns";
 
 export default function StatsPage() {
     const { data: stats, isLoading, error } = useStats();
@@ -367,6 +369,9 @@ export default function StatsPage() {
 
                         {/* Top genres */}
                         <TopGenres topGenres={stats.topGenres} />
+
+                        {/* Weekday patterns */}
+                        <WatchPatterns weekdayDistribution={stats.weekdayDistribution ?? []} />
                     </div>
 
                     {/* ── RIGHT COLUMN: chart + recent activity ── */}
@@ -386,6 +391,11 @@ export default function StatsPage() {
                             recentlyWatchedMovies={stats.recentlyWatchedMovies}
                         />
                     </div>
+                </div>
+
+                {/* ── FULL-WIDTH: Watch heatmap ── */}
+                <div style={{ marginTop: "24px" }}>
+                    <WatchHeatmap heatmap={stats.heatmap ?? []} />
                 </div>
             </div>
         </div>

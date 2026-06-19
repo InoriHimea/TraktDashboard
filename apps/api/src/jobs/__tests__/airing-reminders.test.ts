@@ -69,12 +69,12 @@ const airingEp = {
     seasonNumber: 1,
     episodeNumber: 3,
     showTitle: "Test Show",
-    airDate: dayjs().toISOString(), // today — matches the gte/lt range in production code
+    airDate: dayjs().format("YYYY-MM-DD"), // local date string, matching production column format
     seasonEpisodeCount: null,
 };
 // Settings row returned for the notificationEventTypes lookup (null = all types enabled)
 const settingsRow = { notificationEventTypes: null };
-const staleEp = { ...airingEp, airDate: dayjs().subtract(1, "day").toISOString() };
+const staleEp = { ...airingEp, airDate: dayjs().subtract(1, "day").format("YYYY-MM-DD") };
 
 beforeEach(() => {
     pushMock.send.mockReset();

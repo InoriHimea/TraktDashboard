@@ -14,6 +14,8 @@ vi.mock("../stats/ActivityChart", () => ({ ActivityChart: () => null }));
 vi.mock("../stats/MediaComposition", () => ({ MediaComposition: () => null }));
 vi.mock("../stats/TopGenres", () => ({ TopGenres: () => null }));
 vi.mock("../stats/RecentActivity", () => ({ RecentActivity: () => null }));
+vi.mock("../stats/WatchHeatmap", () => ({ WatchHeatmap: () => null }));
+vi.mock("../stats/WatchPatterns", () => ({ WatchPatterns: () => null }));
 
 function makeStats(over: Partial<StatsOverview> = {}): StatsOverview {
     return {
@@ -32,6 +34,8 @@ function makeStats(over: Partial<StatsOverview> = {}): StatsOverview {
         yearComparison: { thisYear: 120, lastYear: 100 },
         longestStreakDays: 88,
         avgDailyWatches30d: 2.3,
+        heatmap: [],
+        weekdayDistribution: [],
         ...over,
     };
 }
