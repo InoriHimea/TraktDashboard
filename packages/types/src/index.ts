@@ -295,6 +295,7 @@ export interface UserSettings {
     jellyfinUrl: string | null;
     jellyfinApiKey: string | null;
     jellyfinAutoDeleteLibraryIds: string[] | null;
+    notificationEventTypes: string[];
 }
 
 // ─── Jellyfin ─────────────────────────────────────────────────────────────────

@@ -85,6 +85,13 @@
       "when": 1750291200000,
       "tag": "0011_jellyfin_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1750377600000,
+      "tag": "0012_notification_event_types",
+      "breakpoints": true
     }
   ]
 }

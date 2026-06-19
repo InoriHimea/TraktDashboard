@@ -268,6 +268,7 @@ export const userSettings = pgTable("user_settings", {
     jellyfinUrl: text("jellyfin_url"),
     jellyfinApiKey: text("jellyfin_api_key"),
     jellyfinAutoDeleteLibraryIds: text("jellyfin_auto_delete_library_ids"),
+    notificationEventTypes: text("notification_event_types"),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

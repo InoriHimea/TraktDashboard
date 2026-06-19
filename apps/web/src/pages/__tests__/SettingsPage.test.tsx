@@ -14,6 +14,7 @@ const settings: UserSettings = {
     jellyfinUrl: null,
     jellyfinApiKey: null,
     jellyfinAutoDeleteLibraryIds: null,
+    notificationEventTypes: ["series_premiere", "season_premiere", "finale", "regular"],
 };
 
 vi.mock("../../hooks", () => ({
@@ -65,6 +66,10 @@ describe("SettingsPage", () => {
                 displayLanguage: "en-US",
                 syncIntervalMinutes: 120,
                 httpProxy: "http://127.0.0.1:7890",
+                jellyfinUrl: null,
+                jellyfinApiKey: null,
+                jellyfinAutoDeleteLibraryIds: [],
+                notificationEventTypes: ["series_premiere", "season_premiere", "finale", "regular"],
             }),
         );
         expect(toastMock).toHaveBeenCalledWith(

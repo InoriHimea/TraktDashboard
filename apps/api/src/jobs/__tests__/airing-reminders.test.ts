@@ -22,6 +22,9 @@ class SelectBuilder {
     innerJoin() {
         return this;
     }
+    leftJoin() {
+        return this;
+    }
     where() {
         // Apply date-range filtering on items with an airDate field (episode queries).
         // Items without airDate (e.g. subscription rows) pass through untouched.
@@ -67,7 +70,10 @@ const airingEp = {
     episodeNumber: 3,
     showTitle: "Test Show",
     airDate: dayjs().toISOString(), // today — matches the gte/lt range in production code
+    seasonEpisodeCount: null,
 };
+// Settings row returned for the notificationEventTypes lookup (null = all types enabled)
+const settingsRow = { notificationEventTypes: null };
 const staleEp = { ...airingEp, airDate: dayjs().subtract(1, "day").toISOString() };
 
 beforeEach(() => {
@@ -83,8 +89,8 @@ describe("runAiringReminders", () => {
     });
 
     it("sends one push per subscription with airing episodes", async () => {
-        // Query order: [userId probe] → [airing episodes] → [user subs for send]
-        dbMockState.db = createMockDb([[sub], [airingEp], [sub]]);
+        // Query order: [userId probe] → [settingsRow] → [airing episodes] → [user subs for send]
+        dbMockState.db = createMockDb([[sub], [settingsRow], [airingEp], [sub]]);
         pushMock.send.mockResolvedValue({ ok: true });
         const result = await runAiringReminders();
         expect(result).toEqual({ sent: 1, pruned: 0 });
@@ -96,15 +102,15 @@ describe("runAiringReminders", () => {
     });
 
     it("skips users with no episodes airing today", async () => {
-        // userId probe returns sub, episodes query returns empty — no third query needed.
-        dbMockState.db = createMockDb([[sub], []]);
+        // userId probe returns sub, settings row, episodes query returns empty — no send query.
+        dbMockState.db = createMockDb([[sub], [settingsRow], []]);
         const result = await runAiringReminders();
         expect(result).toEqual({ sent: 0, pruned: 0 });
         expect(pushMock.send).not.toHaveBeenCalled();
     });
 
     it("prunes dead subscriptions on 410 Gone", async () => {
-        dbMockState.db = createMockDb([[sub], [airingEp], [sub]]);
+        dbMockState.db = createMockDb([[sub], [settingsRow], [airingEp], [sub]]);
         pushMock.send.mockResolvedValue({ ok: false, statusCode: 410 });
         const result = await runAiringReminders();
         expect(result).toEqual({ sent: 0, pruned: 1 });
@@ -113,8 +119,7 @@ describe("runAiringReminders", () => {
 
     it("skips episodes airing on a different date", async () => {
         // staleEp.airDate is yesterday — the gte/lt range filter should exclude it.
-        // Episodes query returns empty after filtering, so no third query needed.
-        dbMockState.db = createMockDb([[sub], [staleEp]]);
+        dbMockState.db = createMockDb([[sub], [settingsRow], [staleEp]]);
         pushMock.send.mockResolvedValue({ ok: true });
         const result = await runAiringReminders();
         expect(result).toEqual({ sent: 0, pruned: 0 });
@@ -123,7 +128,7 @@ describe("runAiringReminders", () => {
 
     it("does not push for episodes already watched today", async () => {
         // DB returns [] because NOT EXISTS (watch_history) filtered out watched episodes.
-        dbMockState.db = createMockDb([[sub], []]);
+        dbMockState.db = createMockDb([[sub], [settingsRow], []]);
         const result = await runAiringReminders();
         expect(result).toEqual({ sent: 0, pruned: 0 });
         expect(pushMock.send).not.toHaveBeenCalled();

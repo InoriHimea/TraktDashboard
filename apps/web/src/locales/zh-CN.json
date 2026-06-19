@@ -97,7 +97,13 @@
         "jellyfinAutoDeleteLibrariesHint": "看完后自动删除文件的媒体库（仅电视节目）。未选择的库仅支持手动删除。",
         "jellyfinLoadLibrariesFailed": "无法加载媒体库，请检查服务器地址和 API Key",
         "jellyfinLoadLibraries": "加载媒体库",
-        "jellyfinNotConfigured": "请先填写服务器地址和 API Key 后加载媒体库"
+        "jellyfinNotConfigured": "请先填写服务器地址和 API Key 后加载媒体库",
+        "notifEventTypesTitle": "提醒类型",
+        "notifEventTypesHint": "选择哪些播出事件会触发推送通知。",
+        "notifSeriesPremiere": "首播（S1E1）",
+        "notifSeasonPremiere": "回归季（每季首集）",
+        "notifFinale": "季终（每季最后一集）",
+        "notifRegular": "普通更新"
     },
     "progress": {
         "watching": "追剧中",

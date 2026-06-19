@@ -61,6 +61,12 @@ export default function SettingsPage() {
     const [jellyfinUrl, setJellyfinUrl] = useState("");
     const [jellyfinApiKey, setJellyfinApiKey] = useState("");
     const [jellyfinAutoDeleteIds, setJellyfinAutoDeleteIds] = useState<string[]>([]);
+    const [notifEventTypes, setNotifEventTypes] = useState<string[]>([
+        "series_premiere",
+        "season_premiere",
+        "finale",
+        "regular",
+    ]);
     const [jellyfinLibraries, setJellyfinLibraries] = useState<JellyfinLibrary[]>([]);
     const [jellyfinLibrariesLoading, setJellyfinLibrariesLoading] = useState(false);
     const { toast } = useToast();
@@ -79,6 +85,11 @@ export default function SettingsPage() {
         setJellyfinUrl(settings.jellyfinUrl ?? "");
         setJellyfinApiKey(settings.jellyfinApiKey ?? "");
         setJellyfinAutoDeleteIds(settings.jellyfinAutoDeleteLibraryIds ?? []);
+        setNotifEventTypes(
+            settings.notificationEventTypes.length > 0
+                ? settings.notificationEventTypes
+                : ["series_premiere", "season_premiere", "finale", "regular"],
+        );
         hasSeededRef.current = true;
     }, [settings]);
 
@@ -216,6 +227,7 @@ export default function SettingsPage() {
                 jellyfinUrl: jellyfinUrl.trim() || null,
                 jellyfinApiKey: jellyfinApiKey.trim() || null,
                 jellyfinAutoDeleteLibraryIds: jellyfinAutoDeleteIds,
+                notificationEventTypes: notifEventTypes,
             });
             hasSeededRef.current = false;
             setLocale(langTrimmed);
@@ -476,6 +488,82 @@ export default function SettingsPage() {
                                     ? t("settings.notificationsHint")
                                     : t("settings.pushUnsupported")}
                             </p>
+
+                            {/* Notification event type checkboxes (F02) */}
+                            {pushSupported && (
+                                <div style={{ marginTop: "14px" }}>
+                                    <span
+                                        style={{
+                                            ...labelStyle,
+                                            marginBottom: "4px",
+                                        }}
+                                    >
+                                        {t("settings.notifEventTypesTitle")}
+                                    </span>
+                                    <p
+                                        style={{
+                                            fontSize: "12px",
+                                            color: "var(--color-text-muted)",
+                                            marginBottom: "8px",
+                                            lineHeight: 1.5,
+                                        }}
+                                    >
+                                        {t("settings.notifEventTypesHint")}
+                                    </p>
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            gap: "6px",
+                                            padding: "10px",
+                                            borderRadius: "var(--radius-md)",
+                                            background: "var(--color-surface-3)",
+                                            border: "1px solid var(--color-border)",
+                                        }}
+                                    >
+                                        {(
+                                            [
+                                                [
+                                                    "series_premiere",
+                                                    t("settings.notifSeriesPremiere"),
+                                                ],
+                                                [
+                                                    "season_premiere",
+                                                    t("settings.notifSeasonPremiere"),
+                                                ],
+                                                ["finale", t("settings.notifFinale")],
+                                                ["regular", t("settings.notifRegular")],
+                                            ] as [string, string][]
+                                        ).map(([type, label]) => (
+                                            <label
+                                                key={type}
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: "8px",
+                                                    fontSize: "13px",
+                                                    color: "var(--color-text)",
+                                                    cursor: "pointer",
+                                                }}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={notifEventTypes.includes(type)}
+                                                    onChange={() =>
+                                                        setNotifEventTypes((prev) =>
+                                                            prev.includes(type)
+                                                                ? prev.filter((t) => t !== type)
+                                                                : [...prev, type],
+                                                        )
+                                                    }
+                                                    style={{ accentColor: "var(--color-accent)" }}
+                                                />
+                                                {label}
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Divider */}

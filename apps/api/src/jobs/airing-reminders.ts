@@ -3,7 +3,9 @@ import {
     pushSubscriptions,
     episodes,
     shows,
+    seasons,
     userShowProgress,
+    userSettings,
     watchHistory,
 } from "@trakt-dashboard/db";
 import { and, eq, gte, lt, asc, sql } from "drizzle-orm";
@@ -15,19 +17,49 @@ dayjs.extend(utc);
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
+const ALL_EVENT_TYPES = ["series_premiere", "season_premiere", "finale", "regular"] as const;
+type EventType = (typeof ALL_EVENT_TYPES)[number];
+
+const DEFAULT_EVENT_TYPES: EventType[] = [
+    "series_premiere",
+    "season_premiere",
+    "finale",
+    "regular",
+];
+
+function parseEventTypes(raw: string | null | undefined): EventType[] {
+    if (!raw) return DEFAULT_EVENT_TYPES;
+    try {
+        const parsed = JSON.parse(raw) as unknown[];
+        const valid = parsed.filter(
+            (v): v is EventType =>
+                typeof v === "string" && (ALL_EVENT_TYPES as readonly string[]).includes(v),
+        );
+        return valid.length > 0 ? valid : DEFAULT_EVENT_TYPES;
+    } catch {
+        return DEFAULT_EVENT_TYPES;
+    }
+}
+
+function classifyEpisode(
+    seasonNumber: number,
+    episodeNumber: number,
+    seasonEpisodeCount: number | null,
+): EventType {
+    if (seasonNumber === 1 && episodeNumber === 1) return "series_premiere";
+    if (episodeNumber === 1) return "season_premiere";
+    if (seasonEpisodeCount != null && episodeNumber === seasonEpisodeCount) return "finale";
+    return "regular";
+}
+
 /**
- * Daily airing-reminder digest (N2-T05). For every user that has push
- * subscriptions, finds episodes from their tracked shows airing *today* and
- * sends a single language-neutral push (show titles + episode codes). Notifying
- * on the air day (run once daily) keeps it dedup-free. Dead subscriptions
- * (404/410) are pruned. Returns counts for observability/tests.
+ * Daily airing-reminder digest (N2-T05 / F02). Finds episodes airing today,
+ * classifies each as series_premiere / season_premiere / finale / regular,
+ * and filters by the user's notificationEventTypes setting before sending.
  */
 export async function runAiringReminders(): Promise<{ sent: number; pruned: number }> {
     const db = getDb();
 
-    // Step 1: find all distinct userIds that have at least one subscription.
-    // Selecting only userId (not p256dh/auth) keeps this initial probe lightweight
-    // even when the total subscription count is large.
     const userIdRows = await db
         .select({ userId: pushSubscriptions.userId })
         .from(pushSubscriptions);
@@ -35,46 +67,55 @@ export async function runAiringReminders(): Promise<{ sent: number; pruned: numb
 
     const subscribedUserIds = [...new Set(userIdRows.map((r) => r.userId))];
 
-    // Step 2: use UTC so the date window is timezone-consistent regardless of
-    // which timezone the server process runs in.
     const today = dayjs.utc().format("YYYY-MM-DD");
     const tomorrow = dayjs.utc().add(1, "day").format("YYYY-MM-DD");
 
     let sent = 0;
     let pruned = 0;
 
-    // Step 3: query airing episodes per user, then load subscriptions only for
-    // users that actually have episodes today. Sequential DB queries keep load
-    // predictable; push sends within a user are parallelised.
     for (const userId of subscribedUserIds) {
-        const airing = await db
+        const [settingsRow] = await db
+            .select({ notificationEventTypes: userSettings.notificationEventTypes })
+            .from(userSettings)
+            .where(eq(userSettings.userId, userId));
+        const enabledTypes = parseEventTypes(settingsRow?.notificationEventTypes);
+
+        const airingRaw = await db
             .select({
                 title: episodes.title,
                 seasonNumber: episodes.seasonNumber,
                 episodeNumber: episodes.episodeNumber,
                 showTitle: shows.title,
+                seasonEpisodeCount: seasons.episodeCount,
             })
             .from(episodes)
             .innerJoin(shows, eq(episodes.showId, shows.id))
             .innerJoin(userShowProgress, eq(shows.id, userShowProgress.showId))
+            .leftJoin(
+                seasons,
+                and(eq(seasons.showId, shows.id), eq(seasons.seasonNumber, episodes.seasonNumber)),
+            )
             .where(
                 and(
                     eq(userShowProgress.userId, userId),
                     gte(episodes.airDate, today),
                     lt(episodes.airDate, tomorrow),
                     sql`NOT EXISTS (
-                    SELECT 1 FROM ${watchHistory}
-                    WHERE ${watchHistory.episodeId} = ${episodes.id}
-                      AND ${watchHistory.userId} = ${userId}
-                )`,
+                        SELECT 1 FROM ${watchHistory}
+                        WHERE ${watchHistory.episodeId} = ${episodes.id}
+                          AND ${watchHistory.userId} = ${userId}
+                    )`,
                 ),
             )
             .orderBy(asc(shows.title));
 
+        const airing = airingRaw.filter((ep) => {
+            const type = classifyEpisode(ep.seasonNumber, ep.episodeNumber, ep.seasonEpisodeCount);
+            return enabledTypes.includes(type);
+        });
+
         if (airing.length === 0) continue;
 
-        // Only fetch endpoint keys for this user after confirming they have
-        // airing episodes — avoids loading keys for inactive users.
         const userSubs = await db
             .select()
             .from(pushSubscriptions)
@@ -91,14 +132,11 @@ export async function runAiringReminders(): Promise<{ sent: number; pruned: numb
                       url: "/calendar",
                   }
                 : (() => {
-                      // Compute only for multi-episode cases to avoid wasted allocation
-                      // when there is exactly one airing episode.
                       const distinctShows = new Set(airing.map((e) => e.showTitle));
                       const shown = airing.slice(0, 4);
                       const overflow = airing.length - shown.length;
                       const overflowSuffix = overflow > 0 ? ` +${overflow}` : "";
                       if (distinctShows.size === 1) {
-                          // Multiple episodes from the same show — omit redundant show prefix.
                           return {
                               title: first.showTitle,
                               body:
@@ -108,7 +146,6 @@ export async function runAiringReminders(): Promise<{ sent: number; pruned: numb
                               url: "/calendar",
                           };
                       }
-                      // Multiple shows — title shows first show + count of additional shows.
                       return {
                           title: `${first.showTitle} +${distinctShows.size - 1}`,
                           body:
@@ -122,9 +159,6 @@ export async function runAiringReminders(): Promise<{ sent: number; pruned: numb
                       };
                   })();
 
-        // Parallelise sends across subscriptions for this user. Each send is
-        // individually caught so an unexpected sendPush rejection (e.g. VAPID
-        // init error) does not abort the entire user's batch.
         const results = await Promise.all(
             userSubs.map((sub) =>
                 sendPush(

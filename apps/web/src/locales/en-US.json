@@ -97,7 +97,13 @@
         "jellyfinAutoDeleteLibrariesHint": "Episode files in these libraries will be deleted automatically after watching. Unconfigured libraries support manual delete only.",
         "jellyfinLoadLibrariesFailed": "Failed to load libraries. Check server URL and API Key.",
         "jellyfinLoadLibraries": "Load libraries",
-        "jellyfinNotConfigured": "Enter the server URL and API Key first, then load libraries."
+        "jellyfinNotConfigured": "Enter the server URL and API Key first, then load libraries.",
+        "notifEventTypesTitle": "Notification types",
+        "notifEventTypesHint": "Choose which airing events trigger a push notification.",
+        "notifSeriesPremiere": "Series premiere (S1E1)",
+        "notifSeasonPremiere": "Season premiere (first episode of each season)",
+        "notifFinale": "Season finale (last episode of each season)",
+        "notifRegular": "Regular episodes"
     },
     "progress": {
         "watching": "Watching",
