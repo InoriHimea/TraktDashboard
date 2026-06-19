@@ -3,6 +3,7 @@ import { Tv2, CheckCircle2, LayoutGrid } from "lucide-react";
 import { useShowsProgress } from "../hooks";
 import { ShowCard } from "../components/ShowCard";
 import { MediaListPage, type MediaFilterOption } from "../components/MediaListPage";
+import { UpNextBanner } from "../components/UpNextBanner";
 import { t } from "../lib/i18n";
 
 const FILTERS: MediaFilterOption[] = [
@@ -53,6 +54,7 @@ export default function TVShowsPage() {
             emptyLabel={t("progress.empty")}
             searchEmptyLabel={t("common.noSearchResults", { query: debouncedSearch })}
             importHint={t("common.importHint")}
+            headerSlot={<UpNextBanner />}
             renderItem={(progress, i) => (
                 <ShowCard key={progress.show.id} progress={progress} index={i} />
             )}

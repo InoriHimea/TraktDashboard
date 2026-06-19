@@ -32,6 +32,7 @@ interface MediaListPageProps<T> {
     importHint: string;
     renderItem: (item: T, index: number) => React.ReactNode;
     hideFilters?: boolean;
+    headerSlot?: React.ReactNode;
 }
 
 export function MediaListPage<T>({
@@ -54,6 +55,7 @@ export function MediaListPage<T>({
     importHint,
     renderItem,
     hideFilters = false,
+    headerSlot,
 }: MediaListPageProps<T>) {
     const searchRef = useRef<HTMLInputElement>(null);
 
@@ -161,6 +163,7 @@ export function MediaListPage<T>({
             </div>
 
             <div className="app-container py-6">
+                {headerSlot}
                 {isLoading ? (
                     <motion.div
                         initial={{ opacity: 0 }}

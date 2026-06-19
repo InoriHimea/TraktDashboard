@@ -20,6 +20,7 @@ import type {
     JellyfinEpisode,
     JellyfinMovie,
     SearchResult,
+    UpNextItem,
 } from "@trakt-dashboard/types";
 
 const API_BASE = "/api";
@@ -93,6 +94,7 @@ export const api = {
             request<{ ok: boolean }>(`/shows/${showId}/force-sync`, {
                 method: "POST",
             }),
+        upNext: () => request<ApiResponse<UpNextItem[]>>("/shows/up-next"),
     },
     episodes: {
         detail: (showId: number, season: number, episode: number) =>

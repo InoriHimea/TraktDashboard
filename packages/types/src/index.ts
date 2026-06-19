@@ -137,6 +137,24 @@ export interface ShowProgress {
     seasons: SeasonProgress[];
 }
 
+// ─── Up Next ─────────────────────────────────────────────────────────────────
+
+export interface UpNextItem {
+    showId: number;
+    showTitle: string;
+    posterPath: string | null;
+    lastWatchedAt: string | null;
+    nextEpisode: {
+        id: number;
+        seasonNumber: number;
+        episodeNumber: number;
+        title: string | null;
+        stillPath: string | null;
+        airDate: string | null;
+        runtime: number | null;
+    };
+}
+
 // ─── Sync ─────────────────────────────────────────────────────────────────────
 
 export type SyncStatus = "idle" | "running" | "completed" | "error";

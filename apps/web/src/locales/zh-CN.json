@@ -422,5 +422,10 @@
         "refresh": "刷新页面",
         "connectionFailed": "连接失败",
         "authUnavailable": "认证服务暂时不可用。请检查您的网络连接，然后刷新页面重试。"
+    },
+    "upNext": {
+        "title": "接着看",
+        "markWatched": "标记已看",
+        "marked": "已看"
     }
 }

@@ -17,6 +17,7 @@ import type {
     HistoryPage,
     JellyfinEpisode,
     JellyfinMovie,
+    UpNextItem,
 } from "@trakt-dashboard/types";
 import { api } from "../lib/api";
 
@@ -395,6 +396,33 @@ export function useDeleteJellyfinItem() {
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ["jellyfin-episode"] });
             qc.invalidateQueries({ queryKey: ["jellyfin-movie"] });
+        },
+    });
+}
+
+export function useUpNext() {
+    return useQuery<UpNextItem[]>({
+        queryKey: queryKeys.upNext,
+        queryFn: () => api.shows.upNext().then((r) => r.data),
+        staleTime: 1000 * 60 * 2,
+    });
+}
+
+export function useMarkEpisodeWatched() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({
+            showId,
+            seasonNumber,
+            episodeNumber,
+        }: {
+            showId: number;
+            seasonNumber: number;
+            episodeNumber: number;
+        }) => api.episodes.watch(showId, seasonNumber, episodeNumber, new Date().toISOString()),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: queryKeys.upNext });
+            qc.invalidateQueries({ queryKey: queryKeys.showsProgress.all });
         },
     });
 }

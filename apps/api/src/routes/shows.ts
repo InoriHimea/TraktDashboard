@@ -9,13 +9,14 @@ import {
     watchResetCursors,
     userSettings,
 } from "@trakt-dashboard/db";
-import { eq, and, desc, asc, sql, like, inArray } from "drizzle-orm";
+import { eq, and, desc, asc, sql, like, inArray, isNotNull } from "drizzle-orm";
 import { autoDeleteJellyfinEpisode } from "../services/jellyfin.js";
 import type {
     ShowProgress,
     SeasonProgress,
     EpisodeProgress,
     ShowStatus,
+    UpNextItem,
 } from "@trakt-dashboard/types";
 import { getTmdbEpisodeDetail } from "../services/tmdb.js";
 import { z } from "zod";
@@ -130,6 +131,57 @@ showRoutes.get("/progress", async (c) => {
     );
 
     return c.json({ data: result, total: Number(total), limit, offset });
+});
+
+// GET /api/shows/up-next — next unwatched episode per non-completed show
+showRoutes.get("/up-next", async (c) => {
+    const userId = c.get("userId");
+    const db = getDb();
+
+    const rows = await db
+        .select({
+            showId: userShowProgress.showId,
+            showTitle: shows.title,
+            showPosterPath: shows.posterPath,
+            lastWatchedAt: userShowProgress.lastWatchedAt,
+            epId: episodes.id,
+            epSeasonNumber: episodes.seasonNumber,
+            epEpisodeNumber: episodes.episodeNumber,
+            epTitle: episodes.title,
+            epStillPath: episodes.stillPath,
+            epAirDate: episodes.airDate,
+            epRuntime: episodes.runtime,
+        })
+        .from(userShowProgress)
+        .innerJoin(shows, eq(userShowProgress.showId, shows.id))
+        .innerJoin(episodes, eq(userShowProgress.nextEpisodeId, episodes.id))
+        .where(
+            and(
+                eq(userShowProgress.userId, userId),
+                eq(userShowProgress.completed, false),
+                isNotNull(userShowProgress.nextEpisodeId),
+            ),
+        )
+        .orderBy(desc(userShowProgress.lastWatchedAt))
+        .limit(30);
+
+    const data: UpNextItem[] = rows.map((r) => ({
+        showId: r.showId,
+        showTitle: r.showTitle,
+        posterPath: r.showPosterPath,
+        lastWatchedAt: toIsoOrNull(r.lastWatchedAt),
+        nextEpisode: {
+            id: r.epId,
+            seasonNumber: r.epSeasonNumber,
+            episodeNumber: r.epEpisodeNumber,
+            title: r.epTitle,
+            stillPath: r.epStillPath,
+            airDate: r.epAirDate,
+            runtime: r.epRuntime,
+        },
+    }));
+
+    return c.json({ data });
 });
 
 // GET /api/shows/:id — single show with full season/episode progress

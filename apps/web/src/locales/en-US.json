@@ -422,5 +422,10 @@
         "refresh": "Refresh page",
         "connectionFailed": "Connection failed",
         "authUnavailable": "The authentication service is temporarily unavailable. Check your network connection, then refresh the page to retry."
+    },
+    "upNext": {
+        "title": "Up Next",
+        "markWatched": "Mark watched",
+        "marked": "Watched"
     }
 }

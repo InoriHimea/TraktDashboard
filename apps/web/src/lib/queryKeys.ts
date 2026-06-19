@@ -46,6 +46,8 @@ export const queryKeys = {
         byType: (type: string | undefined) => ["watchlist", type] as const,
     },
 
+    upNext: ["up-next"] as const,
+
     history: {
         all: ["history"] as const,
         list: (
