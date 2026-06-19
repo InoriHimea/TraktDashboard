@@ -32,6 +32,20 @@
         "addToWatchlistShort": "加入待看",
         "minutes": "{{n}} 分钟"
     },
+    "search": {
+        "placeholder": "搜索剧集或电影…",
+        "hint": "按 Esc 关闭",
+        "openSearch": "搜索",
+        "noResults": "没有找到匹配结果",
+        "minChars": "请输入至少 2 个字符",
+        "searching": "搜索中…",
+        "error": "搜索失败，请重试",
+        "addToWatchlist": "加入",
+        "adding": "添加中",
+        "added": "已加入",
+        "typeShow": "剧集",
+        "typeMovie": "电影"
+    },
     "nav": {
         "progress": "进度",
         "tvShows": "电视节目",

@@ -254,6 +254,20 @@ export interface StatsOverview {
     weekdayDistribution: Array<{ weekday: number; count: number }>;
 }
 
+// ─── Search ──────────────────────────────────────────────────────────────────
+
+export interface SearchResult {
+    type: "show" | "movie";
+    traktId: number;
+    slug: string;
+    title: string;
+    year: number;
+    tmdbId: number | null;
+    posterPath: string | null;
+    localId: number | null;
+    inWatchlist: boolean;
+}
+
 // ─── Now Playing ─────────────────────────────────────────────────────────────
 
 export interface NowPlayingEpisode {

@@ -19,6 +19,7 @@ import type {
     JellyfinLibrary,
     JellyfinEpisode,
     JellyfinMovie,
+    SearchResult,
 } from "@trakt-dashboard/types";
 
 const API_BASE = "/api";
@@ -216,6 +217,17 @@ export const api = {
             request<{ ok: boolean }>("/notifications/unsubscribe", {
                 method: "POST",
                 body: JSON.stringify({ endpoint }),
+            }),
+    },
+    search: {
+        query: (q: string, type: "show" | "movie" | "all" = "all", limit = 8) => {
+            const params = new URLSearchParams({ q, type, limit: String(limit) });
+            return request<ApiResponse<SearchResult[]>>(`/search?${params}`);
+        },
+        watchlistAdd: (type: "show" | "movie", traktId: number, tmdbId?: number) =>
+            request<{ ok: boolean }>("/search/watchlist-add", {
+                method: "POST",
+                body: JSON.stringify({ type, traktId, ...(tmdbId ? { tmdbId } : {}) }),
             }),
     },
     jellyfin: {

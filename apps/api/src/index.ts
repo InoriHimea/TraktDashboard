@@ -15,6 +15,7 @@ import { calendarRoutes } from "./routes/calendar.js";
 import { historyRoutes } from "./routes/history.js";
 import { notificationRoutes } from "./routes/notifications.js";
 import { jellyfinRoutes } from "./routes/jellyfin.js";
+import { searchRoutes } from "./routes/search.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { startScheduler } from "./jobs/scheduler.js";
 import { encryptLegacyTokensAtRest } from "./lib/token-migration.js";
@@ -52,6 +53,7 @@ api.route("/calendar", calendarRoutes);
 api.route("/history", historyRoutes);
 api.route("/notifications", notificationRoutes);
 api.route("/jellyfin", jellyfinRoutes);
+api.route("/search", searchRoutes);
 
 const routes = app.route("/api", api);
 

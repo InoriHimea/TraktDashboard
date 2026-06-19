@@ -355,6 +355,21 @@ interface TraktWatchingResponse {
     };
 }
 
+export interface TraktSearchResultItem {
+    type: "show" | "movie";
+    score: number;
+    show?: {
+        title: string;
+        year: number;
+        ids: { trakt: number; slug: string; tvdb?: number; imdb?: string; tmdb?: number };
+    };
+    movie?: {
+        title: string;
+        year: number;
+        ids: { trakt: number; slug: string; imdb?: string; tmdb?: number };
+    };
+}
+
 export class TraktApiError extends Error {
     constructor(
         public readonly status: number,
@@ -723,5 +738,17 @@ export function getTraktClient() {
                 }),
             });
         },
+
+        searchShows: (userId: number, q: string, limit = 8) =>
+            traktFetch<TraktSearchResultItem[]>("/search/show", userId, {
+                query: q,
+                limit: String(limit),
+            }),
+
+        searchMovies: (userId: number, q: string, limit = 8) =>
+            traktFetch<TraktSearchResultItem[]>("/search/movie", userId, {
+                query: q,
+                limit: String(limit),
+            }),
     };
 }

@@ -32,6 +32,20 @@
         "addToWatchlistShort": "Add to Watchlist",
         "minutes": "{{n}} min"
     },
+    "search": {
+        "placeholder": "Search shows or movies…",
+        "hint": "Press Esc to close",
+        "openSearch": "Search",
+        "noResults": "No results found",
+        "minChars": "Enter at least 2 characters",
+        "searching": "Searching…",
+        "error": "Search failed, please retry",
+        "addToWatchlist": "Add",
+        "adding": "Adding",
+        "added": "Added",
+        "typeShow": "Show",
+        "typeMovie": "Movie"
+    },
     "nav": {
         "progress": "Progress",
         "tvShows": "TV Shows",

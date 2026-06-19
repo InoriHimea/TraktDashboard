@@ -11,10 +11,12 @@ import {
     Bookmark,
     Calendar,
     Clock,
+    Search,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNowPlaying } from "../hooks/index";
 import { NowPlayingPopup } from "./NowPlayingPopup";
+import { SearchModal } from "./SearchModal";
 import { t } from "../lib/i18n";
 
 interface TopNavProps {
@@ -50,6 +52,7 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
     const qc = useQueryClient();
     const { data: nowPlayingData, isWatching, isLoading: nowPlayingLoading } = useNowPlaying();
     const [isPopupOpen, setIsPopupOpen] = useState(false);
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
     const triggerRef = useRef<HTMLButtonElement>(null);
     const prevIsWatching = useRef(isWatching);
 
@@ -255,8 +258,36 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
                     </LayoutGroup>
                 </nav>
 
-                {/* Right: Now Playing trigger + username + logout */}
+                {/* Right: Search + Now Playing trigger + username + logout */}
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                    {/* Search button */}
+                    <button
+                        onClick={() => setIsSearchOpen(true)}
+                        title={t("search.openSearch")}
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            width: 32,
+                            height: 32,
+                            borderRadius: "var(--radius-md)",
+                            background: "transparent",
+                            border: "1px solid var(--color-border-subtle)",
+                            color: "var(--color-text-muted)",
+                            cursor: "pointer",
+                            transition: "background 0.15s, border-color 0.15s, color 0.15s",
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "var(--color-surface-3)";
+                            e.currentTarget.style.color = "var(--color-text)";
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "transparent";
+                            e.currentTarget.style.color = "var(--color-text-muted)";
+                        }}
+                    >
+                        <Search size={14} aria-hidden="true" />
+                    </button>
                     {/* Now Playing trigger button — only when watching */}
                     {isWatching && (
                         <button
@@ -337,6 +368,9 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
                 onClose={() => setIsPopupOpen(false)}
                 triggerRef={triggerRef}
             />
+
+            {/* Search modal */}
+            {isSearchOpen && <SearchModal onClose={() => setIsSearchOpen(false)} />}
         </>
     );
 }
