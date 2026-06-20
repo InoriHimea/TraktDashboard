@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import HistoryPage from "../HistoryPage";
@@ -19,6 +20,7 @@ vi.mock("../../lib/api", () => ({
     api: {
         history: {
             export: vi.fn(() => "/api/history/export?mediaType=all&format=csv"),
+            import: vi.fn().mockResolvedValue({ ok: true, imported: 0, skipped: 0, errors: [] }),
         },
     },
 }));
@@ -54,10 +56,13 @@ function mockReturn(over: Record<string, unknown> = {}) {
 }
 
 function renderPage() {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     return render(
-        <MemoryRouter>
-            <HistoryPage />
-        </MemoryRouter>,
+        <QueryClientProvider client={qc}>
+            <MemoryRouter>
+                <HistoryPage />
+            </MemoryRouter>
+        </QueryClientProvider>,
     );
 }
 
@@ -85,9 +90,7 @@ describe("HistoryPage", () => {
 
     it("re-queries with the new media type when a filter is selected", () => {
         renderPage();
-        // First three buttons are the all / episode / movie filters in order
-        const filterButtons = screen.getAllByRole("button");
-        fireEvent.click(filterButtons[1]); // episode
+        fireEvent.click(screen.getByRole("button", { name: /剧集/ }));
         expect(mocks.useInfiniteHistory).toHaveBeenLastCalledWith("episode", undefined, undefined);
     });
 

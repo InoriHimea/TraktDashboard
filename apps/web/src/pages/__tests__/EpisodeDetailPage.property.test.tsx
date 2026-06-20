@@ -13,6 +13,12 @@ vi.mock("../../hooks", () => ({
         isError: false,
         refetch: vi.fn(),
     })),
+    useNote: () => ({ data: null, isLoading: false }),
+    useUpsertNote: () => ({ mutate: vi.fn(), isPending: false }),
+    useDeleteNote: () => ({ mutate: vi.fn(), isPending: false }),
+    useUserRating: () => ({ data: null }),
+    useSetRating: () => ({ mutate: vi.fn(), isPending: false }),
+    useRemoveRating: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 vi.mock("../../components/EpisodeInfoCard", () => ({

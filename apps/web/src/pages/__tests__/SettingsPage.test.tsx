@@ -59,7 +59,7 @@ describe("SettingsPage", () => {
         fireEvent.change(proxyInput, {
             target: { value: "http://127.0.0.1:7890" },
         });
-        fireEvent.click(screen.getByRole("button", { name: /保存/ }));
+        fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
         await waitFor(() =>
             expect(updateSettingsMock).toHaveBeenCalledWith({
@@ -96,7 +96,7 @@ describe("SettingsPage", () => {
 
         const proxyInput = await screen.findByPlaceholderText("http://proxy.example.com:7890");
         fireEvent.change(proxyInput, { target: { value: "socks5://proxy" } });
-        fireEvent.click(screen.getByRole("button", { name: /保存/ }));
+        fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
         expect(updateSettingsMock).not.toHaveBeenCalled();
         expect(toastMock).toHaveBeenCalledWith(

@@ -23,6 +23,13 @@ vi.mock("../../hooks", () => ({
     useWatchlist: () => ({ data: [] }),
     useAddToWatchlist: () => mocks.addToWatchlist,
     useRemoveFromWatchlist: () => mocks.removeFromWatchlist,
+    useCollectionCheck: () => ({ data: { inCollection: false } }),
+    useNote: () => ({ data: null, isLoading: false }),
+    useUpsertNote: () => ({ mutate: vi.fn(), isPending: false }),
+    useDeleteNote: () => ({ mutate: vi.fn(), isPending: false }),
+    useRatings: () => ({ data: [] }),
+    useSetRating: () => ({ mutate: vi.fn(), isPending: false }),
+    useRemoveRating: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 vi.mock("../../lib/toast", () => ({
