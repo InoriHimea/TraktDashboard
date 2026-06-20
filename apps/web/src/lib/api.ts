@@ -19,6 +19,7 @@ import type {
     JellyfinLibrary,
     JellyfinEpisode,
     JellyfinMovie,
+    JellyfinNowPlaying,
     SearchResult,
     UpNextItem,
     UserRating,
@@ -264,5 +265,6 @@ export const api = {
             request<{ ok: boolean }>(`/jellyfin/items/${jellyfinItemId}`, {
                 method: "DELETE",
             }),
+        nowPlaying: () => request<ApiResponse<JellyfinNowPlaying | null>>("/jellyfin/now-playing"),
     },
 };

@@ -17,6 +17,7 @@ import type {
     HistoryPage,
     JellyfinEpisode,
     JellyfinMovie,
+    JellyfinNowPlaying,
     UpNextItem,
     UserRating,
 } from "@trakt-dashboard/types";
@@ -443,6 +444,17 @@ export function useRemoveRating() {
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: queryKeys.ratings });
         },
+    });
+}
+
+export function useJellyfinNowPlaying() {
+    return useQuery<JellyfinNowPlaying | null>({
+        queryKey: queryKeys.jellyfinNowPlaying,
+        queryFn: () => api.jellyfin.nowPlaying().then((r) => r.data ?? null),
+        refetchInterval: 30_000,
+        staleTime: 25_000,
+        placeholderData: (prev) => prev,
+        retry: false,
     });
 }
 

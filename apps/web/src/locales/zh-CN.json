@@ -436,5 +436,12 @@
         "distributionTitle": "评分分布",
         "distributionSubtitle": "共 {count} 条评分",
         "avgLabel": "均分 {avg} / 10"
+    },
+    "nowPlaying": {
+        "title": "正在播放",
+        "jellyfinTitle": "Jellyfin 播放中",
+        "paused": "已暂停",
+        "catchUp": "标记已看",
+        "marked": "已看"
     }
 }

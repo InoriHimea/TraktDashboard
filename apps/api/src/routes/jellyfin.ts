@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { getDb, userSettings } from "@trakt-dashboard/db";
+import { getDb, userSettings, shows, movies } from "@trakt-dashboard/db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import {
@@ -7,11 +7,13 @@ import {
     findJellyfinEpisode,
     findJellyfinMovie,
     deleteJellyfinItem,
+    getActiveSessions,
 } from "../services/jellyfin.js";
 import { parseBoundedInt } from "../lib/number.js";
 import { decryptToken } from "../lib/encrypt.js";
 import { resolveApiSecret } from "../lib/secret.js";
 import { validateBody } from "../lib/validate.js";
+import type { JellyfinNowPlaying } from "@trakt-dashboard/types";
 
 export const jellyfinRoutes = new Hono<{ Variables: { userId: number } }>();
 
@@ -32,6 +34,65 @@ async function getJellyfinConfig(userId: number) {
         return null;
     }
 }
+
+// GET /api/jellyfin/now-playing — returns active Jellyfin session, if any
+jellyfinRoutes.get("/now-playing", async (c) => {
+    const userId = c.get("userId");
+    const cfg = await getJellyfinConfig(userId);
+    if (!cfg) return c.json({ data: null });
+
+    try {
+        const session = await getActiveSessions(cfg);
+        if (!session) return c.json({ data: null });
+
+        const db = getDb();
+        let localShowId: number | null = null;
+        let localMovieId: number | null = null;
+
+        if (session.mediaType === "episode" && session.tmdbShowId) {
+            const [row] = await db
+                .select({ id: shows.id })
+                .from(shows)
+                .where(eq(shows.tmdbId, session.tmdbShowId))
+                .limit(1);
+            localShowId = row?.id ?? null;
+        } else if (session.mediaType === "movie" && session.tmdbMovieId) {
+            const [row] = await db
+                .select({ id: movies.id })
+                .from(movies)
+                .where(eq(movies.tmdbId, session.tmdbMovieId))
+                .limit(1);
+            localMovieId = row?.id ?? null;
+        }
+
+        // Build Jellyfin poster URL — use series poster for episodes, item poster for movies
+        const base = cfg.url.replace(/\/$/, "");
+        let posterUrl: string | null = null;
+        if (session.mediaType === "episode" && session.seriesJellyfinId) {
+            posterUrl = `${base}/Items/${session.seriesJellyfinId}/Images/Primary?quality=80&maxHeight=300`;
+        } else {
+            posterUrl = `${base}/Items/${session.jellyfinItemId}/Images/Primary?quality=80&maxHeight=300`;
+        }
+
+        const data: JellyfinNowPlaying = {
+            jellyfinItemId: session.jellyfinItemId,
+            mediaType: session.mediaType,
+            title: session.title,
+            seriesTitle: session.seriesTitle,
+            seasonNumber: session.seasonNumber,
+            episodeNumber: session.episodeNumber,
+            posterUrl,
+            runtimeMinutes: session.runtimeMinutes,
+            progressPct: session.progressPct,
+            isPaused: session.isPaused,
+            localShowId,
+            localMovieId,
+        };
+        return c.json({ data });
+    } catch {
+        return c.json({ data: null });
+    }
+});
 
 // GET /api/jellyfin/libraries — uses stored (encrypted) credentials
 jellyfinRoutes.get("/libraries", async (c) => {

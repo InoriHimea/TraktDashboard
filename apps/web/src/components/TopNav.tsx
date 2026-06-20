@@ -14,7 +14,7 @@ import {
     Search,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNowPlaying } from "../hooks/index";
+import { useNowPlaying, useJellyfinNowPlaying } from "../hooks/index";
 import { NowPlayingPopup } from "./NowPlayingPopup";
 import { SearchModal } from "./SearchModal";
 import { t } from "../lib/i18n";
@@ -51,6 +51,8 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
     const location = useLocation();
     const qc = useQueryClient();
     const { data: nowPlayingData, isWatching, isLoading: nowPlayingLoading } = useNowPlaying();
+    const { data: jellyfinNowPlaying } = useJellyfinNowPlaying();
+    const isJellyfinPlaying = !!jellyfinNowPlaying && !isWatching;
     const [isPopupOpen, setIsPopupOpen] = useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const triggerRef = useRef<HTMLButtonElement>(null);
@@ -288,8 +290,8 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
                     >
                         <Search size={14} aria-hidden="true" />
                     </button>
-                    {/* Now Playing trigger button — only when watching */}
-                    {isWatching && (
+                    {/* Now Playing trigger button — Trakt watching OR Jellyfin playing */}
+                    {(isWatching || isJellyfinPlaying) && (
                         <button
                             ref={triggerRef}
                             data-testid="now-playing-trigger"
@@ -302,9 +304,13 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
                                 padding: "5px 10px",
                                 borderRadius: "var(--radius-md)",
                                 background: isPopupOpen ? "var(--color-surface-3)" : "transparent",
-                                border: "1px solid var(--color-accent)",
-                                color: "var(--color-accent)",
-                                boxShadow: "0 0 18px var(--color-accent-glow)",
+                                border: isJellyfinPlaying
+                                    ? "1px solid #06b6d4"
+                                    : "1px solid var(--color-accent)",
+                                color: isJellyfinPlaying ? "#06b6d4" : "var(--color-accent)",
+                                boxShadow: isJellyfinPlaying
+                                    ? "0 0 18px rgba(6,182,212,0.3)"
+                                    : "0 0 18px var(--color-accent-glow)",
                                 fontSize: "12px",
                                 cursor: "pointer",
                                 position: "relative",
@@ -318,8 +324,12 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
                                     width: "7px",
                                     height: "7px",
                                     borderRadius: "50%",
-                                    background: "var(--color-accent)",
-                                    boxShadow: "0 0 10px var(--color-accent)",
+                                    background: isJellyfinPlaying
+                                        ? "#06b6d4"
+                                        : "var(--color-accent)",
+                                    boxShadow: isJellyfinPlaying
+                                        ? "0 0 10px #06b6d4"
+                                        : "0 0 10px var(--color-accent)",
                                     animation: "pulse 1.5s ease-in-out infinite",
                                 }}
                             />
@@ -363,8 +373,9 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
             {/* Now Playing popup — rendered outside header to avoid stacking context issues */}
             <NowPlayingPopup
                 data={nowPlayingData}
+                jellyfinData={jellyfinNowPlaying}
                 isLoading={nowPlayingLoading}
-                isOpen={isPopupOpen && isWatching}
+                isOpen={isPopupOpen && (isWatching || isJellyfinPlaying)}
                 onClose={() => setIsPopupOpen(false)}
                 triggerRef={triggerRef}
             />

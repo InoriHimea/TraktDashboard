@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { tmdbImage } from "../lib/image";
 import { AnimatePresence, motion } from "framer-motion";
-import { Tv2 } from "lucide-react";
-import type { NowPlayingEpisode } from "@trakt-dashboard/types";
+import { Tv2, CheckCircle2 } from "lucide-react";
+import type { NowPlayingEpisode, JellyfinNowPlaying } from "@trakt-dashboard/types";
+import { useMarkEpisodeWatched, useMarkMovieWatched } from "../hooks";
+import { t } from "../lib/i18n";
 
 interface NowPlayingPopupProps {
     data: NowPlayingEpisode | null;
+    jellyfinData?: JellyfinNowPlaying | null;
     isLoading: boolean;
     isOpen: boolean;
     onClose: () => void;
@@ -86,8 +89,192 @@ function Skeleton() {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
+function JellyfinBody({ jd, onClose }: { jd: JellyfinNowPlaying; onClose: () => void }) {
+    const markEp = useMarkEpisodeWatched();
+    const markMovie = useMarkMovieWatched(jd.localMovieId ?? 0);
+    const [marked, setMarked] = useState(false);
+
+    const canMark =
+        jd.mediaType === "episode"
+            ? !!(jd.localShowId && jd.seasonNumber != null && jd.episodeNumber != null)
+            : !!jd.localMovieId;
+
+    async function handleMark() {
+        if (!canMark || marked) return;
+        try {
+            if (jd.mediaType === "episode") {
+                await markEp.mutateAsync({
+                    showId: jd.localShowId!,
+                    seasonNumber: jd.seasonNumber!,
+                    episodeNumber: jd.episodeNumber!,
+                });
+            } else {
+                await markMovie.mutateAsync(new Date().toISOString());
+            }
+            setMarked(true);
+            setTimeout(onClose, 1000);
+        } catch {
+            // ignore
+        }
+    }
+
+    const isPending = markEp.isPending || markMovie.isPending;
+
+    return (
+        <div style={{ padding: "14px", display: "flex", gap: "12px" }}>
+            {/* Poster */}
+            <div
+                style={{
+                    width: "56px",
+                    height: "80px",
+                    borderRadius: "6px",
+                    background: "var(--color-surface-3)",
+                    flexShrink: 0,
+                    overflow: "hidden",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                }}
+            >
+                {jd.posterUrl ? (
+                    <img
+                        src={jd.posterUrl}
+                        alt={jd.seriesTitle ?? jd.title}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).style.display = "none";
+                        }}
+                    />
+                ) : (
+                    <Tv2 size={22} style={{ color: "var(--color-text-muted)" }} />
+                )}
+            </div>
+
+            {/* Info */}
+            <div
+                style={{
+                    flex: 1,
+                    minWidth: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "4px",
+                }}
+            >
+                {jd.mediaType === "episode" &&
+                    jd.seasonNumber != null &&
+                    jd.episodeNumber != null && (
+                        <span
+                            style={{
+                                fontSize: "11px",
+                                color: "var(--color-accent)",
+                                fontWeight: 600,
+                            }}
+                        >
+                            {formatSeasonEpisode(jd.seasonNumber, jd.episodeNumber)}
+                        </span>
+                    )}
+                <p
+                    style={{
+                        fontSize: "13px",
+                        fontWeight: 500,
+                        color: "var(--color-text)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        margin: 0,
+                    }}
+                >
+                    {jd.mediaType === "episode" ? jd.title : jd.title}
+                </p>
+                {jd.seriesTitle && (
+                    <p
+                        style={{
+                            fontSize: "11px",
+                            color: "var(--color-text-muted)",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            margin: 0,
+                        }}
+                    >
+                        {jd.seriesTitle}
+                    </p>
+                )}
+                {jd.isPaused && (
+                    <span
+                        style={{
+                            fontSize: "11px",
+                            color: "var(--color-text-secondary)",
+                            marginTop: "2px",
+                        }}
+                    >
+                        {t("nowPlaying.paused")}
+                    </span>
+                )}
+
+                {/* Progress bar */}
+                <div
+                    style={{
+                        marginTop: "6px",
+                        height: "3px",
+                        borderRadius: "999px",
+                        background: "var(--color-surface-3)",
+                        overflow: "hidden",
+                    }}
+                >
+                    <div
+                        style={{
+                            height: "100%",
+                            width: `${jd.progressPct}%`,
+                            background: "linear-gradient(90deg, var(--color-accent), #a78bfa)",
+                            borderRadius: "999px",
+                            transition: "width 0.6s ease",
+                        }}
+                    />
+                </div>
+
+                {/* Mark watched button */}
+                {canMark && (
+                    <button
+                        onClick={handleMark}
+                        disabled={isPending || marked}
+                        style={{
+                            marginTop: "8px",
+                            padding: "5px 10px",
+                            borderRadius: "6px",
+                            background: marked
+                                ? "var(--color-watched, #22c55e)"
+                                : "var(--color-accent)",
+                            border: "none",
+                            color: "#fff",
+                            fontSize: "11px",
+                            fontWeight: 600,
+                            cursor: isPending || marked ? "default" : "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            opacity: isPending ? 0.7 : 1,
+                            transition: "background 0.2s",
+                        }}
+                    >
+                        {marked ? (
+                            <>
+                                <CheckCircle2 size={12} />
+                                {t("nowPlaying.marked")}
+                            </>
+                        ) : (
+                            t("nowPlaying.catchUp")
+                        )}
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+}
+
 export function NowPlayingPopup({
     data,
+    jellyfinData,
     isLoading,
     isOpen,
     onClose,
@@ -189,7 +376,8 @@ export function NowPlayingPopup({
                                 width: "7px",
                                 height: "7px",
                                 borderRadius: "50%",
-                                background: "var(--color-accent)",
+                                background:
+                                    jellyfinData && !data ? "#06b6d4" : "var(--color-accent)",
                                 animation: "pulse 1.5s ease-in-out infinite",
                             }}
                         />
@@ -201,13 +389,17 @@ export function NowPlayingPopup({
                                 letterSpacing: "0.02em",
                             }}
                         >
-                            Now Playing
+                            {jellyfinData && !data
+                                ? t("nowPlaying.jellyfinTitle")
+                                : t("nowPlaying.title")}
                         </span>
                     </div>
 
                     {/* Body */}
-                    {isLoading && !data ? (
+                    {isLoading && !data && !jellyfinData ? (
                         <Skeleton />
+                    ) : !data && jellyfinData ? (
+                        <JellyfinBody jd={jellyfinData} onClose={onClose} />
                     ) : data ? (
                         <div
                             style={{

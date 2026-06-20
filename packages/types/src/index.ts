@@ -300,6 +300,21 @@ export interface SearchResult {
 
 // ─── Now Playing ─────────────────────────────────────────────────────────────
 
+export interface JellyfinNowPlaying {
+    jellyfinItemId: string;
+    mediaType: "episode" | "movie";
+    title: string;
+    seriesTitle: string | null;
+    seasonNumber: number | null;
+    episodeNumber: number | null;
+    posterUrl: string | null; // absolute Jellyfin image URL
+    runtimeMinutes: number | null;
+    progressPct: number; // 0-100
+    isPaused: boolean;
+    localShowId: number | null;
+    localMovieId: number | null;
+}
+
 export interface NowPlayingEpisode {
     show: {
         title: string;

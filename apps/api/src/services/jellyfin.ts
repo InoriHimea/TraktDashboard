@@ -99,6 +99,86 @@ export async function deleteJellyfinItem(cfg: JellyfinConfig, itemId: string): P
     if (!res.ok) throw new Error(`Jellyfin delete failed: ${res.status}`);
 }
 
+// ─── Active Sessions (now-playing) ───────────────────────────────────────────
+
+interface RawNowPlayingItem {
+    Id: string;
+    Name: string;
+    Type: "Episode" | "Movie" | string;
+    SeriesName?: string;
+    SeriesId?: string;
+    ParentIndexNumber?: number; // season
+    IndexNumber?: number; // episode
+    RunTimeTicks?: number;
+    ProviderIds?: { Tmdb?: string; Imdb?: string };
+    ImageTags?: { Primary?: string };
+    SeriesPrimaryImageTag?: string;
+}
+
+interface RawSession {
+    NowPlayingItem?: RawNowPlayingItem;
+    PlayState?: { PositionTicks?: number; IsPaused?: boolean };
+}
+
+export interface JellyfinActiveSession {
+    jellyfinItemId: string;
+    mediaType: "episode" | "movie";
+    title: string;
+    seriesTitle: string | null;
+    seriesJellyfinId: string | null;
+    seasonNumber: number | null;
+    episodeNumber: number | null;
+    runtimeMinutes: number | null;
+    progressPct: number; // 0-100
+    isPaused: boolean;
+    tmdbShowId: number | null; // series TMDB ID (for episodes)
+    tmdbMovieId: number | null; // movie TMDB ID
+}
+
+export async function getActiveSessions(
+    cfg: JellyfinConfig,
+): Promise<JellyfinActiveSession | null> {
+    const res = await jellyfinFetch(cfg, "/Sessions?ActiveWithinSeconds=60");
+    if (!res.ok) throw new Error(`Jellyfin sessions failed: ${res.status}`);
+    const sessions = (await res.json()) as RawSession[];
+
+    for (const session of sessions) {
+        const item = session.NowPlayingItem;
+        if (!item) continue;
+
+        const mediaType =
+            item.Type === "Movie" ? "movie" : item.Type === "Episode" ? "episode" : null;
+        if (!mediaType) continue;
+
+        const runtimeTicks = item.RunTimeTicks ?? null;
+        const positionTicks = session.PlayState?.PositionTicks ?? 0;
+        const runtimeMinutes = runtimeTicks ? Math.round(runtimeTicks / 600_000_000) : null;
+        const progressPct =
+            runtimeTicks && runtimeTicks > 0
+                ? Math.min(100, Math.max(0, (positionTicks / runtimeTicks) * 100))
+                : 0;
+
+        const tmdbStr = item.ProviderIds?.Tmdb;
+        const tmdbId = tmdbStr ? parseInt(tmdbStr, 10) : null;
+
+        return {
+            jellyfinItemId: item.Id,
+            mediaType,
+            title: item.Name,
+            seriesTitle: item.SeriesName ?? null,
+            seriesJellyfinId: item.SeriesId ?? null,
+            seasonNumber: item.ParentIndexNumber ?? null,
+            episodeNumber: item.IndexNumber ?? null,
+            runtimeMinutes,
+            progressPct,
+            isPaused: session.PlayState?.IsPaused ?? false,
+            tmdbShowId: mediaType === "episode" ? tmdbId : null,
+            tmdbMovieId: mediaType === "movie" ? tmdbId : null,
+        };
+    }
+    return null;
+}
+
 export async function autoDeleteJellyfinEpisode(
     cfg: JellyfinConfig,
     autoDeleteLibraryIds: string[],

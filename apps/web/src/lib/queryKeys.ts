@@ -48,6 +48,7 @@ export const queryKeys = {
 
     upNext: ["up-next"] as const,
     ratings: ["ratings"] as const,
+    jellyfinNowPlaying: ["jellyfin-now-playing"] as const,
 
     history: {
         all: ["history"] as const,

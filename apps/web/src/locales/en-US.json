@@ -436,5 +436,12 @@
         "distributionTitle": "Rating Distribution",
         "distributionSubtitle": "{count} ratings total",
         "avgLabel": "Average {avg} / 10"
+    },
+    "nowPlaying": {
+        "title": "Now Playing",
+        "jellyfinTitle": "Playing in Jellyfin",
+        "paused": "Paused",
+        "catchUp": "Mark watched",
+        "marked": "Watched"
     }
 }
