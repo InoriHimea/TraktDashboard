@@ -1,0 +1,364 @@
+import { spawn } from "node:child_process";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface GDriveToken {
+    access_token: string;
+    refresh_token: string;
+    token_type: string;
+    expiry_date: number; // ms epoch
+    scope: string;
+}
+
+export interface WebDAVConfig {
+    url: string;
+    username: string;
+    password: string;
+}
+
+export interface BackupFile {
+    name: string;
+    fileId: string;
+    sizeBytes: number;
+    createdAt: string; // ISO
+    provider: "gdrive" | "webdav";
+}
+
+// ─── Google Drive OAuth Device Flow ──────────────────────────────────────────
+
+const GDRIVE_CLIENT_ID =
+    process.env.GDRIVE_CLIENT_ID ?? "YOUR_CLIENT_ID.apps.googleusercontent.com";
+const GDRIVE_CLIENT_SECRET = process.env.GDRIVE_CLIENT_SECRET ?? "";
+const GDRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+const GDRIVE_DEVICE_AUTH_URL = "https://oauth2.googleapis.com/device/code";
+const GDRIVE_TOKEN_URL = "https://oauth2.googleapis.com/token";
+const GDRIVE_UPLOAD_URL = "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
+const GDRIVE_LIST_URL = "https://www.googleapis.com/drive/v3/files";
+const GDRIVE_FOLDER_NAME = "TraktDashboardBackups";
+
+export interface DeviceAuthResponse {
+    device_code: string;
+    user_code: string;
+    verification_url: string;
+    expires_in: number;
+    interval: number;
+}
+
+export async function startGDriveDeviceFlow(): Promise<DeviceAuthResponse> {
+    const res = await fetch(GDRIVE_DEVICE_AUTH_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+            client_id: GDRIVE_CLIENT_ID,
+            scope: GDRIVE_SCOPE,
+        }),
+    });
+    if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`GDrive device auth failed: ${err}`);
+    }
+    return res.json() as Promise<DeviceAuthResponse>;
+}
+
+export async function pollGDriveToken(deviceCode: string): Promise<GDriveToken | null> {
+    const res = await fetch(GDRIVE_TOKEN_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+            client_id: GDRIVE_CLIENT_ID,
+            client_secret: GDRIVE_CLIENT_SECRET,
+            device_code: deviceCode,
+            grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+        }),
+    });
+    const data = (await res.json()) as Record<string, unknown>;
+    if (data.error === "authorization_pending" || data.error === "slow_down") return null;
+    if (data.error) throw new Error(`GDrive poll error: ${String(data.error)}`);
+    return {
+        access_token: String(data.access_token),
+        refresh_token: String(data.refresh_token ?? ""),
+        token_type: String(data.token_type ?? "Bearer"),
+        scope: String(data.scope ?? GDRIVE_SCOPE),
+        expiry_date: Date.now() + Number(data.expires_in ?? 3600) * 1000,
+    };
+}
+
+async function refreshGDriveToken(token: GDriveToken): Promise<GDriveToken> {
+    if (Date.now() < token.expiry_date - 60_000) return token;
+    const res = await fetch(GDRIVE_TOKEN_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+            client_id: GDRIVE_CLIENT_ID,
+            client_secret: GDRIVE_CLIENT_SECRET,
+            refresh_token: token.refresh_token,
+            grant_type: "refresh_token",
+        }),
+    });
+    const data = (await res.json()) as Record<string, unknown>;
+    if (!res.ok || data.error)
+        throw new Error(`GDrive token refresh failed: ${String(data.error ?? res.status)}`);
+    return {
+        ...token,
+        access_token: String(data.access_token),
+        expiry_date: Date.now() + Number(data.expires_in ?? 3600) * 1000,
+    };
+}
+
+export async function revokeGDriveToken(token: GDriveToken): Promise<void> {
+    await fetch(
+        `https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(token.access_token)}`,
+        { method: "POST" },
+    );
+}
+
+async function getOrCreateGDriveFolder(accessToken: string): Promise<string> {
+    // Search for existing folder
+    const q = encodeURIComponent(
+        `name='${GDRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+    );
+    const res = await fetch(`${GDRIVE_LIST_URL}?q=${q}&fields=files(id)`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const data = (await res.json()) as { files: Array<{ id: string }> };
+    if (data.files?.length > 0) return data.files[0].id;
+
+    // Create folder
+    const createRes = await fetch("https://www.googleapis.com/drive/v3/files", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            name: GDRIVE_FOLDER_NAME,
+            mimeType: "application/vnd.google-apps.folder",
+        }),
+    });
+    const folder = (await createRes.json()) as { id: string };
+    return folder.id;
+}
+
+export async function uploadToGDrive(
+    token: GDriveToken,
+    buffer: Buffer,
+    filename: string,
+): Promise<{ fileId: string; refreshedToken: GDriveToken }> {
+    const refreshedToken = await refreshGDriveToken(token);
+    const folderId = await getOrCreateGDriveFolder(refreshedToken.access_token);
+
+    const metadata = JSON.stringify({
+        name: filename,
+        parents: [folderId],
+        mimeType: "application/gzip",
+    });
+
+    const boundary = "===backup_boundary===";
+    const body = Buffer.concat([
+        Buffer.from(
+            `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n--${boundary}\r\nContent-Type: application/gzip\r\n\r\n`,
+        ),
+        buffer,
+        Buffer.from(`\r\n--${boundary}--`),
+    ]);
+
+    const res = await fetch(GDRIVE_UPLOAD_URL, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${refreshedToken.access_token}`,
+            "Content-Type": `multipart/related; boundary="${boundary}"`,
+        },
+        body: new Uint8Array(body),
+    });
+    if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`GDrive upload failed (${res.status}): ${err}`);
+    }
+    const file = (await res.json()) as { id: string };
+    return { fileId: file.id, refreshedToken };
+}
+
+export async function listGDriveBackups(
+    token: GDriveToken,
+): Promise<{ files: BackupFile[]; refreshedToken: GDriveToken }> {
+    const refreshedToken = await refreshGDriveToken(token);
+    const folderId = await getOrCreateGDriveFolder(refreshedToken.access_token).catch(() => null);
+    if (!folderId) return { files: [], refreshedToken };
+
+    const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
+    const fields = encodeURIComponent("files(id,name,size,createdTime)");
+    const res = await fetch(
+        `${GDRIVE_LIST_URL}?q=${q}&fields=${fields}&orderBy=createdTime+desc&pageSize=50`,
+        { headers: { Authorization: `Bearer ${refreshedToken.access_token}` } },
+    );
+    const data = (await res.json()) as {
+        files: Array<{ id: string; name: string; size: string; createdTime: string }>;
+    };
+    const files: BackupFile[] = (data.files ?? []).map((f) => ({
+        name: f.name,
+        fileId: f.id,
+        sizeBytes: Number(f.size ?? 0),
+        createdAt: f.createdTime,
+        provider: "gdrive",
+    }));
+    return { files, refreshedToken };
+}
+
+export async function deleteGDriveFile(token: GDriveToken, fileId: string): Promise<void> {
+    const refreshedToken = await refreshGDriveToken(token);
+    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${refreshedToken.access_token}` },
+    });
+}
+
+// ─── WebDAV ───────────────────────────────────────────────────────────────────
+
+function webdavAuth(cfg: WebDAVConfig): string {
+    return `Basic ${Buffer.from(`${cfg.username}:${cfg.password}`).toString("base64")}`;
+}
+
+function webdavBackupPath(cfg: WebDAVConfig, filename: string): string {
+    const base = cfg.url.replace(/\/$/, "");
+    return `${base}/TraktDashboardBackups/${filename}`;
+}
+
+export async function ensureWebDAVFolder(cfg: WebDAVConfig): Promise<void> {
+    const base = cfg.url.replace(/\/$/, "");
+    const folderUrl = `${base}/TraktDashboardBackups`;
+    const res = await fetch(folderUrl, {
+        method: "MKCOL",
+        headers: { Authorization: webdavAuth(cfg) },
+    });
+    // 201 Created or 405 Method Not Allowed (folder already exists) — both OK
+    if (res.status !== 201 && res.status !== 405 && res.status !== 200) {
+        throw new Error(`WebDAV MKCOL failed: ${res.status}`);
+    }
+}
+
+export async function uploadToWebDAV(
+    cfg: WebDAVConfig,
+    buffer: Buffer,
+    filename: string,
+): Promise<void> {
+    await ensureWebDAVFolder(cfg);
+    const url = webdavBackupPath(cfg, filename);
+    const res = await fetch(url, {
+        method: "PUT",
+        headers: {
+            Authorization: webdavAuth(cfg),
+            "Content-Type": "application/gzip",
+            "Content-Length": String(buffer.byteLength),
+        },
+        body: new Uint8Array(buffer),
+    });
+    if (!res.ok) {
+        throw new Error(`WebDAV PUT failed (${res.status})`);
+    }
+}
+
+export async function listWebDAVBackups(cfg: WebDAVConfig): Promise<BackupFile[]> {
+    const base = cfg.url.replace(/\/$/, "");
+    const folderUrl = `${base}/TraktDashboardBackups/`;
+    const body = `<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+  <D:prop><D:displayname/><D:getcontentlength/><D:creationdate/></D:prop>
+</D:propfind>`;
+    const res = await fetch(folderUrl, {
+        method: "PROPFIND",
+        headers: {
+            Authorization: webdavAuth(cfg),
+            "Content-Type": "application/xml",
+            Depth: "1",
+        },
+        body,
+    });
+    if (res.status === 404) return [];
+    if (!res.ok) throw new Error(`WebDAV PROPFIND failed: ${res.status}`);
+
+    const xml = await res.text();
+    // Simple regex parse — avoid pulling in xml2js
+    const files: BackupFile[] = [];
+    const responseRe = /<D:response>([\s\S]*?)<\/D:response>/gi;
+    let m: RegExpExecArray | null;
+    while ((m = responseRe.exec(xml)) !== null) {
+        const block = m[1];
+        const href = /<D:href>(.*?)<\/D:href>/i.exec(block)?.[1] ?? "";
+        const name = decodeURIComponent(href.split("/").pop() ?? "");
+        if (!name || !name.endsWith(".gz")) continue;
+        const size = Number(
+            /<D:getcontentlength>(.*?)<\/D:getcontentlength>/i.exec(block)?.[1] ?? 0,
+        );
+        const created =
+            /<D:creationdate>(.*?)<\/D:creationdate>/i.exec(block)?.[1] ?? new Date().toISOString();
+        files.push({ name, fileId: href, sizeBytes: size, createdAt: created, provider: "webdav" });
+    }
+    return files.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function deleteWebDAVFile(cfg: WebDAVConfig, filePath: string): Promise<void> {
+    // filePath is the href returned by PROPFIND (may be absolute path)
+    const base = new URL(cfg.url).origin;
+    const url = filePath.startsWith("http") ? filePath : `${base}${filePath}`;
+    await fetch(url, {
+        method: "DELETE",
+        headers: { Authorization: webdavAuth(cfg) },
+    });
+}
+
+// ─── pg_dump ──────────────────────────────────────────────────────────────────
+
+export async function dumpDatabase(): Promise<Buffer> {
+    const databaseUrl = process.env.DATABASE_URL;
+    if (!databaseUrl) throw new Error("DATABASE_URL not set");
+
+    return new Promise<Buffer>((resolve, reject) => {
+        const proc = spawn(
+            "sh",
+            ["-c", `pg_dump --format=plain "${databaseUrl.replace(/"/g, '\\"')}" | gzip`],
+            { stdio: ["ignore", "pipe", "pipe"] },
+        );
+        const chunks: Buffer[] = [];
+        const errChunks: Buffer[] = [];
+        proc.stdout!.on("data", (d: Buffer) => chunks.push(d));
+        proc.stderr!.on("data", (d: Buffer) => errChunks.push(d));
+        proc.on("close", (code) => {
+            if (code !== 0) {
+                const errMsg = Buffer.concat(errChunks).toString("utf8").slice(0, 300);
+                reject(new Error(`pg_dump failed (exit ${code}): ${errMsg}`));
+            } else {
+                resolve(Buffer.concat(chunks));
+            }
+        });
+        proc.on("error", reject);
+    });
+}
+
+// ─── Cleanup old backups ──────────────────────────────────────────────────────
+
+export async function pruneOldGDriveBackups(
+    token: GDriveToken,
+    retentionDays: number,
+): Promise<GDriveToken> {
+    const { files, refreshedToken } = await listGDriveBackups(token);
+    const cutoff = Date.now() - retentionDays * 86_400_000;
+    for (const f of files) {
+        if (new Date(f.createdAt).getTime() < cutoff) {
+            await deleteGDriveFile(refreshedToken, f.fileId).catch(() => null);
+        }
+    }
+    return refreshedToken;
+}
+
+export async function pruneOldWebDAVBackups(
+    cfg: WebDAVConfig,
+    retentionDays: number,
+): Promise<void> {
+    const files = await listWebDAVBackups(cfg);
+    const cutoff = Date.now() - retentionDays * 86_400_000;
+    for (const f of files) {
+        if (new Date(f.createdAt).getTime() < cutoff) {
+            await deleteWebDAVFile(cfg, f.fileId).catch(() => null);
+        }
+    }
+}

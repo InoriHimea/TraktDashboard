@@ -587,6 +587,34 @@ export interface HistoryPage {
     total: number;
 }
 
+export interface BackupFile {
+    name: string;
+    fileId: string;
+    sizeBytes: number;
+    createdAt: string;
+    provider: "gdrive" | "webdav";
+}
+
+export interface BackupRun {
+    id: number;
+    provider: string;
+    status: "success" | "failed";
+    filename: string | null;
+    sizeBytes: number | null;
+    fileId: string | null;
+    error: string | null;
+    startedAt: string;
+    finishedAt: string | null;
+}
+
+export interface DeviceAuthInfo {
+    device_code: string;
+    user_code: string;
+    verification_url: string;
+    expires_in: number;
+    interval: number;
+}
+
 export interface UserCollectionItem {
     id: number;
     mediaType: "show" | "movie" | "episode";

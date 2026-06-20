@@ -269,6 +269,13 @@ export const userSettings = pgTable("user_settings", {
     jellyfinApiKey: text("jellyfin_api_key"),
     jellyfinAutoDeleteLibraryIds: text("jellyfin_auto_delete_library_ids"),
     notificationEventTypes: text("notification_event_types"),
+    // F14: 云端备份配置
+    gdriveToken: text("gdrive_token"),
+    webdavUrl: text("webdav_url"),
+    webdavUsername: text("webdav_username"),
+    webdavPassword: text("webdav_password"),
+    backupAutoEnabled: boolean("backup_auto_enabled").notNull().default(false),
+    backupRetentionDays: integer("backup_retention_days").notNull().default(30),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -482,4 +489,25 @@ export const syncRuns = pgTable(
         index("sync_runs_user_id_idx").on(t.userId),
         index("sync_runs_started_at_idx").on(t.startedAt),
     ],
+);
+
+// ─── Backup Runs (F14) ────────────────────────────────────────────────────────
+
+export const backupRuns = pgTable(
+    "backup_runs",
+    {
+        id: serial("id").primaryKey(),
+        userId: integer("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
+        provider: text("provider").notNull(), // 'gdrive' | 'webdav'
+        status: text("status").notNull(), // 'success' | 'failed'
+        filename: text("filename"),
+        sizeBytes: bigint("size_bytes", { mode: "number" }),
+        fileId: text("file_id"),
+        error: text("error"),
+        startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+        finishedAt: timestamp("finished_at", { withTimezone: true }),
+    },
+    (t) => [index("backup_runs_user_idx").on(t.userId)],
 );

@@ -28,6 +28,9 @@ import type {
     UserList,
     UserListItem,
     UserCollectionItem,
+    BackupFile,
+    BackupRun,
+    DeviceAuthInfo,
 } from "@trakt-dashboard/types";
 
 const API_BASE = "/api";
@@ -356,5 +359,55 @@ export const api = {
                 body: JSON.stringify({ confirm: true }),
             }),
         remove: (id: number) => request<{ ok: boolean }>(`/collection/${id}`, { method: "DELETE" }),
+    },
+    backup: {
+        gdriveStartAuth: () =>
+            request<{ ok: boolean; data: DeviceAuthInfo }>("/backup/gdrive/auth", {
+                method: "POST",
+            }),
+        gdrivePoll: (device_code: string) =>
+            request<{ ok: boolean; connected?: boolean; pending?: boolean }>(
+                "/backup/gdrive/poll",
+                {
+                    method: "POST",
+                    body: JSON.stringify({ device_code }),
+                },
+            ),
+        gdriveRevoke: () => request<{ ok: boolean }>("/backup/gdrive/revoke", { method: "DELETE" }),
+        gdriveStatus: () => request<{ connected: boolean }>("/backup/gdrive/status"),
+        webdavSave: (cfg: { url: string; username: string; password: string }) =>
+            request<{ ok: boolean }>("/backup/webdav", {
+                method: "PUT",
+                body: JSON.stringify(cfg),
+            }),
+        webdavClear: () =>
+            request<{ ok: boolean }>("/backup/webdav", { method: "PUT", body: JSON.stringify({}) }),
+        webdavStatus: () =>
+            request<{ connected: boolean; url: string | null }>("/backup/webdav/status"),
+        saveSettings: (s: { autoEnabled?: boolean; retentionDays?: number }) =>
+            request<{ ok: boolean }>("/backup/settings", {
+                method: "PUT",
+                body: JSON.stringify(s),
+            }),
+        trigger: (provider: "gdrive" | "webdav" | "all" = "all") =>
+            request<{
+                ok: boolean;
+                results: Array<{
+                    provider: string;
+                    ok: boolean;
+                    error?: string;
+                    filename?: string;
+                }>;
+            }>("/backup/trigger", { method: "POST", body: JSON.stringify({ provider }) }),
+        runs: (limit = 20) => request<{ data: BackupRun[] }>(`/backup/runs?limit=${limit}`),
+        files: (provider?: "gdrive" | "webdav") =>
+            request<{ data: BackupFile[] }>(
+                `/backup/files${provider ? `?provider=${provider}` : ""}`,
+            ),
+        deleteFile: (provider: "gdrive" | "webdav", fileId: string) =>
+            request<{ ok: boolean }>("/backup/files", {
+                method: "DELETE",
+                body: JSON.stringify({ provider, fileId }),
+            }),
     },
 };

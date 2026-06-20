@@ -120,7 +120,29 @@
         "notifSeriesPremiere": "首播（S1E1）",
         "notifSeasonPremiere": "回归季（每季首集）",
         "notifFinale": "季终（每季最后一集）",
-        "notifRegular": "普通更新"
+        "notifRegular": "普通更新",
+        "backup": {
+            "title": "备份与恢复",
+            "hint": "将数据库备份至 Google Drive 或 WebDAV，保留 pg_dump 格式，随时可恢复。",
+            "connected": "已连接",
+            "connect": "连接",
+            "disconnect": "断开",
+            "gdriveConnected": "Google Drive 已连接",
+            "gdriveDisconnected": "Google Drive 已断开",
+            "gdriveAuthFailed": "Google Drive 授权失败",
+            "deviceFlowHint": "请访问以下链接，输入验证码完成授权：",
+            "webdavUrl": "服务器",
+            "webdavUsername": "用户名",
+            "webdavPassword": "密码",
+            "webdavTest": "保存并测试",
+            "webdavSaved": "WebDAV 配置已保存",
+            "webdavCleared": "WebDAV 已断开",
+            "webdavFailed": "WebDAV 连接失败",
+            "triggerNow": "立即备份",
+            "triggerSuccess": "备份成功（{{n}} 个目标）",
+            "triggerFailed": "备份失败，请查看历史记录",
+            "history": "备份历史"
+        }
     },
     "progress": {
         "watching": "追剧中",

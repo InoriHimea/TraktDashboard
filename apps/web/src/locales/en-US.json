@@ -120,7 +120,29 @@
         "notifSeriesPremiere": "Series premiere (S1E1)",
         "notifSeasonPremiere": "Season premiere (first episode of each season)",
         "notifFinale": "Season finale (last episode of each season)",
-        "notifRegular": "Regular episodes"
+        "notifRegular": "Regular episodes",
+        "backup": {
+            "title": "Backup & Restore",
+            "hint": "Back up your database to Google Drive or WebDAV in pg_dump format, restorable at any time.",
+            "connected": "Connected",
+            "connect": "Connect",
+            "disconnect": "Disconnect",
+            "gdriveConnected": "Google Drive connected",
+            "gdriveDisconnected": "Google Drive disconnected",
+            "gdriveAuthFailed": "Google Drive authorization failed",
+            "deviceFlowHint": "Visit the link below and enter the code to authorize:",
+            "webdavUrl": "Server",
+            "webdavUsername": "Username",
+            "webdavPassword": "Password",
+            "webdavTest": "Save & Test",
+            "webdavSaved": "WebDAV configuration saved",
+            "webdavCleared": "WebDAV disconnected",
+            "webdavFailed": "WebDAV connection failed",
+            "triggerNow": "Backup Now",
+            "triggerSuccess": "Backup succeeded ({{n}} target(s))",
+            "triggerFailed": "Backup failed, check history for details",
+            "history": "Backup History"
+        }
     },
     "progress": {
         "watching": "Watching",

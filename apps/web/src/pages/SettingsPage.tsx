@@ -1,6 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
-import { Save, Download, Bell, Server } from "lucide-react";
+import {
+    Save,
+    Download,
+    Bell,
+    Server,
+    HardDrive,
+    Cloud,
+    Loader2,
+    Check,
+    X,
+    Trash2,
+    RefreshCw,
+} from "lucide-react";
 import type { JellyfinLibrary } from "@trakt-dashboard/types";
 import { useSettings, useUpdateSettings } from "../hooks";
 import { api } from "../lib/api";
@@ -71,6 +83,37 @@ export default function SettingsPage() {
     const [jellyfinLibrariesLoading, setJellyfinLibrariesLoading] = useState(false);
     const { toast } = useToast();
     const [theme, setTheme] = useState<Theme>(loadTheme);
+
+    // ── 备份状态 ──────────────────────────────────────────────────────────────
+    const [gdriveConnected, setGdriveConnected] = useState(false);
+    const [gdriveLoading, setGdriveLoading] = useState(false);
+    const [deviceAuth, setDeviceAuth] = useState<{
+        user_code: string;
+        verification_url: string;
+        device_code: string;
+        interval: number;
+    } | null>(null);
+    const [gdrivePollTimer, setGdrivePollTimer] = useState<ReturnType<typeof setInterval> | null>(
+        null,
+    );
+    const [webdavUrl, setWebdavUrl] = useState("");
+    const [webdavUsername, setWebdavUsername] = useState("");
+    const [webdavPassword, setWebdavPassword] = useState("");
+    const [webdavConnected, setWebdavConnected] = useState(false);
+    const [webdavSaving, setWebdavSaving] = useState(false);
+    const [backupTriggerLoading, setBackupTriggerLoading] = useState(false);
+    const [backupRuns, setBackupRuns] = useState<
+        Array<{
+            id: number;
+            provider: string;
+            status: string;
+            filename: string | null;
+            sizeBytes: number | null;
+            error: string | null;
+            startedAt: string;
+        }>
+    >([]);
+    const [backupRunsLoading, setBackupRunsLoading] = useState(false);
     // Track whether the form has been seeded. Prevents window-focus refetches from
     // clobbering unsaved edits. Reset to false after a successful save so fresh
     // server values propagate.
@@ -92,6 +135,27 @@ export default function SettingsPage() {
         );
         hasSeededRef.current = true;
     }, [settings]);
+
+    // 初始化备份状态
+    useEffect(() => {
+        api.backup
+            .gdriveStatus()
+            .then((r) => setGdriveConnected(r.connected))
+            .catch(() => null);
+        api.backup
+            .webdavStatus()
+            .then((r) => {
+                setWebdavConnected(r.connected);
+                if (r.url) setWebdavUrl(r.url);
+            })
+            .catch(() => null);
+        setBackupRunsLoading(true);
+        api.backup
+            .runs(10)
+            .then((r) => setBackupRuns(r.data))
+            .catch(() => null)
+            .finally(() => setBackupRunsLoading(false));
+    }, []);
 
     // Apply the saved display language to the UI locale (a real side effect).
     const settingsLanguage = settings?.displayLanguage;
@@ -783,6 +847,614 @@ export default function SettingsPage() {
                             >
                                 {t("settings.dataExportHint")}
                             </p>
+                        </div>
+
+                        {/* Divider before backup */}
+                        <div style={{ height: "1px", background: "var(--color-border-subtle)" }} />
+
+                        {/* ── 备份与恢复 ─────────────────────────────────────── */}
+                        <div>
+                            <span style={labelStyle}>
+                                <HardDrive
+                                    size={14}
+                                    style={{ display: "inline", marginRight: 6 }}
+                                />
+                                {t("settings.backup.title")}
+                            </span>
+                            <p
+                                style={{
+                                    fontSize: 12,
+                                    color: "var(--color-text-muted)",
+                                    marginBottom: 16,
+                                }}
+                            >
+                                {t("settings.backup.hint")}
+                            </p>
+
+                            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                                {/* Google Drive */}
+                                <div
+                                    style={{
+                                        padding: "14px 16px",
+                                        borderRadius: 12,
+                                        border: "1px solid var(--color-border-subtle)",
+                                        background: "var(--color-surface)",
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "space-between",
+                                            marginBottom: 8,
+                                        }}
+                                    >
+                                        <span
+                                            style={{
+                                                fontWeight: 600,
+                                                fontSize: 13,
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: 6,
+                                            }}
+                                        >
+                                            <Cloud size={14} />
+                                            Google Drive
+                                            {gdriveConnected && (
+                                                <span
+                                                    style={{
+                                                        fontSize: 10,
+                                                        padding: "2px 7px",
+                                                        borderRadius: 10,
+                                                        background: "rgba(16,185,129,0.15)",
+                                                        color: "#10b981",
+                                                        fontWeight: 700,
+                                                    }}
+                                                >
+                                                    {t("settings.backup.connected")}
+                                                </span>
+                                            )}
+                                        </span>
+                                        {gdriveConnected ? (
+                                            <button
+                                                type="button"
+                                                onClick={async () => {
+                                                    await api.backup
+                                                        .gdriveRevoke()
+                                                        .catch(() => null);
+                                                    setGdriveConnected(false);
+                                                    toast(
+                                                        t("settings.backup.gdriveDisconnected"),
+                                                        "success",
+                                                    );
+                                                }}
+                                                style={{
+                                                    fontSize: 12,
+                                                    color: "#ef4444",
+                                                    background: "none",
+                                                    border: "none",
+                                                    cursor: "pointer",
+                                                }}
+                                            >
+                                                {t("settings.backup.disconnect")}
+                                            </button>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                disabled={gdriveLoading}
+                                                onClick={async () => {
+                                                    setGdriveLoading(true);
+                                                    try {
+                                                        const res =
+                                                            await api.backup.gdriveStartAuth();
+                                                        setDeviceAuth(res.data);
+                                                        const timer = setInterval(
+                                                            async () => {
+                                                                const poll =
+                                                                    await api.backup.gdrivePoll(
+                                                                        res.data.device_code,
+                                                                    );
+                                                                if (poll.connected) {
+                                                                    clearInterval(timer);
+                                                                    setGdrivePollTimer(null);
+                                                                    setDeviceAuth(null);
+                                                                    setGdriveConnected(true);
+                                                                    setGdriveLoading(false);
+                                                                    toast(
+                                                                        t(
+                                                                            "settings.backup.gdriveConnected",
+                                                                        ),
+                                                                        "success",
+                                                                    );
+                                                                }
+                                                            },
+                                                            (res.data.interval + 1) * 1000,
+                                                        );
+                                                        setGdrivePollTimer(timer);
+                                                    } catch {
+                                                        setGdriveLoading(false);
+                                                        toast(
+                                                            t("settings.backup.gdriveAuthFailed"),
+                                                            "error",
+                                                        );
+                                                    }
+                                                }}
+                                                style={{
+                                                    fontSize: 12,
+                                                    fontWeight: 600,
+                                                    padding: "5px 12px",
+                                                    borderRadius: 7,
+                                                    border: "1px solid var(--color-border)",
+                                                    background: "var(--color-surface-2)",
+                                                    color: "var(--color-text)",
+                                                    cursor: "pointer",
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    gap: 5,
+                                                }}
+                                            >
+                                                {gdriveLoading ? (
+                                                    <Loader2
+                                                        size={12}
+                                                        style={{
+                                                            animation: "spin 1s linear infinite",
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <Cloud size={12} />
+                                                )}
+                                                {t("settings.backup.connect")}
+                                            </button>
+                                        )}
+                                    </div>
+                                    {/* Device Flow 提示 */}
+                                    {deviceAuth && (
+                                        <div
+                                            style={{
+                                                marginTop: 10,
+                                                padding: "10px 14px",
+                                                borderRadius: 8,
+                                                background: "var(--color-surface-2)",
+                                                border: "1px solid var(--color-border-subtle)",
+                                            }}
+                                        >
+                                            <p
+                                                style={{
+                                                    margin: 0,
+                                                    fontSize: 12,
+                                                    color: "var(--color-text-muted)",
+                                                }}
+                                            >
+                                                {t("settings.backup.deviceFlowHint")}
+                                            </p>
+                                            <p
+                                                style={{
+                                                    margin: "6px 0 0",
+                                                    fontSize: 14,
+                                                    fontWeight: 700,
+                                                    letterSpacing: "0.1em",
+                                                    color: "var(--color-text)",
+                                                }}
+                                            >
+                                                {deviceAuth.user_code}
+                                            </p>
+                                            <a
+                                                href={deviceAuth.verification_url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                style={{
+                                                    fontSize: 11,
+                                                    color: "var(--color-accent)",
+                                                    marginTop: 4,
+                                                    display: "block",
+                                                }}
+                                            >
+                                                {deviceAuth.verification_url}
+                                            </a>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (gdrivePollTimer)
+                                                        clearInterval(gdrivePollTimer);
+                                                    setGdrivePollTimer(null);
+                                                    setDeviceAuth(null);
+                                                    setGdriveLoading(false);
+                                                }}
+                                                style={{
+                                                    marginTop: 8,
+                                                    fontSize: 11,
+                                                    color: "var(--color-text-muted)",
+                                                    background: "none",
+                                                    border: "none",
+                                                    cursor: "pointer",
+                                                }}
+                                            >
+                                                {t("common.cancel")}
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* WebDAV */}
+                                <div
+                                    style={{
+                                        padding: "14px 16px",
+                                        borderRadius: 12,
+                                        border: "1px solid var(--color-border-subtle)",
+                                        background: "var(--color-surface)",
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "space-between",
+                                            marginBottom: 10,
+                                        }}
+                                    >
+                                        <span
+                                            style={{
+                                                fontWeight: 600,
+                                                fontSize: 13,
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: 6,
+                                            }}
+                                        >
+                                            <Server size={14} />
+                                            WebDAV
+                                            {webdavConnected && (
+                                                <span
+                                                    style={{
+                                                        fontSize: 10,
+                                                        padding: "2px 7px",
+                                                        borderRadius: 10,
+                                                        background: "rgba(16,185,129,0.15)",
+                                                        color: "#10b981",
+                                                        fontWeight: 700,
+                                                    }}
+                                                >
+                                                    {t("settings.backup.connected")}
+                                                </span>
+                                            )}
+                                        </span>
+                                        {webdavConnected && (
+                                            <button
+                                                type="button"
+                                                onClick={async () => {
+                                                    await api.backup
+                                                        .webdavClear()
+                                                        .catch(() => null);
+                                                    setWebdavConnected(false);
+                                                    setWebdavUrl("");
+                                                    setWebdavUsername("");
+                                                    setWebdavPassword("");
+                                                    toast(
+                                                        t("settings.backup.webdavCleared"),
+                                                        "success",
+                                                    );
+                                                }}
+                                                style={{
+                                                    fontSize: 12,
+                                                    color: "#ef4444",
+                                                    background: "none",
+                                                    border: "none",
+                                                    cursor: "pointer",
+                                                }}
+                                            >
+                                                {t("settings.backup.disconnect")}
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div
+                                        style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                                    >
+                                        {[
+                                            {
+                                                label: t("settings.backup.webdavUrl"),
+                                                value: webdavUrl,
+                                                onChange: setWebdavUrl,
+                                                placeholder:
+                                                    "https://nextcloud.example.com/remote.php/dav/files/user/",
+                                            },
+                                            {
+                                                label: t("settings.backup.webdavUsername"),
+                                                value: webdavUsername,
+                                                onChange: setWebdavUsername,
+                                                placeholder: "username",
+                                            },
+                                            {
+                                                label: t("settings.backup.webdavPassword"),
+                                                value: webdavPassword,
+                                                onChange: setWebdavPassword,
+                                                placeholder: "••••••••",
+                                                type: "password",
+                                            },
+                                        ].map(({ label, value, onChange, placeholder, type }) => (
+                                            <div
+                                                key={label}
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: 10,
+                                                }}
+                                            >
+                                                <span
+                                                    style={{
+                                                        fontSize: 12,
+                                                        color: "var(--color-text-muted)",
+                                                        width: 80,
+                                                        flexShrink: 0,
+                                                    }}
+                                                >
+                                                    {label}
+                                                </span>
+                                                <input
+                                                    type={type ?? "text"}
+                                                    value={value}
+                                                    onChange={(e) => onChange(e.target.value)}
+                                                    placeholder={placeholder}
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: "6px 10px",
+                                                        borderRadius: 7,
+                                                        border: "1px solid var(--color-border)",
+                                                        background: "var(--color-surface-2)",
+                                                        color: "var(--color-text)",
+                                                        fontSize: 12,
+                                                        fontFamily: "inherit",
+                                                    }}
+                                                />
+                                            </div>
+                                        ))}
+                                        <button
+                                            type="button"
+                                            disabled={
+                                                webdavSaving ||
+                                                !webdavUrl ||
+                                                !webdavUsername ||
+                                                !webdavPassword
+                                            }
+                                            onClick={async () => {
+                                                setWebdavSaving(true);
+                                                try {
+                                                    await api.backup.webdavSave({
+                                                        url: webdavUrl,
+                                                        username: webdavUsername,
+                                                        password: webdavPassword,
+                                                    });
+                                                    setWebdavConnected(true);
+                                                    setWebdavPassword("");
+                                                    toast(
+                                                        t("settings.backup.webdavSaved"),
+                                                        "success",
+                                                    );
+                                                } catch (e) {
+                                                    toast(
+                                                        (e as Error).message ||
+                                                            t("settings.backup.webdavFailed"),
+                                                        "error",
+                                                    );
+                                                } finally {
+                                                    setWebdavSaving(false);
+                                                }
+                                            }}
+                                            style={{
+                                                alignSelf: "flex-start",
+                                                marginTop: 4,
+                                                fontSize: 12,
+                                                fontWeight: 600,
+                                                padding: "6px 14px",
+                                                borderRadius: 7,
+                                                border: "none",
+                                                background: "#10b981",
+                                                color: "#fff",
+                                                cursor: "pointer",
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: 5,
+                                                opacity:
+                                                    !webdavUrl || !webdavUsername || !webdavPassword
+                                                        ? 0.45
+                                                        : 1,
+                                            }}
+                                        >
+                                            {webdavSaving ? (
+                                                <Loader2
+                                                    size={11}
+                                                    style={{ animation: "spin 1s linear infinite" }}
+                                                />
+                                            ) : (
+                                                <Check size={11} />
+                                            )}
+                                            {t("settings.backup.webdavTest")}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* 立即备份 */}
+                                {(gdriveConnected || webdavConnected) && (
+                                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                        <button
+                                            type="button"
+                                            disabled={backupTriggerLoading}
+                                            onClick={async () => {
+                                                setBackupTriggerLoading(true);
+                                                try {
+                                                    const res = await api.backup.trigger("all");
+                                                    const successCount = res.results.filter(
+                                                        (r) => r.ok,
+                                                    ).length;
+                                                    if (res.ok) {
+                                                        toast(
+                                                            t("settings.backup.triggerSuccess", {
+                                                                n: successCount,
+                                                            }),
+                                                            "success",
+                                                        );
+                                                    } else {
+                                                        toast(
+                                                            t("settings.backup.triggerFailed"),
+                                                            "error",
+                                                        );
+                                                    }
+                                                    // Refresh run history
+                                                    api.backup
+                                                        .runs(10)
+                                                        .then((r) => setBackupRuns(r.data))
+                                                        .catch(() => null);
+                                                } catch (e) {
+                                                    toast((e as Error).message, "error");
+                                                } finally {
+                                                    setBackupTriggerLoading(false);
+                                                }
+                                            }}
+                                            style={{
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: 6,
+                                                padding: "8px 18px",
+                                                borderRadius: 8,
+                                                border: "none",
+                                                background: "var(--color-accent)",
+                                                color: "#fff",
+                                                fontSize: 13,
+                                                fontWeight: 600,
+                                                cursor: "pointer",
+                                            }}
+                                        >
+                                            {backupTriggerLoading ? (
+                                                <Loader2
+                                                    size={13}
+                                                    style={{ animation: "spin 1s linear infinite" }}
+                                                />
+                                            ) : (
+                                                <RefreshCw size={13} />
+                                            )}
+                                            {t("settings.backup.triggerNow")}
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* 备份历史 */}
+                                {backupRuns.length > 0 && (
+                                    <div>
+                                        <p
+                                            style={{
+                                                fontSize: 11,
+                                                fontWeight: 700,
+                                                letterSpacing: "0.08em",
+                                                textTransform: "uppercase",
+                                                color: "var(--color-text-muted)",
+                                                marginBottom: 8,
+                                            }}
+                                        >
+                                            {t("settings.backup.history")}
+                                        </p>
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                flexDirection: "column",
+                                                gap: 5,
+                                            }}
+                                        >
+                                            {backupRuns.map((run) => (
+                                                <div
+                                                    key={run.id}
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: 8,
+                                                        padding: "7px 10px",
+                                                        borderRadius: 8,
+                                                        background: "var(--color-surface-2)",
+                                                        border: `1px solid ${run.status === "success" ? "rgba(16,185,129,0.2)" : "rgba(239,68,68,0.2)"}`,
+                                                    }}
+                                                >
+                                                    {run.status === "success" ? (
+                                                        <Check
+                                                            size={12}
+                                                            style={{
+                                                                color: "#10b981",
+                                                                flexShrink: 0,
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <X
+                                                            size={12}
+                                                            style={{
+                                                                color: "#ef4444",
+                                                                flexShrink: 0,
+                                                            }}
+                                                        />
+                                                    )}
+                                                    <span
+                                                        style={{
+                                                            fontSize: 11,
+                                                            color: "var(--color-text-muted)",
+                                                            flexShrink: 0,
+                                                        }}
+                                                    >
+                                                        {run.provider.toUpperCase()}
+                                                    </span>
+                                                    <span
+                                                        style={{
+                                                            fontSize: 11,
+                                                            color: "var(--color-text)",
+                                                            flex: 1,
+                                                            overflow: "hidden",
+                                                            textOverflow: "ellipsis",
+                                                            whiteSpace: "nowrap",
+                                                        }}
+                                                    >
+                                                        {run.filename ?? run.error ?? "—"}
+                                                    </span>
+                                                    <span
+                                                        style={{
+                                                            fontSize: 10,
+                                                            color: "var(--color-text-muted)",
+                                                            flexShrink: 0,
+                                                        }}
+                                                    >
+                                                        {new Date(run.startedAt).toLocaleString()}
+                                                    </span>
+                                                    {run.sizeBytes && (
+                                                        <span
+                                                            style={{
+                                                                fontSize: 10,
+                                                                color: "var(--color-text-muted)",
+                                                                flexShrink: 0,
+                                                            }}
+                                                        >
+                                                            {(run.sizeBytes / 1024 / 1024).toFixed(
+                                                                1,
+                                                            )}{" "}
+                                                            MB
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                {backupRunsLoading && (
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            justifyContent: "center",
+                                            padding: "8px 0",
+                                        }}
+                                    >
+                                        <Loader2
+                                            size={16}
+                                            style={{
+                                                animation: "spin 1s linear infinite",
+                                                color: "var(--color-text-muted)",
+                                            }}
+                                        />
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
