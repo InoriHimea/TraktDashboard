@@ -1,8 +1,20 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Tv2, Film, LayoutGrid, Clock, Download, Loader2, ChevronDown } from "lucide-react";
+import {
+    Tv2,
+    Film,
+    LayoutGrid,
+    Clock,
+    Download,
+    Loader2,
+    ChevronDown,
+    Upload,
+    X,
+} from "lucide-react";
 import { useInfiniteHistory } from "../hooks";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "../lib/queryKeys";
 import type { HistoryEntry } from "@trakt-dashboard/types";
 import { tmdbImage } from "../lib/utils";
 import { getLocale, t } from "../lib/i18n";
@@ -165,10 +177,45 @@ function HistoryPosterCard({ entry, index }: { entry: HistoryEntry; index: numbe
     );
 }
 
+type ImportResult = { imported: number; skipped: number; errors: string[] } | null;
+
 export default function HistoryPage() {
     const [filter, setFilter] = useState<MediaFilter>("all");
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
+    const [importing, setImporting] = useState(false);
+    const [importResult, setImportResult] = useState<ImportResult>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const qc = useQueryClient();
+
+    async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        e.target.value = "";
+        setImporting(true);
+        setImportResult(null);
+        try {
+            const text = await file.text();
+            const parsed = JSON.parse(text) as unknown;
+            const entries = Array.isArray(parsed)
+                ? parsed
+                : (parsed as Record<string, unknown>)?.entries;
+            if (!Array.isArray(entries)) throw new Error(t("history.import.invalidFormat"));
+            const result = await api.history.import(entries);
+            setImportResult({
+                imported: result.imported,
+                skipped: result.skipped,
+                errors: result.errors,
+            });
+            if (result.imported > 0) {
+                qc.invalidateQueries({ queryKey: queryKeys.history.all });
+            }
+        } catch (err) {
+            setImportResult({ imported: 0, skipped: 0, errors: [String(err)] });
+        } finally {
+            setImporting(false);
+        }
+    }
 
     const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage, error, refetch } =
         useInfiniteHistory(filter, startDate || undefined, endDate || undefined);
@@ -199,16 +246,73 @@ export default function HistoryPage() {
                             </p>
                         )}
                     </div>
-                    <a
-                        href={exportUrl}
-                        download="watch-history.csv"
-                        className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-accent)] hover:text-[var(--color-text)]"
-                        title={t("history.exportCsv")}
-                    >
-                        <Download className="h-4 w-4" />
-                        <span className="hidden sm:inline">{t("history.exportCsv")}</span>
-                    </a>
+                    <div className="flex items-center gap-2">
+                        {/* Import JSON */}
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".json,application/json"
+                            className="hidden"
+                            onChange={handleImport}
+                        />
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={importing}
+                            className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-accent)] hover:text-[var(--color-text)] disabled:opacity-50"
+                            title={t("history.import.button")}
+                        >
+                            {importing ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <Upload className="h-4 w-4" />
+                            )}
+                            <span className="hidden sm:inline">{t("history.import.button")}</span>
+                        </button>
+                        {/* Export CSV */}
+                        <a
+                            href={exportUrl}
+                            download="watch-history.csv"
+                            className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-accent)] hover:text-[var(--color-text)]"
+                            title={t("history.exportCsv")}
+                        >
+                            <Download className="h-4 w-4" />
+                            <span className="hidden sm:inline">{t("history.exportCsv")}</span>
+                        </a>
+                    </div>
                 </div>
+
+                {/* Import result banner */}
+                {importResult && (
+                    <div
+                        className={`mb-5 flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-sm ${
+                            importResult.errors.length > 0
+                                ? "border-red-800/40 bg-red-950/30 text-red-300"
+                                : "border-green-800/40 bg-green-950/30 text-green-300"
+                        }`}
+                    >
+                        <div>
+                            <p className="font-semibold">
+                                {t("history.import.resultTitle", {
+                                    imported: importResult.imported,
+                                    skipped: importResult.skipped,
+                                })}
+                            </p>
+                            {importResult.errors.length > 0 && (
+                                <ul className="mt-1 list-disc pl-4 text-xs opacity-80">
+                                    {importResult.errors.slice(0, 5).map((e, i) => (
+                                        <li key={i}>{e}</li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                        <button
+                            onClick={() => setImportResult(null)}
+                            className="mt-0.5 shrink-0 opacity-60 hover:opacity-100"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    </div>
+                )}
 
                 {/* Controls */}
                 <div className="mb-6 flex flex-wrap items-center gap-3">

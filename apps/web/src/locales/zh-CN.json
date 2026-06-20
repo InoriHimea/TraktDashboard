@@ -172,7 +172,12 @@
         "empty": "暂无观看记录。",
         "emptyHint": "开始观看后记录将出现在这里。",
         "loadMore": "加载更多",
-        "exportCsv": "导出 CSV"
+        "exportCsv": "导出 CSV",
+        "import": {
+            "button": "导入 JSON",
+            "invalidFormat": "无效格式：需要 JSON 数组",
+            "resultTitle": "导入完成：{{imported}} 条成功，{{skipped}} 条跳过"
+        }
     },
     "watchlist": {
         "title": "待看列表",

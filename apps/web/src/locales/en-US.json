@@ -172,7 +172,12 @@
         "empty": "No watch history yet.",
         "emptyHint": "Start watching and records will appear here.",
         "loadMore": "Load more",
-        "exportCsv": "Export CSV"
+        "exportCsv": "Export CSV",
+        "import": {
+            "button": "Import JSON",
+            "invalidFormat": "Invalid format: expected JSON array",
+            "resultTitle": "Import done: {{imported}} added, {{skipped}} skipped"
+        }
     },
     "watchlist": {
         "title": "Watchlist",

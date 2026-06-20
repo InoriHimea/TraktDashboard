@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { getDb, watchHistory, episodes, shows, movies } from "@trakt-dashboard/db";
-import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql, ilike, or } from "drizzle-orm";
 import { apiOk } from "../lib/response.js";
 import { parseBoundedInt } from "../lib/number.js";
 import { toIsoOrNull } from "../lib/datetime.js";
@@ -188,4 +188,193 @@ historyRoutes.get("/export", async (c) => {
             "Content-Disposition": `attachment; filename="watch-history.csv"`,
         },
     });
+});
+
+// POST /api/history/import — JSON 导入（与 export 格式对称）
+historyRoutes.post("/import", async (c) => {
+    const userId = c.get("userId");
+
+    let body: unknown;
+    try {
+        body = await c.req.json();
+    } catch {
+        return c.json({ error: "Invalid JSON" }, 400);
+    }
+
+    const rawEntries: unknown[] = Array.isArray(body)
+        ? body
+        : Array.isArray((body as Record<string, unknown>)?.entries)
+          ? ((body as Record<string, unknown>).entries as unknown[])
+          : [];
+
+    if (rawEntries.length === 0) return c.json({ error: "No entries found" }, 400);
+    if (rawEntries.length > 50_000) return c.json({ error: "Too many entries (max 50000)" }, 400);
+
+    const db = getDb();
+    let imported = 0;
+    let skipped = 0;
+    const errors: string[] = [];
+
+    // ── Pre-build lookup caches ─────────────────────────────────────────────
+    // Collect unique show titles and movie titles first, then batch-query.
+    const showTitles = new Set<string>();
+    const movieTitles = new Set<string>();
+
+    for (const entry of rawEntries) {
+        const e = entry as Record<string, unknown>;
+        const mt = (e.history as Record<string, unknown> | undefined)?.mediaType;
+        if (mt === "episode") {
+            const st = (e.show as Record<string, unknown> | undefined)?.title;
+            if (typeof st === "string") showTitles.add(st.toLowerCase());
+        } else if (mt === "movie") {
+            const mt2 = (e.movie as Record<string, unknown> | undefined)?.title;
+            if (typeof mt2 === "string") movieTitles.add(mt2.toLowerCase());
+        }
+    }
+
+    // Batch show lookup: title or translatedName match (case-insensitive)
+    const showCache = new Map<string, number>(); // lowercase title → local show.id
+    for (const title of showTitles) {
+        const [row] = await db
+            .select({ id: shows.id, title: shows.title, translatedName: shows.translatedName })
+            .from(shows)
+            .where(or(ilike(shows.title, title), ilike(shows.translatedName, title)))
+            .limit(1);
+        if (row) {
+            showCache.set(title, row.id);
+            if (row.translatedName) showCache.set(row.translatedName.toLowerCase(), row.id);
+        }
+    }
+
+    // Batch movie lookup
+    const movieCache = new Map<string, number>(); // lowercase title → local movie.id
+    for (const title of movieTitles) {
+        const [row] = await db
+            .select({ id: movies.id })
+            .from(movies)
+            .where(ilike(movies.title, title))
+            .limit(1);
+        if (row) movieCache.set(title, row.id);
+    }
+
+    // ── Process entries ─────────────────────────────────────────────────────
+    for (const entry of rawEntries) {
+        try {
+            const e = entry as Record<string, unknown>;
+            const h = (e.history as Record<string, unknown>) ?? {};
+            const mediaType = h.mediaType as string | undefined;
+            const rawWatchedAt = h.watchedAt as string | undefined;
+            const watchedAt = rawWatchedAt ? new Date(rawWatchedAt) : null;
+
+            if (mediaType !== "episode" && mediaType !== "movie") {
+                skipped++;
+                continue;
+            }
+
+            if (mediaType === "episode") {
+                const ep = (e.episode as Record<string, unknown>) ?? {};
+                const showTitle = ((e.show as Record<string, unknown>) ?? {}).title as
+                    | string
+                    | undefined;
+                const seasonNumber = ep.seasonNumber as number | undefined;
+                const episodeNumber = ep.episodeNumber as number | undefined;
+
+                if (!showTitle || seasonNumber == null || episodeNumber == null) {
+                    skipped++;
+                    continue;
+                }
+
+                const showId = showCache.get(showTitle.toLowerCase());
+                if (!showId) {
+                    skipped++;
+                    continue;
+                }
+
+                const [epRow] = await db
+                    .select({ id: episodes.id })
+                    .from(episodes)
+                    .where(
+                        and(
+                            eq(episodes.showId, showId),
+                            eq(episodes.seasonNumber, seasonNumber),
+                            eq(episodes.episodeNumber, episodeNumber),
+                        ),
+                    )
+                    .limit(1);
+
+                if (!epRow) {
+                    skipped++;
+                    continue;
+                }
+
+                // Duplicate check
+                const dupConds = [
+                    eq(watchHistory.userId, userId),
+                    eq(watchHistory.episodeId, epRow.id),
+                ];
+                if (watchedAt) dupConds.push(eq(watchHistory.watchedAt, watchedAt));
+                const [dup] = await db
+                    .select({ id: watchHistory.id })
+                    .from(watchHistory)
+                    .where(and(...dupConds))
+                    .limit(1);
+                if (dup) {
+                    skipped++;
+                    continue;
+                }
+
+                await db.insert(watchHistory).values({
+                    userId,
+                    episodeId: epRow.id,
+                    mediaType: "episode",
+                    watchedAt,
+                    source: "import",
+                });
+                imported++;
+            } else {
+                // movie
+                const movieTitle = ((e.movie as Record<string, unknown>) ?? {}).title as
+                    | string
+                    | undefined;
+                if (!movieTitle) {
+                    skipped++;
+                    continue;
+                }
+
+                const movieId = movieCache.get(movieTitle.toLowerCase());
+                if (!movieId) {
+                    skipped++;
+                    continue;
+                }
+
+                const dupConds = [
+                    eq(watchHistory.userId, userId),
+                    eq(watchHistory.movieId, movieId),
+                ];
+                if (watchedAt) dupConds.push(eq(watchHistory.watchedAt, watchedAt));
+                const [dup] = await db
+                    .select({ id: watchHistory.id })
+                    .from(watchHistory)
+                    .where(and(...dupConds))
+                    .limit(1);
+                if (dup) {
+                    skipped++;
+                    continue;
+                }
+
+                await db.insert(watchHistory).values({
+                    userId,
+                    movieId,
+                    mediaType: "movie",
+                    watchedAt,
+                    source: "import",
+                });
+                imported++;
+            }
+        } catch (err) {
+            if (errors.length < 20) errors.push(String(err));
+        }
+    }
+
+    return c.json({ ok: true, imported, skipped, errors });
 });

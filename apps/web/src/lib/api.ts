@@ -197,6 +197,11 @@ export const api = {
             if (endDate) params.set("endDate", endDate);
             return `/api/history/export?${params}`;
         },
+        import: (entries: unknown[]) =>
+            request<{ ok: boolean; imported: number; skipped: number; errors: string[] }>(
+                "/history/import",
+                { method: "POST", body: JSON.stringify(entries) },
+            ),
     },
     watchlist: {
         list: (type?: "shows" | "movies") => {
