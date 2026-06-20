@@ -12,6 +12,7 @@ import {
     Loader2,
     History,
     Bookmark,
+    Archive,
 } from "lucide-react";
 import {
     useMovieDetail,
@@ -23,6 +24,7 @@ import {
     useRemoveFromWatchlist,
     useJellyfinMovie,
     useDeleteJellyfinItem,
+    useCollectionCheck,
 } from "../hooks";
 import { tmdbImage } from "../lib/utils";
 import { useToast } from "../lib/toast";
@@ -107,6 +109,8 @@ export default function MovieDetailPage() {
     const isWatchlistPending = addToWatchlist.isPending || removeFromWatchlist.isPending;
 
     const { toast } = useToast();
+    const { data: collectionData } = useCollectionCheck(isValidId ? { movieId } : {});
+    const inCollection = collectionData?.inCollection ?? false;
 
     const { data: jellyfinMovie = null } = useJellyfinMovie(progress?.movie.tmdbId ?? null);
     const deleteJellyfinItem = useDeleteJellyfinItem();
@@ -481,6 +485,25 @@ export default function MovieDetailPage() {
                                     <StarRating type="movie" localId={movieId} />
                                 </div>
                                 {movieId > 0 && <NoteEditor mediaType="movie" movieId={movieId} />}
+                                {inCollection && (
+                                    <div
+                                        style={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: 6,
+                                            padding: "6px 12px",
+                                            borderRadius: 20,
+                                            background: "var(--color-accent-dim)",
+                                            border: "1px solid var(--color-border-focus)",
+                                            color: "var(--color-accent-light)",
+                                            fontSize: 12,
+                                            fontWeight: 600,
+                                        }}
+                                    >
+                                        <Archive size={13} />
+                                        {t("collection.inCollection")}
+                                    </div>
+                                )}
                                 <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-5 shadow-lg shadow-black/10">
                                     <div className="mb-4 text-xs uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
                                         {t("movieDetail.profileWatch")}

@@ -980,5 +980,36 @@ export function getTraktClient() {
                 body: JSON.stringify(body),
             });
         },
+
+        // ── Collection ──────────────────────────────────────────────────────
+        getCollectionShows: async (userId: number): Promise<unknown[]> => {
+            return traktFetch<unknown[]>("/sync/collection/shows", userId);
+        },
+
+        getCollectionMovies: async (userId: number): Promise<unknown[]> => {
+            return traktFetch<unknown[]>("/sync/collection/movies", userId);
+        },
+
+        removeCollectionShows: async (
+            userId: number,
+            items: Array<{ ids: { trakt?: number; tmdb?: number } }>,
+        ): Promise<void> => {
+            await traktFetchRaw("/sync/collection/remove", userId, undefined, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ shows: items }),
+            });
+        },
+
+        removeCollectionMovies: async (
+            userId: number,
+            items: Array<{ ids: { trakt?: number; tmdb?: number } }>,
+        ): Promise<void> => {
+            await traktFetchRaw("/sync/collection/remove", userId, undefined, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ movies: items }),
+            });
+        },
     };
 }

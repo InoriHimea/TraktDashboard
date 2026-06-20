@@ -57,7 +57,8 @@
         "history": "History",
         "statistics": "Statistics",
         "sync": "Sync",
-        "settings": "Settings"
+        "settings": "Settings",
+        "collection": "Collection"
     },
     "watchHistory": {
         "episodeTitle": "Episode Watch History",
@@ -491,5 +492,17 @@
             "friends": "Friends",
             "public": "Public"
         }
+    },
+    "collection": {
+        "title": "My Collection",
+        "count": "{{count}} items",
+        "shows": "Shows",
+        "movies": "Movies",
+        "syncFromTrakt": "Sync from Trakt",
+        "clearRemote": "Clear Remote",
+        "confirmClear": "Confirm Clear",
+        "empty": "No items in your collection",
+        "emptyHint": "Click 'Sync from Trakt' to pull your remote collection locally",
+        "inCollection": "In Collection"
     }
 }

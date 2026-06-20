@@ -27,6 +27,7 @@ import type {
     UserNote,
     UserList,
     UserListItem,
+    UserCollectionItem,
 } from "@trakt-dashboard/types";
 
 const API_BASE = "/api";
@@ -337,5 +338,23 @@ export const api = {
         removeItem: (listId: number, itemId: number) =>
             request<{ ok: boolean }>(`/lists/${listId}/items/${itemId}`, { method: "DELETE" }),
         sync: () => request<{ ok: boolean; synced: number }>("/lists/sync", { method: "POST" }),
+    },
+    collection: {
+        getAll: (type: "all" | "show" | "movie" = "all") =>
+            request<ApiResponse<UserCollectionItem[]>>(`/collection?type=${type}`),
+        check: (params: { showId?: number; movieId?: number }) => {
+            const p = new URLSearchParams();
+            if (params.showId) p.set("showId", String(params.showId));
+            if (params.movieId) p.set("movieId", String(params.movieId));
+            return request<{ inCollection: boolean }>(`/collection/check?${p}`);
+        },
+        sync: () =>
+            request<{ ok: boolean; synced: number }>("/collection/sync", { method: "POST" }),
+        clearRemote: () =>
+            request<{ ok: boolean; removed: number }>("/collection/clear-remote", {
+                method: "POST",
+                body: JSON.stringify({ confirm: true }),
+            }),
+        remove: (id: number) => request<{ ok: boolean }>(`/collection/${id}`, { method: "DELETE" }),
     },
 };

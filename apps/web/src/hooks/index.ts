@@ -24,6 +24,7 @@ import type {
     UserNote,
     UserList,
     UserListItem,
+    UserCollectionItem,
 } from "@trakt-dashboard/types";
 import { api } from "../lib/api";
 
@@ -617,5 +618,46 @@ export function useSyncLists() {
     return useMutation({
         mutationFn: () => api.lists.sync(),
         onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.lists.all }),
+    });
+}
+
+// ── Collection ────────────────────────────────────────────────────────────────
+
+export function useCollection(type: "all" | "show" | "movie" = "all") {
+    return useQuery<UserCollectionItem[]>({
+        queryKey: queryKeys.collection.byType(type),
+        queryFn: () => api.collection.getAll(type).then((r) => r.data),
+        staleTime: 1000 * 60 * 5,
+    });
+}
+
+export function useCollectionCheck(params: { showId?: number; movieId?: number }) {
+    return useQuery<{ inCollection: boolean }>({
+        queryKey: queryKeys.collection.check(params.showId, params.movieId),
+        queryFn: () => api.collection.check(params),
+        enabled: !!(params.showId || params.movieId),
+        staleTime: 1000 * 60 * 2,
+    });
+}
+
+export function useSyncCollection() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: () => api.collection.sync(),
+        onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.collection.all }),
+    });
+}
+
+export function useClearRemoteCollection() {
+    return useMutation({
+        mutationFn: () => api.collection.clearRemote(),
+    });
+}
+
+export function useRemoveCollectionItem() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => api.collection.remove(id),
+        onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.collection.all }),
     });
 }

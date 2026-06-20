@@ -57,7 +57,8 @@
         "history": "观看历史",
         "statistics": "统计",
         "sync": "同步",
-        "settings": "设置"
+        "settings": "设置",
+        "collection": "我的收藏"
     },
     "watchHistory": {
         "episodeTitle": "单集观看历史",
@@ -491,5 +492,17 @@
             "friends": "好友",
             "public": "公开"
         }
+    },
+    "collection": {
+        "title": "我的收藏",
+        "count": "共 {{count}} 件",
+        "shows": "剧集",
+        "movies": "电影",
+        "syncFromTrakt": "从 Trakt 同步",
+        "clearRemote": "清空远程收藏",
+        "confirmClear": "确认清空",
+        "empty": "暂无收藏内容",
+        "emptyHint": "点击『从 Trakt 同步』将远程收藏拉取到本地",
+        "inCollection": "已收藏"
     }
 }

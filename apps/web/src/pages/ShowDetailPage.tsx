@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, RefreshCw, CheckCheck } from "lucide-react";
+import { ArrowLeft, RefreshCw, CheckCheck, Archive } from "lucide-react";
 import {
     useShowDetail,
     useResetProgress,
@@ -10,6 +10,7 @@ import {
     useWatchlist,
     useAddToWatchlist,
     useRemoveFromWatchlist,
+    useCollectionCheck,
 } from "../hooks";
 import { HeroSection } from "../components/HeroSection";
 import { SeasonTab } from "../components/SeasonTab";
@@ -113,6 +114,8 @@ export default function ShowDetailPage() {
     const isWatchlistPending = addToWatchlist.isPending || removeFromWatchlist.isPending;
 
     const { toast } = useToast();
+    const { data: collectionData } = useCollectionCheck(isValidId ? { showId } : {});
+    const inCollection = collectionData?.inCollection ?? false;
 
     if (isLoading) return <PageSkeleton />;
     if (error) return <PageError onRetry={() => refetch()} />;
@@ -260,6 +263,28 @@ export default function ShowDetailPage() {
                 )}
 
                 {isValidId && <NoteEditor mediaType="show" showId={showId} />}
+
+                {/* 已收藏 badge */}
+                {inCollection && (
+                    <div
+                        style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                            padding: "6px 12px",
+                            borderRadius: 20,
+                            background: "var(--color-accent-dim)",
+                            border: "1px solid var(--color-border-focus)",
+                            color: "var(--color-accent-light)",
+                            fontSize: 12,
+                            fontWeight: 600,
+                            width: "fit-content",
+                        }}
+                    >
+                        <Archive size={13} />
+                        {t("collection.inCollection")}
+                    </div>
+                )}
 
                 {/* 季/集区域 */}
                 <div

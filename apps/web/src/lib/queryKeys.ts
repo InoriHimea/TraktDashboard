@@ -67,6 +67,12 @@ export const queryKeys = {
         all: ["lists"] as const,
         items: (listId: number) => ["lists", listId, "items"] as const,
     },
+    collection: {
+        all: ["collection"] as const,
+        byType: (type: string) => ["collection", type] as const,
+        check: (showId?: number, movieId?: number) =>
+            ["collection-check", showId, movieId] as const,
+    },
 
     history: {
         all: ["history"] as const,

@@ -586,3 +586,22 @@ export interface HistoryPage {
     entries: HistoryEntry[];
     total: number;
 }
+
+export interface UserCollectionItem {
+    id: number;
+    mediaType: "show" | "movie" | "episode";
+    showId: number | null;
+    movieId: number | null;
+    season: number | null;
+    episode: number | null;
+    mediaFormat: string | null;
+    resolution: string | null;
+    hdr: string | null;
+    audio: string | null;
+    audioChannels: string | null;
+    collectedAt: string | null;
+    updatedAt: string;
+    title?: string;
+    posterPath?: string | null;
+    year?: number | null;
+}

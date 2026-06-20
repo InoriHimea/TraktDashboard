@@ -14,6 +14,7 @@ import {
     Search,
     Compass,
     ListOrdered,
+    Archive,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNowPlaying, useJellyfinNowPlaying } from "../hooks/index";
@@ -31,6 +32,7 @@ const NAV = [
     { to: "/movies", icon: Film, labelKey: "nav.movies" },
     { to: "/discover", icon: Compass, labelKey: "nav.discover" },
     { to: "/lists", icon: ListOrdered, labelKey: "nav.lists" },
+    { to: "/collection", icon: Archive, labelKey: "nav.collection" },
     { to: "/calendar", icon: Calendar, labelKey: "nav.calendar" },
     { to: "/watchlist", icon: Bookmark, labelKey: "nav.watchlist" },
     { to: "/history", icon: Clock, labelKey: "nav.history" },

@@ -429,6 +429,32 @@ export const userListItems = pgTable(
     (t) => [index("user_list_items_list_idx").on(t.listId)],
 );
 
+// ─── User Collection ──────────────────────────────────────────────────────────
+
+export const userCollection = pgTable(
+    "user_collection",
+    {
+        id: serial("id").primaryKey(),
+        userId: integer("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
+        mediaType: text("media_type").notNull(), // 'show' | 'movie' | 'episode'
+        showId: integer("show_id").references(() => shows.id, { onDelete: "cascade" }),
+        movieId: integer("movie_id").references(() => movies.id, { onDelete: "cascade" }),
+        season: integer("season"),
+        episode: integer("episode"),
+        mediaFormat: text("media_format"), // 'blu-ray'|'digital'|'dvd'|'vhs'|'betamax'|'vcd'|'laserdisc'
+        resolution: text("resolution"), // 'uhd_4k'|'hd_1080p'|'hd_720p'|'sd_480p'|'sd_480i'|'sd_576p'|'sd_576i'
+        hdr: text("hdr"), // 'dolby_vision'|'hdr10'|'hdr10_plus'|'hlg'
+        audio: text("audio"), // 'dolby_atmos'|'dtsx'|'auro_3d'|'dolby_truehd'|etc
+        audioChannels: text("audio_channels"), // '9.1'|'7.1'|'5.1'|'stereo'|'mono'
+        collectedAt: timestamp("collected_at", { withTimezone: true }),
+        updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+        createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    },
+    (t) => [index("user_collection_user_idx").on(t.userId)],
+);
+
 // ─── Sync Runs (N4-T03) ───────────────────────────────────────────────────────
 // Persists sync run summaries for diagnostics. Process-memory metrics are
 // written here on finalization. Retains the most recent 100 rows; older rows
