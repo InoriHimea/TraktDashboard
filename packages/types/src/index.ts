@@ -166,6 +166,18 @@ export interface UserRating {
     ratedAt: string | null;
 }
 
+export interface UserNote {
+    id: number;
+    mediaType: "episode" | "show" | "movie";
+    showId: number | null;
+    movieId: number | null;
+    season: number | null;
+    episode: number | null;
+    content: string;
+    updatedAt: string;
+    createdAt: string;
+}
+
 // ─── Sync ─────────────────────────────────────────────────────────────────────
 
 export type SyncStatus = "idle" | "running" | "completed" | "error";

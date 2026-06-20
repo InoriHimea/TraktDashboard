@@ -34,6 +34,7 @@ import { Tag } from "../components/ui/Tag";
 import { OverviewText } from "../components/ui/OverviewText";
 import { WatchedBadge } from "../components/ui/WatchedBadge";
 import { StarRating } from "../components/StarRating";
+import { NoteEditor } from "../components/NoteEditor";
 
 function DetailRow({ label, value }: { label: string; value: string }) {
     return (
@@ -479,6 +480,7 @@ export default function MovieDetailPage() {
                                     </div>
                                     <StarRating type="movie" localId={movieId} />
                                 </div>
+                                {movieId > 0 && <NoteEditor mediaType="movie" movieId={movieId} />}
                                 <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-5 shadow-lg shadow-black/10">
                                     <div className="mb-4 text-xs uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
                                         {t("movieDetail.profileWatch")}

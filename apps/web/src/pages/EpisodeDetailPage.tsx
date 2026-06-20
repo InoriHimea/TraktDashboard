@@ -12,6 +12,7 @@ import { WatchedBadge } from "../components/ui/WatchedBadge";
 import { resolveEpisodeStillLarge, resolveBackdropFallback } from "../lib/image";
 import { t } from "../lib/i18n";
 import { formatEpisode } from "../lib/utils";
+import { NoteEditor } from "../components/NoteEditor";
 
 function EpisodeDetailState({ message, action }: { message: string; action?: ReactNode }) {
     return (
@@ -219,6 +220,15 @@ export default function EpisodeDetailPage() {
                         episodes={data.seasonEpisodes || []}
                         watched={isWatched}
                         fallbackImageUrl={fallbackUrl}
+                    />
+                </section>
+
+                <section className="border-t border-border/40 pt-8 lg:pt-10">
+                    <NoteEditor
+                        mediaType="episode"
+                        showId={data.showId}
+                        season={data.seasonNumber}
+                        episode={data.episodeNumber}
                     />
                 </section>
             </main>

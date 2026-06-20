@@ -24,6 +24,7 @@ import type {
     DiscoverItem,
     UpNextItem,
     UserRating,
+    UserNote,
 } from "@trakt-dashboard/types";
 
 const API_BASE = "/api";
@@ -273,5 +274,34 @@ export const api = {
             request<ApiResponse<DiscoverItem[]>>(
                 `/discover?mediaType=${mediaType}&tab=${tab}&limit=${limit}`,
             ),
+    },
+    notes: {
+        get: (params: {
+            mediaType: "episode" | "show" | "movie";
+            showId?: number;
+            movieId?: number;
+            season?: number;
+            episode?: number;
+        }) => {
+            const p = new URLSearchParams({ mediaType: params.mediaType });
+            if (params.showId != null) p.set("showId", String(params.showId));
+            if (params.movieId != null) p.set("movieId", String(params.movieId));
+            if (params.season != null) p.set("season", String(params.season));
+            if (params.episode != null) p.set("episode", String(params.episode));
+            return request<ApiResponse<UserNote | null>>(`/notes?${p}`);
+        },
+        upsert: (body: {
+            mediaType: "episode" | "show" | "movie";
+            showId?: number | null;
+            movieId?: number | null;
+            season?: number | null;
+            episode?: number | null;
+            content: string;
+        }) =>
+            request<ApiResponse<UserNote>>("/notes", {
+                method: "PUT",
+                body: JSON.stringify(body),
+            }),
+        delete: (id: number) => request<{ ok: boolean }>(`/notes/${id}`, { method: "DELETE" }),
     },
 };

@@ -49,6 +49,16 @@ export const queryKeys = {
     upNext: ["up-next"] as const,
     ratings: ["ratings"] as const,
     jellyfinNowPlaying: ["jellyfin-now-playing"] as const,
+    notes: {
+        all: ["notes"] as const,
+        get: (
+            mediaType: string,
+            showId?: number,
+            movieId?: number,
+            season?: number,
+            episode?: number,
+        ) => ["notes", mediaType, showId, movieId, season, episode] as const,
+    },
     discover: {
         all: ["discover"] as const,
         list: (mediaType: string, tab: string) => ["discover", mediaType, tab] as const,

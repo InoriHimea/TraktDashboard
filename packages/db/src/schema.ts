@@ -364,6 +364,27 @@ export const userRatings = pgTable(
     ],
 );
 
+// ─── User Notes ───────────────────────────────────────────────────────────────
+
+export const userNotes = pgTable(
+    "user_notes",
+    {
+        id: serial("id").primaryKey(),
+        userId: integer("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
+        mediaType: text("media_type").notNull(), // 'episode' | 'show' | 'movie'
+        showId: integer("show_id").references(() => shows.id, { onDelete: "cascade" }),
+        movieId: integer("movie_id").references(() => movies.id, { onDelete: "cascade" }),
+        season: integer("season"),
+        episode: integer("episode"),
+        content: text("content").notNull().default(""),
+        updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+        createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    },
+    (t) => [index("user_notes_user_idx").on(t.userId)],
+);
+
 // ─── Sync Runs (N4-T03) ───────────────────────────────────────────────────────
 // Persists sync run summaries for diagnostics. Process-memory metrics are
 // written here on finalization. Retains the most recent 100 rows; older rows

@@ -456,5 +456,12 @@
         "addWatchlist": "加入待看",
         "removeWatchlist": "移出待看",
         "error": "加载失败，请重试"
+    },
+    "notes": {
+        "title": "我的笔记",
+        "placeholder": "写下你的观后感……",
+        "saved": "已保存",
+        "unsaved": "未保存",
+        "delete": "删除笔记"
     }
 }

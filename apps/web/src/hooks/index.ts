@@ -21,6 +21,7 @@ import type {
     DiscoverItem,
     UpNextItem,
     UserRating,
+    UserNote,
 } from "@trakt-dashboard/types";
 import { api } from "../lib/api";
 
@@ -482,6 +483,46 @@ export function useMarkEpisodeWatched() {
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: queryKeys.upNext });
             qc.invalidateQueries({ queryKey: queryKeys.showsProgress.all });
+        },
+    });
+}
+
+export function useNote(params: {
+    mediaType: "episode" | "show" | "movie";
+    showId?: number;
+    movieId?: number;
+    season?: number;
+    episode?: number;
+}) {
+    return useQuery<UserNote | null>({
+        queryKey: queryKeys.notes.get(
+            params.mediaType,
+            params.showId,
+            params.movieId,
+            params.season,
+            params.episode,
+        ),
+        queryFn: () => api.notes.get(params).then((r) => r.data ?? null),
+        staleTime: 1000 * 60 * 2,
+    });
+}
+
+export function useUpsertNote() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (body: Parameters<typeof api.notes.upsert>[0]) => api.notes.upsert(body),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: queryKeys.notes.all });
+        },
+    });
+}
+
+export function useDeleteNote() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => api.notes.delete(id),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: queryKeys.notes.all });
         },
     });
 }

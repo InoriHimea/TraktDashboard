@@ -456,5 +456,12 @@
         "addWatchlist": "Add to watchlist",
         "removeWatchlist": "Remove from watchlist",
         "error": "Failed to load, please try again"
+    },
+    "notes": {
+        "title": "My Notes",
+        "placeholder": "Write your thoughts…",
+        "saved": "Saved",
+        "unsaved": "Unsaved",
+        "delete": "Delete note"
     }
 }

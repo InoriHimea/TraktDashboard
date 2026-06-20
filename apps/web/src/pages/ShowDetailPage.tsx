@@ -16,6 +16,7 @@ import { SeasonTab } from "../components/SeasonTab";
 import { EpisodeGrid } from "../components/EpisodeGrid";
 import { WatchHistoryPanel } from "../components/WatchHistoryPanel";
 import { StarRating } from "../components/StarRating";
+import { NoteEditor } from "../components/NoteEditor";
 import { Button } from "../components/ui/Button";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { t } from "../lib/i18n";
@@ -257,6 +258,8 @@ export default function ShowDetailPage() {
                         <StarRating type="show" localId={showId} />
                     </div>
                 )}
+
+                {isValidId && <NoteEditor mediaType="show" showId={showId} />}
 
                 {/* 季/集区域 */}
                 <div
