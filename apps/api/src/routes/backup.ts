@@ -291,6 +291,15 @@ backupRoutes.post("/trigger", async (c) => {
         if (provider === "gdrive") {
             const token = parseGDriveToken(row.gdriveToken);
             if (!token) {
+                await db.insert(backupRuns).values({
+                    userId,
+                    provider,
+                    status: "failed",
+                    filename,
+                    error: "Google Drive not connected",
+                    startedAt,
+                    finishedAt: new Date(),
+                });
                 results.push({ provider, ok: false, error: "Google Drive not connected" });
                 continue;
             }
@@ -333,6 +342,15 @@ backupRoutes.post("/trigger", async (c) => {
         } else if (provider === "webdav") {
             const cfg = buildWebDAVConfig(row);
             if (!cfg) {
+                await db.insert(backupRuns).values({
+                    userId,
+                    provider,
+                    status: "failed",
+                    filename,
+                    error: "WebDAV not configured",
+                    startedAt,
+                    finishedAt: new Date(),
+                });
                 results.push({ provider, ok: false, error: "WebDAV not configured" });
                 continue;
             }
@@ -367,7 +385,7 @@ backupRoutes.post("/trigger", async (c) => {
     }
 
     const anyOk = results.some((r) => r.ok);
-    return c.json({ ok: anyOk, results });
+    return c.json({ ok: anyOk, results }, anyOk ? 200 : 502);
 });
 
 // ─── Backup History ───────────────────────────────────────────────────────────

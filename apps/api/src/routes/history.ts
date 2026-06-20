@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { getDb, watchHistory, episodes, shows, movies } from "@trakt-dashboard/db";
-import { eq, and, gte, lte, desc, sql, ilike, or } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql, ilike, or, isNull } from "drizzle-orm";
 import { apiOk } from "../lib/response.js";
 import { parseBoundedInt } from "../lib/number.js";
 import { toIsoOrNull } from "../lib/datetime.js";
@@ -307,12 +307,18 @@ historyRoutes.post("/import", async (c) => {
                     continue;
                 }
 
-                // Duplicate check
+                // Duplicate check — include watchedAt in the key so a null-timestamp
+                // entry only deduplicates against other null-timestamp entries, not
+                // against existing timestamped rows for the same episode.
                 const dupConds = [
                     eq(watchHistory.userId, userId),
                     eq(watchHistory.episodeId, epRow.id),
                 ];
-                if (watchedAt) dupConds.push(eq(watchHistory.watchedAt, watchedAt));
+                if (watchedAt !== null) {
+                    dupConds.push(eq(watchHistory.watchedAt, watchedAt));
+                } else {
+                    dupConds.push(isNull(watchHistory.watchedAt));
+                }
                 const [dup] = await db
                     .select({ id: watchHistory.id })
                     .from(watchHistory)
@@ -351,7 +357,11 @@ historyRoutes.post("/import", async (c) => {
                     eq(watchHistory.userId, userId),
                     eq(watchHistory.movieId, movieId),
                 ];
-                if (watchedAt) dupConds.push(eq(watchHistory.watchedAt, watchedAt));
+                if (watchedAt !== null) {
+                    dupConds.push(eq(watchHistory.watchedAt, watchedAt));
+                } else {
+                    dupConds.push(isNull(watchHistory.watchedAt));
+                }
                 const [dup] = await db
                     .select({ id: watchHistory.id })
                     .from(watchHistory)
@@ -373,6 +383,7 @@ historyRoutes.post("/import", async (c) => {
             }
         } catch (err) {
             if (errors.length < 20) errors.push(String(err));
+            skipped++;
         }
     }
 

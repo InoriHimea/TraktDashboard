@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { getDb, userLists, userListItems, shows, movies } from "@trakt-dashboard/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { z } from "zod";
 import { validateBody } from "../lib/validate.js";
 import { getTraktClient, TraktApiError } from "../services/trakt.js";
@@ -140,7 +140,7 @@ listsRoutes.put("/:id", async (c) => {
     const [updated] = await db
         .update(userLists)
         .set({ ...updates, updatedAt: new Date() })
-        .where(eq(userLists.id, listId))
+        .where(and(eq(userLists.id, listId), eq(userLists.userId, userId)))
         .returning();
 
     return c.json({ data: toList(updated) });
@@ -289,10 +289,10 @@ listsRoutes.post("/:id/items", async (c) => {
         })
         .returning();
 
-    // Update item_count
+    // Update item_count atomically to avoid lost increments under concurrent requests.
     await db
         .update(userLists)
-        .set({ itemCount: list.itemCount + 1, updatedAt: now })
+        .set({ itemCount: sql`${userLists.itemCount} + 1`, updatedAt: now })
         .where(eq(userLists.id, listId));
 
     return c.json({ data: { id: item.id } }, 201);
@@ -348,7 +348,7 @@ listsRoutes.delete("/:id/items/:itemId", async (c) => {
     await db.delete(userListItems).where(eq(userListItems.id, itemId));
     await db
         .update(userLists)
-        .set({ itemCount: Math.max(0, list.itemCount - 1), updatedAt: new Date() })
+        .set({ itemCount: sql`GREATEST(${userLists.itemCount} - 1, 0)`, updatedAt: new Date() })
         .where(eq(userLists.id, listId));
 
     return c.json({ ok: true });

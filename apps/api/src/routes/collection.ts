@@ -84,6 +84,10 @@ collectionRoutes.get("/check", async (c) => {
     const movieId = c.req.query("movieId") ? Number(c.req.query("movieId")) : null;
     const db = getDb();
 
+    if (showId && movieId) {
+        return c.json({ error: "Provide either showId or movieId, not both" }, 400);
+    }
+
     const conds = [eq(userCollection.userId, userId)];
     if (showId) {
         conds.push(eq(userCollection.showId, showId));
@@ -314,6 +318,8 @@ collectionRoutes.delete("/:id", async (c) => {
         .limit(1);
     if (!item) return c.json({ error: "Not found" }, 404);
 
-    await db.delete(userCollection).where(eq(userCollection.id, id));
+    await db
+        .delete(userCollection)
+        .where(and(eq(userCollection.id, id), eq(userCollection.userId, userId)));
     return c.json({ ok: true });
 });

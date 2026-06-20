@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { createGzip } from "node:zlib";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -45,6 +46,12 @@ export interface DeviceAuthResponse {
 }
 
 export async function startGDriveDeviceFlow(): Promise<DeviceAuthResponse> {
+    if (!GDRIVE_CLIENT_SECRET) {
+        throw new Error("GDRIVE_CLIENT_SECRET is not configured");
+    }
+    if (GDRIVE_CLIENT_ID.includes("YOUR_CLIENT_ID")) {
+        throw new Error("GDRIVE_CLIENT_ID is not configured");
+    }
     const res = await fetch(GDRIVE_DEVICE_AUTH_URL, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -206,10 +213,13 @@ export async function listGDriveBackups(
 
 export async function deleteGDriveFile(token: GDriveToken, fileId: string): Promise<void> {
     const refreshedToken = await refreshGDriveToken(token);
-    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${refreshedToken.access_token}` },
     });
+    if (!res.ok && res.status !== 404) {
+        throw new Error(`GDrive DELETE failed (${res.status})`);
+    }
 }
 
 // ─── WebDAV ───────────────────────────────────────────────────────────────────
@@ -230,8 +240,8 @@ export async function ensureWebDAVFolder(cfg: WebDAVConfig): Promise<void> {
         method: "MKCOL",
         headers: { Authorization: webdavAuth(cfg) },
     });
-    // 201 Created or 405 Method Not Allowed (folder already exists) — both OK
-    if (res.status !== 201 && res.status !== 405 && res.status !== 200) {
+    // 201 Created, 200 OK, 405 Method Not Allowed (folder exists), 207 Multi-Status — all OK
+    if (res.status !== 201 && res.status !== 405 && res.status !== 200 && res.status !== 207) {
         throw new Error(`WebDAV MKCOL failed: ${res.status}`);
     }
 }
@@ -300,10 +310,13 @@ export async function deleteWebDAVFile(cfg: WebDAVConfig, filePath: string): Pro
     // filePath is the href returned by PROPFIND (may be absolute path)
     const base = new URL(cfg.url).origin;
     const url = filePath.startsWith("http") ? filePath : `${base}${filePath}`;
-    await fetch(url, {
+    const res = await fetch(url, {
         method: "DELETE",
         headers: { Authorization: webdavAuth(cfg) },
     });
+    if (!res.ok && res.status !== 404) {
+        throw new Error(`WebDAV DELETE failed (${res.status})`);
+    }
 }
 
 // ─── pg_dump ──────────────────────────────────────────────────────────────────
@@ -313,24 +326,35 @@ export async function dumpDatabase(): Promise<Buffer> {
     if (!databaseUrl) throw new Error("DATABASE_URL not set");
 
     return new Promise<Buffer>((resolve, reject) => {
-        const proc = spawn(
-            "sh",
-            ["-c", `pg_dump --format=plain "${databaseUrl.replace(/"/g, '\\"')}" | gzip`],
-            { stdio: ["ignore", "pipe", "pipe"] },
-        );
+        let settled = false;
+        const settle = (fn: () => void) => {
+            if (!settled) {
+                settled = true;
+                fn();
+            }
+        };
+
+        // Spawn pg_dump directly — no sh -c, so DATABASE_URL cannot inject shell commands.
+        const pg = spawn("pg_dump", ["--format=plain", databaseUrl], {
+            stdio: ["ignore", "pipe", "pipe"],
+        });
+        const gz = createGzip();
         const chunks: Buffer[] = [];
         const errChunks: Buffer[] = [];
-        proc.stdout!.on("data", (d: Buffer) => chunks.push(d));
-        proc.stderr!.on("data", (d: Buffer) => errChunks.push(d));
-        proc.on("close", (code) => {
+
+        pg.stdout!.pipe(gz);
+        gz.on("data", (d: Buffer) => chunks.push(d));
+        gz.on("end", () => settle(() => resolve(Buffer.concat(chunks))));
+
+        pg.stderr!.on("data", (d: Buffer) => errChunks.push(d));
+        pg.on("close", (code) => {
             if (code !== 0) {
                 const errMsg = Buffer.concat(errChunks).toString("utf8").slice(0, 300);
-                reject(new Error(`pg_dump failed (exit ${code}): ${errMsg}`));
-            } else {
-                resolve(Buffer.concat(chunks));
+                settle(() => reject(new Error(`pg_dump failed (exit ${code}): ${errMsg}`)));
             }
         });
-        proc.on("error", reject);
+        pg.on("error", (err) => settle(() => reject(err)));
+        gz.on("error", (err) => settle(() => reject(err)));
     });
 }
 
