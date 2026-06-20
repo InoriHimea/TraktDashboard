@@ -36,6 +36,7 @@ function makeStats(over: Partial<StatsOverview> = {}): StatsOverview {
         avgDailyWatches30d: 2.3,
         heatmap: [],
         weekdayDistribution: [],
+        ratingDistribution: [],
         ...over,
     };
 }

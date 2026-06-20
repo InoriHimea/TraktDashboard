@@ -25,6 +25,7 @@ import { SignalMetrics } from "./SignalMetrics";
 import type { SignalMetric } from "./SignalMetrics";
 import { WatchHeatmap } from "./WatchHeatmap";
 import { WatchPatterns } from "./WatchPatterns";
+import { RatingDistribution } from "./RatingDistribution";
 
 export default function StatsPage() {
     const { data: stats, isLoading, error } = useStats();
@@ -397,6 +398,13 @@ export default function StatsPage() {
                 <div style={{ marginTop: "24px" }}>
                     <WatchHeatmap heatmap={stats.heatmap ?? []} />
                 </div>
+
+                {/* ── FULL-WIDTH: Rating distribution ── */}
+                {(stats.ratingDistribution ?? []).some((r) => r.count > 0) && (
+                    <div style={{ marginTop: "24px" }}>
+                        <RatingDistribution ratingDistribution={stats.ratingDistribution ?? []} />
+                    </div>
+                )}
             </div>
         </div>
     );

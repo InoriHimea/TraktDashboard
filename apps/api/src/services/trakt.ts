@@ -193,6 +193,32 @@ export interface TraktWatchlistMovie {
     };
 }
 
+export interface TraktRatingShow {
+    rated_at: string;
+    rating: number; // 1-10
+    show: {
+        title: string;
+        year: number | null;
+        ids: {
+            trakt: number;
+            slug: string;
+            tvdb: number | null;
+            imdb: string | null;
+            tmdb: number | null;
+        };
+    };
+}
+
+export interface TraktRatingMovie {
+    rated_at: string;
+    rating: number; // 1-10
+    movie: {
+        title: string;
+        year: number | null;
+        ids: { trakt: number; slug: string; imdb: string | null; tmdb: number | null };
+    };
+}
+
 export interface TraktShowProgress {
     aired: number;
     completed: number;
@@ -750,5 +776,41 @@ export function getTraktClient() {
                 query: q,
                 limit: String(limit),
             }),
+
+        // Rating methods
+        getRatingsShows: (userId: number) =>
+            traktFetch<TraktRatingShow[]>("/sync/ratings/shows", userId),
+
+        getRatingsMovies: (userId: number) =>
+            traktFetch<TraktRatingMovie[]>("/sync/ratings/movies", userId),
+
+        addRating: async (
+            userId: number,
+            type: "shows" | "movies",
+            ids: { trakt?: number; tmdb?: number; imdb?: string },
+            rating: number,
+        ): Promise<void> => {
+            await traktFetchRaw("/sync/ratings", userId, undefined, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    [type]: [{ ids, rating }],
+                }),
+            });
+        },
+
+        removeRating: async (
+            userId: number,
+            type: "shows" | "movies",
+            ids: { trakt?: number; tmdb?: number; imdb?: string },
+        ): Promise<void> => {
+            await traktFetchRaw("/sync/ratings/remove", userId, undefined, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    [type]: [{ ids }],
+                }),
+            });
+        },
     };
 }

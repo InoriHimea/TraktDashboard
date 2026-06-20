@@ -11,6 +11,7 @@ import {
     userSettings,
     watchResetCursors,
     watchlist,
+    userRatings,
 } from "@trakt-dashboard/db";
 import {
     eq,
@@ -26,7 +27,13 @@ import {
     ne,
 } from "drizzle-orm";
 import { getTraktClient } from "./trakt.js";
-import type { TraktMovieHistoryEntry, TraktWatchedMovie, TraktShowProgress } from "./trakt.js";
+import type {
+    TraktMovieHistoryEntry,
+    TraktWatchedMovie,
+    TraktShowProgress,
+    TraktRatingShow,
+    TraktRatingMovie,
+} from "./trakt.js";
 import { getTmdbShow, getTmdbSeason, getTmdbMovie } from "./tmdb.js";
 import pLimit from "p-limit";
 import dayjs from "dayjs";
@@ -260,6 +267,13 @@ export async function triggerFullSync(userId: number): Promise<void> {
             .set({ currentShow: "Syncing watchlist…", updatedAt: new Date() })
             .where(eq(syncState.userId, userId));
         await syncWatchlist(userId);
+
+        // Sync ratings after watchlist
+        await db
+            .update(syncState)
+            .set({ currentShow: "Syncing ratings…", updatedAt: new Date() })
+            .where(eq(syncState.userId, userId));
+        await syncRatings(userId);
 
         await db
             .update(syncState)
@@ -544,6 +558,17 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
             await syncWatchlist(userId);
         } catch (e) {
             console.error("[sync:incr] Watchlist sync failed:", toErrorMessage(e));
+        }
+
+        // ── Incremental ratings ───────────────────────────────────────────────
+        try {
+            await db
+                .update(syncState)
+                .set({ currentShow: "Syncing ratings…", updatedAt: new Date() })
+                .where(eq(syncState.userId, userId));
+            await syncRatings(userId);
+        } catch (e) {
+            console.error("[sync:incr] Ratings sync failed:", toErrorMessage(e));
         }
 
         // Conservative cursor advance: if any show failed, roll back the cursor
@@ -1859,6 +1884,92 @@ export async function syncWatchlist(userId: number): Promise<void> {
         );
     } catch (e) {
         console.error(`[sync:watchlist] Failed to sync watchlist:`, toErrorMessage(e));
+    }
+}
+
+// ─── Ratings sync ─────────────────────────────────────────────────────────────
+
+export async function syncRatings(userId: number): Promise<void> {
+    const db = getDb();
+    const trakt = getTraktClient();
+
+    try {
+        const [showRatings, movieRatings] = await Promise.all([
+            trakt.getRatingsShows(userId) as Promise<TraktRatingShow[]>,
+            trakt.getRatingsMovies(userId) as Promise<TraktRatingMovie[]>,
+        ]);
+
+        // Resolve show Trakt IDs → local show IDs
+        const showTraktIds = showRatings.flatMap((r) =>
+            r.show.ids.trakt ? [r.show.ids.trakt] : [],
+        );
+        const localShows =
+            showTraktIds.length > 0
+                ? await db
+                      .select({ id: shows.id, traktId: shows.traktId })
+                      .from(shows)
+                      .where(inArray(shows.traktId, showTraktIds))
+                : [];
+        const showIdByTraktId = new Map(localShows.map((s) => [s.traktId, s.id]));
+
+        // Resolve movie Trakt IDs → local movie IDs
+        const movieTraktIds = movieRatings.flatMap((r) =>
+            r.movie.ids.trakt ? [r.movie.ids.trakt] : [],
+        );
+        const localMovies =
+            movieTraktIds.length > 0
+                ? await db
+                      .select({ id: movies.id, traktId: movies.traktId })
+                      .from(movies)
+                      .where(inArray(movies.traktId, movieTraktIds))
+                : [];
+        const movieIdByTraktId = new Map(localMovies.map((m) => [m.traktId, m.id]));
+
+        // Upsert show ratings
+        for (const r of showRatings) {
+            const localId = showIdByTraktId.get(r.show.ids.trakt);
+            if (!localId) continue;
+            await db
+                .insert(userRatings)
+                .values({
+                    userId,
+                    mediaType: "show",
+                    showId: localId,
+                    movieId: null,
+                    rating: r.rating,
+                    ratedAt: r.rated_at ? new Date(r.rated_at) : null,
+                })
+                .onConflictDoUpdate({
+                    target: [userRatings.userId, userRatings.showId],
+                    set: { rating: r.rating, ratedAt: r.rated_at ? new Date(r.rated_at) : null },
+                });
+        }
+
+        // Upsert movie ratings
+        for (const r of movieRatings) {
+            const localId = movieIdByTraktId.get(r.movie.ids.trakt);
+            if (!localId) continue;
+            await db
+                .insert(userRatings)
+                .values({
+                    userId,
+                    mediaType: "movie",
+                    showId: null,
+                    movieId: localId,
+                    rating: r.rating,
+                    ratedAt: r.rated_at ? new Date(r.rated_at) : null,
+                })
+                .onConflictDoUpdate({
+                    target: [userRatings.userId, userRatings.movieId],
+                    set: { rating: r.rating, ratedAt: r.rated_at ? new Date(r.rated_at) : null },
+                });
+        }
+
+        console.log(
+            `[sync:ratings] Synced ${showRatings.length} show ratings and ${movieRatings.length} movie ratings`,
+        );
+    } catch (e) {
+        console.error("[sync:ratings] Failed to sync ratings:", e instanceof Error ? e.message : e);
     }
 }
 

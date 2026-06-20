@@ -47,6 +47,7 @@ export const queryKeys = {
     },
 
     upNext: ["up-next"] as const,
+    ratings: ["ratings"] as const,
 
     history: {
         all: ["history"] as const,

@@ -427,5 +427,14 @@
         "title": "Up Next",
         "markWatched": "Mark watched",
         "marked": "Watched"
+    },
+    "rating": {
+        "myRating": "My Rating",
+        "prompt": "Rate this",
+        "scoreLabel": "{score} / 10",
+        "ratingsUnit": "ratings",
+        "distributionTitle": "Rating Distribution",
+        "distributionSubtitle": "{count} ratings total",
+        "avgLabel": "Average {avg} / 10"
     }
 }

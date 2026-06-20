@@ -15,6 +15,7 @@ import { HeroSection } from "../components/HeroSection";
 import { SeasonTab } from "../components/SeasonTab";
 import { EpisodeGrid } from "../components/EpisodeGrid";
 import { WatchHistoryPanel } from "../components/WatchHistoryPanel";
+import { StarRating } from "../components/StarRating";
 import { Button } from "../components/ui/Button";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { t } from "../lib/i18n";
@@ -226,6 +227,36 @@ export default function ShowDetailPage() {
                     inWatchlist={inWatchlist}
                     isComplete={isComplete}
                 />
+
+                {/* 我的评分 */}
+                {isValidId && (
+                    <div
+                        style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "6px",
+                            padding: "16px 20px",
+                            borderRadius: "14px",
+                            border: "1px solid var(--color-border-subtle)",
+                            background: "var(--color-surface)",
+                            width: "fit-content",
+                        }}
+                    >
+                        <p
+                            style={{
+                                fontSize: "11px",
+                                fontWeight: 600,
+                                color: "var(--color-text-muted)",
+                                letterSpacing: "0.08em",
+                                textTransform: "uppercase",
+                                margin: 0,
+                            }}
+                        >
+                            {t("rating.myRating")}
+                        </p>
+                        <StarRating type="show" localId={showId} />
+                    </div>
+                )}
 
                 {/* 季/集区域 */}
                 <div

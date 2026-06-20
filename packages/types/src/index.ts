@@ -155,6 +155,17 @@ export interface UpNextItem {
     };
 }
 
+// ─── Ratings ─────────────────────────────────────────────────────────────────
+
+export interface UserRating {
+    id: number;
+    mediaType: "show" | "movie";
+    showId: number | null;
+    movieId: number | null;
+    rating: number; // 1-10
+    ratedAt: string | null;
+}
+
 // ─── Sync ─────────────────────────────────────────────────────────────────────
 
 export type SyncStatus = "idle" | "running" | "completed" | "error";
@@ -270,6 +281,7 @@ export interface StatsOverview {
     avgDailyWatches30d: number;
     heatmap: Array<{ date: string; count: number }>;
     weekdayDistribution: Array<{ weekday: number; count: number }>;
+    ratingDistribution: Array<{ rating: number; count: number }>;
 }
 
 // ─── Search ──────────────────────────────────────────────────────────────────

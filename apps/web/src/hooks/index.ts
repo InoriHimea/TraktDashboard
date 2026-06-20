@@ -18,6 +18,7 @@ import type {
     JellyfinEpisode,
     JellyfinMovie,
     UpNextItem,
+    UserRating,
 } from "@trakt-dashboard/types";
 import { api } from "../lib/api";
 
@@ -405,6 +406,43 @@ export function useUpNext() {
         queryKey: queryKeys.upNext,
         queryFn: () => api.shows.upNext().then((r) => r.data),
         staleTime: 1000 * 60 * 2,
+    });
+}
+
+export function useRatings() {
+    return useQuery<UserRating[]>({
+        queryKey: queryKeys.ratings,
+        queryFn: () => api.ratings.list("all").then((r) => r.data),
+        staleTime: 1000 * 60 * 5,
+    });
+}
+
+export function useSetRating() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({
+            type,
+            localId,
+            rating,
+        }: {
+            type: "show" | "movie";
+            localId: number;
+            rating: number;
+        }) => api.ratings.set(type, localId, rating),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: queryKeys.ratings });
+        },
+    });
+}
+
+export function useRemoveRating() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ type, localId }: { type: "show" | "movie"; localId: number }) =>
+            api.ratings.remove(type, localId),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: queryKeys.ratings });
+        },
     });
 }
 

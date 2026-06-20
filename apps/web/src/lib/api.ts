@@ -21,6 +21,7 @@ import type {
     JellyfinMovie,
     SearchResult,
     UpNextItem,
+    UserRating,
 } from "@trakt-dashboard/types";
 
 const API_BASE = "/api";
@@ -219,6 +220,20 @@ export const api = {
             request<{ ok: boolean }>("/notifications/unsubscribe", {
                 method: "POST",
                 body: JSON.stringify({ endpoint }),
+            }),
+    },
+    ratings: {
+        list: (type: "show" | "movie" | "all" = "all") =>
+            request<ApiResponse<UserRating[]>>(`/ratings?type=${type}`),
+        set: (type: "show" | "movie", localId: number, rating: number) =>
+            request<{ ok: boolean; rating: number }>("/ratings", {
+                method: "PUT",
+                body: JSON.stringify({ type, localId, rating }),
+            }),
+        remove: (type: "show" | "movie", localId: number) =>
+            request<{ ok: boolean }>("/ratings", {
+                method: "DELETE",
+                body: JSON.stringify({ type, localId }),
             }),
     },
     search: {

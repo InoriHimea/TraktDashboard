@@ -16,6 +16,7 @@ import { historyRoutes } from "./routes/history.js";
 import { notificationRoutes } from "./routes/notifications.js";
 import { jellyfinRoutes } from "./routes/jellyfin.js";
 import { searchRoutes } from "./routes/search.js";
+import { ratingsRoutes } from "./routes/ratings.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { startScheduler } from "./jobs/scheduler.js";
 import { encryptLegacyTokensAtRest } from "./lib/token-migration.js";
@@ -54,6 +55,7 @@ api.route("/history", historyRoutes);
 api.route("/notifications", notificationRoutes);
 api.route("/jellyfin", jellyfinRoutes);
 api.route("/search", searchRoutes);
+api.route("/ratings", ratingsRoutes);
 
 const routes = app.route("/api", api);
 

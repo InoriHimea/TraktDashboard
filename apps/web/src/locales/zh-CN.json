@@ -427,5 +427,14 @@
         "title": "接着看",
         "markWatched": "标记已看",
         "marked": "已看"
+    },
+    "rating": {
+        "myRating": "我的评分",
+        "prompt": "点击评分",
+        "scoreLabel": "{score} 分",
+        "ratingsUnit": "条评分",
+        "distributionTitle": "评分分布",
+        "distributionSubtitle": "共 {count} 条评分",
+        "avgLabel": "均分 {avg} / 10"
     }
 }
