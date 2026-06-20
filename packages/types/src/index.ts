@@ -284,6 +284,22 @@ export interface StatsOverview {
     ratingDistribution: Array<{ rating: number; count: number }>;
 }
 
+// ─── Discover ────────────────────────────────────────────────────────────────
+
+export interface DiscoverItem {
+    type: "show" | "movie";
+    traktId: number;
+    traktSlug: string;
+    title: string;
+    year: number | null;
+    tmdbId: number | null;
+    imdbId: string | null;
+    watchers?: number;
+    localId: number | null;
+    posterPath: string | null;
+    inWatchlist: boolean;
+}
+
 // ─── Search ──────────────────────────────────────────────────────────────────
 
 export interface SearchResult {

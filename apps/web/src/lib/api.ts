@@ -21,6 +21,7 @@ import type {
     JellyfinMovie,
     JellyfinNowPlaying,
     SearchResult,
+    DiscoverItem,
     UpNextItem,
     UserRating,
 } from "@trakt-dashboard/types";
@@ -266,5 +267,11 @@ export const api = {
                 method: "DELETE",
             }),
         nowPlaying: () => request<ApiResponse<JellyfinNowPlaying | null>>("/jellyfin/now-playing"),
+    },
+    discover: {
+        list: (mediaType: "show" | "movie", tab: "trending" | "popular", limit = 20) =>
+            request<ApiResponse<DiscoverItem[]>>(
+                `/discover?mediaType=${mediaType}&tab=${tab}&limit=${limit}`,
+            ),
     },
 };

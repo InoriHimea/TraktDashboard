@@ -18,6 +18,7 @@ import type {
     JellyfinEpisode,
     JellyfinMovie,
     JellyfinNowPlaying,
+    DiscoverItem,
     UpNextItem,
     UserRating,
 } from "@trakt-dashboard/types";
@@ -444,6 +445,14 @@ export function useRemoveRating() {
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: queryKeys.ratings });
         },
+    });
+}
+
+export function useDiscover(mediaType: "show" | "movie", tab: "trending" | "popular") {
+    return useQuery<DiscoverItem[]>({
+        queryKey: queryKeys.discover.list(mediaType, tab),
+        queryFn: () => api.discover.list(mediaType, tab).then((r) => r.data),
+        staleTime: 1000 * 60 * 5,
     });
 }
 

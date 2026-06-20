@@ -50,6 +50,7 @@
         "progress": "Progress",
         "tvShows": "TV Shows",
         "movies": "Movies",
+        "discover": "Discover",
         "calendar": "Calendar",
         "watchlist": "Watchlist",
         "history": "History",
@@ -443,5 +444,17 @@
         "paused": "Paused",
         "catchUp": "Mark watched",
         "marked": "Watched"
+    },
+    "discover": {
+        "title": "Discover",
+        "subtitle": "Explore what's trending and popular on Trakt",
+        "shows": "Shows",
+        "movies": "Movies",
+        "trending": "Trending",
+        "popular": "Popular",
+        "watching": "watching",
+        "addWatchlist": "Add to watchlist",
+        "removeWatchlist": "Remove from watchlist",
+        "error": "Failed to load, please try again"
     }
 }

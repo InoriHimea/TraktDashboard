@@ -219,6 +219,50 @@ export interface TraktRatingMovie {
     };
 }
 
+// ─── Discovery ────────────────────────────────────────────────────────────────
+
+export interface TraktTrendingShow {
+    watchers: number;
+    show: {
+        title: string;
+        year: number | null;
+        ids: {
+            trakt: number;
+            slug: string;
+            tvdb: number | null;
+            imdb: string | null;
+            tmdb: number | null;
+        };
+    };
+}
+
+export interface TraktPopularShow {
+    title: string;
+    year: number | null;
+    ids: {
+        trakt: number;
+        slug: string;
+        tvdb: number | null;
+        imdb: string | null;
+        tmdb: number | null;
+    };
+}
+
+export interface TraktTrendingMovie {
+    watchers: number;
+    movie: {
+        title: string;
+        year: number | null;
+        ids: { trakt: number; slug: string; imdb: string | null; tmdb: number | null };
+    };
+}
+
+export interface TraktPopularMovie {
+    title: string;
+    year: number | null;
+    ids: { trakt: number; slug: string; imdb: string | null; tmdb: number | null };
+}
+
 export interface TraktShowProgress {
     aired: number;
     completed: number;
@@ -776,6 +820,16 @@ export function getTraktClient() {
                 query: q,
                 limit: String(limit),
             }),
+
+        // Discovery
+        getTrendingShows: (userId: number, limit = 20) =>
+            traktFetch<TraktTrendingShow[]>("/shows/trending", userId, { limit: String(limit) }),
+        getPopularShows: (userId: number, limit = 20) =>
+            traktFetch<TraktPopularShow[]>("/shows/popular", userId, { limit: String(limit) }),
+        getTrendingMovies: (userId: number, limit = 20) =>
+            traktFetch<TraktTrendingMovie[]>("/movies/trending", userId, { limit: String(limit) }),
+        getPopularMovies: (userId: number, limit = 20) =>
+            traktFetch<TraktPopularMovie[]>("/movies/popular", userId, { limit: String(limit) }),
 
         // Rating methods
         getRatingsShows: (userId: number) =>

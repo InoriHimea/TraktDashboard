@@ -50,6 +50,7 @@
         "progress": "进度",
         "tvShows": "电视节目",
         "movies": "电影",
+        "discover": "发现",
         "calendar": "播出日历",
         "watchlist": "待看列表",
         "history": "观看历史",
@@ -443,5 +444,17 @@
         "paused": "已暂停",
         "catchUp": "标记已看",
         "marked": "已看"
+    },
+    "discover": {
+        "title": "发现",
+        "subtitle": "探索 Trakt 上正在流行的剧集与电影",
+        "shows": "剧集",
+        "movies": "电影",
+        "trending": "趋势",
+        "popular": "热门",
+        "watching": "人在看",
+        "addWatchlist": "加入待看",
+        "removeWatchlist": "移出待看",
+        "error": "加载失败，请重试"
     }
 }
