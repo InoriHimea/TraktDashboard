@@ -22,6 +22,8 @@ import type {
     UpNextItem,
     UserRating,
     UserNote,
+    UserList,
+    UserListItem,
 } from "@trakt-dashboard/types";
 import { api } from "../lib/api";
 
@@ -524,5 +526,96 @@ export function useDeleteNote() {
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: queryKeys.notes.all });
         },
+    });
+}
+
+// ── Lists ─────────────────────────────────────────────────────────────────────
+
+export function useLists() {
+    return useQuery<UserList[]>({
+        queryKey: queryKeys.lists.all,
+        queryFn: () => api.lists.getAll().then((r) => r.data),
+        staleTime: 1000 * 60 * 2,
+    });
+}
+
+export function useListItems(listId: number | null) {
+    return useQuery<UserListItem[]>({
+        queryKey: queryKeys.lists.items(listId ?? 0),
+        queryFn: () => api.lists.getItems(listId!).then((r) => r.data),
+        enabled: listId != null,
+        staleTime: 1000 * 60,
+    });
+}
+
+export function useCreateList() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (body: { name: string; description?: string; privacy?: string }) =>
+            api.lists.create(body),
+        onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.lists.all }),
+    });
+}
+
+export function useUpdateList() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({
+            id,
+            ...body
+        }: {
+            id: number;
+            name?: string;
+            description?: string;
+            privacy?: string;
+        }) => api.lists.update(id, body),
+        onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.lists.all }),
+    });
+}
+
+export function useDeleteList() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => api.lists.delete(id),
+        onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.lists.all }),
+    });
+}
+
+export function useAddListItem() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({
+            listId,
+            ...body
+        }: {
+            listId: number;
+            mediaType: "show" | "movie";
+            localId: number;
+            notes?: string;
+        }) => api.lists.addItem(listId, body),
+        onSuccess: (_data, vars) => {
+            qc.invalidateQueries({ queryKey: queryKeys.lists.items(vars.listId) });
+            qc.invalidateQueries({ queryKey: queryKeys.lists.all });
+        },
+    });
+}
+
+export function useRemoveListItem() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ listId, itemId }: { listId: number; itemId: number }) =>
+            api.lists.removeItem(listId, itemId),
+        onSuccess: (_data, vars) => {
+            qc.invalidateQueries({ queryKey: queryKeys.lists.items(vars.listId) });
+            qc.invalidateQueries({ queryKey: queryKeys.lists.all });
+        },
+    });
+}
+
+export function useSyncLists() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: () => api.lists.sync(),
+        onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.lists.all }),
     });
 }

@@ -166,6 +166,35 @@ export interface UserRating {
     ratedAt: string | null;
 }
 
+export interface UserList {
+    id: number;
+    traktId: number | null;
+    traktSlug: string | null;
+    name: string;
+    description: string | null;
+    privacy: "private" | "friends" | "public";
+    sortBy: string;
+    sortHow: string;
+    itemCount: number;
+    updatedAt: string;
+    createdAt: string;
+}
+
+export interface UserListItem {
+    id: number;
+    listId: number;
+    mediaType: "show" | "movie";
+    showId: number | null;
+    movieId: number | null;
+    rank: number | null;
+    notes: string | null;
+    listedAt: string | null;
+    // Joined metadata
+    title?: string;
+    year?: number | null;
+    posterPath?: string | null;
+}
+
 export interface UserNote {
     id: number;
     mediaType: "episode" | "show" | "movie";

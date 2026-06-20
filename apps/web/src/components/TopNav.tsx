@@ -13,6 +13,7 @@ import {
     Clock,
     Search,
     Compass,
+    ListOrdered,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNowPlaying, useJellyfinNowPlaying } from "../hooks/index";
@@ -29,6 +30,7 @@ const NAV = [
     { to: "/tv-shows", icon: Tv2, labelKey: "nav.tvShows" },
     { to: "/movies", icon: Film, labelKey: "nav.movies" },
     { to: "/discover", icon: Compass, labelKey: "nav.discover" },
+    { to: "/lists", icon: ListOrdered, labelKey: "nav.lists" },
     { to: "/calendar", icon: Calendar, labelKey: "nav.calendar" },
     { to: "/watchlist", icon: Bookmark, labelKey: "nav.watchlist" },
     { to: "/history", icon: Clock, labelKey: "nav.history" },

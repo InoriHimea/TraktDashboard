@@ -63,6 +63,10 @@ export const queryKeys = {
         all: ["discover"] as const,
         list: (mediaType: string, tab: string) => ["discover", mediaType, tab] as const,
     },
+    lists: {
+        all: ["lists"] as const,
+        items: (listId: number) => ["lists", listId, "items"] as const,
+    },
 
     history: {
         all: ["history"] as const,

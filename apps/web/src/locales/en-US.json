@@ -51,6 +51,7 @@
         "tvShows": "TV Shows",
         "movies": "Movies",
         "discover": "Discover",
+        "lists": "My Lists",
         "calendar": "Calendar",
         "watchlist": "Watchlist",
         "history": "History",
@@ -463,5 +464,27 @@
         "saved": "Saved",
         "unsaved": "Unsaved",
         "delete": "Delete note"
+    },
+    "lists": {
+        "title": "My Lists",
+        "empty": "No lists yet — click + to create one",
+        "emptyItems": "This list has no items",
+        "selectList": "Select a list from the left",
+        "syncFromTrakt": "Sync from Trakt",
+        "createTitle": "New List",
+        "nameLabel": "Name",
+        "namePlaceholder": "Enter list name…",
+        "descLabel": "Description (optional)",
+        "descPlaceholder": "Enter description…",
+        "privacyLabel": "Privacy",
+        "createConfirm": "Create",
+        "deleteList": "Delete list",
+        "confirmDelete": "Confirm delete",
+        "removeItem": "Remove from list",
+        "privacy": {
+            "private": "Private",
+            "friends": "Friends",
+            "public": "Public"
+        }
     }
 }

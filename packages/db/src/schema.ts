@@ -385,6 +385,50 @@ export const userNotes = pgTable(
     (t) => [index("user_notes_user_idx").on(t.userId)],
 );
 
+// ─── User Lists ───────────────────────────────────────────────────────────────
+
+export const userLists = pgTable(
+    "user_lists",
+    {
+        id: serial("id").primaryKey(),
+        userId: integer("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
+        traktId: integer("trakt_id"),
+        traktSlug: text("trakt_slug"),
+        name: text("name").notNull(),
+        description: text("description"),
+        privacy: text("privacy").notNull().default("private"), // 'private'|'friends'|'public'
+        sortBy: text("sort_by").notNull().default("rank"),
+        sortHow: text("sort_how").notNull().default("asc"),
+        itemCount: integer("item_count").notNull().default(0),
+        updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+        createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    },
+    (t) => [index("user_lists_user_idx").on(t.userId)],
+);
+
+export const userListItems = pgTable(
+    "user_list_items",
+    {
+        id: serial("id").primaryKey(),
+        userId: integer("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
+        listId: integer("list_id")
+            .notNull()
+            .references(() => userLists.id, { onDelete: "cascade" }),
+        mediaType: text("media_type").notNull(), // 'show' | 'movie'
+        showId: integer("show_id").references(() => shows.id, { onDelete: "cascade" }),
+        movieId: integer("movie_id").references(() => movies.id, { onDelete: "cascade" }),
+        rank: integer("rank"),
+        notes: text("notes"),
+        listedAt: timestamp("listed_at", { withTimezone: true }),
+        createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    },
+    (t) => [index("user_list_items_list_idx").on(t.listId)],
+);
+
 // ─── Sync Runs (N4-T03) ───────────────────────────────────────────────────────
 // Persists sync run summaries for diagnostics. Process-memory metrics are
 // written here on finalization. Retains the most recent 100 rows; older rows

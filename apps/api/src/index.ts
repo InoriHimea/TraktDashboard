@@ -19,6 +19,7 @@ import { searchRoutes } from "./routes/search.js";
 import { ratingsRoutes } from "./routes/ratings.js";
 import { discoverRoutes } from "./routes/discover.js";
 import { notesRoutes } from "./routes/notes.js";
+import { listsRoutes } from "./routes/lists.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { startScheduler } from "./jobs/scheduler.js";
 import { encryptLegacyTokensAtRest } from "./lib/token-migration.js";
@@ -60,6 +61,7 @@ api.route("/search", searchRoutes);
 api.route("/ratings", ratingsRoutes);
 api.route("/discover", discoverRoutes);
 api.route("/notes", notesRoutes);
+api.route("/lists", listsRoutes);
 
 const routes = app.route("/api", api);
 

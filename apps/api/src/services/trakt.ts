@@ -440,6 +440,37 @@ export interface TraktSearchResultItem {
     };
 }
 
+export interface TraktList {
+    name: string;
+    description: string | null;
+    privacy: "private" | "friends" | "public";
+    display_numbers: boolean;
+    allow_comments: boolean;
+    sort_by: string;
+    sort_how: string;
+    created_at: string;
+    updated_at: string;
+    item_count: number;
+    ids: { trakt: number; slug: string };
+}
+
+export interface TraktListItem {
+    rank: number;
+    listed_at: string;
+    notes: string | null;
+    type: "show" | "movie";
+    show?: {
+        title: string;
+        year: number;
+        ids: { trakt: number; slug: string; tvdb?: number; imdb?: string; tmdb?: number };
+    };
+    movie?: {
+        title: string;
+        year: number;
+        ids: { trakt: number; slug: string; imdb?: string; tmdb?: number };
+    };
+}
+
 export class TraktApiError extends Error {
     constructor(
         public readonly status: number,
@@ -864,6 +895,89 @@ export function getTraktClient() {
                 body: JSON.stringify({
                     [type]: [{ ids }],
                 }),
+            });
+        },
+
+        // ── List methods ────────────────────────────────────────────────────
+
+        getLists: (userId: number) => traktFetch<TraktList[]>("/users/me/lists", userId),
+
+        getListItems: (userId: number, slug: string) =>
+            traktFetch<TraktListItem[]>(`/users/me/lists/${slug}/items`, userId),
+
+        createList: async (
+            userId: number,
+            data: {
+                name: string;
+                description?: string;
+                privacy?: string;
+                sort_by?: string;
+                sort_how?: string;
+            },
+        ): Promise<TraktList> => {
+            const { data: result } = await traktFetchRaw("/users/me/lists", userId, undefined, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data),
+            });
+            return result as TraktList;
+        },
+
+        updateList: async (
+            userId: number,
+            slug: string,
+            data: { name?: string; description?: string; privacy?: string },
+        ): Promise<TraktList> => {
+            const { data: result } = await traktFetchRaw(
+                `/users/me/lists/${slug}`,
+                userId,
+                undefined,
+                {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(data),
+                },
+            );
+            return result as TraktList;
+        },
+
+        deleteList: async (userId: number, slug: string): Promise<void> => {
+            await traktFetchRaw(`/users/me/lists/${slug}`, userId, undefined, {
+                method: "DELETE",
+            });
+        },
+
+        addListItems: async (
+            userId: number,
+            slug: string,
+            items: Array<{ type: "show" | "movie"; ids: { trakt?: number; tmdb?: number } }>,
+        ): Promise<void> => {
+            const body: Record<string, Array<{ ids: object }>> = { shows: [], movies: [] };
+            for (const item of items) {
+                if (item.type === "show") body.shows.push({ ids: item.ids });
+                else body.movies.push({ ids: item.ids });
+            }
+            await traktFetchRaw(`/users/me/lists/${slug}/items`, userId, undefined, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+            });
+        },
+
+        removeListItems: async (
+            userId: number,
+            slug: string,
+            items: Array<{ type: "show" | "movie"; ids: { trakt?: number; tmdb?: number } }>,
+        ): Promise<void> => {
+            const body: Record<string, Array<{ ids: object }>> = { shows: [], movies: [] };
+            for (const item of items) {
+                if (item.type === "show") body.shows.push({ ids: item.ids });
+                else body.movies.push({ ids: item.ids });
+            }
+            await traktFetchRaw(`/users/me/lists/${slug}/items/remove`, userId, undefined, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
             });
         },
     };

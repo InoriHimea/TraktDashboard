@@ -25,6 +25,8 @@ import type {
     UpNextItem,
     UserRating,
     UserNote,
+    UserList,
+    UserListItem,
 } from "@trakt-dashboard/types";
 
 const API_BASE = "/api";
@@ -303,5 +305,32 @@ export const api = {
                 body: JSON.stringify(body),
             }),
         delete: (id: number) => request<{ ok: boolean }>(`/notes/${id}`, { method: "DELETE" }),
+    },
+    lists: {
+        getAll: () => request<ApiResponse<UserList[]>>("/lists"),
+        create: (body: { name: string; description?: string; privacy?: string }) =>
+            request<ApiResponse<UserList>>("/lists", {
+                method: "POST",
+                body: JSON.stringify(body),
+            }),
+        update: (id: number, body: { name?: string; description?: string; privacy?: string }) =>
+            request<ApiResponse<UserList>>(`/lists/${id}`, {
+                method: "PUT",
+                body: JSON.stringify(body),
+            }),
+        delete: (id: number) => request<{ ok: boolean }>(`/lists/${id}`, { method: "DELETE" }),
+        getItems: (listId: number) =>
+            request<ApiResponse<UserListItem[]>>(`/lists/${listId}/items`),
+        addItem: (
+            listId: number,
+            body: { mediaType: "show" | "movie"; localId: number; notes?: string },
+        ) =>
+            request<ApiResponse<{ id: number }>>(`/lists/${listId}/items`, {
+                method: "POST",
+                body: JSON.stringify(body),
+            }),
+        removeItem: (listId: number, itemId: number) =>
+            request<{ ok: boolean }>(`/lists/${listId}/items/${itemId}`, { method: "DELETE" }),
+        sync: () => request<{ ok: boolean; synced: number }>("/lists/sync", { method: "POST" }),
     },
 };

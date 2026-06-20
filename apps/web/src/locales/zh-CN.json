@@ -51,6 +51,7 @@
         "tvShows": "电视节目",
         "movies": "电影",
         "discover": "发现",
+        "lists": "我的列表",
         "calendar": "播出日历",
         "watchlist": "待看列表",
         "history": "观看历史",
@@ -463,5 +464,27 @@
         "saved": "已保存",
         "unsaved": "未保存",
         "delete": "删除笔记"
+    },
+    "lists": {
+        "title": "我的列表",
+        "empty": "暂无列表，点击 + 创建",
+        "emptyItems": "此列表暂无内容",
+        "selectList": "从左侧选择一个列表",
+        "syncFromTrakt": "从 Trakt 同步",
+        "createTitle": "新建列表",
+        "nameLabel": "列表名称",
+        "namePlaceholder": "输入列表名称…",
+        "descLabel": "描述（可选）",
+        "descPlaceholder": "输入描述…",
+        "privacyLabel": "隐私设置",
+        "createConfirm": "创建",
+        "deleteList": "删除列表",
+        "confirmDelete": "确认删除",
+        "removeItem": "从列表移除",
+        "privacy": {
+            "private": "私密",
+            "friends": "好友",
+            "public": "公开"
+        }
     }
 }
