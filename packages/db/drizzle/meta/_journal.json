@@ -92,6 +92,41 @@
       "when": 1750377600000,
       "tag": "0012_notification_event_types",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1750464000000,
+      "tag": "0013_user_ratings",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1750550400000,
+      "tag": "0014_user_notes",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1750636800000,
+      "tag": "0015_user_lists",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1750723200000,
+      "tag": "0016_user_collection",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1750809600000,
+      "tag": "0017_backup",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,4 @@
-CREATE TABLE "user_ratings" (
+CREATE TABLE IF NOT EXISTS "user_ratings" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"user_id" integer NOT NULL,
 	"media_type" text NOT NULL,
@@ -11,6 +11,6 @@ CREATE TABLE "user_ratings" (
 	CONSTRAINT "user_ratings_show_id_shows_id_fk" FOREIGN KEY ("show_id") REFERENCES "shows"("id") ON DELETE cascade ON UPDATE no action,
 	CONSTRAINT "user_ratings_movie_id_movies_id_fk" FOREIGN KEY ("movie_id") REFERENCES "movies"("id") ON DELETE cascade ON UPDATE no action
 );
-CREATE UNIQUE INDEX "user_ratings_show_idx" ON "user_ratings" ("user_id","show_id");
-CREATE UNIQUE INDEX "user_ratings_movie_idx" ON "user_ratings" ("user_id","movie_id");
-CREATE INDEX "user_ratings_user_idx" ON "user_ratings" ("user_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "user_ratings_show_idx" ON "user_ratings" ("user_id","show_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "user_ratings_movie_idx" ON "user_ratings" ("user_id","movie_id");
+CREATE INDEX IF NOT EXISTS "user_ratings_user_idx" ON "user_ratings" ("user_id");
