@@ -36,178 +36,44 @@ function uniqueRecentItems<T>(items: T[], keyOf: (item: T) => string, limit: num
 statsRoutes.get("/overview", async (c) => {
     const userId = c.get("userId");
     const db = getDb();
-
-    const [totals] = await db
-        .select({
-            totalWatched: sql<number>`count(distinct ${watchHistory.episodeId})`,
-            totalShows: sql<number>`count(distinct ${episodes.showId})`,
-        })
-        .from(watchHistory)
-        .innerJoin(episodes, eq(watchHistory.episodeId, episodes.id))
-        .where(eq(watchHistory.userId, userId));
-
-    const [completedCount] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(userShowProgress)
-        .where(and(eq(userShowProgress.userId, userId), eq(userShowProgress.completed, true)));
-
-    // Total runtime in minutes
-    const [episodeRuntime] = await db
-        .select({ total: sql<number>`sum(${episodes.runtime})` })
-        .from(watchHistory)
-        .innerJoin(episodes, eq(watchHistory.episodeId, episodes.id))
-        .where(and(eq(watchHistory.userId, userId), eq(watchHistory.mediaType, "episode")));
-
-    const [movieTotals] = await db
-        .select({
-            totalMoviesWatched: sql<number>`count(distinct ${userMovieProgress.movieId})`,
-            totalMovieWatches: sql<number>`coalesce(sum(${userMovieProgress.watchCount}), 0)`,
-            totalMovieRuntimeMinutes: sql<number>`coalesce(sum(${movies.runtime} * ${userMovieProgress.watchCount}), 0)`,
-        })
-        .from(userMovieProgress)
-        .innerJoin(movies, eq(userMovieProgress.movieId, movies.id))
-        .where(and(eq(userMovieProgress.userId, userId), sql`${userMovieProgress.watchCount} > 0`));
-
-    // Watch activity per month (last 12 months)
-    const monthlyActivity = await db
-        .select({
-            month: sql<string>`to_char(watched_at, 'YYYY-MM')`,
-            count: sql<number>`count(*)`,
-        })
-        .from(watchHistory)
-        .where(
-            and(
-                eq(watchHistory.userId, userId),
-                gte(watchHistory.watchedAt, new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)),
-            ),
-        )
-        .groupBy(sql`to_char(watched_at, 'YYYY-MM')`)
-        .orderBy(sql`to_char(watched_at, 'YYYY-MM')`);
-
-    // Top genres
-    const allShowProgress = await db
-        .select({ genres: shows.genres })
-        .from(userShowProgress)
-        .innerJoin(shows, eq(userShowProgress.showId, shows.id))
-        .where(eq(userShowProgress.userId, userId));
-
-    const allMovieProgress = await db
-        .select({ genres: movies.genres })
-        .from(userMovieProgress)
-        .innerJoin(movies, eq(userMovieProgress.movieId, movies.id))
-        .where(and(eq(userMovieProgress.userId, userId), sql`${userMovieProgress.watchCount} > 0`));
-
-    const genreCount: Record<string, number> = {};
-    for (const row of [...allShowProgress, ...allMovieProgress]) {
-        for (const g of (row.genres as string[]) || []) {
-            genreCount[g] = (genreCount[g] || 0) + 1;
-        }
-    }
-    const topGenres = Object.entries(genreCount)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 8)
-        .map(([name, count]) => ({ name, count }));
-
-    // Recently watched
-    const recentEpisodeRows = await db
-        .select({
-            episodeId: watchHistory.episodeId,
-            showTitle: shows.title,
-            showId: shows.id,
-            posterPath: shows.posterPath,
-            stillPath: episodes.stillPath,
-            episodeTitle: episodes.title,
-            seasonNumber: episodes.seasonNumber,
-            episodeNumber: episodes.episodeNumber,
-            watchedAt: watchHistory.watchedAt,
-        })
-        .from(watchHistory)
-        .innerJoin(episodes, eq(watchHistory.episodeId, episodes.id))
-        .innerJoin(shows, eq(episodes.showId, shows.id))
-        .where(and(eq(watchHistory.userId, userId), eq(watchHistory.mediaType, "episode")))
-        .orderBy(desc(watchHistory.watchedAt))
-        .limit(45);
-
-    const recentlyWatched = uniqueRecentItems(
-        recentEpisodeRows,
-        (row) => `${row.episodeId}:${watchedAtKey(row.watchedAt)}`,
-        15,
-    ).map(({ episodeId: _episodeId, ...row }) => row);
-
-    const recentMovieRows = await db
-        .select({
-            movieTitle: movies.title,
-            movieId: movies.id,
-            posterPath: movies.posterPath,
-            watchedAt: watchHistory.watchedAt,
-        })
-        .from(watchHistory)
-        .innerJoin(movies, eq(watchHistory.movieId, movies.id))
-        .where(and(eq(watchHistory.userId, userId), eq(watchHistory.mediaType, "movie")))
-        .orderBy(desc(watchHistory.watchedAt))
-        .limit(30);
-
-    const recentlyWatchedMovies = uniqueRecentItems(
-        recentMovieRows,
-        (row) => `${row.movieId}:${watchedAtKey(row.watchedAt)}`,
-        10,
-    );
-
-    // D1 — trend metrics
-    const now = new Date();
-    const thisYearStart = new Date(now.getFullYear(), 0, 1);
-    const lastYearStart = new Date(now.getFullYear() - 1, 0, 1);
-    const sameDayLastYear = new Date(
-        now.getFullYear() - 1,
-        now.getMonth(),
-        now.getDate(),
-        23,
-        59,
-        59,
-    );
-
-    const [
-        [yearCurrentRow],
-        [yearLastRow],
-        watchDates,
-        [avg30Row],
-        heatmapRows,
-        weekdayRows,
-        ratingRows,
-    ] = await Promise.all([
-        db
-            .select({ count: sql<number>`count(*)` })
-            .from(watchHistory)
-            .where(
-                and(eq(watchHistory.userId, userId), gte(watchHistory.watchedAt, thisYearStart)),
-            ),
-        db
-            .select({ count: sql<number>`count(*)` })
-            .from(watchHistory)
-            .where(
-                and(
-                    eq(watchHistory.userId, userId),
-                    gte(watchHistory.watchedAt, lastYearStart),
-                    lte(watchHistory.watchedAt, sameDayLastYear),
-                ),
-            ),
-        db
-            .selectDistinct({ day: sql<string>`DATE(${watchHistory.watchedAt})::text` })
-            .from(watchHistory)
-            .where(and(eq(watchHistory.userId, userId), sql`${watchHistory.watchedAt} IS NOT NULL`))
-            .orderBy(sql`DATE(${watchHistory.watchedAt})::text`),
-        db
-            .select({ count: sql<number>`count(*)` })
-            .from(watchHistory)
-            .where(
-                and(
-                    eq(watchHistory.userId, userId),
-                    gte(watchHistory.watchedAt, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)),
-                ),
-            ),
-        db
+    try {
+        const [totals] = await db
             .select({
-                date: sql<string>`DATE(${watchHistory.watchedAt})::text`,
+                totalWatched: sql<number>`count(distinct ${watchHistory.episodeId})`,
+                totalShows: sql<number>`count(distinct ${episodes.showId})`,
+            })
+            .from(watchHistory)
+            .innerJoin(episodes, eq(watchHistory.episodeId, episodes.id))
+            .where(eq(watchHistory.userId, userId));
+
+        const [completedCount] = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(userShowProgress)
+            .where(and(eq(userShowProgress.userId, userId), eq(userShowProgress.completed, true)));
+
+        // Total runtime in minutes
+        const [episodeRuntime] = await db
+            .select({ total: sql<number>`sum(${episodes.runtime})` })
+            .from(watchHistory)
+            .innerJoin(episodes, eq(watchHistory.episodeId, episodes.id))
+            .where(and(eq(watchHistory.userId, userId), eq(watchHistory.mediaType, "episode")));
+
+        const [movieTotals] = await db
+            .select({
+                totalMoviesWatched: sql<number>`count(distinct ${userMovieProgress.movieId})`,
+                totalMovieWatches: sql<number>`coalesce(sum(${userMovieProgress.watchCount}), 0)`,
+                totalMovieRuntimeMinutes: sql<number>`coalesce(sum(${movies.runtime} * ${userMovieProgress.watchCount}), 0)`,
+            })
+            .from(userMovieProgress)
+            .innerJoin(movies, eq(userMovieProgress.movieId, movies.id))
+            .where(
+                and(eq(userMovieProgress.userId, userId), sql`${userMovieProgress.watchCount} > 0`),
+            );
+
+        // Watch activity per month (last 12 months)
+        const monthlyActivity = await db
+            .select({
+                month: sql<string>`to_char(watched_at, 'YYYY-MM')`,
                 count: sql<number>`count(*)`,
             })
             .from(watchHistory)
@@ -215,77 +81,243 @@ statsRoutes.get("/overview", async (c) => {
                 and(
                     eq(watchHistory.userId, userId),
                     gte(watchHistory.watchedAt, new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)),
-                    sql`${watchHistory.watchedAt} IS NOT NULL`,
                 ),
             )
-            .groupBy(sql`DATE(${watchHistory.watchedAt})`)
-            .orderBy(sql`DATE(${watchHistory.watchedAt})`),
-        db
+            .groupBy(sql`to_char(watched_at, 'YYYY-MM')`)
+            .orderBy(sql`to_char(watched_at, 'YYYY-MM')`);
+
+        // Top genres
+        const allShowProgress = await db
+            .select({ genres: shows.genres })
+            .from(userShowProgress)
+            .innerJoin(shows, eq(userShowProgress.showId, shows.id))
+            .where(eq(userShowProgress.userId, userId));
+
+        const allMovieProgress = await db
+            .select({ genres: movies.genres })
+            .from(userMovieProgress)
+            .innerJoin(movies, eq(userMovieProgress.movieId, movies.id))
+            .where(
+                and(eq(userMovieProgress.userId, userId), sql`${userMovieProgress.watchCount} > 0`),
+            );
+
+        const genreCount: Record<string, number> = {};
+        for (const row of [...allShowProgress, ...allMovieProgress]) {
+            for (const g of (row.genres as string[]) || []) {
+                genreCount[g] = (genreCount[g] || 0) + 1;
+            }
+        }
+        const topGenres = Object.entries(genreCount)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 8)
+            .map(([name, count]) => ({ name, count }));
+
+        // Recently watched
+        const recentEpisodeRows = await db
             .select({
-                weekday: sql<number>`EXTRACT(DOW FROM ${watchHistory.watchedAt})::integer`,
-                count: sql<number>`count(*)`,
+                episodeId: watchHistory.episodeId,
+                showTitle: shows.title,
+                showId: shows.id,
+                posterPath: shows.posterPath,
+                stillPath: episodes.stillPath,
+                episodeTitle: episodes.title,
+                seasonNumber: episodes.seasonNumber,
+                episodeNumber: episodes.episodeNumber,
+                watchedAt: watchHistory.watchedAt,
             })
             .from(watchHistory)
-            .where(and(eq(watchHistory.userId, userId), sql`${watchHistory.watchedAt} IS NOT NULL`))
-            .groupBy(sql`EXTRACT(DOW FROM ${watchHistory.watchedAt})`)
-            .orderBy(sql`EXTRACT(DOW FROM ${watchHistory.watchedAt})`),
+            .innerJoin(episodes, eq(watchHistory.episodeId, episodes.id))
+            .innerJoin(shows, eq(episodes.showId, shows.id))
+            .where(and(eq(watchHistory.userId, userId), eq(watchHistory.mediaType, "episode")))
+            .orderBy(desc(watchHistory.watchedAt))
+            .limit(45);
 
-        // Rating distribution (1-10)
-        db
+        const recentlyWatched = uniqueRecentItems(
+            recentEpisodeRows,
+            (row) => `${row.episodeId}:${watchedAtKey(row.watchedAt)}`,
+            15,
+        ).map(({ episodeId: _episodeId, ...row }) => row);
+
+        const recentMovieRows = await db
             .select({
-                rating: userRatings.rating,
-                count: sql<number>`count(*)`,
+                movieTitle: movies.title,
+                movieId: movies.id,
+                posterPath: movies.posterPath,
+                watchedAt: watchHistory.watchedAt,
             })
-            .from(userRatings)
-            .where(eq(userRatings.userId, userId))
-            .groupBy(userRatings.rating)
-            .orderBy(userRatings.rating),
-    ]);
+            .from(watchHistory)
+            .innerJoin(movies, eq(watchHistory.movieId, movies.id))
+            .where(and(eq(watchHistory.userId, userId), eq(watchHistory.mediaType, "movie")))
+            .orderBy(desc(watchHistory.watchedAt))
+            .limit(30);
 
-    const longestStreakDays = longestConsecutiveDays(watchDates.map((d) => d.day));
+        const recentlyWatchedMovies = uniqueRecentItems(
+            recentMovieRows,
+            (row) => `${row.movieId}:${watchedAtKey(row.watchedAt)}`,
+            10,
+        );
 
-    const avgDailyWatches30d = Math.round((Number(avg30Row?.count || 0) / 30) * 10) / 10;
+        // D1 — trend metrics
+        const now = new Date();
+        const thisYearStart = new Date(now.getFullYear(), 0, 1);
+        const lastYearStart = new Date(now.getFullYear() - 1, 0, 1);
+        const sameDayLastYear = new Date(
+            now.getFullYear() - 1,
+            now.getMonth(),
+            now.getDate(),
+            23,
+            59,
+            59,
+        );
 
-    return c.json({
-        data: {
-            totalEpisodesWatched: Number(totals?.totalWatched || 0),
-            totalShowsWatched: Number(totals?.totalShows || 0),
-            totalShowsCompleted: Number(completedCount?.count || 0),
-            totalMoviesWatched: Number(movieTotals?.totalMoviesWatched || 0),
-            totalMovieWatches: Number(movieTotals?.totalMovieWatches || 0),
-            totalRuntimeMinutes:
-                Number(episodeRuntime?.total || 0) +
-                Number(movieTotals?.totalMovieRuntimeMinutes || 0),
-            totalEpisodeRuntimeMinutes: Number(episodeRuntime?.total || 0),
-            totalMovieRuntimeMinutes: Number(movieTotals?.totalMovieRuntimeMinutes || 0),
-            monthlyActivity: monthlyActivity.map((r) => ({
-                month: r.month,
-                count: Number(r.count),
-            })),
-            topGenres,
-            recentlyWatched,
-            recentlyWatchedMovies,
-            yearComparison: {
-                thisYear: Number(yearCurrentRow?.count || 0),
-                lastYear: Number(yearLastRow?.count || 0),
+        const [
+            [yearCurrentRow],
+            [yearLastRow],
+            watchDates,
+            [avg30Row],
+            heatmapRows,
+            weekdayRows,
+            ratingRows,
+        ] = await Promise.all([
+            db
+                .select({ count: sql<number>`count(*)` })
+                .from(watchHistory)
+                .where(
+                    and(
+                        eq(watchHistory.userId, userId),
+                        gte(watchHistory.watchedAt, thisYearStart),
+                    ),
+                ),
+            db
+                .select({ count: sql<number>`count(*)` })
+                .from(watchHistory)
+                .where(
+                    and(
+                        eq(watchHistory.userId, userId),
+                        gte(watchHistory.watchedAt, lastYearStart),
+                        lte(watchHistory.watchedAt, sameDayLastYear),
+                    ),
+                ),
+            db
+                .selectDistinct({ day: sql<string>`DATE(${watchHistory.watchedAt})::text` })
+                .from(watchHistory)
+                .where(
+                    and(
+                        eq(watchHistory.userId, userId),
+                        sql`${watchHistory.watchedAt} IS NOT NULL`,
+                    ),
+                )
+                .orderBy(sql`DATE(${watchHistory.watchedAt})::text`),
+            db
+                .select({ count: sql<number>`count(*)` })
+                .from(watchHistory)
+                .where(
+                    and(
+                        eq(watchHistory.userId, userId),
+                        gte(
+                            watchHistory.watchedAt,
+                            new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+                        ),
+                    ),
+                ),
+            db
+                .select({
+                    date: sql<string>`DATE(${watchHistory.watchedAt})::text`,
+                    count: sql<number>`count(*)`,
+                })
+                .from(watchHistory)
+                .where(
+                    and(
+                        eq(watchHistory.userId, userId),
+                        gte(
+                            watchHistory.watchedAt,
+                            new Date(Date.now() - 365 * 24 * 60 * 60 * 1000),
+                        ),
+                        sql`${watchHistory.watchedAt} IS NOT NULL`,
+                    ),
+                )
+                .groupBy(sql`DATE(${watchHistory.watchedAt})`)
+                .orderBy(sql`DATE(${watchHistory.watchedAt})`),
+            db
+                .select({
+                    weekday: sql<number>`EXTRACT(DOW FROM ${watchHistory.watchedAt})::integer`,
+                    count: sql<number>`count(*)`,
+                })
+                .from(watchHistory)
+                .where(
+                    and(
+                        eq(watchHistory.userId, userId),
+                        sql`${watchHistory.watchedAt} IS NOT NULL`,
+                    ),
+                )
+                .groupBy(sql`EXTRACT(DOW FROM ${watchHistory.watchedAt})`)
+                .orderBy(sql`EXTRACT(DOW FROM ${watchHistory.watchedAt})`),
+
+            // Rating distribution (1-10)
+            db
+                .select({
+                    rating: userRatings.rating,
+                    count: sql<number>`count(*)`,
+                })
+                .from(userRatings)
+                .where(eq(userRatings.userId, userId))
+                .groupBy(userRatings.rating)
+                .orderBy(userRatings.rating),
+        ]);
+
+        const longestStreakDays = longestConsecutiveDays(watchDates.map((d) => d.day));
+
+        const avgDailyWatches30d = Math.round((Number(avg30Row?.count || 0) / 30) * 10) / 10;
+
+        return c.json({
+            data: {
+                totalEpisodesWatched: Number(totals?.totalWatched || 0),
+                totalShowsWatched: Number(totals?.totalShows || 0),
+                totalShowsCompleted: Number(completedCount?.count || 0),
+                totalMoviesWatched: Number(movieTotals?.totalMoviesWatched || 0),
+                totalMovieWatches: Number(movieTotals?.totalMovieWatches || 0),
+                totalRuntimeMinutes:
+                    Number(episodeRuntime?.total || 0) +
+                    Number(movieTotals?.totalMovieRuntimeMinutes || 0),
+                totalEpisodeRuntimeMinutes: Number(episodeRuntime?.total || 0),
+                totalMovieRuntimeMinutes: Number(movieTotals?.totalMovieRuntimeMinutes || 0),
+                monthlyActivity: monthlyActivity.map((r) => ({
+                    month: r.month,
+                    count: Number(r.count),
+                })),
+                topGenres,
+                recentlyWatched,
+                recentlyWatchedMovies,
+                yearComparison: {
+                    thisYear: Number(yearCurrentRow?.count || 0),
+                    lastYear: Number(yearLastRow?.count || 0),
+                },
+                longestStreakDays,
+                avgDailyWatches30d,
+                heatmap: heatmapRows.map((r) => ({ date: r.date, count: Number(r.count) })),
+                weekdayDistribution: (() => {
+                    const wdMap = new Map(
+                        weekdayRows.map((r) => [Number(r.weekday), Number(r.count)]),
+                    );
+                    return Array.from({ length: 7 }, (_, i) => ({
+                        weekday: i,
+                        count: wdMap.get(i) ?? 0,
+                    }));
+                })(),
+                ratingDistribution: (() => {
+                    const rMap = new Map(
+                        ratingRows.map((r) => [Number(r.rating), Number(r.count)]),
+                    );
+                    return Array.from({ length: 10 }, (_, i) => ({
+                        rating: i + 1,
+                        count: rMap.get(i + 1) ?? 0,
+                    }));
+                })(),
             },
-            longestStreakDays,
-            avgDailyWatches30d,
-            heatmap: heatmapRows.map((r) => ({ date: r.date, count: Number(r.count) })),
-            weekdayDistribution: (() => {
-                const wdMap = new Map(weekdayRows.map((r) => [Number(r.weekday), Number(r.count)]));
-                return Array.from({ length: 7 }, (_, i) => ({
-                    weekday: i,
-                    count: wdMap.get(i) ?? 0,
-                }));
-            })(),
-            ratingDistribution: (() => {
-                const rMap = new Map(ratingRows.map((r) => [Number(r.rating), Number(r.count)]));
-                return Array.from({ length: 10 }, (_, i) => ({
-                    rating: i + 1,
-                    count: rMap.get(i + 1) ?? 0,
-                }));
-            })(),
-        },
-    });
+        });
+    } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error("[stats] /overview failed:", message);
+        return c.json({ error: message }, 500);
+    }
 });

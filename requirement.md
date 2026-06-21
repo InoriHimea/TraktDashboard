@@ -20,6 +20,8 @@
 ### F02 — 历史记录（History）
 
 - 拉取 Trakt 观看历史并本地存档
+- **增量同步**：`getHistory()` 调用 `/sync/history`（无 `/episodes` 后缀），同时返回剧集和电影；按 `entry.type` 分别处理两类媒体
+- **全量同步**：`syncMovies()` 独立调用 `/sync/watched/movies` + `/sync/history/movies`（路径不变）
 - CSV 导入（电影 / 剧集）；导入时按 N 条 chunk 批量事务
 - 剧集标题匹配用 `lower()=lower()` 精确等值，避免 LIKE 通配符误匹配
 
@@ -75,7 +77,8 @@
 
 ### F09 — 定时同步（Scheduler）
 
-- `triggerIncrementalSync`：history / ratings / collection / lists / jellyfin
+- `triggerIncrementalSync`：history（剧集 + 电影）/ ratings / collection / lists / jellyfin
+- 增量同步电影：从 `/sync/history` 获取电影条目，按 traktId 去重，写入 `watch_history`（`media_type='movie'`）并调 `recalcMovieProgress`
 - collection 同步 best-effort，失败仅 warn 不阻断主流程
 
 ### F10 — 数据库迁移

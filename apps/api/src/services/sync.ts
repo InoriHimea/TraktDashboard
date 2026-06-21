@@ -332,7 +332,7 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
         const showMap = new Map<number, typeof history>();
         for (const entry of history) {
             if (entry.type !== "episode") continue;
-            const tmdbId = entry.show.ids.tmdb;
+            const tmdbId = entry.show!.ids.tmdb;
             if (!tmdbId) continue;
             if (!showMap.has(tmdbId)) showMap.set(tmdbId, []);
             showMap.get(tmdbId)!.push(entry);
@@ -354,7 +354,7 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
             Array.from(showMap.entries()).map(([tmdbId, entries]) =>
                 limit(async () => {
                     try {
-                        const traktId = entries[0].show.ids.trakt;
+                        const traktId = entries[0].show!.ids.trakt;
                         if (!traktId) {
                             console.warn(
                                 `[sync:incr] Missing Trakt id for tmdb ${tmdbId}, skipping`,
@@ -363,7 +363,7 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
                         }
                         const showId = await upsertShowFromTrakt(
                             traktId,
-                            entries[0].show,
+                            entries[0].show!,
                             userId,
                             true,
                         );
@@ -371,8 +371,8 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
                             const ep = await findOrCreateEpisode(
                                 showId,
                                 tmdbId,
-                                entry.episode.season,
-                                entry.episode.number,
+                                entry.episode!.season,
+                                entry.episode!.number,
                                 userId,
                             );
                             if (!ep) continue;

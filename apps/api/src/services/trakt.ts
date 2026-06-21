@@ -71,8 +71,9 @@ export interface TraktHistoryEntry {
     id: number;
     watched_at: string;
     action: string;
-    type: string;
-    episode: {
+    type: string; // "episode" | "movie"
+    // Present when type === "episode"
+    episode?: {
         season: number;
         number: number;
         title: string;
@@ -84,7 +85,13 @@ export interface TraktHistoryEntry {
             tvrage: number;
         };
     };
-    show: TraktShow;
+    show?: TraktShow;
+    // Present when type === "movie"
+    movie?: {
+        title: string;
+        year: number | null;
+        ids: { trakt: number; slug: string; imdb: string | null; tmdb: number | null };
+    };
 }
 
 export interface TraktMovieHistoryEntry {
@@ -551,7 +558,8 @@ export function getTraktClient() {
         getWatchedMovies: (userId: number) =>
             traktFetch<TraktWatchedMovie[]>("/sync/watched/movies", userId),
 
-        // Task 3.2: getHistory now uses traktFetchRaw (unified token refresh + 429 retry)
+        // getHistory fetches /sync/history (episodes + movies) so incremental sync
+        // can pick up both media types in one pass, rather than calling two endpoints.
         getHistory: async (userId: number, startAt?: string): Promise<TraktHistoryEntry[]> => {
             const all: TraktHistoryEntry[] = [];
             let page = 1;
@@ -563,11 +571,7 @@ export function getTraktClient() {
                 };
                 if (startAt) params.start_at = startAt;
 
-                const { data, headers } = await traktFetchRaw(
-                    "/sync/history/episodes",
-                    userId,
-                    params,
-                );
+                const { data, headers } = await traktFetchRaw("/sync/history", userId, params);
                 all.push(...(data as TraktHistoryEntry[]));
 
                 const rawPageCount = parseInt(headers.get("X-Pagination-Page-Count") ?? "1", 10);
