@@ -1,5 +1,12 @@
 import { Hono } from "hono";
-import { getDb, episodes, shows, userShowProgress, watchHistory } from "@trakt-dashboard/db";
+import {
+    getDb,
+    episodes,
+    shows,
+    userShowProgress,
+    watchHistory,
+    seasons,
+} from "@trakt-dashboard/db";
 import { eq, and, asc, sql } from "drizzle-orm";
 import dayjs from "dayjs";
 import { apiOk } from "../lib/response.js";
@@ -24,6 +31,7 @@ calendarRoutes.get("/", async (c) => {
         .select({
             episode: episodes,
             show: shows,
+            seasonEpisodeCount: seasons.episodeCount,
             // P1-T13: per-episode watched flag via correlated EXISTS (avoids row fan-out
             // that a LEFT JOIN against multiple history rows would produce).
             watched: sql<boolean>`EXISTS (SELECT 1 FROM ${watchHistory} WHERE ${watchHistory.episodeId} = ${episodes.id} AND ${watchHistory.userId} = ${userId})`,
@@ -31,6 +39,13 @@ calendarRoutes.get("/", async (c) => {
         .from(episodes)
         .innerJoin(shows, eq(episodes.showId, shows.id))
         .innerJoin(userShowProgress, eq(shows.id, userShowProgress.showId))
+        .leftJoin(
+            seasons,
+            and(
+                eq(seasons.showId, episodes.showId),
+                eq(seasons.seasonNumber, episodes.seasonNumber),
+            ),
+        )
         .where(
             and(
                 eq(userShowProgress.userId, userId),
@@ -55,6 +70,9 @@ calendarRoutes.get("/", async (c) => {
                 stillPath: row.episode.stillPath,
                 airDate: row.episode.airDate,
                 watched: Boolean(row.watched),
+                isFinale:
+                    row.seasonEpisodeCount != null &&
+                    row.episode.episodeNumber === row.seasonEpisodeCount,
                 show: {
                     id: row.show.id,
                     title: row.show.title,

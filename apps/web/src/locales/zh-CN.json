@@ -360,7 +360,8 @@
         "prevDay": "前一天",
         "nextDay": "后一天",
         "sameDay": "同日 {{n}} 集",
-        "unknownNetwork": "未知平台"
+        "unknownNetwork": "未知平台",
+        "finale": "结局"
     },
     "stats": {
         "loading": "正在加载统计数据…",

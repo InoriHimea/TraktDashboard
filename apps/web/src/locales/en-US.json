@@ -360,7 +360,8 @@
         "prevDay": "Previous day",
         "nextDay": "Next day",
         "sameDay": "{{n}} eps same day",
-        "unknownNetwork": "Unknown network"
+        "unknownNetwork": "Unknown network",
+        "finale": "Finale"
     },
     "stats": {
         "loading": "Loading statistics…",

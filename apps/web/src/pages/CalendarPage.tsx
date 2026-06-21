@@ -388,6 +388,11 @@ export default function CalendarPage() {
                                                     >
                                                         <MoreVertical className="size-4" />
                                                     </span>
+                                                    {episode.isFinale && (
+                                                        <div className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full border border-amber-400/40 bg-amber-500/80 px-2.5 py-1 text-[11px] font-bold text-white shadow-lg backdrop-blur-md">
+                                                            {t("calendar.finale")}
+                                                        </div>
+                                                    )}
                                                     <div className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full border border-white/20 bg-[var(--color-panel-glass-strong)] px-2.5 py-1 text-[11px] font-bold text-foreground shadow-lg backdrop-blur-md">
                                                         <Clock className="size-3" />
                                                         {formatAirTime(episode.airDate)}

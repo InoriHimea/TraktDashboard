@@ -32,14 +32,178 @@ export async function runMigrations() {
     const migrationsFolder = resolve(__dirname, "../drizzle");
     console.log("[db] Running migrations from:", migrationsFolder);
     await migrate(db, { migrationsFolder });
-    // Belt-and-suspenders: if migration 0011 was previously recorded in
-    // __drizzle_migrations without the DDL executing, apply the columns here.
+    // Belt-and-suspenders: if a migration was previously recorded in
+    // __drizzle_migrations without the DDL actually executing (e.g. via db:push
+    // or manual SQL that wasn't tracked), apply the DDL explicitly here.
+    // All statements are idempotent (IF NOT EXISTS / ADD COLUMN IF NOT EXISTS).
+
+    // 0011 — Jellyfin settings columns
     await db.execute(sql`
         ALTER TABLE "user_settings"
         ADD COLUMN IF NOT EXISTS "jellyfin_url" text,
         ADD COLUMN IF NOT EXISTS "jellyfin_api_key" text,
         ADD COLUMN IF NOT EXISTS "jellyfin_auto_delete_library_ids" text
     `);
+
+    // 0013 — user_ratings
+    await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS "user_ratings" (
+            "id" serial PRIMARY KEY NOT NULL,
+            "user_id" integer NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+            "media_type" text NOT NULL,
+            "show_id" integer REFERENCES "shows"("id") ON DELETE cascade,
+            "movie_id" integer REFERENCES "movies"("id") ON DELETE cascade,
+            "rating" integer NOT NULL,
+            "rated_at" timestamp with time zone,
+            "created_at" timestamp with time zone DEFAULT now() NOT NULL
+        )
+    `);
+    await db.execute(
+        sql`CREATE UNIQUE INDEX IF NOT EXISTS "user_ratings_show_idx" ON "user_ratings" ("user_id","show_id")`,
+    );
+    await db.execute(
+        sql`CREATE UNIQUE INDEX IF NOT EXISTS "user_ratings_movie_idx" ON "user_ratings" ("user_id","movie_id")`,
+    );
+    await db.execute(
+        sql`CREATE INDEX IF NOT EXISTS "user_ratings_user_idx" ON "user_ratings" ("user_id")`,
+    );
+
+    // 0014 — user_notes
+    await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS "user_notes" (
+            "id" serial PRIMARY KEY NOT NULL,
+            "user_id" integer NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+            "media_type" text NOT NULL,
+            "show_id" integer REFERENCES "shows"("id") ON DELETE cascade,
+            "movie_id" integer REFERENCES "movies"("id") ON DELETE cascade,
+            "season" integer,
+            "episode" integer,
+            "content" text NOT NULL DEFAULT '',
+            "updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+            "created_at" timestamp with time zone DEFAULT now() NOT NULL
+        )
+    `);
+    await db.execute(
+        sql`CREATE UNIQUE INDEX IF NOT EXISTS "user_notes_episode_idx" ON "user_notes" ("user_id","show_id","season","episode") WHERE (season IS NOT NULL AND episode IS NOT NULL)`,
+    );
+    await db.execute(
+        sql`CREATE UNIQUE INDEX IF NOT EXISTS "user_notes_show_idx" ON "user_notes" ("user_id","show_id") WHERE (season IS NULL AND episode IS NULL AND show_id IS NOT NULL)`,
+    );
+    await db.execute(
+        sql`CREATE UNIQUE INDEX IF NOT EXISTS "user_notes_movie_idx" ON "user_notes" ("user_id","movie_id") WHERE (movie_id IS NOT NULL)`,
+    );
+    await db.execute(
+        sql`CREATE INDEX IF NOT EXISTS "user_notes_user_idx" ON "user_notes" ("user_id")`,
+    );
+
+    // 0015 — user_lists + user_list_items
+    await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS "user_lists" (
+            "id" serial PRIMARY KEY NOT NULL,
+            "user_id" integer NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+            "trakt_id" integer,
+            "trakt_slug" text,
+            "name" text NOT NULL,
+            "description" text,
+            "privacy" text DEFAULT 'private' NOT NULL,
+            "sort_by" text DEFAULT 'rank' NOT NULL,
+            "sort_how" text DEFAULT 'asc' NOT NULL,
+            "item_count" integer DEFAULT 0 NOT NULL,
+            "updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+            "created_at" timestamp with time zone DEFAULT now() NOT NULL
+        )
+    `);
+    await db.execute(
+        sql`CREATE UNIQUE INDEX IF NOT EXISTS "user_lists_trakt_idx" ON "user_lists" ("user_id","trakt_id") WHERE (trakt_id IS NOT NULL)`,
+    );
+    await db.execute(
+        sql`CREATE INDEX IF NOT EXISTS "user_lists_user_idx" ON "user_lists" ("user_id")`,
+    );
+    await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS "user_list_items" (
+            "id" serial PRIMARY KEY NOT NULL,
+            "user_id" integer NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+            "list_id" integer NOT NULL REFERENCES "user_lists"("id") ON DELETE cascade,
+            "media_type" text NOT NULL,
+            "show_id" integer REFERENCES "shows"("id") ON DELETE cascade,
+            "movie_id" integer REFERENCES "movies"("id") ON DELETE cascade,
+            "rank" integer,
+            "notes" text,
+            "listed_at" timestamp with time zone,
+            "created_at" timestamp with time zone DEFAULT now() NOT NULL
+        )
+    `);
+    await db.execute(
+        sql`CREATE UNIQUE INDEX IF NOT EXISTS "user_list_items_show_idx" ON "user_list_items" ("list_id","show_id") WHERE (show_id IS NOT NULL)`,
+    );
+    await db.execute(
+        sql`CREATE UNIQUE INDEX IF NOT EXISTS "user_list_items_movie_idx" ON "user_list_items" ("list_id","movie_id") WHERE (movie_id IS NOT NULL)`,
+    );
+    await db.execute(
+        sql`CREATE INDEX IF NOT EXISTS "user_list_items_list_idx" ON "user_list_items" ("list_id")`,
+    );
+
+    // 0016 — user_collection
+    await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS "user_collection" (
+            "id" serial PRIMARY KEY NOT NULL,
+            "user_id" integer NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+            "media_type" text NOT NULL,
+            "show_id" integer REFERENCES "shows"("id") ON DELETE cascade,
+            "movie_id" integer REFERENCES "movies"("id") ON DELETE cascade,
+            "season" integer,
+            "episode" integer,
+            "media_format" text,
+            "resolution" text,
+            "hdr" text,
+            "audio" text,
+            "audio_channels" text,
+            "collected_at" timestamp with time zone,
+            "updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+            "created_at" timestamp with time zone DEFAULT now() NOT NULL
+        )
+    `);
+    await db.execute(
+        sql`CREATE UNIQUE INDEX IF NOT EXISTS "user_collection_episode_idx" ON "user_collection" ("user_id","show_id","season","episode") WHERE (season IS NOT NULL AND episode IS NOT NULL)`,
+    );
+    await db.execute(
+        sql`CREATE UNIQUE INDEX IF NOT EXISTS "user_collection_show_idx" ON "user_collection" ("user_id","show_id") WHERE (season IS NULL AND episode IS NULL AND show_id IS NOT NULL)`,
+    );
+    await db.execute(
+        sql`CREATE UNIQUE INDEX IF NOT EXISTS "user_collection_movie_idx" ON "user_collection" ("user_id","movie_id") WHERE (movie_id IS NOT NULL)`,
+    );
+    await db.execute(
+        sql`CREATE INDEX IF NOT EXISTS "user_collection_user_idx" ON "user_collection" ("user_id")`,
+    );
+
+    // 0017 — backup settings + backup_runs
+    await db.execute(sql`
+        ALTER TABLE "user_settings"
+        ADD COLUMN IF NOT EXISTS "gdrive_token" text,
+        ADD COLUMN IF NOT EXISTS "webdav_url" text,
+        ADD COLUMN IF NOT EXISTS "webdav_username" text,
+        ADD COLUMN IF NOT EXISTS "webdav_password" text,
+        ADD COLUMN IF NOT EXISTS "backup_auto_enabled" boolean NOT NULL DEFAULT false,
+        ADD COLUMN IF NOT EXISTS "backup_retention_days" integer NOT NULL DEFAULT 30
+    `);
+    await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS "backup_runs" (
+            "id" serial PRIMARY KEY NOT NULL,
+            "user_id" integer NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+            "provider" text NOT NULL,
+            "status" text NOT NULL,
+            "filename" text,
+            "size_bytes" bigint,
+            "file_id" text,
+            "error" text,
+            "started_at" timestamp with time zone NOT NULL DEFAULT now(),
+            "finished_at" timestamp with time zone
+        )
+    `);
+    await db.execute(
+        sql`CREATE INDEX IF NOT EXISTS "backup_runs_user_idx" ON "backup_runs" ("user_id")`,
+    );
+
     await client.end();
     console.log("[db] Migrations complete");
 }

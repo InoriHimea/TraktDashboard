@@ -105,6 +105,8 @@ export interface CalendarEpisode {
     airDate: string | null;
     /** Whether the current user has any watch-history entry for this episode (P1-T13). */
     watched: boolean;
+    /** True when this episode is the last episode of its season (season finale). */
+    isFinale: boolean;
     show: {
         id: number;
         title: string;
