@@ -2010,12 +2010,23 @@ export async function syncUserCollection(userId: number): Promise<number> {
     const now = new Date();
     let synced = 0;
 
-    // ── Shows (show level) ──────────────────────────────────────────────────
+    // ── Shows (show level, media format from first available episode) ────────
     try {
         const traktShows = (await trakt.getCollectionShows(userId)) as Array<{
             collected_at?: string;
             last_collected_at?: string;
             show?: { ids?: { tmdb?: number } };
+            seasons?: Array<{
+                episodes?: Array<{
+                    metadata?: {
+                        media_type?: string;
+                        resolution?: string;
+                        hdr?: string;
+                        audio?: string;
+                        audio_channels?: string;
+                    };
+                }>;
+            }>;
         }>;
 
         const tmdbIds = traktShows.flatMap((ts) => (ts.show?.ids?.tmdb ? [ts.show.ids.tmdb] : []));
@@ -2039,6 +2050,21 @@ export async function syncUserCollection(userId: number): Promise<number> {
                   ? new Date(ts.collected_at)
                   : now;
 
+            // Use first episode with any media metadata as representative format for the show
+            const firstMeta = ts.seasons
+                ?.flatMap((s) => s.episodes ?? [])
+                .find(
+                    (e) => e.metadata?.media_type || e.metadata?.resolution || e.metadata?.hdr,
+                )?.metadata;
+
+            const formatVals = {
+                mediaFormat: firstMeta?.media_type ?? null,
+                resolution: firstMeta?.resolution ?? null,
+                hdr: firstMeta?.hdr ?? null,
+                audio: firstMeta?.audio ?? null,
+                audioChannels: firstMeta?.audio_channels ?? null,
+            };
+
             const [existing] = await db
                 .select({ id: userCollection.id })
                 .from(userCollection)
@@ -2054,7 +2080,7 @@ export async function syncUserCollection(userId: number): Promise<number> {
             if (existing) {
                 await db
                     .update(userCollection)
-                    .set({ collectedAt, updatedAt: now })
+                    .set({ collectedAt, updatedAt: now, ...formatVals })
                     .where(eq(userCollection.id, existing.id));
             } else {
                 await db.insert(userCollection).values({
@@ -2064,6 +2090,7 @@ export async function syncUserCollection(userId: number): Promise<number> {
                     collectedAt,
                     updatedAt: now,
                     createdAt: now,
+                    ...formatVals,
                 });
             }
             synced++;

@@ -987,11 +987,11 @@ export function getTraktClient() {
 
         // ── Collection ──────────────────────────────────────────────────────
         getCollectionShows: async (userId: number): Promise<unknown[]> => {
-            return traktFetch<unknown[]>("/sync/collection/shows", userId);
+            return traktFetch<unknown[]>("/sync/collection/shows?extended=metadata", userId);
         },
 
         getCollectionMovies: async (userId: number): Promise<unknown[]> => {
-            return traktFetch<unknown[]>("/sync/collection/movies", userId);
+            return traktFetch<unknown[]>("/sync/collection/movies?extended=metadata", userId);
         },
 
         removeCollectionShows: async (

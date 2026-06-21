@@ -59,6 +59,7 @@ function CollectionCard({ item, index }: { item: UserCollectionItem; index: numb
     const remove = useRemoveCollectionItem();
     const { toast } = useToast();
     const [confirmRemove, setConfirmRemove] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
     const isShow = item.mediaType === "show";
     const detailPath =
         isShow && item.showId
@@ -75,84 +76,92 @@ function CollectionCard({ item, index }: { item: UserCollectionItem; index: numb
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.18, delay: Math.min(index * 0.02, 0.3) }}
             style={{ position: "relative" }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => {
+                setIsHovered(false);
+                if (!remove.isPending) setConfirmRemove(false);
+            }}
         >
-            {/* Remove button */}
-            {confirmRemove ? (
-                <div
-                    style={{
-                        position: "absolute",
-                        top: 5,
-                        right: 5,
-                        zIndex: 2,
-                        display: "flex",
-                        gap: 4,
-                    }}
-                >
+            {/* Remove button — visible only on hover or while confirming */}
+            <div
+                style={{
+                    position: "absolute",
+                    top: 5,
+                    right: 5,
+                    zIndex: 2,
+                    display: "flex",
+                    gap: 4,
+                    opacity: isHovered || confirmRemove ? 1 : 0,
+                    transition: "opacity 0.15s",
+                    pointerEvents: isHovered || confirmRemove ? "auto" : "none",
+                }}
+            >
+                {confirmRemove ? (
+                    <>
+                        <button
+                            onClick={() =>
+                                remove.mutate(item.id, {
+                                    onSuccess: () => setConfirmRemove(false),
+                                    onError: () => {
+                                        setConfirmRemove(false);
+                                        toast(t("collection.removeFailed"), "error");
+                                    },
+                                })
+                            }
+                            style={{
+                                padding: "3px 8px",
+                                borderRadius: 5,
+                                border: "none",
+                                background: "#ef4444",
+                                color: "#fff",
+                                fontSize: 10,
+                                fontWeight: 700,
+                                cursor: "pointer",
+                            }}
+                        >
+                            {t("common.confirm")}
+                        </button>
+                        <button
+                            onClick={() => setConfirmRemove(false)}
+                            style={{
+                                padding: "3px 6px",
+                                borderRadius: 5,
+                                border: "none",
+                                background: "rgba(0,0,0,0.65)",
+                                color: "#fff",
+                                fontSize: 10,
+                                cursor: "pointer",
+                            }}
+                        >
+                            <X size={10} />
+                        </button>
+                    </>
+                ) : (
                     <button
-                        onClick={() =>
-                            remove.mutate(item.id, {
-                                onSuccess: () => setConfirmRemove(false),
-                                onError: () => {
-                                    setConfirmRemove(false);
-                                    toast(t("collection.removeFailed"), "error");
-                                },
-                            })
-                        }
+                        onClick={() => setConfirmRemove(true)}
                         style={{
-                            padding: "3px 8px",
-                            borderRadius: 5,
-                            border: "none",
-                            background: "#ef4444",
-                            color: "#fff",
-                            fontSize: 10,
-                            fontWeight: 700,
-                            cursor: "pointer",
-                        }}
-                    >
-                        {t("common.confirm")}
-                    </button>
-                    <button
-                        onClick={() => setConfirmRemove(false)}
-                        style={{
-                            padding: "3px 6px",
+                            width: 22,
+                            height: 22,
                             borderRadius: 5,
                             border: "none",
                             background: "rgba(0,0,0,0.65)",
-                            color: "#fff",
-                            fontSize: 10,
+                            color: "var(--color-text-muted)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
                             cursor: "pointer",
+                            backdropFilter: "blur(4px)",
+                            transition: "color 0.15s",
                         }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = "#ef4444")}
+                        onMouseLeave={(e) =>
+                            (e.currentTarget.style.color = "var(--color-text-muted)")
+                        }
                     >
-                        <X size={10} />
+                        <X size={11} />
                     </button>
-                </div>
-            ) : (
-                <button
-                    onClick={() => setConfirmRemove(true)}
-                    style={{
-                        position: "absolute",
-                        top: 5,
-                        right: 5,
-                        zIndex: 2,
-                        width: 22,
-                        height: 22,
-                        borderRadius: 5,
-                        border: "none",
-                        background: "rgba(0,0,0,0.65)",
-                        color: "var(--color-text-muted)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        cursor: "pointer",
-                        backdropFilter: "blur(4px)",
-                        transition: "color 0.15s",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = "#ef4444")}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-text-muted)")}
-                >
-                    <X size={11} />
-                </button>
-            )}
+                )}
+            </div>
 
             <div
                 style={{
