@@ -120,18 +120,21 @@ export async function revokeGDriveToken(token: GDriveToken): Promise<void> {
 }
 
 async function getOrCreateGDriveFolder(accessToken: string): Promise<string> {
-    // Search for existing folder
     const q = encodeURIComponent(
         `name='${GDRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
     );
-    const res = await fetch(`${GDRIVE_LIST_URL}?q=${q}&fields=files(id)`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    const listHeaders = { Authorization: `Bearer ${accessToken}` };
+    // Order by createdTime so we always pick the same folder if duplicates exist.
+    const listUrl = `${GDRIVE_LIST_URL}?q=${q}&fields=files(id)&orderBy=createdTime`;
+
+    const res = await fetch(listUrl, { headers: listHeaders });
     const data = (await res.json()) as { files: Array<{ id: string }> };
     if (data.files?.length > 0) return data.files[0].id;
 
-    // Create folder
-    const createRes = await fetch("https://www.googleapis.com/drive/v3/files", {
+    // Create folder. Two concurrent requests may both reach this point (TOCTOU), creating
+    // duplicate folders. Google Drive allows this; we mitigate by re-listing after creation
+    // and consistently returning the oldest folder ID so all instances converge.
+    await fetch("https://www.googleapis.com/drive/v3/files", {
         method: "POST",
         headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -142,8 +145,12 @@ async function getOrCreateGDriveFolder(accessToken: string): Promise<string> {
             mimeType: "application/vnd.google-apps.folder",
         }),
     });
-    const folder = (await createRes.json()) as { id: string };
-    return folder.id;
+
+    // Re-list after creation to pick a stable ID (oldest = createdTime asc order).
+    const retryRes = await fetch(listUrl, { headers: listHeaders });
+    const retryData = (await retryRes.json()) as { files: Array<{ id: string }> };
+    if (retryData.files?.length > 0) return retryData.files[0].id;
+    throw new Error("GDrive: failed to create or find backup folder");
 }
 
 export async function uploadToGDrive(
@@ -316,7 +323,11 @@ export async function deleteWebDAVFile(cfg: WebDAVConfig, filePath: string): Pro
     if (resolved.origin !== baseUrl.origin) {
         throw new Error("WebDAV delete target is outside the configured server");
     }
-    if (!decodeURIComponent(resolved.pathname).includes("/TraktDashboardBackups/")) {
+    // Check the raw (percent-encoded) pathname — do NOT decode before checking.
+    // decodeURIComponent() would turn %2F into "/" which lets a crafted path like
+    // /TraktDashboardBackups%2F..%2Fetc pass the substring check while the actual
+    // request targets a path outside the backup folder on servers that decode %2F.
+    if (!resolved.pathname.includes("/TraktDashboardBackups/")) {
         throw new Error("WebDAV delete target is outside the backup folder");
     }
     const res = await fetch(resolved.toString(), {
@@ -336,9 +347,14 @@ export async function dumpDatabase(): Promise<Buffer> {
 
     return new Promise<Buffer>((resolve, reject) => {
         let settled = false;
+        let dumpTimer: ReturnType<typeof setTimeout> | null = null;
         const settle = (fn: () => void) => {
             if (!settled) {
                 settled = true;
+                if (dumpTimer) {
+                    clearTimeout(dumpTimer);
+                    dumpTimer = null;
+                }
                 fn();
             }
         };
@@ -361,12 +377,30 @@ export async function dumpDatabase(): Promise<Buffer> {
         const maybeResolve = () => {
             if (!gzEnded || !pgOk) return;
             const buf = Buffer.concat(chunks);
-            if (buf.length === 0) {
+            // A gzip stream always emits at least a 20-byte header+footer even for empty
+            // input, so buf.length === 0 can never fire here. Use a small threshold that
+            // is above the bare envelope size (20 bytes) but below any real pg_dump output
+            // (which includes PostgreSQL version comments and SET statements).
+            if (buf.length < 100) {
                 settle(() => reject(new Error("pg_dump produced an empty dump")));
                 return;
             }
             settle(() => resolve(buf));
         };
+
+        // Kill pg_dump if it stalls waiting for a DB lock — without a timeout the
+        // Promise would hang indefinitely, holding the HTTP connection open forever.
+        dumpTimer = setTimeout(
+            () => {
+                settle(() => reject(new Error("pg_dump timed out after 5 minutes")));
+                try {
+                    pg.kill("SIGTERM");
+                } catch {
+                    /* already exited */
+                }
+            },
+            5 * 60 * 1000,
+        );
 
         pg.stdout!.pipe(gz);
         gz.on("data", (d: Buffer) => chunks.push(d));

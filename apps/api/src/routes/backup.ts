@@ -105,7 +105,13 @@ backupRoutes.post("/gdrive/poll", async (c) => {
     const body = (await c.req.json().catch(() => ({}))) as { device_code?: string };
     if (!body.device_code) return c.json({ error: "device_code required" }, 400);
 
-    const token = await pollGDriveToken(body.device_code);
+    let token: Awaited<ReturnType<typeof pollGDriveToken>>;
+    try {
+        token = await pollGDriveToken(body.device_code);
+    } catch (err) {
+        // access_denied, expired_token, etc. — surface as structured 400 rather than 500
+        return c.json({ ok: false, pending: false, error: (err as Error).message }, 400);
+    }
     if (!token) return c.json({ ok: false, pending: true });
 
     // Google omits refresh_token on re-consent when one was already granted. Persisting

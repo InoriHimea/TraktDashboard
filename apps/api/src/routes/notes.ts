@@ -66,8 +66,10 @@ notesRoutes.get("/", async (c) => {
     const mediaType = c.req.query("mediaType") as UserNote["mediaType"] | undefined;
     const showId = c.req.query("showId") ? Number(c.req.query("showId")) : undefined;
     const movieId = c.req.query("movieId") ? Number(c.req.query("movieId")) : undefined;
-    const season = c.req.query("season") != null ? Number(c.req.query("season")) : undefined;
-    const episode = c.req.query("episode") != null ? Number(c.req.query("episode")) : undefined;
+    // Use a truthy check (not != null) so an empty string (?season=) is treated as absent
+    // rather than Number("") = 0, which would silently filter to season-0 (Specials only).
+    const season = c.req.query("season") ? Number(c.req.query("season")) : undefined;
+    const episode = c.req.query("episode") ? Number(c.req.query("episode")) : undefined;
 
     const db = getDb();
     const conds = [eq(userNotes.userId, userId)];

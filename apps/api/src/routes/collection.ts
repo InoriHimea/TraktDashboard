@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { getDb, userCollection, shows, movies } from "@trakt-dashboard/db";
 import { eq, and, isNull, isNotNull } from "drizzle-orm";
-import { getTraktClient, TraktApiError } from "../services/trakt.js";
+import { getTraktClient } from "../services/trakt.js";
 import { syncUserCollection } from "../services/sync.js";
 import type { UserCollectionItem } from "@trakt-dashboard/types";
 
@@ -53,6 +53,10 @@ collectionRoutes.get("/", async (c) => {
         .where(
             and(
                 eq(userCollection.userId, userId),
+                // Only return show-level rows (season IS NULL). Episode-level rows from the
+                // old sync design are excluded so the listing stays consistent with /check,
+                // which also requires season IS NULL for shows.
+                isNull(userCollection.season),
                 rawType === "show"
                     ? isNotNull(userCollection.showId)
                     : rawType === "movie"
@@ -81,9 +85,16 @@ collectionRoutes.get("/", async (c) => {
 // GET /api/collection/check?showId=&movieId= — check if item is in collection
 collectionRoutes.get("/check", async (c) => {
     const userId = c.get("userId");
-    const showId = c.req.query("showId") ? Number(c.req.query("showId")) : null;
-    const movieId = c.req.query("movieId") ? Number(c.req.query("movieId")) : null;
+    const rawShowId = c.req.query("showId");
+    const rawMovieId = c.req.query("movieId");
+    const showId = rawShowId ? Number(rawShowId) : null;
+    const movieId = rawMovieId ? Number(rawMovieId) : null;
     const db = getDb();
+
+    if (showId !== null && !Number.isFinite(showId))
+        return c.json({ error: "Invalid showId" }, 400);
+    if (movieId !== null && !Number.isFinite(movieId))
+        return c.json({ error: "Invalid movieId" }, 400);
 
     if (showId && movieId) {
         return c.json({ error: "Provide either showId or movieId, not both" }, 400);
@@ -112,8 +123,12 @@ collectionRoutes.get("/check", async (c) => {
 // POST /api/collection/sync — pull all from Trakt → upsert local DB (add-only archive)
 collectionRoutes.post("/sync", async (c) => {
     const userId = c.get("userId");
-    const synced = await syncUserCollection(userId);
-    return c.json({ ok: true, synced });
+    try {
+        const synced = await syncUserCollection(userId);
+        return c.json({ ok: true, synced });
+    } catch (err) {
+        return c.json({ ok: false, error: (err as Error).message }, 500);
+    }
 });
 
 // POST /api/collection/clear-remote — delete ALL remote Trakt collection (requires confirm)
@@ -130,12 +145,19 @@ collectionRoutes.post("/clear-remote", async (c) => {
     const db = getDb();
     const trakt = getTraktClient();
 
-    // Collect Trakt IDs from local DB for all collected shows/movies
+    // Only select show-level rows (isNull(season)) to avoid sending duplicate IDs when
+    // episode-level rows share the same showId as a show-level row.
     const showRows = await db
         .select({ traktId: shows.traktId, tmdbId: shows.tmdbId })
         .from(userCollection)
         .innerJoin(shows, eq(userCollection.showId, shows.id))
-        .where(and(eq(userCollection.userId, userId), isNotNull(userCollection.showId)));
+        .where(
+            and(
+                eq(userCollection.userId, userId),
+                isNotNull(userCollection.showId),
+                isNull(userCollection.season),
+            ),
+        );
 
     const movieRows = await db
         .select({ traktId: movies.traktId, tmdbId: movies.tmdbId })
@@ -182,6 +204,7 @@ collectionRoutes.post("/clear-remote", async (c) => {
 collectionRoutes.delete("/:id", async (c) => {
     const userId = c.get("userId");
     const id = Number(c.req.param("id"));
+    if (!Number.isFinite(id)) return c.json({ error: "Invalid id" }, 400);
     const db = getDb();
     const trakt = getTraktClient();
 
@@ -192,10 +215,13 @@ collectionRoutes.delete("/:id", async (c) => {
         .limit(1);
     if (!item) return c.json({ error: "Not found" }, 404);
 
-    // Local→Trakt deletion propagation (本地删→删远端). Best-effort: a Trakt failure
-    // must not block the local delete, since the local archive is the source of truth.
+    // Local→Trakt deletion propagation (本地删→删远端). Best-effort: ANY Trakt failure
+    // (including network errors, not just TraktApiError) must not block the local delete,
+    // since the local archive is the source of truth.
+    // Only propagate show-level rows to Trakt — episode-level rows (season/episode non-null)
+    // would incorrectly remove the entire show if passed to removeCollectionShows.
     try {
-        if (item.showId) {
+        if (item.showId && item.season === null && item.episode === null) {
             const [row] = await db
                 .select({ traktId: shows.traktId, tmdbId: shows.tmdbId })
                 .from(shows)
@@ -219,7 +245,6 @@ collectionRoutes.delete("/:id", async (c) => {
             if (Object.keys(ids).length > 0) await trakt.removeCollectionMovies(userId, [{ ids }]);
         }
     } catch (err) {
-        if (!(err instanceof TraktApiError)) throw err;
         console.warn(
             "[collection] Trakt remove failed, deleting locally only:",
             (err as Error).message,

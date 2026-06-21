@@ -96,6 +96,10 @@ export default function SettingsPage() {
     const [gdrivePollTimer, setGdrivePollTimer] = useState<ReturnType<typeof setInterval> | null>(
         null,
     );
+    // Ref that always mirrors gdrivePollTimer so the unmount cleanup effect can read the
+    // current value without re-running (a [gdrivePollTimer] dependency would re-run the
+    // cleanup on every timer change, clearing an already-running interval in StrictMode).
+    const gdrivePollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const [webdavUrl, setWebdavUrl] = useState("");
     const [webdavUsername, setWebdavUsername] = useState("");
     const [webdavPassword, setWebdavPassword] = useState("");
@@ -136,13 +140,19 @@ export default function SettingsPage() {
         hasSeededRef.current = true;
     }, [settings]);
 
-    // Clear the Google Drive device-auth poll interval on unmount so it can't keep
-    // firing requests / setState after the user leaves the Settings page.
+    // Keep ref in sync so the unmount cleanup always sees the latest timer.
+    useEffect(() => {
+        gdrivePollTimerRef.current = gdrivePollTimer;
+    }, [gdrivePollTimer]);
+
+    // Clear the Google Drive device-auth poll interval on unmount. Empty deps so this
+    // runs cleanup exactly once (on unmount) via the ref — avoids re-running on every
+    // timer state change which would clear a live interval in React 18 Strict Mode.
     useEffect(() => {
         return () => {
-            if (gdrivePollTimer) clearInterval(gdrivePollTimer);
+            if (gdrivePollTimerRef.current) clearInterval(gdrivePollTimerRef.current);
         };
-    }, [gdrivePollTimer]);
+    }, []);
 
     // 初始化备份状态
     useEffect(() => {
