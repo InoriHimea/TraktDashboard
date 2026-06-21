@@ -136,6 +136,14 @@ export default function SettingsPage() {
         hasSeededRef.current = true;
     }, [settings]);
 
+    // Clear the Google Drive device-auth poll interval on unmount so it can't keep
+    // firing requests / setState after the user leaves the Settings page.
+    useEffect(() => {
+        return () => {
+            if (gdrivePollTimer) clearInterval(gdrivePollTimer);
+        };
+    }, [gdrivePollTimer]);
+
     // 初始化备份状态
     useEffect(() => {
         api.backup
@@ -948,23 +956,53 @@ export default function SettingsPage() {
                                                         const res =
                                                             await api.backup.gdriveStartAuth();
                                                         setDeviceAuth(res.data);
+                                                        // Stop polling once the device code expires.
+                                                        const deadline =
+                                                            Date.now() + res.data.expires_in * 1000;
+                                                        const stopPolling = (
+                                                            timer: ReturnType<typeof setInterval>,
+                                                        ) => {
+                                                            clearInterval(timer);
+                                                            setGdrivePollTimer(null);
+                                                            setDeviceAuth(null);
+                                                            setGdriveLoading(false);
+                                                        };
                                                         const timer = setInterval(
                                                             async () => {
-                                                                const poll =
-                                                                    await api.backup.gdrivePoll(
-                                                                        res.data.device_code,
-                                                                    );
-                                                                if (poll.connected) {
-                                                                    clearInterval(timer);
-                                                                    setGdrivePollTimer(null);
-                                                                    setDeviceAuth(null);
-                                                                    setGdriveConnected(true);
-                                                                    setGdriveLoading(false);
+                                                                if (Date.now() >= deadline) {
+                                                                    stopPolling(timer);
                                                                     toast(
                                                                         t(
-                                                                            "settings.backup.gdriveConnected",
+                                                                            "settings.backup.gdriveAuthFailed",
                                                                         ),
-                                                                        "success",
+                                                                        "error",
+                                                                    );
+                                                                    return;
+                                                                }
+                                                                try {
+                                                                    const poll =
+                                                                        await api.backup.gdrivePoll(
+                                                                            res.data.device_code,
+                                                                        );
+                                                                    if (poll.connected) {
+                                                                        stopPolling(timer);
+                                                                        setGdriveConnected(true);
+                                                                        toast(
+                                                                            t(
+                                                                                "settings.backup.gdriveConnected",
+                                                                            ),
+                                                                            "success",
+                                                                        );
+                                                                    }
+                                                                } catch {
+                                                                    // Denied / expired / network — stop and surface failure
+                                                                    // instead of looping forever with a stuck spinner.
+                                                                    stopPolling(timer);
+                                                                    toast(
+                                                                        t(
+                                                                            "settings.backup.gdriveAuthFailed",
+                                                                        ),
+                                                                        "error",
                                                                     );
                                                                 }
                                                             },

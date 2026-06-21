@@ -118,6 +118,8 @@ interface RawNowPlayingItem {
 interface RawSession {
     NowPlayingItem?: RawNowPlayingItem;
     PlayState?: { PositionTicks?: number; IsPaused?: boolean };
+    UserId?: string;
+    UserName?: string;
 }
 
 export interface JellyfinActiveSession {
@@ -137,14 +139,21 @@ export interface JellyfinActiveSession {
 
 export async function getActiveSessions(
     cfg: JellyfinConfig,
+    username?: string,
 ): Promise<JellyfinActiveSession | null> {
     const res = await jellyfinFetch(cfg, "/Sessions?ActiveWithinSeconds=60");
     if (!res.ok) throw new Error(`Jellyfin sessions failed: ${res.status}`);
     const sessions = (await res.json()) as RawSession[];
 
+    // On a shared Jellyfin server /Sessions returns every account's playback. When a
+    // username is configured, only consider that user's sessions so we never report
+    // (or "catch up" Trakt against) someone else's now-playing.
+    const wanted = username?.trim().toLowerCase();
+
     for (const session of sessions) {
         const item = session.NowPlayingItem;
         if (!item) continue;
+        if (wanted && (session.UserName ?? "").toLowerCase() !== wanted) continue;
 
         const mediaType =
             item.Type === "Movie" ? "movie" : item.Type === "Episode" ? "episode" : null;

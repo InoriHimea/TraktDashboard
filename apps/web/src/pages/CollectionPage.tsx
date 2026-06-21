@@ -20,6 +20,7 @@ import {
 } from "../hooks";
 import { tmdbImage } from "../lib/image";
 import { t } from "../lib/i18n";
+import { useToast } from "../lib/toast";
 import type { UserCollectionItem } from "@trakt-dashboard/types";
 
 type MediaFilter = "all" | "show" | "movie";
@@ -56,6 +57,7 @@ function formatBadge(item: UserCollectionItem) {
 
 function CollectionCard({ item, index }: { item: UserCollectionItem; index: number }) {
     const remove = useRemoveCollectionItem();
+    const { toast } = useToast();
     const [confirmRemove, setConfirmRemove] = useState(false);
     const isShow = item.mediaType === "show";
     const detailPath =
@@ -88,7 +90,13 @@ function CollectionCard({ item, index }: { item: UserCollectionItem; index: numb
                 >
                     <button
                         onClick={() =>
-                            remove.mutate(item.id, { onSuccess: () => setConfirmRemove(false) })
+                            remove.mutate(item.id, {
+                                onSuccess: () => setConfirmRemove(false),
+                                onError: () => {
+                                    setConfirmRemove(false);
+                                    toast(t("collection.removeFailed"), "error");
+                                },
+                            })
                         }
                         style={{
                             padding: "3px 8px",

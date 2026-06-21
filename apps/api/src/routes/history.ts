@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { getDb, watchHistory, episodes, shows, movies } from "@trakt-dashboard/db";
-import { eq, and, gte, lte, desc, sql, ilike, or, isNull } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql, or, isNull, inArray } from "drizzle-orm";
 import { apiOk } from "../lib/response.js";
 import { parseBoundedInt } from "../lib/number.js";
 import { toIsoOrNull } from "../lib/datetime.js";
@@ -173,7 +173,9 @@ historyRoutes.get("/export", async (c) => {
                 isEp ? (row.show?.title ?? "") : (row.movie?.title ?? ""),
                 isEp ? (row.episode?.seasonNumber ?? "") : "",
                 isEp ? (row.episode?.episodeNumber ?? "") : "",
-                isEp ? (row.episode?.title ?? "") : (row.movie?.title ?? ""),
+                // Title column is the episode title; movies have no episode title (the
+                // movie name already appears in the "Show / Movie" column).
+                isEp ? (row.episode?.title ?? "") : "",
                 toIsoOrNull(row.history.watchedAt) ?? "",
                 row.history.source,
             ]
@@ -235,10 +237,18 @@ historyRoutes.post("/import", async (c) => {
     // Batch show lookup: title or translatedName match (case-insensitive)
     const showCache = new Map<string, number>(); // lowercase title → local show.id
     for (const title of showTitles) {
+        // Exact case-insensitive match (title is already lower-cased). Using lower()=
+        // rather than ilike avoids LIKE metacharacters (% / _) in a title being treated
+        // as wildcards, which would match the wrong show or fail to match its own row.
         const [row] = await db
             .select({ id: shows.id, title: shows.title, translatedName: shows.translatedName })
             .from(shows)
-            .where(or(ilike(shows.title, title), ilike(shows.translatedName, title)))
+            .where(
+                or(
+                    sql`lower(${shows.title}) = ${title}`,
+                    sql`lower(${shows.translatedName}) = ${title}`,
+                ),
+            )
             .limit(1);
         if (row) {
             showCache.set(title, row.id);
@@ -252,9 +262,28 @@ historyRoutes.post("/import", async (c) => {
         const [row] = await db
             .select({ id: movies.id })
             .from(movies)
-            .where(ilike(movies.title, title))
+            .where(sql`lower(${movies.title}) = ${title}`)
             .limit(1);
         if (row) movieCache.set(title, row.id);
+    }
+
+    // Batch-preload episodes for every resolved show, so the per-entry loop resolves
+    // episodes from memory instead of issuing one SELECT per imported entry (N+1).
+    const episodeCache = new Map<string, number>(); // `${showId}:${season}:${episode}` → episode.id
+    const resolvedShowIds = [...new Set(showCache.values())];
+    if (resolvedShowIds.length > 0) {
+        const epRows = await db
+            .select({
+                id: episodes.id,
+                showId: episodes.showId,
+                seasonNumber: episodes.seasonNumber,
+                episodeNumber: episodes.episodeNumber,
+            })
+            .from(episodes)
+            .where(inArray(episodes.showId, resolvedShowIds));
+        for (const r of epRows) {
+            episodeCache.set(`${r.showId}:${r.seasonNumber}:${r.episodeNumber}`, r.id);
+        }
     }
 
     // ── Process entries ─────────────────────────────────────────────────────
@@ -290,19 +319,8 @@ historyRoutes.post("/import", async (c) => {
                     continue;
                 }
 
-                const [epRow] = await db
-                    .select({ id: episodes.id })
-                    .from(episodes)
-                    .where(
-                        and(
-                            eq(episodes.showId, showId),
-                            eq(episodes.seasonNumber, seasonNumber),
-                            eq(episodes.episodeNumber, episodeNumber),
-                        ),
-                    )
-                    .limit(1);
-
-                if (!epRow) {
+                const epId = episodeCache.get(`${showId}:${seasonNumber}:${episodeNumber}`);
+                if (!epId) {
                     skipped++;
                     continue;
                 }
@@ -312,7 +330,7 @@ historyRoutes.post("/import", async (c) => {
                 // against existing timestamped rows for the same episode.
                 const dupConds = [
                     eq(watchHistory.userId, userId),
-                    eq(watchHistory.episodeId, epRow.id),
+                    eq(watchHistory.episodeId, epId),
                 ];
                 if (watchedAt !== null) {
                     dupConds.push(eq(watchHistory.watchedAt, watchedAt));
@@ -331,7 +349,7 @@ historyRoutes.post("/import", async (c) => {
 
                 await db.insert(watchHistory).values({
                     userId,
-                    episodeId: epRow.id,
+                    episodeId: epId,
                     mediaType: "episode",
                     watchedAt,
                     source: "import",

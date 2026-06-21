@@ -108,6 +108,13 @@ backupRoutes.post("/gdrive/poll", async (c) => {
     const token = await pollGDriveToken(body.device_code);
     if (!token) return c.json({ ok: false, pending: true });
 
+    // Google omits refresh_token on re-consent when one was already granted. Persisting
+    // an empty refresh_token would brick the next token refresh, so keep the existing one.
+    if (!token.refresh_token) {
+        const existing = parseGDriveToken((await getSettings(userId))?.gdriveToken);
+        if (existing?.refresh_token) token.refresh_token = existing.refresh_token;
+    }
+
     await saveGDriveToken(userId, token);
     return c.json({ ok: true, connected: true });
 });

@@ -65,7 +65,7 @@ ratingsRoutes.put("/", async (c) => {
             .where(eq(shows.id, localId));
         if (!row) return c.json({ error: "Show not found" }, 404);
         if (row.traktId) traktIds.trakt = row.traktId;
-        traktIds.tmdb = row.tmdbId;
+        if (row.tmdbId) traktIds.tmdb = row.tmdbId;
     } else {
         const [row] = await db
             .select({ traktId: movies.traktId, tmdbId: movies.tmdbId })

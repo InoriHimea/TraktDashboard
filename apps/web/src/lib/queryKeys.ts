@@ -70,6 +70,7 @@ export const queryKeys = {
     collection: {
         all: ["collection"] as const,
         byType: (type: string) => ["collection", type] as const,
+        checkAll: ["collection-check"] as const,
         check: (showId?: number, movieId?: number) =>
             ["collection-check", showId, movieId] as const,
     },

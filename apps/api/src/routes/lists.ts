@@ -134,6 +134,10 @@ listsRoutes.put("/:id", async (c) => {
             });
         } catch (err) {
             if (!(err instanceof TraktApiError)) throw err;
+            console.warn(
+                "[lists] Trakt update failed, updating locally only:",
+                (err as Error).message,
+            );
         }
     }
 
@@ -164,6 +168,10 @@ listsRoutes.delete("/:id", async (c) => {
             await trakt.deleteList(userId, list.traktSlug);
         } catch (err) {
             if (!(err instanceof TraktApiError)) throw err;
+            console.warn(
+                "[lists] Trakt delete failed, deleting locally only:",
+                (err as Error).message,
+            );
         }
     }
 
@@ -271,10 +279,16 @@ listsRoutes.post("/:id/items", async (c) => {
             await trakt.addListItems(userId, list.traktSlug, [{ type: mediaType, ids: traktIds }]);
         } catch (err) {
             if (!(err instanceof TraktApiError)) throw err;
+            console.warn(
+                "[lists] Trakt add-item failed, storing locally only:",
+                (err as Error).message,
+            );
         }
     }
 
     const now = new Date();
+    // onConflictDoNothing: re-adding the same title hits the (list_id, show_id) /
+    // (list_id, movie_id) unique index — make it idempotent instead of a 500.
     const [item] = await db
         .insert(userListItems)
         .values({
@@ -287,7 +301,25 @@ listsRoutes.post("/:id/items", async (c) => {
             listedAt: now,
             createdAt: now,
         })
+        .onConflictDoNothing()
         .returning();
+
+    if (!item) {
+        // Already in the list — return the existing row without re-incrementing the count.
+        const [existing] = await db
+            .select({ id: userListItems.id })
+            .from(userListItems)
+            .where(
+                and(
+                    eq(userListItems.listId, listId),
+                    mediaType === "show"
+                        ? eq(userListItems.showId, localId)
+                        : eq(userListItems.movieId, localId),
+                ),
+            )
+            .limit(1);
+        return c.json({ data: { id: existing?.id ?? null, alreadyExists: true } });
+    }
 
     // Update item_count atomically to avoid lost increments under concurrent requests.
     await db
@@ -341,6 +373,10 @@ listsRoutes.delete("/:id/items/:itemId", async (c) => {
                 ]);
             } catch (err) {
                 if (!(err instanceof TraktApiError)) throw err;
+                console.warn(
+                    "[lists] Trakt remove-item failed, removing locally only:",
+                    (err as Error).message,
+                );
             }
         }
     }

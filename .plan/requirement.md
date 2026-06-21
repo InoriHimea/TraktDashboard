@@ -1,6 +1,6 @@
 # Trakt Dashboard — Requirements
 
-Living spec of the current functional and non-functional requirements. Last reviewed: 2026-06-19.
+Living spec of the current functional and non-functional requirements. Last reviewed: 2026-06-21.
 
 ## Product
 
@@ -14,6 +14,11 @@ privacy-first (data stays on the user's server).
   season/episode breakdown; episode detail; reset-show progress (reset cursor).
 - **Movies** — watched movie library with rewatch counts and last-watched dates; movie detail.
 - **Watchlist** — two-way sync with Trakt (Trakt is source of truth on periodic reconcile).
+- **Collection** — local DB is an **unbounded, add-only archive**; Trakt is the capped (≤100) syncable
+  subset. Pull (Trakt → local) is incremental and never deletes local rows (items dropped from
+  Trakt — including cap eviction — are retained locally). Delete (local → Trakt) propagates: removing
+  a local item also removes it from the Trakt collection. Show collection captures episode-level rows
+  with media format metadata. Sync runs automatically inside the scheduled incremental sync.
 - **Calendar** — upcoming/recent episodes within a bounded window (≤90 days each direction),
   grouped by air date, showing watched status.
 - **Stats** — monthly watch charts, top genres, totals (episodes/movies/runtime).

@@ -12,6 +12,7 @@ import {
     watchResetCursors,
     watchlist,
     userRatings,
+    userCollection,
 } from "@trakt-dashboard/db";
 import {
     eq,
@@ -274,6 +275,13 @@ export async function triggerFullSync(userId: number): Promise<void> {
             .set({ currentShow: "Syncing ratings…", updatedAt: new Date() })
             .where(eq(syncState.userId, userId));
         await syncRatings(userId);
+
+        // Sync collection after ratings (add-only local archive)
+        await db
+            .update(syncState)
+            .set({ currentShow: "Syncing collection…", updatedAt: new Date() })
+            .where(eq(syncState.userId, userId));
+        await syncUserCollection(userId);
 
         await db
             .update(syncState)
@@ -569,6 +577,17 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
             await syncRatings(userId);
         } catch (e) {
             console.error("[sync:incr] Ratings sync failed:", toErrorMessage(e));
+        }
+
+        // ── Incremental collection (add-only local archive) ───────────────────
+        try {
+            await db
+                .update(syncState)
+                .set({ currentShow: "Syncing collection…", updatedAt: new Date() })
+                .where(eq(syncState.userId, userId));
+            await syncUserCollection(userId);
+        } catch (e) {
+            console.error("[sync:incr] Collection sync failed:", toErrorMessage(e));
         }
 
         // Conservative cursor advance: if any show failed, roll back the cursor
@@ -1971,6 +1990,149 @@ export async function syncRatings(userId: number): Promise<void> {
     } catch (e) {
         console.error("[sync:ratings] Failed to sync ratings:", e instanceof Error ? e.message : e);
     }
+}
+
+/**
+ * Pull the user's Trakt collection into the local DB.
+ *
+ * Design: the local collection is an unbounded, add-only archive while Trakt is the
+ * capped (≤100) syncable subset. This sync therefore ONLY inserts/refreshes rows and
+ * NEVER deletes — items dropped from Trakt (including cap eviction) stay archived
+ * locally. Local→Trakt deletion is handled separately in the collection route.
+ *
+ * Shows are tracked at show level (one row per show). Per-episode media-format
+ * archival is a deferred enhancement (would need an episode-grouped UI); the previous
+ * code declared but silently discarded the per-episode payload, which is removed here.
+ */
+export async function syncUserCollection(userId: number): Promise<number> {
+    const db = getDb();
+    const trakt = getTraktClient();
+    const now = new Date();
+    let synced = 0;
+
+    // ── Shows (show level) ──────────────────────────────────────────────────
+    try {
+        const traktShows = (await trakt.getCollectionShows(userId)) as Array<{
+            collected_at?: string;
+            last_collected_at?: string;
+            show?: { ids?: { tmdb?: number } };
+        }>;
+
+        const tmdbIds = traktShows.flatMap((ts) => (ts.show?.ids?.tmdb ? [ts.show.ids.tmdb] : []));
+        const localShows =
+            tmdbIds.length > 0
+                ? await db
+                      .select({ id: shows.id, tmdbId: shows.tmdbId })
+                      .from(shows)
+                      .where(inArray(shows.tmdbId, tmdbIds))
+                : [];
+        const showIdByTmdb = new Map(localShows.map((s) => [s.tmdbId, s.id]));
+
+        for (const ts of traktShows) {
+            const tmdbId = ts.show?.ids?.tmdb;
+            const localId = tmdbId ? showIdByTmdb.get(tmdbId) : undefined;
+            if (!localId) continue;
+
+            const collectedAt = ts.last_collected_at
+                ? new Date(ts.last_collected_at)
+                : ts.collected_at
+                  ? new Date(ts.collected_at)
+                  : now;
+
+            const [existing] = await db
+                .select({ id: userCollection.id })
+                .from(userCollection)
+                .where(
+                    and(
+                        eq(userCollection.userId, userId),
+                        eq(userCollection.showId, localId),
+                        isNull(userCollection.season),
+                        isNull(userCollection.episode),
+                    ),
+                )
+                .limit(1);
+            if (existing) {
+                await db
+                    .update(userCollection)
+                    .set({ collectedAt, updatedAt: now })
+                    .where(eq(userCollection.id, existing.id));
+            } else {
+                await db.insert(userCollection).values({
+                    userId,
+                    mediaType: "show",
+                    showId: localId,
+                    collectedAt,
+                    updatedAt: now,
+                    createdAt: now,
+                });
+            }
+            synced++;
+        }
+    } catch (e) {
+        console.error("[sync:collection] shows failed:", e instanceof Error ? e.message : e);
+    }
+
+    // ── Movies (with media-format metadata) ─────────────────────────────────
+    try {
+        const traktMovies = (await trakt.getCollectionMovies(userId)) as Array<{
+            collected_at?: string;
+            media_type?: string;
+            resolution?: string;
+            hdr?: string;
+            audio?: string;
+            audio_channels?: string;
+            movie?: { ids?: { tmdb?: number } };
+        }>;
+
+        const tmdbIds = traktMovies.flatMap((tm) =>
+            tm.movie?.ids?.tmdb ? [tm.movie.ids.tmdb] : [],
+        );
+        const localMovies =
+            tmdbIds.length > 0
+                ? await db
+                      .select({ id: movies.id, tmdbId: movies.tmdbId })
+                      .from(movies)
+                      .where(inArray(movies.tmdbId, tmdbIds))
+                : [];
+        const movieIdByTmdb = new Map(localMovies.map((m) => [m.tmdbId, m.id]));
+
+        for (const tm of traktMovies) {
+            const tmdbId = tm.movie?.ids?.tmdb;
+            const localId = tmdbId ? movieIdByTmdb.get(tmdbId) : undefined;
+            if (!localId) continue;
+
+            const vals = {
+                mediaFormat: tm.media_type ?? null,
+                resolution: tm.resolution ?? null,
+                hdr: tm.hdr ?? null,
+                audio: tm.audio ?? null,
+                audioChannels: tm.audio_channels ?? null,
+                collectedAt: tm.collected_at ? new Date(tm.collected_at) : now,
+                updatedAt: now,
+            };
+            const [existing] = await db
+                .select({ id: userCollection.id })
+                .from(userCollection)
+                .where(and(eq(userCollection.userId, userId), eq(userCollection.movieId, localId)))
+                .limit(1);
+            if (existing) {
+                await db.update(userCollection).set(vals).where(eq(userCollection.id, existing.id));
+            } else {
+                await db.insert(userCollection).values({
+                    userId,
+                    mediaType: "movie",
+                    movieId: localId,
+                    ...vals,
+                    createdAt: now,
+                });
+            }
+            synced++;
+        }
+    } catch (e) {
+        console.error("[sync:collection] movies failed:", e instanceof Error ? e.message : e);
+    }
+
+    return synced;
 }
 
 // ─── Startup cleanup ──────────────────────────────────────────────────────────

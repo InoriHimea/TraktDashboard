@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { getDb, userNotes } from "@trakt-dashboard/db";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { validateBody } from "../lib/validate.js";
 import type { UserNote } from "@trakt-dashboard/types";
@@ -11,8 +11,10 @@ const upsertSchema = z.object({
     mediaType: z.enum(["episode", "show", "movie"]),
     showId: z.number().int().positive().nullable().optional(),
     movieId: z.number().int().positive().nullable().optional(),
-    season: z.number().int().positive().nullable().optional(),
-    episode: z.number().int().positive().nullable().optional(),
+    // Specials use season 0 (and occasionally episode 0), so allow 0 here — using
+    // .positive() rejected any note on a special episode.
+    season: z.number().int().min(0).nullable().optional(),
+    episode: z.number().int().min(0).nullable().optional(),
     content: z.string().max(10000),
 });
 
@@ -110,36 +112,47 @@ notesRoutes.put("/", async (c) => {
         episode: episode ?? null,
     });
 
-    const [existing] = await db
-        .select()
-        .from(userNotes)
-        .where(and(...lookupConds));
+    // user_notes has no unique constraint, so a naive select-then-insert lets two
+    // overlapping autosaves both miss the SELECT and both INSERT (duplicate rows, one
+    // edit lost). Serialize per note key with a transaction-scoped advisory lock —
+    // race-safe without depending on a DB migration.
+    const lockKey = `notes:${userId}:${mediaType}:${showId ?? ""}:${movieId ?? ""}:${season ?? ""}:${episode ?? ""}`;
 
-    if (existing) {
-        const [updated] = await db
-            .update(userNotes)
-            .set({ content, updatedAt: now })
-            .where(eq(userNotes.id, existing.id))
+    const { note, created } = await db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`);
+
+        const [existing] = await tx
+            .select()
+            .from(userNotes)
+            .where(and(...lookupConds));
+
+        if (existing) {
+            const [updated] = await tx
+                .update(userNotes)
+                .set({ content, updatedAt: now })
+                .where(eq(userNotes.id, existing.id))
+                .returning();
+            return { note: updated, created: false };
+        }
+
+        const [inserted] = await tx
+            .insert(userNotes)
+            .values({
+                userId,
+                mediaType,
+                showId: showId ?? null,
+                movieId: movieId ?? null,
+                season: season ?? null,
+                episode: episode ?? null,
+                content,
+                updatedAt: now,
+                createdAt: now,
+            })
             .returning();
-        return c.json({ data: toNote(updated) });
-    }
+        return { note: inserted, created: true };
+    });
 
-    const [created] = await db
-        .insert(userNotes)
-        .values({
-            userId,
-            mediaType,
-            showId: showId ?? null,
-            movieId: movieId ?? null,
-            season: season ?? null,
-            episode: episode ?? null,
-            content,
-            updatedAt: now,
-            createdAt: now,
-        })
-        .returning();
-
-    return c.json({ data: toNote(created) }, 201);
+    return c.json({ data: toNote(note) }, created ? 201 : 200);
 });
 
 // DELETE /api/notes/:id

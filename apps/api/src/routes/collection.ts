@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { getDb, userCollection, shows, movies } from "@trakt-dashboard/db";
 import { eq, and, isNull, isNotNull } from "drizzle-orm";
 import { getTraktClient, TraktApiError } from "../services/trakt.js";
+import { syncUserCollection } from "../services/sync.js";
 import type { UserCollectionItem } from "@trakt-dashboard/types";
 
 export const collectionRoutes = new Hono<{ Variables: { userId: number } }>();
@@ -108,138 +109,10 @@ collectionRoutes.get("/check", async (c) => {
     return c.json({ inCollection: !!row });
 });
 
-// POST /api/collection/sync — pull all from Trakt → upsert local DB
+// POST /api/collection/sync — pull all from Trakt → upsert local DB (add-only archive)
 collectionRoutes.post("/sync", async (c) => {
     const userId = c.get("userId");
-    const db = getDb();
-    const trakt = getTraktClient();
-    const now = new Date();
-    let synced = 0;
-
-    // ── Shows ──────────────────────────────────────────────────────────────
-    try {
-        const traktShows = (await trakt.getCollectionShows(userId)) as Array<{
-            collected_at?: string;
-            show?: { ids?: { trakt?: number; tmdb?: number } };
-            seasons?: Array<{
-                number: number;
-                episodes: Array<{
-                    number: number;
-                    collected_at?: string;
-                    media_type?: string;
-                    resolution?: string;
-                    hdr?: string;
-                    audio?: string;
-                    audio_channels?: string;
-                }>;
-            }>;
-        }>;
-
-        for (const ts of traktShows) {
-            const tmdbId = ts.show?.ids?.tmdb;
-            if (!tmdbId) continue;
-
-            const [show] = await db
-                .select({ id: shows.id })
-                .from(shows)
-                .where(eq(shows.tmdbId, tmdbId))
-                .limit(1);
-            if (!show) continue;
-
-            // Upsert show-level entry
-            const [existing] = await db
-                .select({ id: userCollection.id })
-                .from(userCollection)
-                .where(
-                    and(
-                        eq(userCollection.userId, userId),
-                        eq(userCollection.showId, show.id),
-                        isNull(userCollection.season),
-                        isNull(userCollection.episode),
-                    ),
-                )
-                .limit(1);
-
-            const collectedAt = ts.collected_at ? new Date(ts.collected_at) : now;
-            if (existing) {
-                await db
-                    .update(userCollection)
-                    .set({ collectedAt, updatedAt: now })
-                    .where(eq(userCollection.id, existing.id));
-            } else {
-                await db.insert(userCollection).values({
-                    userId,
-                    mediaType: "show",
-                    showId: show.id,
-                    collectedAt,
-                    updatedAt: now,
-                    createdAt: now,
-                });
-            }
-            synced++;
-        }
-    } catch (err) {
-        if (!(err instanceof TraktApiError)) throw err;
-        console.warn("[collection] shows sync failed:", (err as Error).message);
-    }
-
-    // ── Movies ─────────────────────────────────────────────────────────────
-    try {
-        const traktMovies = (await trakt.getCollectionMovies(userId)) as Array<{
-            collected_at?: string;
-            media_type?: string;
-            resolution?: string;
-            hdr?: string;
-            audio?: string;
-            audio_channels?: string;
-            movie?: { ids?: { trakt?: number; tmdb?: number } };
-        }>;
-
-        for (const tm of traktMovies) {
-            const tmdbId = tm.movie?.ids?.tmdb;
-            if (!tmdbId) continue;
-
-            const [movie] = await db
-                .select({ id: movies.id })
-                .from(movies)
-                .where(eq(movies.tmdbId, tmdbId))
-                .limit(1);
-            if (!movie) continue;
-
-            const [existing] = await db
-                .select({ id: userCollection.id })
-                .from(userCollection)
-                .where(and(eq(userCollection.userId, userId), eq(userCollection.movieId, movie.id)))
-                .limit(1);
-
-            const collectedAt = tm.collected_at ? new Date(tm.collected_at) : now;
-            const vals = {
-                mediaFormat: tm.media_type ?? null,
-                resolution: tm.resolution ?? null,
-                hdr: tm.hdr ?? null,
-                audio: tm.audio ?? null,
-                audioChannels: tm.audio_channels ?? null,
-                collectedAt,
-                updatedAt: now,
-            };
-            if (existing) {
-                await db.update(userCollection).set(vals).where(eq(userCollection.id, existing.id));
-            } else {
-                await db.insert(userCollection).values({
-                    userId,
-                    mediaType: "movie",
-                    movieId: movie.id,
-                    ...vals,
-                    createdAt: now,
-                });
-            }
-            synced++;
-        }
-    } catch (err) {
-        if (!(err instanceof TraktApiError)) throw err;
-        console.warn("[collection] movies sync failed:", (err as Error).message);
-    }
-
+    const synced = await syncUserCollection(userId);
     return c.json({ ok: true, synced });
 });
 
@@ -305,11 +178,12 @@ collectionRoutes.post("/clear-remote", async (c) => {
     return c.json({ ok: true, removed });
 });
 
-// DELETE /api/collection/:id — remove single item from local collection
+// DELETE /api/collection/:id — remove single item from local collection AND Trakt
 collectionRoutes.delete("/:id", async (c) => {
     const userId = c.get("userId");
     const id = Number(c.req.param("id"));
     const db = getDb();
+    const trakt = getTraktClient();
 
     const [item] = await db
         .select()
@@ -317,6 +191,40 @@ collectionRoutes.delete("/:id", async (c) => {
         .where(and(eq(userCollection.id, id), eq(userCollection.userId, userId)))
         .limit(1);
     if (!item) return c.json({ error: "Not found" }, 404);
+
+    // Local→Trakt deletion propagation (本地删→删远端). Best-effort: a Trakt failure
+    // must not block the local delete, since the local archive is the source of truth.
+    try {
+        if (item.showId) {
+            const [row] = await db
+                .select({ traktId: shows.traktId, tmdbId: shows.tmdbId })
+                .from(shows)
+                .where(eq(shows.id, item.showId))
+                .limit(1);
+            const ids = {
+                ...(row?.traktId ? { trakt: row.traktId } : {}),
+                ...(row?.tmdbId ? { tmdb: row.tmdbId } : {}),
+            };
+            if (Object.keys(ids).length > 0) await trakt.removeCollectionShows(userId, [{ ids }]);
+        } else if (item.movieId) {
+            const [row] = await db
+                .select({ traktId: movies.traktId, tmdbId: movies.tmdbId })
+                .from(movies)
+                .where(eq(movies.id, item.movieId))
+                .limit(1);
+            const ids = {
+                ...(row?.traktId ? { trakt: row.traktId } : {}),
+                ...(row?.tmdbId ? { tmdb: row.tmdbId } : {}),
+            };
+            if (Object.keys(ids).length > 0) await trakt.removeCollectionMovies(userId, [{ ids }]);
+        }
+    } catch (err) {
+        if (!(err instanceof TraktApiError)) throw err;
+        console.warn(
+            "[collection] Trakt remove failed, deleting locally only:",
+            (err as Error).message,
+        );
+    }
 
     await db
         .delete(userCollection)

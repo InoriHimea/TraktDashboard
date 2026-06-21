@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useRatings, useSetRating, useRemoveRating } from "../hooks";
 import { t } from "../lib/i18n";
 
@@ -10,7 +10,9 @@ interface StarRatingProps {
 const STAR_COUNT = 5;
 
 function StarIcon({ fill, size = 20 }: { fill: "empty" | "half" | "full"; size?: number }) {
-    const id = `half-${Math.random().toString(36).slice(2, 7)}`;
+    // Stable, collision-free gradient id (Math.random() regenerated every render and
+    // could collide across stars). Strip ":" so it's safe inside url(#...).
+    const id = `star-half-${useId().replace(/:/g, "")}`;
     if (fill === "full") {
         return (
             <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">

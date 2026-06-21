@@ -42,7 +42,9 @@ jellyfinRoutes.get("/now-playing", async (c) => {
     if (!cfg) return c.json({ data: null });
 
     try {
-        const session = await getActiveSessions(cfg);
+        // Optional JELLYFIN_USER restricts now-playing to a single account on a
+        // shared Jellyfin server (avoids reporting another household member's playback).
+        const session = await getActiveSessions(cfg, process.env.JELLYFIN_USER);
         if (!session) return c.json({ data: null });
 
         const db = getDb();

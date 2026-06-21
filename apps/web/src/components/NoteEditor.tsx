@@ -24,13 +24,28 @@ export function NoteEditor({ mediaType, showId, movieId, season, episode }: Note
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const initialized = useRef(false);
 
-    // Populate local state once note loads (only on first load)
+    // When the target changes (different episode/show/movie), allow content to
+    // repopulate from the newly-loaded note instead of keeping the previous one.
+    useEffect(() => {
+        initialized.current = false;
+    }, [mediaType, showId, movieId, season, episode]);
+
+    // Populate local state once the current note loads; the guard prevents a
+    // background refetch from clobbering in-progress edits of the same note.
     useEffect(() => {
         if (!initialized.current && note !== undefined) {
             setContent(note?.content ?? "");
             initialized.current = true;
         }
     }, [note]);
+
+    // Clear any pending debounce on unmount so the timer can't fire a mutation/
+    // setState after the editor is gone (and so the timer isn't leaked).
+    useEffect(() => {
+        return () => {
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+        };
+    }, []);
 
     function handleChange(val: string) {
         if (val.length > MAX_CHARS) return;

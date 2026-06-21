@@ -525,6 +525,7 @@
         "confirmClear": "确认清空",
         "empty": "暂无收藏内容",
         "emptyHint": "点击『从 Trakt 同步』将远程收藏拉取到本地",
-        "inCollection": "已收藏"
+        "inCollection": "已收藏",
+        "removeFailed": "移除失败，请重试"
     }
 }

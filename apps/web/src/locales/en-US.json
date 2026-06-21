@@ -525,6 +525,7 @@
         "confirmClear": "Confirm Clear",
         "empty": "No items in your collection",
         "emptyHint": "Click 'Sync from Trakt' to pull your remote collection locally",
-        "inCollection": "In Collection"
+        "inCollection": "In Collection",
+        "removeFailed": "Remove failed, please try again"
     }
 }

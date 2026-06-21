@@ -307,10 +307,19 @@ export async function listWebDAVBackups(cfg: WebDAVConfig): Promise<BackupFile[]
 }
 
 export async function deleteWebDAVFile(cfg: WebDAVConfig, filePath: string): Promise<void> {
-    // filePath is the href returned by PROPFIND (may be absolute path)
-    const base = new URL(cfg.url).origin;
-    const url = filePath.startsWith("http") ? filePath : `${base}${filePath}`;
-    const res = await fetch(url, {
+    // filePath is the href returned by PROPFIND (a site-absolute path or full URL).
+    // Constrain it to the configured server origin AND the backup folder, so a crafted
+    // fileId cannot make the server issue an authenticated DELETE to an arbitrary host
+    // (SSRF / credential leak) or delete files outside TraktDashboardBackups.
+    const baseUrl = new URL(cfg.url);
+    const resolved = new URL(filePath, baseUrl); // absolute URLs keep their own origin
+    if (resolved.origin !== baseUrl.origin) {
+        throw new Error("WebDAV delete target is outside the configured server");
+    }
+    if (!decodeURIComponent(resolved.pathname).includes("/TraktDashboardBackups/")) {
+        throw new Error("WebDAV delete target is outside the backup folder");
+    }
+    const res = await fetch(resolved.toString(), {
         method: "DELETE",
         headers: { Authorization: webdavAuth(cfg) },
     });
@@ -342,16 +351,39 @@ export async function dumpDatabase(): Promise<Buffer> {
         const chunks: Buffer[] = [];
         const errChunks: Buffer[] = [];
 
+        // Resolve ONLY when the gzip stream has fully flushed AND pg_dump exited
+        // cleanly (code 0). Wiring resolve() to gz "end" alone is unsafe: when
+        // pg_dump fails, stdout closes early, the pipe ends gzip, and gz "end" can
+        // fire (with a truncated/empty buffer) before the non-zero "close" event —
+        // the race would let a corrupt dump be recorded as a successful backup.
+        let gzEnded = false;
+        let pgOk = false;
+        const maybeResolve = () => {
+            if (!gzEnded || !pgOk) return;
+            const buf = Buffer.concat(chunks);
+            if (buf.length === 0) {
+                settle(() => reject(new Error("pg_dump produced an empty dump")));
+                return;
+            }
+            settle(() => resolve(buf));
+        };
+
         pg.stdout!.pipe(gz);
         gz.on("data", (d: Buffer) => chunks.push(d));
-        gz.on("end", () => settle(() => resolve(Buffer.concat(chunks))));
+        gz.on("end", () => {
+            gzEnded = true;
+            maybeResolve();
+        });
 
         pg.stderr!.on("data", (d: Buffer) => errChunks.push(d));
         pg.on("close", (code) => {
             if (code !== 0) {
                 const errMsg = Buffer.concat(errChunks).toString("utf8").slice(0, 300);
                 settle(() => reject(new Error(`pg_dump failed (exit ${code}): ${errMsg}`)));
+                return;
             }
+            pgOk = true;
+            maybeResolve();
         });
         pg.on("error", (err) => settle(() => reject(err)));
         gz.on("error", (err) => settle(() => reject(err)));

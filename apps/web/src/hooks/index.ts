@@ -644,11 +644,18 @@ export function useSyncCollection() {
     const qc = useQueryClient();
     return useMutation({
         mutationFn: () => api.collection.sync(),
-        onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.collection.all }),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: queryKeys.collection.all });
+            // check keys live under a different prefix; invalidate them explicitly so
+            // "in collection" indicators refresh after new items are pulled in.
+            qc.invalidateQueries({ queryKey: queryKeys.collection.checkAll });
+        },
     });
 }
 
 export function useClearRemoteCollection() {
+    // clear-remote only empties the Trakt collection; the local archive is intentionally
+    // add-only and left untouched (远端删除本地不动), so no local cache invalidation here.
     return useMutation({
         mutationFn: () => api.collection.clearRemote(),
     });
@@ -658,6 +665,9 @@ export function useRemoveCollectionItem() {
     const qc = useQueryClient();
     return useMutation({
         mutationFn: (id: number) => api.collection.remove(id),
-        onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.collection.all }),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: queryKeys.collection.all });
+            qc.invalidateQueries({ queryKey: queryKeys.collection.checkAll });
+        },
     });
 }
