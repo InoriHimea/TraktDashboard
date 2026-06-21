@@ -376,23 +376,31 @@ export default function CalendarPage() {
                                                     <CalendarEpisodeArtwork episode={episode} />
 
                                                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/72 via-black/14 to-transparent" />
-                                                    <div className="absolute left-2.5 top-2.5 rounded-full border border-white/20 bg-[var(--color-panel-glass-strong)] px-2.5 py-1 text-[11px] font-black tabular-nums text-foreground shadow-lg backdrop-blur-md">
-                                                        {formatEpisode(
-                                                            episode.seasonNumber,
-                                                            episode.episodeNumber,
-                                                        )}
-                                                    </div>
+                                                    {episode.isFinale ? (
+                                                        <div className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-full border border-amber-400/40 bg-amber-500/80 px-2.5 py-1 text-[11px] font-bold text-white shadow-lg backdrop-blur-md">
+                                                            <span>{t("calendar.finale")}</span>
+                                                            <span className="opacity-60">·</span>
+                                                            <span className="font-black tabular-nums">
+                                                                {formatEpisode(
+                                                                    episode.seasonNumber,
+                                                                    episode.episodeNumber,
+                                                                )}
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="absolute left-2.5 top-2.5 rounded-full border border-white/20 bg-[var(--color-panel-glass-strong)] px-2.5 py-1 text-[11px] font-black tabular-nums text-foreground shadow-lg backdrop-blur-md">
+                                                            {formatEpisode(
+                                                                episode.seasonNumber,
+                                                                episode.episodeNumber,
+                                                            )}
+                                                        </div>
+                                                    )}
                                                     <span
                                                         aria-hidden="true"
                                                         className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-black/28 text-white/90 opacity-90 backdrop-blur-md transition group-hover:bg-black/42"
                                                     >
                                                         <MoreVertical className="size-4" />
                                                     </span>
-                                                    {episode.isFinale && (
-                                                        <div className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full border border-amber-400/40 bg-amber-500/80 px-2.5 py-1 text-[11px] font-bold text-white shadow-lg backdrop-blur-md">
-                                                            {t("calendar.finale")}
-                                                        </div>
-                                                    )}
                                                     <div className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full border border-white/20 bg-[var(--color-panel-glass-strong)] px-2.5 py-1 text-[11px] font-bold text-foreground shadow-lg backdrop-blur-md">
                                                         <Clock className="size-3" />
                                                         {formatAirTime(episode.airDate)}
