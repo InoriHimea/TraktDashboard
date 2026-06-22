@@ -11,17 +11,20 @@ import {
     X,
     Loader2,
     AlertTriangle,
+    ChevronRight,
+    Disc3,
 } from "lucide-react";
 import {
     useCollection,
     useSyncCollection,
     useClearRemoteCollection,
     useRemoveCollectionItem,
+    useCollectionShowEpisodes,
 } from "../hooks";
 import { tmdbImage } from "../lib/image";
 import { t } from "../lib/i18n";
 import { useToast } from "../lib/toast";
-import type { UserCollectionItem } from "@trakt-dashboard/types";
+import type { UserCollectionItem, CollectionShowEpisodes } from "@trakt-dashboard/types";
 
 type MediaFilter = "all" | "show" | "movie";
 
@@ -31,9 +34,13 @@ const FILTERS: { key: MediaFilter; labelKey: string; icon: typeof Tv2 }[] = [
     { key: "movie", labelKey: "collection.movies", icon: Film },
 ];
 
-function formatBadge(item: UserCollectionItem) {
+function formatBadge(item: {
+    mediaFormat?: string | null;
+    resolution?: string | null;
+    hdr?: string | null;
+}) {
     const parts: string[] = [];
-    if (item.mediaFormat) parts.push(item.mediaFormat.replace("_", " ").toUpperCase());
+    if (item.mediaFormat) parts.push(item.mediaFormat.replace(/_/g, " ").toUpperCase());
     if (item.resolution)
         parts.push(
             item.resolution === "uhd_4k"
@@ -55,7 +62,250 @@ function formatBadge(item: UserCollectionItem) {
     return parts.join(" · ");
 }
 
-function CollectionCard({ item, index }: { item: UserCollectionItem; index: number }) {
+// ── CollectionEpisodeModal ────────────────────────────────────────────────────
+
+function CollectionEpisodeModal({
+    item,
+    onClose,
+}: {
+    item: UserCollectionItem;
+    onClose: () => void;
+}) {
+    const { data: seasons, isLoading } = useCollectionShowEpisodes(item.showId);
+
+    return (
+        <div
+            style={{
+                position: "fixed",
+                inset: 0,
+                zIndex: 50,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 16,
+                background: "rgba(0,0,0,0.6)",
+                backdropFilter: "blur(6px)",
+            }}
+            onClick={onClose}
+        >
+            <motion.div
+                initial={{ opacity: 0, scale: 0.96, y: 12 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: 12 }}
+                transition={{ duration: 0.18 }}
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                    width: "100%",
+                    maxWidth: 560,
+                    maxHeight: "85vh",
+                    borderRadius: 14,
+                    background: "var(--color-surface)",
+                    border: "1px solid var(--color-border-subtle)",
+                    boxShadow: "0 24px 64px rgba(0,0,0,0.45)",
+                    display: "flex",
+                    flexDirection: "column",
+                    overflow: "hidden",
+                }}
+            >
+                {/* Header */}
+                <div
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        padding: "14px 16px",
+                        borderBottom: "1px solid var(--color-border-subtle)",
+                        flexShrink: 0,
+                    }}
+                >
+                    {item.posterPath && (
+                        <img
+                            src={tmdbImage(item.posterPath, "w92") ?? undefined}
+                            alt={item.title}
+                            style={{ width: 36, height: 54, borderRadius: 5, objectFit: "cover" }}
+                        />
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <p
+                            style={{
+                                margin: 0,
+                                fontSize: 15,
+                                fontWeight: 700,
+                                color: "var(--color-text)",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                            }}
+                        >
+                            {item.title}
+                        </p>
+                        <p
+                            style={{
+                                margin: "2px 0 0",
+                                fontSize: 11,
+                                color: "var(--color-text-muted)",
+                            }}
+                        >
+                            {t("collection.episodeDetail")}
+                        </p>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: 7,
+                            border: "none",
+                            background: "var(--color-surface-2)",
+                            color: "var(--color-text-muted)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                            flexShrink: 0,
+                        }}
+                    >
+                        <X size={14} />
+                    </button>
+                </div>
+
+                {/* Body */}
+                <div style={{ overflowY: "auto", padding: "12px 16px 16px", flex: 1 }}>
+                    {isLoading ? (
+                        <div
+                            style={{
+                                display: "flex",
+                                justifyContent: "center",
+                                padding: "32px 0",
+                            }}
+                        >
+                            <Loader2
+                                size={20}
+                                style={{
+                                    animation: "spin 1s linear infinite",
+                                    color: "var(--color-text-muted)",
+                                }}
+                            />
+                        </div>
+                    ) : !seasons || Object.keys(seasons).length === 0 ? (
+                        <p
+                            style={{
+                                textAlign: "center",
+                                padding: "32px 0",
+                                color: "var(--color-text-muted)",
+                                fontSize: 13,
+                            }}
+                        >
+                            {t("collection.noEpisodeData")}
+                        </p>
+                    ) : (
+                        <CollectionSeasonList seasons={seasons} />
+                    )}
+                </div>
+            </motion.div>
+        </div>
+    );
+}
+
+function CollectionSeasonList({ seasons }: { seasons: CollectionShowEpisodes }) {
+    const sortedSeasons = Object.keys(seasons)
+        .map(Number)
+        .sort((a, b) => a - b);
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {sortedSeasons.map((seasonNum) => {
+                const episodes = seasons[String(seasonNum)];
+                return (
+                    <div key={seasonNum}>
+                        <p
+                            style={{
+                                margin: "0 0 6px",
+                                fontSize: 11,
+                                fontWeight: 700,
+                                color: "var(--color-text-muted)",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.06em",
+                            }}
+                        >
+                            {t("common.season", { n: seasonNum })}
+                        </p>
+                        <div
+                            style={{
+                                borderRadius: 8,
+                                border: "1px solid var(--color-border-subtle)",
+                                overflow: "hidden",
+                            }}
+                        >
+                            {episodes.map((ep, idx) => {
+                                const badge = formatBadge(ep);
+                                return (
+                                    <div
+                                        key={ep.episode}
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "space-between",
+                                            padding: "8px 12px",
+                                            borderTop:
+                                                idx > 0
+                                                    ? "1px solid var(--color-border-subtle)"
+                                                    : undefined,
+                                            background: "var(--color-surface-2)",
+                                        }}
+                                    >
+                                        <span
+                                            style={{
+                                                fontSize: 12,
+                                                fontWeight: 600,
+                                                color: "var(--color-text)",
+                                                fontVariantNumeric: "tabular-nums",
+                                            }}
+                                        >
+                                            E{String(ep.episode).padStart(2, "0")}
+                                        </span>
+                                        {badge ? (
+                                            <span
+                                                style={{
+                                                    fontSize: 10,
+                                                    fontWeight: 700,
+                                                    color: "var(--color-accent)",
+                                                    letterSpacing: "0.04em",
+                                                }}
+                                            >
+                                                {badge}
+                                            </span>
+                                        ) : (
+                                            <span
+                                                style={{
+                                                    fontSize: 10,
+                                                    color: "var(--color-text-muted)",
+                                                    opacity: 0.5,
+                                                }}
+                                            >
+                                                —
+                                            </span>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+function CollectionCard({
+    item,
+    index,
+    onShowEpisodes,
+}: {
+    item: UserCollectionItem;
+    index: number;
+    onShowEpisodes?: () => void;
+}) {
     const remove = useRemoveCollectionItem();
     const { toast } = useToast();
     const [confirmRemove, setConfirmRemove] = useState(false);
@@ -317,6 +567,43 @@ function CollectionCard({ item, index }: { item: UserCollectionItem; index: numb
                             {badge}
                         </p>
                     )}
+                    {isShow && onShowEpisodes && (
+                        <button
+                            onClick={(e) => {
+                                e.preventDefault();
+                                onShowEpisodes();
+                            }}
+                            style={{
+                                marginTop: 5,
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 3,
+                                padding: "3px 7px",
+                                borderRadius: 5,
+                                border: "1px solid var(--color-border-subtle)",
+                                background: "var(--color-surface-2)",
+                                color: "var(--color-text-muted)",
+                                fontSize: 9,
+                                fontWeight: 600,
+                                cursor: "pointer",
+                                width: "100%",
+                                justifyContent: "center",
+                                transition: "color 0.12s, border-color 0.12s",
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.color = "var(--color-accent)";
+                                e.currentTarget.style.borderColor = "var(--color-border-focus)";
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.color = "var(--color-text-muted)";
+                                e.currentTarget.style.borderColor = "var(--color-border-subtle)";
+                            }}
+                        >
+                            <Disc3 size={9} />
+                            {t("collection.viewEpisodes")}
+                            <ChevronRight size={9} />
+                        </button>
+                    )}
                 </div>
             </div>
         </motion.div>
@@ -329,6 +616,7 @@ export default function CollectionPage() {
     const sync = useSyncCollection();
     const clearRemote = useClearRemoteCollection();
     const [clearConfirm, setClearConfirm] = useState(false);
+    const [episodeModalItem, setEpisodeModalItem] = useState<UserCollectionItem | null>(null);
 
     return (
         <div
@@ -533,12 +821,31 @@ export default function CollectionPage() {
                     >
                         <AnimatePresence>
                             {(items ?? []).map((item, i) => (
-                                <CollectionCard key={item.id} item={item} index={i} />
+                                <CollectionCard
+                                    key={item.id}
+                                    item={item}
+                                    index={i}
+                                    onShowEpisodes={
+                                        item.mediaType === "show" && item.showId
+                                            ? () => setEpisodeModalItem(item)
+                                            : undefined
+                                    }
+                                />
                             ))}
                         </AnimatePresence>
                     </div>
                 )}
             </div>
+
+            {/* Episode detail modal */}
+            <AnimatePresence>
+                {episodeModalItem && (
+                    <CollectionEpisodeModal
+                        item={episodeModalItem}
+                        onClose={() => setEpisodeModalItem(null)}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 }

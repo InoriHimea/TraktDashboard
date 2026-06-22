@@ -2010,14 +2010,17 @@ export async function syncUserCollection(userId: number): Promise<number> {
     const now = new Date();
     let synced = 0;
 
-    // ── Shows (show level, media format from first available episode) ────────
+    // ── Shows (show-level header + per-episode rows) ─────────────────────────
     try {
         const traktShows = (await trakt.getCollectionShows(userId)) as Array<{
             collected_at?: string;
             last_collected_at?: string;
             show?: { ids?: { tmdb?: number } };
             seasons?: Array<{
+                number: number;
                 episodes?: Array<{
+                    number: number;
+                    collected_at?: string;
                     metadata?: {
                         media_type?: string;
                         resolution?: string;
@@ -2094,6 +2097,51 @@ export async function syncUserCollection(userId: number): Promise<number> {
                 });
             }
             synced++;
+
+            // Upsert per-episode rows with individual metadata
+            for (const season of ts.seasons ?? []) {
+                for (const ep of season.episodes ?? []) {
+                    const epMeta = ep.metadata;
+                    const epCollectedAt = ep.collected_at ? new Date(ep.collected_at) : collectedAt;
+                    const epVals = {
+                        mediaFormat: epMeta?.media_type ?? null,
+                        resolution: epMeta?.resolution ?? null,
+                        hdr: epMeta?.hdr ?? null,
+                        audio: epMeta?.audio ?? null,
+                        audioChannels: epMeta?.audio_channels ?? null,
+                        collectedAt: epCollectedAt,
+                        updatedAt: now,
+                    };
+                    const [existingEp] = await db
+                        .select({ id: userCollection.id })
+                        .from(userCollection)
+                        .where(
+                            and(
+                                eq(userCollection.userId, userId),
+                                eq(userCollection.showId, localId),
+                                eq(userCollection.season, season.number),
+                                eq(userCollection.episode, ep.number),
+                            ),
+                        )
+                        .limit(1);
+                    if (existingEp) {
+                        await db
+                            .update(userCollection)
+                            .set(epVals)
+                            .where(eq(userCollection.id, existingEp.id));
+                    } else {
+                        await db.insert(userCollection).values({
+                            userId,
+                            mediaType: "episode",
+                            showId: localId,
+                            season: season.number,
+                            episode: ep.number,
+                            ...epVals,
+                            createdAt: now,
+                        });
+                    }
+                }
+            }
         }
     } catch (e) {
         console.error("[sync:collection] shows failed:", e instanceof Error ? e.message : e);

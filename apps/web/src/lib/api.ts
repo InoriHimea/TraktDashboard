@@ -28,6 +28,7 @@ import type {
     UserList,
     UserListItem,
     UserCollectionItem,
+    CollectionShowEpisodes,
     BackupFile,
     BackupRun,
     DeviceAuthInfo,
@@ -359,6 +360,8 @@ export const api = {
                 body: JSON.stringify({ confirm: true }),
             }),
         remove: (id: number) => request<{ ok: boolean }>(`/collection/${id}`, { method: "DELETE" }),
+        getShowEpisodes: (showId: number) =>
+            request<{ data: CollectionShowEpisodes }>(`/collection/shows/${showId}/episodes`),
     },
     backup: {
         gdriveStartAuth: () =>

@@ -30,7 +30,8 @@
         "unwatchedShort": "未看",
         "inWatchlist": "已在待看",
         "addToWatchlistShort": "加入待看",
-        "minutes": "{{n}} 分钟"
+        "minutes": "{{n}} 分钟",
+        "season": "第 {{n}} 季"
     },
     "search": {
         "placeholder": "搜索剧集或电影…",
@@ -527,6 +528,9 @@
         "empty": "暂无收藏内容",
         "emptyHint": "点击『从 Trakt 同步』将远程收藏拉取到本地",
         "inCollection": "已收藏",
-        "removeFailed": "移除失败，请重试"
+        "removeFailed": "移除失败，请重试",
+        "viewEpisodes": "查看集数",
+        "episodeDetail": "收藏集数详情",
+        "noEpisodeData": "暂无集数数据，请重新同步"
     }
 }

@@ -25,6 +25,7 @@ import type {
     UserList,
     UserListItem,
     UserCollectionItem,
+    CollectionShowEpisodes,
 } from "@trakt-dashboard/types";
 import { api } from "../lib/api";
 
@@ -669,5 +670,14 @@ export function useRemoveCollectionItem() {
             qc.invalidateQueries({ queryKey: queryKeys.collection.all });
             qc.invalidateQueries({ queryKey: queryKeys.collection.checkAll });
         },
+    });
+}
+
+export function useCollectionShowEpisodes(showId: number | null) {
+    return useQuery<CollectionShowEpisodes>({
+        queryKey: queryKeys.collection.showEpisodes(showId ?? 0),
+        queryFn: () => api.collection.getShowEpisodes(showId!).then((r) => r.data),
+        enabled: showId !== null,
+        staleTime: 1000 * 60 * 5,
     });
 }

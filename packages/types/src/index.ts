@@ -617,6 +617,19 @@ export interface DeviceAuthInfo {
     interval: number;
 }
 
+export interface CollectionEpisodeDetail {
+    episode: number;
+    mediaFormat: string | null;
+    resolution: string | null;
+    hdr: string | null;
+    audio: string | null;
+    audioChannels: string | null;
+    collectedAt: string | null;
+}
+
+/** Keyed by season number (as string, since JSON object keys are always strings). */
+export type CollectionShowEpisodes = Record<string, CollectionEpisodeDetail[]>;
+
 export interface UserCollectionItem {
     id: number;
     mediaType: "show" | "movie" | "episode";

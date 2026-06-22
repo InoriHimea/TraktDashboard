@@ -73,6 +73,7 @@ export const queryKeys = {
         checkAll: ["collection-check"] as const,
         check: (showId?: number, movieId?: number) =>
             ["collection-check", showId, movieId] as const,
+        showEpisodes: (showId: number) => ["collection", "episodes", showId] as const,
     },
 
     history: {

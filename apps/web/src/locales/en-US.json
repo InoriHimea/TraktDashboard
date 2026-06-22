@@ -30,7 +30,8 @@
         "unwatchedShort": "Unwatched",
         "inWatchlist": "In Watchlist",
         "addToWatchlistShort": "Add to Watchlist",
-        "minutes": "{{n}} min"
+        "minutes": "{{n}} min",
+        "season": "Season {{n}}"
     },
     "search": {
         "placeholder": "Search shows or movies…",
@@ -527,6 +528,9 @@
         "empty": "No items in your collection",
         "emptyHint": "Click 'Sync from Trakt' to pull your remote collection locally",
         "inCollection": "In Collection",
-        "removeFailed": "Remove failed, please try again"
+        "removeFailed": "Remove failed, please try again",
+        "viewEpisodes": "Episodes",
+        "episodeDetail": "Episode Collection Detail",
+        "noEpisodeData": "No episode data — try re-syncing"
     }
 }

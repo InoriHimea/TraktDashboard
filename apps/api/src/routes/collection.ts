@@ -1,9 +1,13 @@
 import { Hono } from "hono";
 import { getDb, userCollection, shows, movies } from "@trakt-dashboard/db";
-import { eq, and, isNull, isNotNull } from "drizzle-orm";
+import { eq, and, isNull, isNotNull, asc } from "drizzle-orm";
 import { getTraktClient } from "../services/trakt.js";
 import { syncUserCollection } from "../services/sync.js";
-import type { UserCollectionItem } from "@trakt-dashboard/types";
+import type {
+    UserCollectionItem,
+    CollectionEpisodeDetail,
+    CollectionShowEpisodes,
+} from "@trakt-dashboard/types";
 
 export const collectionRoutes = new Hono<{ Variables: { userId: number } }>();
 
@@ -80,6 +84,54 @@ collectionRoutes.get("/", async (c) => {
     });
 
     return c.json({ data: items });
+});
+
+// GET /api/collection/shows/:showId/episodes — episode-level detail for a collected show
+collectionRoutes.get("/shows/:showId/episodes", async (c) => {
+    const userId = c.get("userId");
+    const showId = Number(c.req.param("showId"));
+    if (!Number.isFinite(showId)) return c.json({ error: "Invalid showId" }, 400);
+    const db = getDb();
+
+    const rows = await db
+        .select({
+            season: userCollection.season,
+            episode: userCollection.episode,
+            mediaFormat: userCollection.mediaFormat,
+            resolution: userCollection.resolution,
+            hdr: userCollection.hdr,
+            audio: userCollection.audio,
+            audioChannels: userCollection.audioChannels,
+            collectedAt: userCollection.collectedAt,
+        })
+        .from(userCollection)
+        .where(
+            and(
+                eq(userCollection.userId, userId),
+                eq(userCollection.showId, showId),
+                isNotNull(userCollection.season),
+                isNotNull(userCollection.episode),
+            ),
+        )
+        .orderBy(asc(userCollection.season), asc(userCollection.episode));
+
+    const seasons: CollectionShowEpisodes = {};
+    for (const r of rows) {
+        const key = String(r.season!);
+        if (!seasons[key]) seasons[key] = [];
+        const ep: CollectionEpisodeDetail = {
+            episode: r.episode!,
+            mediaFormat: r.mediaFormat,
+            resolution: r.resolution,
+            hdr: r.hdr,
+            audio: r.audio,
+            audioChannels: r.audioChannels,
+            collectedAt: r.collectedAt?.toISOString() ?? null,
+        };
+        seasons[key].push(ep);
+    }
+
+    return c.json({ data: seasons });
 });
 
 // GET /api/collection/check?showId=&movieId= — check if item is in collection
