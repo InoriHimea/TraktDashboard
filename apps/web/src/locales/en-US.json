@@ -547,6 +547,11 @@
         "episodeDetail": "Episode Details",
         "specDetail": "Format Details",
         "noEpisodeData": "No episode data — try re-syncing",
-        "noSpecData": "No format data"
+        "noSpecData": "No format data",
+        "remoteCapacity": "Remote Capacity",
+        "pruneRemote": "Prune Oldest",
+        "confirmPrune": "Confirm Prune",
+        "pruneSuccess": "Freed {{freed}} remote slots — local archive kept",
+        "pruneFailed": "Prune failed, please try again"
     }
 }

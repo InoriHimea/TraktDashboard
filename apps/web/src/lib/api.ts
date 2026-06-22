@@ -374,6 +374,22 @@ export const api = {
         remove: (id: number) => request<{ ok: boolean }>(`/collection/${id}`, { method: "DELETE" }),
         getShowEpisodes: (showId: number) =>
             request<{ data: CollectionShowEpisodes }>(`/collection/shows/${showId}/episodes`),
+        capacity: () =>
+            request<ApiResponse<{ used: number; limit: number; pct: number; nearLimit: boolean }>>(
+                "/collection/capacity",
+            ),
+        pruneRemote: (targetPct = 80) =>
+            request<
+                ApiResponse<{
+                    freed: number;
+                    deleted: number;
+                    currentCount: number;
+                    targetCount: number;
+                }>
+            >("/collection/prune-remote", {
+                method: "POST",
+                body: JSON.stringify({ confirm: true, targetPct }),
+            }),
     },
     backup: {
         gdriveStartAuth: () =>

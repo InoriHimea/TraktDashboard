@@ -682,6 +682,24 @@ export function useRemoveCollectionItem() {
     });
 }
 
+export function useCollectionCapacity() {
+    return useQuery<{ used: number; limit: number; pct: number; nearLimit: boolean }>({
+        queryKey: ["collectionCapacity"],
+        queryFn: () => api.collection.capacity().then((r) => r.data),
+        staleTime: 1000 * 60 * 10,
+    });
+}
+
+export function usePruneRemoteCollection() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (targetPct?: number) => api.collection.pruneRemote(targetPct),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["collectionCapacity"] });
+        },
+    });
+}
+
 export function useCollectionShowEpisodes(showId: number | null) {
     return useQuery<CollectionShowEpisodes>({
         queryKey: queryKeys.collection.showEpisodes(showId ?? 0),

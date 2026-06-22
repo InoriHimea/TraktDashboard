@@ -1,8 +1,9 @@
 import { Hono } from "hono";
 import { getDb, userCollection, shows, movies } from "@trakt-dashboard/db";
-import { eq, and, isNull, isNotNull, asc } from "drizzle-orm";
+import { eq, and, isNull, isNotNull, asc, count } from "drizzle-orm";
 import { getTraktClient } from "../services/trakt.js";
 import { syncUserCollection } from "../services/sync.js";
+import { apiOk } from "../lib/response.js";
 import type {
     UserCollectionItem,
     CollectionEpisodeDetail,
@@ -250,6 +251,131 @@ collectionRoutes.post("/clear-remote", async (c) => {
     }
 
     return c.json({ ok: true, removed });
+});
+
+// GET /api/collection/capacity — remote usage vs. limit from Trakt settings
+collectionRoutes.get("/capacity", async (c) => {
+    const userId = c.get("userId");
+    const trakt = getTraktClient();
+    const [stats, settings] = await Promise.all([
+        trakt.getTraktStats(userId),
+        trakt.getUserSettings(userId),
+    ]);
+    const used = stats.episodes.collected + stats.movies.collected;
+    const limit = settings.limits.collection?.item_count ?? 1000;
+    const pct = Math.round((used / limit) * 100);
+    return apiOk(c, { used, limit, pct, nearLimit: pct >= 95 });
+});
+
+// POST /api/collection/prune-remote — delete oldest remote items until below targetPct
+// Local DB is kept intact (add-only archive); next sync won't re-add pruned items.
+collectionRoutes.post("/prune-remote", async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as {
+        confirm?: boolean;
+        targetPct?: number;
+    };
+    if (body.confirm !== true)
+        return c.json(
+            { error: 'Send { "confirm": true } to confirm this destructive action' },
+            400,
+        );
+
+    const userId = c.get("userId");
+    const targetPct = Math.min(Math.max(body.targetPct ?? 80, 10), 95);
+    const db = getDb();
+    const trakt = getTraktClient();
+
+    const [stats, settings] = await Promise.all([
+        trakt.getTraktStats(userId),
+        trakt.getUserSettings(userId),
+    ]);
+    const limit = settings.limits.collection?.item_count ?? 1000;
+    const currentCount = stats.episodes.collected + stats.movies.collected;
+    const targetCount = Math.floor((targetPct / 100) * limit);
+
+    if (currentCount <= targetCount) {
+        return apiOk(c, { freed: 0, deleted: 0, currentCount, targetCount });
+    }
+
+    let toFree = currentCount - targetCount;
+    let deleted = 0;
+    let freed = 0;
+
+    // Delete oldest shows first (each show deletes N episodes from remote)
+    const showItems = await db
+        .select({
+            showId: userCollection.showId,
+            collectedAt: userCollection.collectedAt,
+            traktId: shows.traktId,
+            tmdbId: shows.tmdbId,
+        })
+        .from(userCollection)
+        .innerJoin(shows, eq(userCollection.showId, shows.id))
+        .where(
+            and(
+                eq(userCollection.userId, userId),
+                isNotNull(userCollection.showId),
+                isNull(userCollection.season),
+            ),
+        )
+        .orderBy(asc(userCollection.collectedAt));
+
+    for (const item of showItems) {
+        if (toFree <= 0) break;
+        const ids = {
+            ...(item.traktId ? { trakt: item.traktId } : {}),
+            ...(item.tmdbId ? { tmdb: item.tmdbId } : {}),
+        };
+        if (Object.keys(ids).length === 0) continue;
+
+        // Count episodes in local collection to estimate how many remote slots this frees
+        const [{ epCount }] = await db
+            .select({ epCount: count() })
+            .from(userCollection)
+            .where(
+                and(
+                    eq(userCollection.userId, userId),
+                    eq(userCollection.showId, item.showId!),
+                    isNotNull(userCollection.season),
+                ),
+            );
+
+        await trakt.removeCollectionShows(userId, [{ ids }]);
+        const episodes = Number(epCount) || 1;
+        freed += episodes;
+        toFree -= episodes;
+        deleted++;
+    }
+
+    // If still over target, delete oldest movies
+    if (toFree > 0) {
+        const movieItems = await db
+            .select({
+                movieId: userCollection.movieId,
+                collectedAt: userCollection.collectedAt,
+                traktId: movies.traktId,
+                tmdbId: movies.tmdbId,
+            })
+            .from(userCollection)
+            .innerJoin(movies, eq(userCollection.movieId, movies.id))
+            .where(and(eq(userCollection.userId, userId), isNotNull(userCollection.movieId)))
+            .orderBy(asc(userCollection.collectedAt));
+
+        for (const item of movieItems) {
+            if (toFree <= 0) break;
+            const ids = {
+                ...(item.traktId ? { trakt: item.traktId } : {}),
+                ...(item.tmdbId ? { tmdb: item.tmdbId } : {}),
+            };
+            if (Object.keys(ids).length === 0) continue;
+            await trakt.removeCollectionMovies(userId, [{ ids }]);
+            freed++;
+            toFree--;
+            deleted++;
+        }
+    }
+
+    return apiOk(c, { freed, deleted, currentCount, targetCount });
 });
 
 // DELETE /api/collection/:id — remove single item from local collection AND Trakt

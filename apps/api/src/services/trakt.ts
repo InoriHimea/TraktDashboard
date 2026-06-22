@@ -1020,6 +1020,7 @@ export function getTraktClient() {
                     list: { count: number; item_count: number };
                     watchlist: { item_count: number };
                     favorites: { item_count: number };
+                    collection?: { item_count: number };
                 };
             }>("/users/settings", userId),
 

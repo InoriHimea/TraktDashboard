@@ -20,6 +20,8 @@ import {
     useClearRemoteCollection,
     useRemoveCollectionItem,
     useCollectionShowEpisodes,
+    useCollectionCapacity,
+    usePruneRemoteCollection,
 } from "../hooks";
 import { tmdbImage } from "../lib/image";
 import { t } from "../lib/i18n";
@@ -768,7 +770,11 @@ export default function CollectionPage() {
     const { data: items, isLoading } = useCollection(filter);
     const sync = useSyncCollection();
     const clearRemote = useClearRemoteCollection();
+    const { data: capacity } = useCollectionCapacity();
+    const prune = usePruneRemoteCollection();
+    const { toast } = useToast();
     const [clearConfirm, setClearConfirm] = useState(false);
+    const [pruneConfirm, setPruneConfirm] = useState(false);
     const [modalItem, setModalItem] = useState<UserCollectionItem | null>(null);
 
     return (
@@ -813,6 +819,53 @@ export default function CollectionPage() {
                                 {t("collection.count", { count: items.length })}
                             </p>
                         )}
+                        {/* Remote capacity bar */}
+                        {capacity && (
+                            <div style={{ marginTop: 10, width: 220 }}>
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        fontSize: 10,
+                                        color: capacity.nearLimit
+                                            ? "#f87171"
+                                            : capacity.pct >= 70
+                                              ? "#fbbf24"
+                                              : "var(--color-text-muted)",
+                                        marginBottom: 3,
+                                        fontWeight: 600,
+                                    }}
+                                >
+                                    <span>{t("collection.remoteCapacity")}</span>
+                                    <span>
+                                        {capacity.used.toLocaleString("zh-CN")} /{" "}
+                                        {capacity.limit.toLocaleString("zh-CN")} ({capacity.pct}%)
+                                    </span>
+                                </div>
+                                <div
+                                    style={{
+                                        height: 4,
+                                        borderRadius: 2,
+                                        background: "var(--color-surface-2)",
+                                        overflow: "hidden",
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            height: "100%",
+                                            width: `${Math.min(capacity.pct, 100)}%`,
+                                            borderRadius: 2,
+                                            background: capacity.nearLimit
+                                                ? "#ef4444"
+                                                : capacity.pct >= 70
+                                                  ? "#f59e0b"
+                                                  : "var(--color-accent)",
+                                            transition: "width 0.4s ease",
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        )}
                     </div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                         {/* Sync from Trakt */}
@@ -834,6 +887,83 @@ export default function CollectionPage() {
                                 {t("collection.syncFromTrakt")}
                             </span>
                         </button>
+
+                        {/* Prune oldest remote items — only shown when ≥70% full */}
+                        {capacity &&
+                            capacity.pct >= 70 &&
+                            (pruneConfirm ? (
+                                <div style={{ display: "flex", gap: 6 }}>
+                                    <button
+                                        onClick={() =>
+                                            prune.mutate(80, {
+                                                onSuccess: (res) => {
+                                                    setPruneConfirm(false);
+                                                    if (res.data.freed > 0)
+                                                        toast(
+                                                            t("collection.pruneSuccess", {
+                                                                freed: String(res.data.freed),
+                                                            }),
+                                                            "success",
+                                                        );
+                                                },
+                                                onError: () => {
+                                                    setPruneConfirm(false);
+                                                    toast(t("collection.pruneFailed"), "error");
+                                                },
+                                            })
+                                        }
+                                        disabled={prune.isPending}
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 5,
+                                            padding: "6px 12px",
+                                            borderRadius: 7,
+                                            border: "none",
+                                            background: "#f59e0b",
+                                            color: "#000",
+                                            fontSize: 12,
+                                            fontWeight: 700,
+                                            cursor: "pointer",
+                                        }}
+                                    >
+                                        {prune.isPending ? (
+                                            <Loader2
+                                                size={12}
+                                                style={{ animation: "spin 1s linear infinite" }}
+                                            />
+                                        ) : (
+                                            <AlertTriangle size={12} />
+                                        )}
+                                        {t("collection.confirmPrune")}
+                                    </button>
+                                    <button
+                                        onClick={() => setPruneConfirm(false)}
+                                        style={{
+                                            padding: "6px 10px",
+                                            borderRadius: 7,
+                                            border: "1px solid var(--color-border-subtle)",
+                                            background: "transparent",
+                                            color: "var(--color-text-muted)",
+                                            fontSize: 12,
+                                            cursor: "pointer",
+                                        }}
+                                    >
+                                        {t("common.cancel")}
+                                    </button>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={() => setPruneConfirm(true)}
+                                    title={t("collection.pruneRemote")}
+                                    className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-muted)] transition-colors hover:border-amber-500 hover:text-amber-400"
+                                >
+                                    <Archive size={14} />
+                                    <span className="hidden sm:inline">
+                                        {t("collection.pruneRemote")}
+                                    </span>
+                                </button>
+                            ))}
 
                         {/* Clear remote */}
                         {clearConfirm ? (

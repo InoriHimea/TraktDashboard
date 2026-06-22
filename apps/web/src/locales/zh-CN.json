@@ -547,6 +547,11 @@
         "episodeDetail": "集数详情",
         "specDetail": "收藏规格",
         "noEpisodeData": "暂无集数数据，请重新同步",
-        "noSpecData": "暂无规格数据"
+        "noSpecData": "暂无规格数据",
+        "remoteCapacity": "远端容量",
+        "pruneRemote": "清理最旧条目",
+        "confirmPrune": "确认清理",
+        "pruneSuccess": "已从远端删除 {{freed}} 条，本地归档保留",
+        "pruneFailed": "远端清理失败，请重试"
     }
 }
