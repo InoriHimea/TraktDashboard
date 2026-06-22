@@ -89,17 +89,19 @@ function formatBadge(item: {
     return parts.join(" · ");
 }
 
-// ── CollectionEpisodeModal ────────────────────────────────────────────────────
+// ── Shared modal shell ────────────────────────────────────────────────────────
 
-function CollectionEpisodeModal({
+function ModalShell({
     item,
+    subtitle,
     onClose,
+    children,
 }: {
     item: UserCollectionItem;
+    subtitle: string;
     onClose: () => void;
+    children: React.ReactNode;
 }) {
-    const { data: seasons, isLoading } = useCollectionShowEpisodes(item.showId);
-
     return (
         <div
             style={{
@@ -134,7 +136,6 @@ function CollectionEpisodeModal({
                     overflow: "hidden",
                 }}
             >
-                {/* Header */}
                 <div
                     style={{
                         display: "flex",
@@ -173,7 +174,7 @@ function CollectionEpisodeModal({
                                 color: "var(--color-text-muted)",
                             }}
                         >
-                            {t("collection.episodeDetail")}
+                            {subtitle}
                         </p>
                     </div>
                     <button
@@ -195,42 +196,167 @@ function CollectionEpisodeModal({
                         <X size={14} />
                     </button>
                 </div>
-
-                {/* Body */}
                 <div style={{ overflowY: "auto", padding: "12px 16px 16px", flex: 1 }}>
-                    {isLoading ? (
-                        <div
-                            style={{
-                                display: "flex",
-                                justifyContent: "center",
-                                padding: "32px 0",
-                            }}
-                        >
-                            <Loader2
-                                size={20}
-                                style={{
-                                    animation: "spin 1s linear infinite",
-                                    color: "var(--color-text-muted)",
-                                }}
-                            />
-                        </div>
-                    ) : !seasons || Object.keys(seasons).length === 0 ? (
-                        <p
-                            style={{
-                                textAlign: "center",
-                                padding: "32px 0",
-                                color: "var(--color-text-muted)",
-                                fontSize: 13,
-                            }}
-                        >
-                            {t("collection.noEpisodeData")}
-                        </p>
-                    ) : (
-                        <CollectionSeasonList seasons={seasons} />
-                    )}
+                    {children}
                 </div>
             </motion.div>
         </div>
+    );
+}
+
+// ── CollectionMovieModal ──────────────────────────────────────────────────────
+
+function CollectionMovieModal({
+    item,
+    onClose,
+}: {
+    item: UserCollectionItem;
+    onClose: () => void;
+}) {
+    const badge = formatBadge(item);
+    const fields: [string, string | null | undefined][] = [
+        ["媒体格式", item.mediaFormat?.replace(/_/g, " ").toUpperCase() ?? null],
+        [
+            "分辨率",
+            item.resolution === "uhd_4k"
+                ? "4K"
+                : item.resolution === "hd_1080p"
+                  ? "1080p"
+                  : item.resolution === "hd_720p"
+                    ? "720p"
+                    : (item.resolution?.toUpperCase() ?? null),
+        ],
+        [
+            "HDR",
+            item.hdr === "dolby_vision"
+                ? "Dolby Vision"
+                : item.hdr === "hdr10_plus"
+                  ? "HDR10+"
+                  : item.hdr === "hdr10"
+                    ? "HDR10"
+                    : (item.hdr?.toUpperCase() ?? null),
+        ],
+        [
+            "音频",
+            item.audio === "dolby_atmos"
+                ? "Dolby Atmos"
+                : item.audio === "dolby_truehd"
+                  ? "TrueHD"
+                  : item.audio === "dts_x"
+                    ? "DTS:X"
+                    : item.audio === "dts_ma"
+                      ? "DTS-MA"
+                      : (item.audio?.replace(/_/g, " ").toUpperCase() ?? null),
+        ],
+        ["声道", item.audioChannels ?? null],
+        ["入库时间", item.collectedAt ? new Date(item.collectedAt).toLocaleDateString() : null],
+    ];
+    const activeFields = fields.filter(([, v]) => v);
+
+    return (
+        <ModalShell item={item} subtitle={t("collection.specDetail")} onClose={onClose}>
+            {activeFields.length === 0 ? (
+                <p
+                    style={{
+                        textAlign: "center",
+                        padding: "32px 0",
+                        color: "var(--color-text-muted)",
+                        fontSize: 13,
+                    }}
+                >
+                    {t("collection.noSpecData")}
+                </p>
+            ) : (
+                <div
+                    style={{
+                        borderRadius: 8,
+                        border: "1px solid var(--color-border-subtle)",
+                        overflow: "hidden",
+                    }}
+                >
+                    {activeFields.map(([label, value], idx) => (
+                        <div
+                            key={label}
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                padding: "9px 14px",
+                                borderTop:
+                                    idx > 0 ? "1px solid var(--color-border-subtle)" : undefined,
+                                background: "var(--color-surface-2)",
+                            }}
+                        >
+                            <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+                                {label}
+                            </span>
+                            <span
+                                style={{
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    color: "var(--color-accent)",
+                                }}
+                            >
+                                {value}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            )}
+            {badge && (
+                <p
+                    style={{
+                        margin: "10px 0 0",
+                        fontSize: 10,
+                        color: "var(--color-text-muted)",
+                        textAlign: "center",
+                    }}
+                >
+                    {badge}
+                </p>
+            )}
+        </ModalShell>
+    );
+}
+
+// ── CollectionEpisodeModal ────────────────────────────────────────────────────
+
+function CollectionEpisodeModal({
+    item,
+    onClose,
+}: {
+    item: UserCollectionItem;
+    onClose: () => void;
+}) {
+    const { data: seasons, isLoading } = useCollectionShowEpisodes(item.showId);
+
+    return (
+        <ModalShell item={item} subtitle={t("collection.episodeDetail")} onClose={onClose}>
+            {isLoading ? (
+                <div style={{ display: "flex", justifyContent: "center", padding: "32px 0" }}>
+                    <Loader2
+                        size={20}
+                        style={{
+                            animation: "spin 1s linear infinite",
+                            color: "var(--color-text-muted)",
+                        }}
+                    />
+                </div>
+            ) : !seasons || Object.keys(seasons).length === 0 ? (
+                <p
+                    style={{
+                        textAlign: "center",
+                        padding: "32px 0",
+                        color: "var(--color-text-muted)",
+                        fontSize: 13,
+                    }}
+                >
+                    {t("collection.noEpisodeData")}
+                </p>
+            ) : (
+                <CollectionSeasonList seasons={seasons} />
+            )}
+        </ModalShell>
     );
 }
 
@@ -327,11 +453,11 @@ function CollectionSeasonList({ seasons }: { seasons: CollectionShowEpisodes }) 
 function CollectionCard({
     item,
     index,
-    onShowEpisodes,
+    onViewDetail,
 }: {
     item: UserCollectionItem;
     index: number;
-    onShowEpisodes?: () => void;
+    onViewDetail?: () => void;
 }) {
     const remove = useRemoveCollectionItem();
     const { toast } = useToast();
@@ -594,11 +720,11 @@ function CollectionCard({
                             {badge}
                         </p>
                     )}
-                    {isShow && onShowEpisodes && (
+                    {onViewDetail && (
                         <button
                             onClick={(e) => {
                                 e.preventDefault();
-                                onShowEpisodes();
+                                onViewDetail();
                             }}
                             style={{
                                 marginTop: 5,
@@ -627,7 +753,7 @@ function CollectionCard({
                             }}
                         >
                             <Disc3 size={9} />
-                            {t("collection.viewEpisodes")}
+                            {isShow ? t("collection.viewEpisodes") : t("collection.viewSpecs")}
                             <ChevronRight size={9} />
                         </button>
                     )}
@@ -643,7 +769,7 @@ export default function CollectionPage() {
     const sync = useSyncCollection();
     const clearRemote = useClearRemoteCollection();
     const [clearConfirm, setClearConfirm] = useState(false);
-    const [episodeModalItem, setEpisodeModalItem] = useState<UserCollectionItem | null>(null);
+    const [modalItem, setModalItem] = useState<UserCollectionItem | null>(null);
 
     return (
         <div
@@ -852,11 +978,7 @@ export default function CollectionPage() {
                                     key={item.id}
                                     item={item}
                                     index={i}
-                                    onShowEpisodes={
-                                        item.mediaType === "show" && item.showId
-                                            ? () => setEpisodeModalItem(item)
-                                            : undefined
-                                    }
+                                    onViewDetail={() => setModalItem(item)}
                                 />
                             ))}
                         </AnimatePresence>
@@ -864,13 +986,13 @@ export default function CollectionPage() {
                 )}
             </div>
 
-            {/* Episode detail modal */}
+            {/* Detail modal — episodes for shows, format specs for movies */}
             <AnimatePresence>
-                {episodeModalItem && (
-                    <CollectionEpisodeModal
-                        item={episodeModalItem}
-                        onClose={() => setEpisodeModalItem(null)}
-                    />
+                {modalItem && modalItem.mediaType === "show" && (
+                    <CollectionEpisodeModal item={modalItem} onClose={() => setModalItem(null)} />
+                )}
+                {modalItem && modalItem.mediaType === "movie" && (
+                    <CollectionMovieModal item={modalItem} onClose={() => setModalItem(null)} />
                 )}
             </AnimatePresence>
         </div>

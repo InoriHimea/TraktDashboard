@@ -59,7 +59,7 @@
         "statistics": "统计",
         "sync": "同步",
         "settings": "设置",
-        "collection": "我的收藏"
+        "collection": "媒体库"
     },
     "watchHistory": {
         "episodeTitle": "单集观看历史",
@@ -518,19 +518,22 @@
         }
     },
     "collection": {
-        "title": "我的收藏",
+        "title": "媒体库",
         "count": "共 {{count}} 件",
         "shows": "剧集",
         "movies": "电影",
         "syncFromTrakt": "从 Trakt 同步",
-        "clearRemote": "清空远程收藏",
+        "clearRemote": "清空远程媒体库",
         "confirmClear": "确认清空",
-        "empty": "暂无收藏内容",
-        "emptyHint": "点击『从 Trakt 同步』将远程收藏拉取到本地",
-        "inCollection": "已收藏",
+        "empty": "媒体库暂无内容",
+        "emptyHint": "点击『从 Trakt 同步』将远程媒体库拉取到本地",
+        "inCollection": "已在媒体库",
         "removeFailed": "移除失败，请重试",
         "viewEpisodes": "查看集数",
-        "episodeDetail": "收藏集数详情",
-        "noEpisodeData": "暂无集数数据，请重新同步"
+        "viewSpecs": "查看规格",
+        "episodeDetail": "集数详情",
+        "specDetail": "收藏规格",
+        "noEpisodeData": "暂无集数数据，请重新同步",
+        "noSpecData": "暂无规格数据"
     }
 }

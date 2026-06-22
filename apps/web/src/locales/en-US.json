@@ -59,7 +59,7 @@
         "statistics": "Statistics",
         "sync": "Sync",
         "settings": "Settings",
-        "collection": "Collection"
+        "collection": "Library"
     },
     "watchHistory": {
         "episodeTitle": "Episode Watch History",
@@ -518,19 +518,22 @@
         }
     },
     "collection": {
-        "title": "My Collection",
+        "title": "My Library",
         "count": "{{count}} items",
         "shows": "Shows",
         "movies": "Movies",
         "syncFromTrakt": "Sync from Trakt",
-        "clearRemote": "Clear Remote",
+        "clearRemote": "Clear Remote Library",
         "confirmClear": "Confirm Clear",
-        "empty": "No items in your collection",
-        "emptyHint": "Click 'Sync from Trakt' to pull your remote collection locally",
-        "inCollection": "In Collection",
+        "empty": "Your library is empty",
+        "emptyHint": "Click 'Sync from Trakt' to pull your remote library locally",
+        "inCollection": "In Library",
         "removeFailed": "Remove failed, please try again",
         "viewEpisodes": "Episodes",
-        "episodeDetail": "Episode Collection Detail",
-        "noEpisodeData": "No episode data — try re-syncing"
+        "viewSpecs": "View Specs",
+        "episodeDetail": "Episode Details",
+        "specDetail": "Format Details",
+        "noEpisodeData": "No episode data — try re-syncing",
+        "noSpecData": "No format data"
     }
 }
