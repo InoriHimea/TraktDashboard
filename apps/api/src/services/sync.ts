@@ -2151,11 +2151,13 @@ export async function syncUserCollection(userId: number): Promise<number> {
     try {
         const traktMovies = (await trakt.getCollectionMovies(userId)) as Array<{
             collected_at?: string;
-            media_type?: string;
-            resolution?: string;
-            hdr?: string;
-            audio?: string;
-            audio_channels?: string;
+            metadata?: {
+                media_type?: string;
+                resolution?: string;
+                hdr?: string;
+                audio?: string;
+                audio_channels?: string;
+            };
             movie?: { ids?: { tmdb?: number } };
         }>;
 
@@ -2176,12 +2178,13 @@ export async function syncUserCollection(userId: number): Promise<number> {
             const localId = tmdbId ? movieIdByTmdb.get(tmdbId) : undefined;
             if (!localId) continue;
 
+            const meta = tm.metadata;
             const vals = {
-                mediaFormat: tm.media_type ?? null,
-                resolution: tm.resolution ?? null,
-                hdr: tm.hdr ?? null,
-                audio: tm.audio ?? null,
-                audioChannels: tm.audio_channels ?? null,
+                mediaFormat: meta?.media_type ?? null,
+                resolution: meta?.resolution ?? null,
+                hdr: meta?.hdr ?? null,
+                audio: meta?.audio ?? null,
+                audioChannels: meta?.audio_channels ?? null,
                 collectedAt: tm.collected_at ? new Date(tm.collected_at) : now,
                 updatedAt: now,
             };

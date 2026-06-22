@@ -38,6 +38,8 @@ function formatBadge(item: {
     mediaFormat?: string | null;
     resolution?: string | null;
     hdr?: string | null;
+    audio?: string | null;
+    audioChannels?: string | null;
 }) {
     const parts: string[] = [];
     if (item.mediaFormat) parts.push(item.mediaFormat.replace(/_/g, " ").toUpperCase());
@@ -57,8 +59,33 @@ function formatBadge(item: {
                 ? "DV"
                 : item.hdr === "hdr10_plus"
                   ? "HDR10+"
-                  : item.hdr.toUpperCase(),
+                  : item.hdr === "hdr10"
+                    ? "HDR10"
+                    : item.hdr === "hlg"
+                      ? "HLG"
+                      : item.hdr.toUpperCase(),
         );
+    if (item.audio)
+        parts.push(
+            item.audio === "dolby_atmos"
+                ? "Atmos"
+                : item.audio === "dolby_truehd"
+                  ? "TrueHD"
+                  : item.audio === "dts_x"
+                    ? "DTS:X"
+                    : item.audio === "dts_ma"
+                      ? "DTS-MA"
+                      : item.audio === "dts_hra"
+                        ? "DTS-HRA"
+                        : item.audio === "dd_plus"
+                          ? "DD+"
+                          : item.audio === "aac"
+                            ? "AAC"
+                            : item.audio === "mp3"
+                              ? "MP3"
+                              : item.audio.replace(/_/g, " ").toUpperCase(),
+        );
+    if (item.audioChannels) parts.push(item.audioChannels);
     return parts.join(" · ");
 }
 
