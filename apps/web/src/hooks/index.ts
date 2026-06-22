@@ -26,6 +26,7 @@ import type {
     UserListItem,
     UserCollectionItem,
     CollectionShowEpisodes,
+    TraktOfficialStats,
 } from "@trakt-dashboard/types";
 import { api } from "../lib/api";
 
@@ -130,6 +131,14 @@ export function useStats() {
         queryKey: queryKeys.stats,
         queryFn: () => api.stats.overview().then((r) => r.data),
         staleTime: 1000 * 60 * 5,
+    });
+}
+
+export function useTraktStats() {
+    return useQuery<TraktOfficialStats>({
+        queryKey: ["traktStats"],
+        queryFn: () => api.trakt.stats().then((r) => r.data),
+        staleTime: 1000 * 60 * 15,
     });
 }
 

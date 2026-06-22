@@ -389,6 +389,21 @@ export interface NowPlayingEpisode {
     runtime: number | null; // minutes
 }
 
+// ─── Trakt Official Stats ─────────────────────────────────────────────────────
+
+export interface TraktOfficialStats {
+    movies: { plays: number; watched: number; minutes: number; collected: number; ratings: number };
+    shows: { watched: number; collected: number; ratings: number };
+    episodes: {
+        plays: number;
+        watched: number;
+        minutes: number;
+        collected: number;
+        ratings: number;
+    };
+    ratings: { total: number; distribution: Record<string, number> };
+}
+
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
 export interface User {

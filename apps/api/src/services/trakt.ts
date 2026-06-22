@@ -985,6 +985,44 @@ export function getTraktClient() {
             });
         },
 
+        getTraktStats: (userId: number) =>
+            traktFetch<{
+                movies: {
+                    plays: number;
+                    watched: number;
+                    minutes: number;
+                    collected: number;
+                    ratings: number;
+                };
+                shows: { watched: number; collected: number; ratings: number };
+                seasons: { ratings: number };
+                episodes: {
+                    plays: number;
+                    watched: number;
+                    minutes: number;
+                    collected: number;
+                    ratings: number;
+                };
+                network: { friends: number; followers: number; following: number };
+                ratings: { total: number; distribution: Record<string, number> };
+            }>("/users/me/stats", userId),
+
+        getUserSettings: (userId: number) =>
+            traktFetch<{
+                user: {
+                    username: string;
+                    vip: boolean;
+                    vip_ep: boolean;
+                    vip_og: boolean;
+                    vip_years: number;
+                };
+                limits: {
+                    list: { count: number; item_count: number };
+                    watchlist: { item_count: number };
+                    favorites: { item_count: number };
+                };
+            }>("/users/settings", userId),
+
         // ── Collection ──────────────────────────────────────────────────────
         getCollectionShows: async (userId: number): Promise<unknown[]> => {
             return traktFetch<unknown[]>("/sync/collection/shows?extended=metadata", userId);

@@ -422,7 +422,20 @@
         "dayWed": "三",
         "dayThu": "四",
         "dayFri": "五",
-        "daySat": "六"
+        "daySat": "六",
+        "traktOfficial": "Trakt 官方数据",
+        "traktTotalHours": "总观看时长",
+        "traktTotalPlays": "总播放次数",
+        "traktPlaysUnit": "次播放",
+        "traktRatings": "总评分数",
+        "traktRatingsUnit": "条评分",
+        "traktEpisodes": "剧集观看（集）",
+        "traktEpisodePlays": "剧集播放（含重播）",
+        "traktMovies": "电影观看（部）",
+        "traktMoviePlays": "电影播放（含重播）",
+        "traktShowsWatched": "追过的剧集",
+        "traktShowsUnit": "部剧",
+        "traktRatingDist": "评分分布"
     },
     "sync": {
         "triggerFailed": "触发同步失败",

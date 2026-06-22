@@ -13,8 +13,9 @@ import {
     Zap,
     Activity,
 } from "lucide-react";
-import { useStats } from "../../hooks";
+import { useStats, useTraktStats } from "../../hooks";
 import { t } from "../../lib/i18n";
+import { TraktStats } from "./TraktStats";
 import { CARD_BG, CARD_BDR, T1, T2, T3, COLORS } from "./tokens";
 import { StatCard } from "./StatCard";
 import { ActivityChart } from "./ActivityChart";
@@ -29,6 +30,7 @@ import { RatingDistribution } from "./RatingDistribution";
 
 export default function StatsPage() {
     const { data: stats, isLoading, error } = useStats();
+    const { data: traktStats } = useTraktStats();
 
     if (isLoading)
         return (
@@ -385,6 +387,9 @@ export default function StatsPage() {
                     >
                         {/* Monthly activity chart */}
                         <ActivityChart chartData={chartData} maxBar={maxBar} />
+
+                        {/* Trakt official stats */}
+                        {traktStats && <TraktStats stats={traktStats} />}
 
                         {/* Recent activity */}
                         <RecentActivity

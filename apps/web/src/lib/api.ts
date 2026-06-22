@@ -32,6 +32,7 @@ import type {
     BackupFile,
     BackupRun,
     DeviceAuthInfo,
+    TraktOfficialStats,
 } from "@trakt-dashboard/types";
 
 const API_BASE = "/api";
@@ -141,6 +142,17 @@ export const api = {
     },
     trakt: {
         watching: () => request<ApiResponse<NowPlayingEpisode | null>>("/trakt/watching"),
+        stats: () => request<ApiResponse<TraktOfficialStats>>("/trakt/stats"),
+        profile: () =>
+            request<{
+                vip: boolean;
+                vip_ep: boolean;
+                vip_years: number;
+                limits: {
+                    collection: { item_count: number };
+                    list: { count: number; item_count: number };
+                };
+            }>("/trakt/profile"),
     },
     calendar: {
         list: (before = 14, after = 30) => {

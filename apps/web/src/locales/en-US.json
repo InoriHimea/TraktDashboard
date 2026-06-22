@@ -422,7 +422,20 @@
         "dayWed": "Wed",
         "dayThu": "Thu",
         "dayFri": "Fri",
-        "daySat": "Sat"
+        "daySat": "Sat",
+        "traktOfficial": "Trakt Official",
+        "traktTotalHours": "Total Hours",
+        "traktTotalPlays": "Total Plays",
+        "traktPlaysUnit": "plays",
+        "traktRatings": "Ratings",
+        "traktRatingsUnit": "ratings",
+        "traktEpisodes": "Episodes Watched",
+        "traktEpisodePlays": "Episode Plays (incl. rewatches)",
+        "traktMovies": "Movies Watched",
+        "traktMoviePlays": "Movie Plays (incl. rewatches)",
+        "traktShowsWatched": "Shows Watched",
+        "traktShowsUnit": "shows",
+        "traktRatingDist": "Rating Distribution"
     },
     "sync": {
         "triggerFailed": "Failed to trigger sync",
