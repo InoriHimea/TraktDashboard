@@ -552,6 +552,9 @@
         "pruneRemote": "Prune Oldest",
         "confirmPrune": "Confirm Prune",
         "pruneSuccess": "Freed {{freed}} remote slots — local archive kept",
-        "pruneFailed": "Prune failed, please try again"
+        "pruneFailed": "Prune failed, please try again",
+        "pruneAlreadyUnder": "Already below target — nothing to prune",
+        "clearSuccess": "Remote library cleared ({{removed}} items) — local archive kept",
+        "clearFailed": "Clear remote failed, please try again"
     }
 }

@@ -907,6 +907,11 @@ export default function CollectionPage() {
                                                         }),
                                                         "success",
                                                     );
+                                                } else {
+                                                    toast(
+                                                        t("collection.pruneAlreadyUnder"),
+                                                        "info",
+                                                    );
                                                 }
                                             },
                                             onError: () => {
@@ -978,7 +983,19 @@ export default function CollectionPage() {
                                 <button
                                     onClick={() =>
                                         clearRemote.mutate(undefined, {
-                                            onSuccess: () => setClearConfirm(false),
+                                            onSuccess: (res) => {
+                                                setClearConfirm(false);
+                                                toast(
+                                                    t("collection.clearSuccess", {
+                                                        removed: String(res.data.removed),
+                                                    }),
+                                                    "success",
+                                                );
+                                            },
+                                            onError: () => {
+                                                setClearConfirm(false);
+                                                toast(t("collection.clearFailed"), "error");
+                                            },
                                         })
                                     }
                                     disabled={clearRemote.isPending}

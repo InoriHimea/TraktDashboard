@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { getDb, userCollection, shows, movies } from "@trakt-dashboard/db";
-import { eq, and, isNull, isNotNull, asc } from "drizzle-orm";
+import { eq, and, isNull, isNotNull, asc, or } from "drizzle-orm";
 import { getTraktClient } from "../services/trakt.js";
 import { syncUserCollection } from "../services/sync.js";
 import { apiOk } from "../lib/response.js";
@@ -216,7 +216,13 @@ collectionRoutes.post("/clear-remote", async (c) => {
         .select({ traktId: movies.traktId, tmdbId: movies.tmdbId })
         .from(userCollection)
         .innerJoin(movies, eq(userCollection.movieId, movies.id))
-        .where(and(eq(userCollection.userId, userId), isNotNull(userCollection.movieId)));
+        .where(
+            and(
+                eq(userCollection.userId, userId),
+                isNotNull(userCollection.movieId),
+                isNull(userCollection.season),
+            ),
+        );
 
     let removed = 0;
 
@@ -250,7 +256,7 @@ collectionRoutes.post("/clear-remote", async (c) => {
         }
     }
 
-    return c.json({ ok: true, removed });
+    return apiOk(c, { removed });
 });
 
 // GET /api/collection/capacity — remote usage vs. limit from Trakt settings
@@ -305,7 +311,9 @@ collectionRoutes.post("/prune-remote", async (c) => {
     let freed = 0;
     let partialError: string | undefined;
 
-    // Delete oldest shows first — each show occupies 1 item slot on Trakt
+    // Delete oldest shows first — each show occupies 1 item slot on Trakt.
+    // Pre-filter rows that have at least one valid ID so .limit(toFree) is exact
+    // and the loop never hits the empty-ids continue path.
     const showItems = await db
         .select({
             showId: userCollection.showId,
@@ -320,6 +328,7 @@ collectionRoutes.post("/prune-remote", async (c) => {
                 eq(userCollection.userId, userId),
                 isNotNull(userCollection.showId),
                 isNull(userCollection.season),
+                or(isNotNull(shows.traktId), isNotNull(shows.tmdbId)),
             ),
         )
         .orderBy(asc(userCollection.collectedAt))
@@ -358,6 +367,7 @@ collectionRoutes.post("/prune-remote", async (c) => {
                     eq(userCollection.userId, userId),
                     isNotNull(userCollection.movieId),
                     isNull(userCollection.season),
+                    or(isNotNull(movies.traktId), isNotNull(movies.tmdbId)),
                 ),
             )
             .orderBy(asc(userCollection.collectedAt))

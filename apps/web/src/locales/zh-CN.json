@@ -552,6 +552,9 @@
         "pruneRemote": "清理最旧条目",
         "confirmPrune": "确认清理",
         "pruneSuccess": "已从远端删除 {{freed}} 条，本地归档保留",
-        "pruneFailed": "远端清理失败，请重试"
+        "pruneFailed": "远端清理失败，请重试",
+        "pruneAlreadyUnder": "当前用量已在目标以下，无需清理",
+        "clearSuccess": "已清空远端媒体库（{{removed}} 条），本地归档保留",
+        "clearFailed": "清空远端失败，请重试"
     }
 }

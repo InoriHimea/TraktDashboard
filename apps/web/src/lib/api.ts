@@ -367,7 +367,7 @@ export const api = {
         sync: () =>
             request<{ ok: boolean; synced: number }>("/collection/sync", { method: "POST" }),
         clearRemote: () =>
-            request<{ ok: boolean; removed: number }>("/collection/clear-remote", {
+            request<ApiResponse<{ removed: number }>>("/collection/clear-remote", {
                 method: "POST",
                 body: JSON.stringify({ confirm: true }),
             }),

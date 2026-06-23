@@ -667,12 +667,14 @@ export function useSyncCollection() {
 
 export function useClearRemoteCollection() {
     const qc = useQueryClient();
-    // clear-remote only empties the Trakt collection; the local archive is intentionally
-    // add-only and left untouched (远端删除本地不动), so no local cache invalidation here.
     return useMutation({
         mutationFn: () => api.collection.clearRemote(),
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: queryKeys.collection.capacity });
+            // Local archive is add-only and stays untouched, but invalidate the list
+            // and check queries so UI reflects that remote is now empty.
+            qc.invalidateQueries({ queryKey: queryKeys.collection.all });
+            qc.invalidateQueries({ queryKey: queryKeys.collection.checkAll });
         },
     });
 }
@@ -708,6 +710,8 @@ export function usePruneRemoteCollection() {
         mutationFn: (targetPct?: number) => api.collection.pruneRemote(targetPct),
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: queryKeys.collection.capacity });
+            qc.invalidateQueries({ queryKey: queryKeys.collection.all });
+            qc.invalidateQueries({ queryKey: queryKeys.collection.checkAll });
         },
     });
 }
