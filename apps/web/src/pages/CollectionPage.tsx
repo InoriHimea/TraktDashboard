@@ -838,8 +838,9 @@ export default function CollectionPage() {
                                 >
                                     <span>{t("collection.remoteCapacity")}</span>
                                     <span>
-                                        {capacity.used.toLocaleString("zh-CN")} /{" "}
-                                        {capacity.limit.toLocaleString("zh-CN")} ({capacity.pct}%)
+                                        {capacity.used.toLocaleString()} /{" "}
+                                        {capacity.limit.toLocaleString()} (
+                                        {Math.min(capacity.pct, 100)}%)
                                     </span>
                                 </div>
                                 <div
@@ -888,82 +889,88 @@ export default function CollectionPage() {
                             </span>
                         </button>
 
-                        {/* Prune oldest remote items — only shown when ≥70% full */}
-                        {capacity &&
-                            capacity.pct >= 70 &&
-                            (pruneConfirm ? (
-                                <div style={{ display: "flex", gap: 6 }}>
-                                    <button
-                                        onClick={() =>
-                                            prune.mutate(80, {
-                                                onSuccess: (res) => {
-                                                    setPruneConfirm(false);
-                                                    if (res.data.freed > 0)
-                                                        toast(
-                                                            t("collection.pruneSuccess", {
-                                                                freed: String(res.data.freed),
-                                                            }),
-                                                            "success",
-                                                        );
-                                                },
-                                                onError: () => {
-                                                    setPruneConfirm(false);
-                                                    toast(t("collection.pruneFailed"), "error");
-                                                },
-                                            })
-                                        }
-                                        disabled={prune.isPending}
-                                        style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: 5,
-                                            padding: "6px 12px",
-                                            borderRadius: 7,
-                                            border: "none",
-                                            background: "#f59e0b",
-                                            color: "#000",
-                                            fontSize: 12,
-                                            fontWeight: 700,
-                                            cursor: "pointer",
-                                        }}
-                                    >
-                                        {prune.isPending ? (
-                                            <Loader2
-                                                size={12}
-                                                style={{ animation: "spin 1s linear infinite" }}
-                                            />
-                                        ) : (
-                                            <AlertTriangle size={12} />
-                                        )}
-                                        {t("collection.confirmPrune")}
-                                    </button>
-                                    <button
-                                        onClick={() => setPruneConfirm(false)}
-                                        style={{
-                                            padding: "6px 10px",
-                                            borderRadius: 7,
-                                            border: "1px solid var(--color-border-subtle)",
-                                            background: "transparent",
-                                            color: "var(--color-text-muted)",
-                                            fontSize: 12,
-                                            cursor: "pointer",
-                                        }}
-                                    >
-                                        {t("common.cancel")}
-                                    </button>
-                                </div>
-                            ) : (
+                        {/* Prune oldest remote items */}
+                        {/* Confirm UI stays mounted while pending even if pct drops below 70% */}
+                        {(pruneConfirm || prune.isPending) && (
+                            <div style={{ display: "flex", gap: 6 }}>
                                 <button
-                                    onClick={() => setPruneConfirm(true)}
-                                    title={t("collection.pruneRemote")}
-                                    className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-muted)] transition-colors hover:border-amber-500 hover:text-amber-400"
+                                    onClick={() =>
+                                        prune.mutate(80, {
+                                            onSuccess: (res) => {
+                                                setPruneConfirm(false);
+                                                if (res.data.partialError) {
+                                                    toast(t("collection.pruneFailed"), "error");
+                                                } else if (res.data.freed > 0) {
+                                                    toast(
+                                                        t("collection.pruneSuccess", {
+                                                            freed: String(res.data.freed),
+                                                        }),
+                                                        "success",
+                                                    );
+                                                }
+                                            },
+                                            onError: () => {
+                                                setPruneConfirm(false);
+                                                toast(t("collection.pruneFailed"), "error");
+                                            },
+                                        })
+                                    }
+                                    disabled={prune.isPending}
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 5,
+                                        padding: "6px 12px",
+                                        borderRadius: 7,
+                                        border: "none",
+                                        background: "#f59e0b",
+                                        color: "#000",
+                                        fontSize: 12,
+                                        fontWeight: 700,
+                                        cursor: "pointer",
+                                    }}
                                 >
-                                    <Archive size={14} />
-                                    <span className="hidden sm:inline">
-                                        {t("collection.pruneRemote")}
-                                    </span>
+                                    {prune.isPending ? (
+                                        <Loader2
+                                            size={12}
+                                            style={{ animation: "spin 1s linear infinite" }}
+                                        />
+                                    ) : (
+                                        <AlertTriangle size={12} />
+                                    )}
+                                    {t("collection.confirmPrune")}
                                 </button>
-                            ))}
+                                <button
+                                    onClick={() => setPruneConfirm(false)}
+                                    disabled={prune.isPending}
+                                    style={{
+                                        padding: "6px 10px",
+                                        borderRadius: 7,
+                                        border: "1px solid var(--color-border-subtle)",
+                                        background: "transparent",
+                                        color: "var(--color-text-muted)",
+                                        fontSize: 12,
+                                        cursor: prune.isPending ? "not-allowed" : "pointer",
+                                        opacity: prune.isPending ? 0.5 : 1,
+                                    }}
+                                >
+                                    {t("common.cancel")}
+                                </button>
+                            </div>
+                        )}
+                        {/* Archive button — only shown when ≥70% full and not confirming */}
+                        {capacity && capacity.pct >= 70 && !pruneConfirm && !prune.isPending && (
+                            <button
+                                onClick={() => setPruneConfirm(true)}
+                                title={t("collection.pruneRemote")}
+                                className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-muted)] transition-colors hover:border-amber-500 hover:text-amber-400"
+                            >
+                                <Archive size={14} />
+                                <span className="hidden sm:inline">
+                                    {t("collection.pruneRemote")}
+                                </span>
+                            </button>
+                        )}
 
                         {/* Clear remote */}
                         {clearConfirm ? (
@@ -1001,6 +1008,7 @@ export default function CollectionPage() {
                                 </button>
                                 <button
                                     onClick={() => setClearConfirm(false)}
+                                    disabled={clearRemote.isPending}
                                     style={{
                                         padding: "6px 10px",
                                         borderRadius: 7,
@@ -1008,7 +1016,8 @@ export default function CollectionPage() {
                                         background: "transparent",
                                         color: "var(--color-text-muted)",
                                         fontSize: 12,
-                                        cursor: "pointer",
+                                        cursor: clearRemote.isPending ? "not-allowed" : "pointer",
+                                        opacity: clearRemote.isPending ? 0.5 : 1,
                                     }}
                                 >
                                     {t("common.cancel")}

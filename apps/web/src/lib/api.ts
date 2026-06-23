@@ -375,16 +375,22 @@ export const api = {
         getShowEpisodes: (showId: number) =>
             request<{ data: CollectionShowEpisodes }>(`/collection/shows/${showId}/episodes`),
         capacity: () =>
-            request<ApiResponse<{ used: number; limit: number; pct: number; nearLimit: boolean }>>(
-                "/collection/capacity",
-            ),
+            request<
+                ApiResponse<{
+                    used: number;
+                    limit: number;
+                    pct: number;
+                    nearLimit: boolean;
+                    limitIsDefault?: boolean;
+                }>
+            >("/collection/capacity"),
         pruneRemote: (targetPct = 80) =>
             request<
                 ApiResponse<{
                     freed: number;
-                    deleted: number;
                     currentCount: number;
                     targetCount: number;
+                    partialError?: string;
                 }>
             >("/collection/prune-remote", {
                 method: "POST",

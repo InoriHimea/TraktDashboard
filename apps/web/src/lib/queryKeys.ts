@@ -74,6 +74,7 @@ export const queryKeys = {
         check: (showId?: number, movieId?: number) =>
             ["collection-check", showId, movieId] as const,
         showEpisodes: (showId: number) => ["collection", "episodes", showId] as const,
+        capacity: ["collection-capacity"] as const,
     },
 
     history: {

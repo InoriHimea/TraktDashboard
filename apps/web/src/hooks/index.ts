@@ -659,15 +659,21 @@ export function useSyncCollection() {
             // check keys live under a different prefix; invalidate them explicitly so
             // "in collection" indicators refresh after new items are pulled in.
             qc.invalidateQueries({ queryKey: queryKeys.collection.checkAll });
+            // capacity is under a separate key family — must be invalidated explicitly
+            qc.invalidateQueries({ queryKey: queryKeys.collection.capacity });
         },
     });
 }
 
 export function useClearRemoteCollection() {
+    const qc = useQueryClient();
     // clear-remote only empties the Trakt collection; the local archive is intentionally
     // add-only and left untouched (远端删除本地不动), so no local cache invalidation here.
     return useMutation({
         mutationFn: () => api.collection.clearRemote(),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: queryKeys.collection.capacity });
+        },
     });
 }
 
@@ -683,8 +689,14 @@ export function useRemoveCollectionItem() {
 }
 
 export function useCollectionCapacity() {
-    return useQuery<{ used: number; limit: number; pct: number; nearLimit: boolean }>({
-        queryKey: ["collectionCapacity"],
+    return useQuery<{
+        used: number;
+        limit: number;
+        pct: number;
+        nearLimit: boolean;
+        limitIsDefault?: boolean;
+    }>({
+        queryKey: queryKeys.collection.capacity,
         queryFn: () => api.collection.capacity().then((r) => r.data),
         staleTime: 1000 * 60 * 10,
     });
@@ -695,7 +707,7 @@ export function usePruneRemoteCollection() {
     return useMutation({
         mutationFn: (targetPct?: number) => api.collection.pruneRemote(targetPct),
         onSuccess: () => {
-            qc.invalidateQueries({ queryKey: ["collectionCapacity"] });
+            qc.invalidateQueries({ queryKey: queryKeys.collection.capacity });
         },
     });
 }
