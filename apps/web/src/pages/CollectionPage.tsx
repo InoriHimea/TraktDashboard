@@ -394,6 +394,9 @@ function CollectionSeasonList({ seasons }: { seasons: CollectionShowEpisodes }) 
                         >
                             {episodes.map((ep, idx) => {
                                 const badge = formatBadge(ep);
+                                const collectedDate = ep.collectedAt
+                                    ? new Date(ep.collectedAt)
+                                    : null;
                                 return (
                                     <div
                                         key={ep.episode}
@@ -409,16 +412,43 @@ function CollectionSeasonList({ seasons }: { seasons: CollectionShowEpisodes }) 
                                             background: "var(--color-surface-2)",
                                         }}
                                     >
-                                        <span
+                                        <div
                                             style={{
-                                                fontSize: 12,
-                                                fontWeight: 600,
-                                                color: "var(--color-text)",
-                                                fontVariantNumeric: "tabular-nums",
+                                                display: "flex",
+                                                flexDirection: "column",
+                                                gap: 1,
                                             }}
                                         >
-                                            E{String(ep.episode).padStart(2, "0")}
-                                        </span>
+                                            <span
+                                                style={{
+                                                    fontSize: 12,
+                                                    fontWeight: 600,
+                                                    color: "var(--color-text)",
+                                                    fontVariantNumeric: "tabular-nums",
+                                                }}
+                                            >
+                                                E{String(ep.episode).padStart(2, "0")}
+                                            </span>
+                                            {collectedDate && (
+                                                <span
+                                                    title={collectedDate.toISOString()}
+                                                    style={{
+                                                        fontSize: 10,
+                                                        color: "var(--color-text-muted)",
+                                                        fontVariantNumeric: "tabular-nums",
+                                                    }}
+                                                >
+                                                    {collectedDate.toLocaleString(undefined, {
+                                                        year: "numeric",
+                                                        month: "2-digit",
+                                                        day: "2-digit",
+                                                        hour: "2-digit",
+                                                        minute: "2-digit",
+                                                        second: "2-digit",
+                                                    })}
+                                                </span>
+                                            )}
+                                        </div>
                                         {badge ? (
                                             <span
                                                 style={{
