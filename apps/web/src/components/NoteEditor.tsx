@@ -175,26 +175,7 @@ export function NoteEditor({ mediaType, showId, movieId, season, episode }: Note
                     onChange={(e) => handleChange(e.target.value)}
                     placeholder={t("notes.placeholder")}
                     rows={4}
-                    style={{
-                        width: "100%",
-                        boxSizing: "border-box",
-                        resize: "vertical",
-                        minHeight: "80px",
-                        padding: "10px 12px",
-                        borderRadius: "8px",
-                        border: "1px solid var(--color-border-subtle)",
-                        background: "var(--color-bg)",
-                        color: "var(--color-text-base)",
-                        fontSize: "13px",
-                        lineHeight: 1.6,
-                        fontFamily: "inherit",
-                        outline: "none",
-                        transition: "border-color 0.15s",
-                    }}
-                    onFocus={(e) => (e.currentTarget.style.borderColor = "var(--color-accent)")}
-                    onBlur={(e) =>
-                        (e.currentTarget.style.borderColor = "var(--color-border-subtle)")
-                    }
+                    style={{ minHeight: "80px" }}
                 />
             )}
 

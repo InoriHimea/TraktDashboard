@@ -220,9 +220,49 @@ input:focus-visible {
     color: var(--color-accent-light);
 }
 
-/* Input placeholder */
-input::placeholder {
+/* Input / Textarea */
+input::placeholder,
+textarea::placeholder {
     color: var(--color-text-muted);
+}
+
+textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface);
+    color: var(--color-text-base);
+    font-size: 13px;
+    line-height: 1.65;
+    font-family: inherit;
+    outline: none;
+    resize: vertical;
+    transition:
+        border-color 0.15s,
+        box-shadow 0.15s;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+}
+
+textarea:focus {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-dim);
+}
+
+textarea::-webkit-scrollbar {
+    width: 4px;
+}
+textarea::-webkit-scrollbar-track {
+    background: transparent;
+}
+textarea::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 999px;
+}
+textarea::-webkit-scrollbar-thumb:hover {
+    background: var(--color-surface-4);
 }
 
 /* Smooth transitions for interactive elements */

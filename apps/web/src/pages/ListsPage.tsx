@@ -184,25 +184,6 @@ function CreateListModal({ onClose }: { onClose: () => void }) {
                             maxLength={500}
                             rows={2}
                             placeholder={t("lists.descPlaceholder")}
-                            style={{
-                                width: "100%",
-                                boxSizing: "border-box",
-                                padding: "9px 12px",
-                                borderRadius: "8px",
-                                border: "1px solid var(--color-border-subtle)",
-                                background: "var(--color-bg)",
-                                color: "var(--color-text-base)",
-                                fontSize: "13px",
-                                fontFamily: "inherit",
-                                outline: "none",
-                                resize: "vertical",
-                            }}
-                            onFocus={(e) =>
-                                (e.currentTarget.style.borderColor = "var(--color-accent)")
-                            }
-                            onBlur={(e) =>
-                                (e.currentTarget.style.borderColor = "var(--color-border-subtle)")
-                            }
                         />
                     </div>
 
