@@ -645,6 +645,18 @@ export interface CollectionEpisodeDetail {
 /** Keyed by season number (as string, since JSON object keys are always strings). */
 export type CollectionShowEpisodes = Record<string, CollectionEpisodeDetail[]>;
 
+export interface ScreenTimeData {
+    days: number;
+    daily: Array<{ date: string; all: number; episodes: number; movies: number }>;
+    totals: { all: number; episodes: number; movies: number };
+    averages: { all: number; episodes: number; movies: number };
+    peaks: Record<
+        "morning" | "afternoon" | "evening" | "night",
+        { all: number; episodes: number; movies: number }
+    >;
+    awake_pct: { all: number; episodes: number; movies: number };
+}
+
 export interface UserCollectionItem {
     id: number;
     mediaType: "show" | "movie" | "episode";

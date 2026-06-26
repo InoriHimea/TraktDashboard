@@ -33,6 +33,7 @@ import type {
     BackupRun,
     DeviceAuthInfo,
     TraktOfficialStats,
+    ScreenTimeData,
 } from "@trakt-dashboard/types";
 
 const API_BASE = "/api";
@@ -131,6 +132,8 @@ export const api = {
     },
     stats: {
         overview: () => request<ApiResponse<StatsOverview>>("/stats/overview"),
+        screenTime: (days = 7) =>
+            request<ApiResponse<ScreenTimeData>>(`/stats/screen-time?days=${days}`),
     },
     settings: {
         get: () => request<ApiResponse<UserSettings>>("/settings"),

@@ -28,6 +28,7 @@ import type { SignalMetric } from "./SignalMetrics";
 import { WatchHeatmap } from "./WatchHeatmap";
 import { WatchPatterns } from "./WatchPatterns";
 import { RatingDistribution } from "./RatingDistribution";
+import { ScreenTime } from "./ScreenTime";
 
 export default function StatsPage() {
     const { data: stats, isLoading, error } = useStats();
@@ -404,6 +405,11 @@ export default function StatsPage() {
                         <RatingDistribution ratingDistribution={stats.ratingDistribution ?? []} />
                     </div>
                 )}
+
+                {/* ── FULL-WIDTH: Screen Time ── */}
+                <div style={{ marginTop: "24px" }}>
+                    <ScreenTime />
+                </div>
             </div>
         </div>
     );

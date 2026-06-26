@@ -9,7 +9,7 @@ import {
     userMovieProgress,
     userRatings,
 } from "@trakt-dashboard/db";
-import { eq, and, sql, desc, gte, lte } from "drizzle-orm";
+import { eq, and, sql, desc, gte, lte, isNotNull } from "drizzle-orm";
 import { longestConsecutiveDays } from "../lib/streak.js";
 
 export const statsRoutes = new Hono<{ Variables: { userId: number } }>();
@@ -320,4 +320,131 @@ statsRoutes.get("/overview", async (c) => {
         console.error("[stats] /overview failed:", message);
         return c.json({ error: message }, 500);
     }
+});
+
+// GET /api/stats/screen-time?days=7
+// Calculates screen time breakdown from local history (no VIP required).
+statsRoutes.get("/screen-time", async (c) => {
+    const userId = c.get("userId");
+    const days = Math.min(Math.max(parseInt(c.req.query("days") || "7"), 1), 90);
+    const db = getDb();
+
+    const now = new Date();
+    const startAt = new Date(now);
+    startAt.setDate(startAt.getDate() - days + 1);
+    startAt.setHours(0, 0, 0, 0);
+
+    // Daily totals: SUM(runtime) per day per mediaType
+    const dailyRows = await db
+        .select({
+            date: sql<string>`DATE(${watchHistory.watchedAt})::text`,
+            mediaType: watchHistory.mediaType,
+            minutes: sql<number>`COALESCE(SUM(COALESCE(${episodes.runtime}, ${movies.runtime}, 0)), 0)`,
+            plays: sql<number>`COUNT(*)`,
+        })
+        .from(watchHistory)
+        .leftJoin(episodes, eq(watchHistory.episodeId, episodes.id))
+        .leftJoin(movies, eq(watchHistory.movieId, movies.id))
+        .where(
+            and(
+                eq(watchHistory.userId, userId),
+                isNotNull(watchHistory.watchedAt),
+                gte(watchHistory.watchedAt, startAt),
+                lte(watchHistory.watchedAt, now),
+            ),
+        )
+        .groupBy(sql`DATE(${watchHistory.watchedAt})`, watchHistory.mediaType)
+        .orderBy(sql`DATE(${watchHistory.watchedAt})`);
+
+    // Peak hour counts: COUNT(*) per time bucket per mediaType
+    const bucketExpr = sql<string>`
+        CASE
+            WHEN EXTRACT(HOUR FROM ${watchHistory.watchedAt}) BETWEEN 6 AND 11 THEN 'morning'
+            WHEN EXTRACT(HOUR FROM ${watchHistory.watchedAt}) BETWEEN 12 AND 17 THEN 'afternoon'
+            WHEN EXTRACT(HOUR FROM ${watchHistory.watchedAt}) BETWEEN 18 AND 21 THEN 'evening'
+            ELSE 'night'
+        END`;
+
+    const peakRows = await db
+        .select({
+            bucket: bucketExpr,
+            mediaType: watchHistory.mediaType,
+            count: sql<number>`COUNT(*)`,
+        })
+        .from(watchHistory)
+        .where(
+            and(
+                eq(watchHistory.userId, userId),
+                isNotNull(watchHistory.watchedAt),
+                gte(watchHistory.watchedAt, startAt),
+                lte(watchHistory.watchedAt, now),
+            ),
+        )
+        .groupBy(bucketExpr, watchHistory.mediaType);
+
+    // Build date-indexed daily map
+    const dailyMap = new Map<string, { episodes: number; movies: number }>();
+    for (let i = 0; i < days; i++) {
+        const d = new Date(startAt);
+        d.setDate(d.getDate() + i);
+        dailyMap.set(d.toISOString().slice(0, 10), { episodes: 0, movies: 0 });
+    }
+    for (const r of dailyRows) {
+        const key = String(r.date).slice(0, 10);
+        const entry = dailyMap.get(key) ?? { episodes: 0, movies: 0 };
+        const mins = Number(r.minutes) || 0;
+        if (r.mediaType === "episode") entry.episodes += mins;
+        else if (r.mediaType === "movie") entry.movies += mins;
+        dailyMap.set(key, entry);
+    }
+
+    const daily = Array.from(dailyMap.entries()).map(([date, v]) => ({
+        date,
+        episodes: v.episodes,
+        movies: v.movies,
+        all: v.episodes + v.movies,
+    }));
+
+    const totalEp = daily.reduce((s, d) => s + d.episodes, 0);
+    const totalMv = daily.reduce((s, d) => s + d.movies, 0);
+    const totalAll = totalEp + totalMv;
+
+    // Peaks
+    type Bucket = { all: number; episodes: number; movies: number };
+    const peaks: Record<string, Bucket> = {
+        morning: { all: 0, episodes: 0, movies: 0 },
+        afternoon: { all: 0, episodes: 0, movies: 0 },
+        evening: { all: 0, episodes: 0, movies: 0 },
+        night: { all: 0, episodes: 0, movies: 0 },
+    };
+    for (const r of peakRows) {
+        const bkt = String(r.bucket) as keyof typeof peaks;
+        const n = Number(r.count) || 0;
+        if (!peaks[bkt]) continue;
+        if (r.mediaType === "episode") peaks[bkt].episodes += n;
+        else if (r.mediaType === "movie") peaks[bkt].movies += n;
+        peaks[bkt].all += n;
+    }
+
+    // Awake time % (assuming 16 waking hours per day)
+    const awakeMinutes = days * 16 * 60;
+
+    return c.json({
+        data: {
+            days,
+            daily,
+            totals: { all: totalAll, episodes: totalEp, movies: totalMv },
+            averages: {
+                all: Math.round(totalAll / days),
+                episodes: Math.round(totalEp / days),
+                movies: Math.round(totalMv / days),
+            },
+            peaks,
+            awake_pct: {
+                all: Math.round((totalAll / awakeMinutes) * 100),
+                episodes: Math.round((totalEp / awakeMinutes) * 100),
+                movies: Math.round((totalMv / awakeMinutes) * 100),
+            },
+        },
+    });
 });

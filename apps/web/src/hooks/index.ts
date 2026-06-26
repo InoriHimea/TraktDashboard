@@ -733,3 +733,11 @@ export function useSystemMetrics() {
         staleTime: 5_000,
     });
 }
+
+export function useScreenTime(days = 7) {
+    return useQuery({
+        queryKey: ["screen-time", days],
+        queryFn: () => api.stats.screenTime(days).then((r) => r.data),
+        staleTime: 1000 * 60 * 5,
+    });
+}
