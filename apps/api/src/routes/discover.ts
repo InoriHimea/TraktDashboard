@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { getDb, shows, movies, watchlist } from "@trakt-dashboard/db";
 import { eq, and, inArray } from "drizzle-orm";
 import { getTraktClient } from "../services/trakt.js";
+import { getTmdbShow, getTmdbMovie } from "../services/tmdb.js";
 import type { DiscoverItem } from "@trakt-dashboard/types";
 
 export const discoverRoutes = new Hono<{ Variables: { userId: number } }>();
@@ -71,7 +72,7 @@ discoverRoutes.get("/", async (c) => {
                 : [];
         const wlSet = new Set(wlRows.map((w) => w.showId));
 
-        const data: DiscoverItem[] = normalized.map((n) => {
+        const draft: DiscoverItem[] = normalized.map((n) => {
             const local = localMap.get(n.traktId);
             return {
                 type: "show",
@@ -80,6 +81,21 @@ discoverRoutes.get("/", async (c) => {
                 posterPath: local?.posterPath ?? null,
                 inWatchlist: !!local && wlSet.has(local.id),
             };
+        });
+
+        // For items missing poster (not in local DB), fetch from TMDB in parallel
+        const posterResults = await Promise.allSettled(
+            draft.map((item) =>
+                item.posterPath === null && item.tmdbId !== null
+                    ? getTmdbShow(item.tmdbId, undefined, userId).then((t) => t.poster_path)
+                    : Promise.resolve(item.posterPath),
+            ),
+        );
+        const data: DiscoverItem[] = draft.map((item, i) => {
+            const res = posterResults[i];
+            return res.status === "fulfilled" && res.value
+                ? { ...item, posterPath: res.value }
+                : item;
         });
         return c.json({ data });
     } else {
@@ -127,7 +143,7 @@ discoverRoutes.get("/", async (c) => {
                 : [];
         const wlSet = new Set(wlRows.map((w) => w.movieId));
 
-        const data: DiscoverItem[] = normalized.map((n) => {
+        const draft: DiscoverItem[] = normalized.map((n) => {
             const local = localMap.get(n.traktId);
             return {
                 type: "movie",
@@ -136,6 +152,20 @@ discoverRoutes.get("/", async (c) => {
                 posterPath: local?.posterPath ?? null,
                 inWatchlist: !!local && wlSet.has(local.id),
             };
+        });
+
+        const posterResults = await Promise.allSettled(
+            draft.map((item) =>
+                item.posterPath === null && item.tmdbId !== null
+                    ? getTmdbMovie(item.tmdbId, userId).then((t) => t.poster_path)
+                    : Promise.resolve(item.posterPath),
+            ),
+        );
+        const data: DiscoverItem[] = draft.map((item, i) => {
+            const res = posterResults[i];
+            return res.status === "fulfilled" && res.value
+                ? { ...item, posterPath: res.value }
+                : item;
         });
         return c.json({ data });
     }
