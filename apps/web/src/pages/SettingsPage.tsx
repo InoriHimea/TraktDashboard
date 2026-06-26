@@ -381,8 +381,8 @@ export default function SettingsPage() {
                 <div
                     style={{
                         display: "grid",
-                        gridTemplateColumns: "minmax(0, 560px) 340px",
-                        gap: "32px",
+                        gridTemplateColumns: "1fr minmax(0, 360px)",
+                        gap: "28px",
                         alignItems: "start",
                     }}
                 >
@@ -2085,12 +2085,15 @@ export default function SettingsPage() {
                                             />
                                         </div>
                                     </div>
-                                    {/* Process heap */}
+                                    {/* Process heap — heapUsed can temporarily exceed heapTotal in V8 */}
                                     {(() => {
-                                        const hp = Math.round(
-                                            (sysMetrics.process.heapUsed /
-                                                sysMetrics.process.heapTotal) *
-                                                100,
+                                        const hp = Math.min(
+                                            100,
+                                            Math.round(
+                                                (sysMetrics.process.heapUsed /
+                                                    sysMetrics.process.heapTotal) *
+                                                    100,
+                                            ),
                                         );
                                         return (
                                             <div>

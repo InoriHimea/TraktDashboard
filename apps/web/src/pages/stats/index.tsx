@@ -12,6 +12,7 @@ import {
     TrendingUp,
     Zap,
     Activity,
+    BarChart3,
 } from "lucide-react";
 import { useStats, useTraktStats } from "../../hooks";
 import { t } from "../../lib/i18n";
@@ -208,27 +209,20 @@ export default function StatsPage() {
                     initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.35 }}
-                    style={{
-                        marginBottom: "36px",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-end",
-                    }}
+                    className="mb-6 flex items-center justify-between gap-4"
                 >
-                    <div>
-                        <h2
-                            style={{
-                                fontFamily: "var(--font-display)",
-                                fontSize: "36px",
-                                fontWeight: 400,
-                                color: T1,
-                                lineHeight: 1.1,
-                                marginBottom: "6px",
-                            }}
-                        >
-                            {t("stats.title")}
-                        </h2>
-                        <p style={{ color: T3, fontSize: "14px" }}>{t("stats.subtitle")}</p>
+                    <div className="flex items-center gap-2.5">
+                        <div className="flex size-8 items-center justify-center rounded-lg border border-[var(--action-violet-border)] bg-[var(--action-violet-surface)] text-[var(--action-violet-text)]">
+                            <BarChart3 className="size-[15px]" />
+                        </div>
+                        <div className="flex items-baseline gap-2">
+                            <h1 className="text-lg font-semibold leading-tight">
+                                {t("stats.title")}
+                            </h1>
+                            <span className="text-xs text-[var(--color-text-muted)]">
+                                {t("stats.subtitle")}
+                            </span>
+                        </div>
                     </div>
                     <button
                         onClick={async () => {

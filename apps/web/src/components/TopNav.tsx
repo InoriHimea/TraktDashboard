@@ -5,7 +5,6 @@ import {
     BarChart3,
     Tv2,
     Film,
-    RefreshCw,
     Settings,
     LogOut,
     Bookmark,
@@ -37,7 +36,6 @@ const NAV = [
     { to: "/watchlist", icon: Bookmark, labelKey: "nav.watchlist" },
     { to: "/history", icon: Clock, labelKey: "nav.history" },
     { to: "/stats", icon: BarChart3, labelKey: "nav.statistics" },
-    { to: "/sync", icon: RefreshCw, labelKey: "nav.sync" },
     { to: "/settings", icon: Settings, labelKey: "nav.settings" },
 ];
 
@@ -49,10 +47,6 @@ function isNavActive(pathname: string, to: string) {
     }
     if (to === "/movies") {
         return pathname.startsWith("/movies");
-    }
-    // /sync redirects to /settings; treat both as active on that page
-    if (to === "/sync") {
-        return pathname === "/sync" || pathname === "/settings";
     }
     return pathname === to || pathname.startsWith(`${to}/`);
 }
