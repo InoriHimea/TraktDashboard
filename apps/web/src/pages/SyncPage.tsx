@@ -41,638 +41,642 @@ export default function SyncPage() {
     };
 
     return (
-        <div
-            style={{
-                maxWidth: "680px",
-                margin: "0 auto",
-                padding: "40px 24px",
-            }}
-        >
-            {/* Header */}
-            <div style={{ marginBottom: "32px" }}>
-                <h2
-                    style={{
-                        fontFamily: "var(--font-display)",
-                        fontSize: "32px",
-                        color: "var(--color-text)",
-                        letterSpacing: "-0.02em",
-                        lineHeight: 1.1,
-                        marginBottom: "6px",
-                    }}
-                >
-                    {t("sync.title")}
-                </h2>
-                <p
-                    style={{
-                        color: "var(--color-text-secondary)",
-                        fontSize: "14px",
-                    }}
-                >
-                    {t("sync.subtitle")}
-                </p>
-            </div>
-
-            {/* Status card */}
-            <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                style={{
-                    borderRadius: "var(--radius-lg)",
-                    padding: "24px",
-                    marginBottom: "16px",
-                    background: "var(--color-surface)",
-                    border: "1px solid var(--color-border-subtle)",
-                }}
-            >
-                {isLoading ? (
-                    <div
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "12px",
-                        }}
-                    >
-                        <Loader2
-                            size={16}
-                            className="animate-spin"
-                            style={{ color: "var(--color-accent)" }}
-                        />
-                        <span
-                            style={{
-                                fontSize: "14px",
-                                color: "var(--color-text-secondary)",
-                            }}
-                        >
-                            {t("sync.loadingStatus")}
-                        </span>
+        <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-[var(--color-bg)]">
+            <div className="app-container py-10">
+                <div style={{ maxWidth: "680px" }}>
+                    {/* Header */}
+                    <div className="mb-8 flex items-center gap-3">
+                        <div className="flex size-11 items-center justify-center rounded-xl border border-[var(--action-emerald-border)] bg-[var(--action-emerald-surface)] text-[var(--action-emerald-text)]">
+                            <Database className="size-5" />
+                        </div>
+                        <div>
+                            <h1 className="text-3xl font-bold tracking-tight">{t("sync.title")}</h1>
+                            <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+                                {t("sync.subtitle")}
+                            </p>
+                        </div>
                     </div>
-                ) : isRunning ? (
-                    /* ── Running state ── */
-                    <div
+
+                    {/* Status card */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
                         style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "16px",
+                            borderRadius: "var(--radius-lg)",
+                            padding: "24px",
+                            marginBottom: "16px",
+                            background: "var(--color-surface)",
+                            border: "1px solid var(--color-border-subtle)",
                         }}
                     >
-                        <div
+                        {isLoading ? (
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "12px",
+                                }}
+                            >
+                                <Loader2
+                                    size={16}
+                                    className="animate-spin"
+                                    style={{ color: "var(--color-accent)" }}
+                                />
+                                <span
+                                    style={{
+                                        fontSize: "14px",
+                                        color: "var(--color-text-secondary)",
+                                    }}
+                                >
+                                    {t("sync.loadingStatus")}
+                                </span>
+                            </div>
+                        ) : isRunning ? (
+                            /* ── Running state ── */
+                            <div
+                                style={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: "16px",
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "12px",
+                                    }}
+                                >
+                                    <Loader2
+                                        size={16}
+                                        className="animate-spin"
+                                        style={{
+                                            color: "var(--color-accent)",
+                                            flexShrink: 0,
+                                        }}
+                                    />
+                                    <span
+                                        style={{
+                                            fontSize: "14px",
+                                            fontWeight: 500,
+                                            color: "var(--color-text)",
+                                        }}
+                                    >
+                                        {t("sync.syncingProgress", {
+                                            current: sync.progress,
+                                            total: sync.total,
+                                        })}
+                                    </span>
+                                    <span
+                                        style={{
+                                            fontSize: "13px",
+                                            color: "var(--color-text-muted)",
+                                            marginLeft: "auto",
+                                        }}
+                                    >
+                                        {syncPct}%
+                                    </span>
+                                </div>
+                                <div
+                                    style={{
+                                        height: "6px",
+                                        borderRadius: "999px",
+                                        overflow: "hidden",
+                                        background: "var(--color-surface-3)",
+                                    }}
+                                >
+                                    <motion.div
+                                        style={{
+                                            height: "100%",
+                                            borderRadius: "999px",
+                                            background: "var(--color-accent)",
+                                        }}
+                                        animate={{ width: `${syncPct}%` }}
+                                        transition={{ duration: 0.4 }}
+                                    />
+                                </div>
+                                {sync.currentShow && (
+                                    <p
+                                        style={{
+                                            fontSize: "12px",
+                                            color: "var(--color-text-muted)",
+                                            lineHeight: 1.5,
+                                        }}
+                                    >
+                                        {sync.currentShow}
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            /* ── Idle / completed / error state ── */
+                            <div
+                                style={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: "20px",
+                                }}
+                            >
+                                {/* Status row */}
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "10px",
+                                    }}
+                                >
+                                    {sync?.status === "error" ? (
+                                        <AlertCircle
+                                            size={18}
+                                            style={{
+                                                color: "var(--color-error)",
+                                                flexShrink: 0,
+                                            }}
+                                        />
+                                    ) : sync?.status === "completed" ? (
+                                        <CheckCircle2
+                                            size={18}
+                                            style={{
+                                                color: "var(--color-watched)",
+                                                flexShrink: 0,
+                                            }}
+                                        />
+                                    ) : (
+                                        <RefreshCw
+                                            size={18}
+                                            style={{
+                                                color: "var(--color-text-muted)",
+                                                flexShrink: 0,
+                                            }}
+                                        />
+                                    )}
+                                    <span
+                                        style={{
+                                            fontSize: "15px",
+                                            fontWeight: 500,
+                                            color: "var(--color-text)",
+                                        }}
+                                    >
+                                        {sync?.status === "error"
+                                            ? t("sync.statusFailed")
+                                            : sync?.status === "completed"
+                                              ? t("sync.statusDone")
+                                              : t("sync.statusReady")}
+                                    </span>
+                                </div>
+
+                                {sync?.status === "error" && sync.error && (
+                                    <div
+                                        style={{
+                                            borderRadius: "var(--radius-md)",
+                                            padding: "12px 16px",
+                                            background: "#ef444412",
+                                            border: "1px solid #ef444428",
+                                            fontSize: "13px",
+                                            color: "var(--color-error)",
+                                            lineHeight: 1.6,
+                                        }}
+                                    >
+                                        {sync.error}
+                                    </div>
+                                )}
+
+                                {sync?.lastSyncAt && (
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "6px",
+                                            fontSize: "13px",
+                                            color: "var(--color-text-muted)",
+                                        }}
+                                    >
+                                        <Clock size={13} />
+                                        {t("sync.lastSync")}
+                                        {new Date(sync.lastSyncAt).toLocaleString("zh-CN")}
+                                    </div>
+                                )}
+
+                                {/* ── Sync trigger error ── */}
+                                {syncError && (
+                                    <div
+                                        style={{
+                                            borderRadius: "var(--radius-md)",
+                                            padding: "12px 16px",
+                                            background: "#ef444412",
+                                            border: "1px solid #ef444428",
+                                            fontSize: "13px",
+                                            color: "var(--color-error)",
+                                            lineHeight: 1.6,
+                                        }}
+                                    >
+                                        {syncError}
+                                    </div>
+                                )}
+
+                                {/* ── Sync buttons ── */}
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        gap: "12px",
+                                    }}
+                                >
+                                    {/* Incremental sync */}
+                                    <div
+                                        style={{
+                                            borderRadius: "var(--radius-md)",
+                                            padding: "16px",
+                                            background: "var(--color-surface-2)",
+                                            border: "1px solid var(--color-border-subtle)",
+                                        }}
+                                    >
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "flex-start",
+                                                justifyContent: "space-between",
+                                                gap: "16px",
+                                            }}
+                                        >
+                                            <div style={{ flex: 1 }}>
+                                                <p
+                                                    style={{
+                                                        fontSize: "14px",
+                                                        fontWeight: 500,
+                                                        color: "var(--color-text)",
+                                                        marginBottom: "4px",
+                                                    }}
+                                                >
+                                                    {t("sync.incremental")}
+                                                </p>
+                                                <p
+                                                    style={{
+                                                        fontSize: "12px",
+                                                        color: "var(--color-text-muted)",
+                                                        lineHeight: 1.6,
+                                                    }}
+                                                >
+                                                    {t("sync.incrementalDesc")}
+                                                </p>
+                                            </div>
+                                            <motion.button
+                                                onClick={handleTriggerSync}
+                                                disabled={anyPending || isRunning}
+                                                whileHover={
+                                                    anyPending || isRunning ? {} : { scale: 1.02 }
+                                                }
+                                                whileTap={
+                                                    anyPending || isRunning ? {} : { scale: 0.98 }
+                                                }
+                                                style={{
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    gap: "7px",
+                                                    padding: "9px 18px",
+                                                    borderRadius: "var(--radius-md)",
+                                                    background:
+                                                        anyPending || isRunning
+                                                            ? "var(--color-surface-3)"
+                                                            : "#7c6af7",
+                                                    color:
+                                                        anyPending || isRunning
+                                                            ? "var(--color-text-muted)"
+                                                            : "#fff",
+                                                    fontSize: "13px",
+                                                    fontWeight: 600,
+                                                    border: "none",
+                                                    cursor:
+                                                        anyPending || isRunning
+                                                            ? "not-allowed"
+                                                            : "pointer",
+                                                    flexShrink: 0,
+                                                    transition: "background 0.15s",
+                                                    boxShadow:
+                                                        anyPending || isRunning
+                                                            ? "none"
+                                                            : "0 2px 12px rgba(124,106,247,0.4)",
+                                                }}
+                                            >
+                                                <RefreshCw
+                                                    size={14}
+                                                    className={syncing ? "animate-spin" : ""}
+                                                />
+                                                {syncing ? t("sync.queued") : t("sync.syncNow")}
+                                            </motion.button>
+                                        </div>
+                                    </div>
+
+                                    {/* Full sync */}
+                                    <div
+                                        style={{
+                                            borderRadius: "var(--radius-md)",
+                                            padding: "16px",
+                                            background: "var(--color-surface-2)",
+                                            border: "1px solid var(--color-border-subtle)",
+                                        }}
+                                    >
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "flex-start",
+                                                justifyContent: "space-between",
+                                                gap: "16px",
+                                            }}
+                                        >
+                                            <div style={{ flex: 1 }}>
+                                                <p
+                                                    style={{
+                                                        fontSize: "14px",
+                                                        fontWeight: 500,
+                                                        color: "var(--color-text)",
+                                                        marginBottom: "4px",
+                                                    }}
+                                                >
+                                                    {t("sync.fullSync")}
+                                                </p>
+                                                <p
+                                                    style={{
+                                                        fontSize: "12px",
+                                                        color: "var(--color-text-muted)",
+                                                        lineHeight: 1.6,
+                                                    }}
+                                                >
+                                                    {t("sync.fullDesc")}
+                                                </p>
+                                            </div>
+                                            <motion.button
+                                                onClick={handleTriggerFull}
+                                                disabled={anyPending || isRunning}
+                                                whileHover={
+                                                    anyPending || isRunning ? {} : { scale: 1.02 }
+                                                }
+                                                whileTap={
+                                                    anyPending || isRunning ? {} : { scale: 0.98 }
+                                                }
+                                                style={{
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    gap: "7px",
+                                                    padding: "9px 18px",
+                                                    borderRadius: "var(--radius-md)",
+                                                    background:
+                                                        anyPending || isRunning
+                                                            ? "var(--color-surface-3)"
+                                                            : "#0ea5e9",
+                                                    color:
+                                                        anyPending || isRunning
+                                                            ? "var(--color-text-muted)"
+                                                            : "#fff",
+                                                    fontSize: "13px",
+                                                    fontWeight: 600,
+                                                    border:
+                                                        anyPending || isRunning
+                                                            ? "1px solid transparent"
+                                                            : "1px solid #38bdf840",
+                                                    cursor:
+                                                        anyPending || isRunning
+                                                            ? "not-allowed"
+                                                            : "pointer",
+                                                    flexShrink: 0,
+                                                    transition: "background 0.15s",
+                                                    boxShadow:
+                                                        anyPending || isRunning
+                                                            ? "none"
+                                                            : "0 2px 12px rgba(14,165,233,0.35)",
+                                                }}
+                                            >
+                                                <Database
+                                                    size={14}
+                                                    className={fullSyncing ? "animate-spin" : ""}
+                                                />
+                                                {fullSyncing
+                                                    ? t("sync.syncing")
+                                                    : t("sync.fullSync")}
+                                            </motion.button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </motion.div>
+
+                    {/* Failed shows */}
+                    {failedShows.length > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
                             style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "12px",
+                                borderRadius: "var(--radius-lg)",
+                                padding: "24px",
+                                background: "var(--color-surface)",
+                                border: "1px solid #f59e0b22",
                             }}
                         >
-                            <Loader2
-                                size={16}
-                                className="animate-spin"
+                            <div
                                 style={{
-                                    color: "var(--color-accent)",
-                                    flexShrink: 0,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "8px",
+                                    marginBottom: "16px",
                                 }}
-                            />
-                            <span
+                            >
+                                <AlertTriangle size={15} style={{ color: "var(--color-airing)" }} />
+                                <h3
+                                    style={{
+                                        fontSize: "14px",
+                                        fontWeight: 500,
+                                        color: "var(--color-text)",
+                                    }}
+                                >
+                                    {t("sync.failedShows", { n: failedShows.length })}
+                                </h3>
+                            </div>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: "12px",
+                                }}
+                            >
+                                {failedShows.map((f, i) => (
+                                    <div
+                                        key={`${f.tmdbId}-${f.title}`}
+                                        style={{
+                                            paddingBottom: i < failedShows.length - 1 ? "12px" : 0,
+                                            borderBottom:
+                                                i < failedShows.length - 1
+                                                    ? "1px solid var(--color-border-subtle)"
+                                                    : "none",
+                                        }}
+                                    >
+                                        <p
+                                            style={{
+                                                fontSize: "13px",
+                                                color: "var(--color-text-secondary)",
+                                                fontWeight: 500,
+                                                marginBottom: "2px",
+                                            }}
+                                        >
+                                            {f.title}
+                                        </p>
+                                        <p
+                                            style={{
+                                                fontSize: "12px",
+                                                color: "var(--color-error)",
+                                                opacity: 0.8,
+                                            }}
+                                        >
+                                            {f.error}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {/* Sync Summary - 同步统计 */}
+                    {sync?.status === "completed" && sync.total > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            style={{
+                                marginTop: "16px",
+                                borderRadius: "var(--radius-lg)",
+                                padding: "24px",
+                                background: "var(--color-surface)",
+                                border: "1px solid var(--color-border-subtle)",
+                            }}
+                        >
+                            <h3
                                 style={{
                                     fontSize: "14px",
-                                    fontWeight: 500,
+                                    fontWeight: 600,
                                     color: "var(--color-text)",
+                                    marginBottom: "16px",
                                 }}
                             >
-                                {t("sync.syncingProgress", {
-                                    current: sync.progress,
-                                    total: sync.total,
-                                })}
-                            </span>
-                            <span
-                                style={{
-                                    fontSize: "13px",
-                                    color: "var(--color-text-muted)",
-                                    marginLeft: "auto",
-                                }}
-                            >
-                                {syncPct}%
-                            </span>
-                        </div>
-                        <div
-                            style={{
-                                height: "6px",
-                                borderRadius: "999px",
-                                overflow: "hidden",
-                                background: "var(--color-surface-3)",
-                            }}
-                        >
-                            <motion.div
-                                style={{
-                                    height: "100%",
-                                    borderRadius: "999px",
-                                    background: "var(--color-accent)",
-                                }}
-                                animate={{ width: `${syncPct}%` }}
-                                transition={{ duration: 0.4 }}
-                            />
-                        </div>
-                        {sync.currentShow && (
-                            <p
-                                style={{
-                                    fontSize: "12px",
-                                    color: "var(--color-text-muted)",
-                                    lineHeight: 1.5,
-                                }}
-                            >
-                                {sync.currentShow}
-                            </p>
-                        )}
-                    </div>
-                ) : (
-                    /* ── Idle / completed / error state ── */
-                    <div
-                        style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "20px",
-                        }}
-                    >
-                        {/* Status row */}
-                        <div
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "10px",
-                            }}
-                        >
-                            {sync?.status === "error" ? (
-                                <AlertCircle
-                                    size={18}
-                                    style={{
-                                        color: "var(--color-error)",
-                                        flexShrink: 0,
-                                    }}
-                                />
-                            ) : sync?.status === "completed" ? (
-                                <CheckCircle2
-                                    size={18}
-                                    style={{
-                                        color: "var(--color-watched)",
-                                        flexShrink: 0,
-                                    }}
-                                />
-                            ) : (
-                                <RefreshCw
-                                    size={18}
-                                    style={{
-                                        color: "var(--color-text-muted)",
-                                        flexShrink: 0,
-                                    }}
-                                />
-                            )}
-                            <span
-                                style={{
-                                    fontSize: "15px",
-                                    fontWeight: 500,
-                                    color: "var(--color-text)",
-                                }}
-                            >
-                                {sync?.status === "error"
-                                    ? t("sync.statusFailed")
-                                    : sync?.status === "completed"
-                                      ? t("sync.statusDone")
-                                      : t("sync.statusReady")}
-                            </span>
-                        </div>
-
-                        {sync?.status === "error" && sync.error && (
+                                {t("sync.summary")}
+                            </h3>
                             <div
                                 style={{
-                                    borderRadius: "var(--radius-md)",
-                                    padding: "12px 16px",
-                                    background: "#ef444412",
-                                    border: "1px solid #ef444428",
-                                    fontSize: "13px",
-                                    color: "var(--color-error)",
-                                    lineHeight: 1.6,
+                                    display: "grid",
+                                    gridTemplateColumns: "1fr 1fr",
+                                    gap: "16px",
                                 }}
                             >
-                                {sync.error}
-                            </div>
-                        )}
-
-                        {sync?.lastSyncAt && (
-                            <div
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "6px",
-                                    fontSize: "13px",
-                                    color: "var(--color-text-muted)",
-                                }}
-                            >
-                                <Clock size={13} />
-                                {t("sync.lastSync")}
-                                {new Date(sync.lastSyncAt).toLocaleString("zh-CN")}
-                            </div>
-                        )}
-
-                        {/* ── Sync trigger error ── */}
-                        {syncError && (
-                            <div
-                                style={{
-                                    borderRadius: "var(--radius-md)",
-                                    padding: "12px 16px",
-                                    background: "#ef444412",
-                                    border: "1px solid #ef444428",
-                                    fontSize: "13px",
-                                    color: "var(--color-error)",
-                                    lineHeight: 1.6,
-                                }}
-                            >
-                                {syncError}
-                            </div>
-                        )}
-
-                        {/* ── Sync buttons ── */}
-                        <div
-                            style={{
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: "12px",
-                            }}
-                        >
-                            {/* Incremental sync */}
-                            <div
-                                style={{
-                                    borderRadius: "var(--radius-md)",
-                                    padding: "16px",
-                                    background: "var(--color-surface-2)",
-                                    border: "1px solid var(--color-border-subtle)",
-                                }}
-                            >
+                                {/* 成功列 */}
                                 <div
                                     style={{
-                                        display: "flex",
-                                        alignItems: "flex-start",
-                                        justifyContent: "space-between",
-                                        gap: "16px",
+                                        borderRadius: "var(--radius-md)",
+                                        padding: "16px",
+                                        background: "#10b98114",
+                                        border: "1px solid #10b98128",
                                     }}
                                 >
-                                    <div style={{ flex: 1 }}>
-                                        <p
-                                            style={{
-                                                fontSize: "14px",
-                                                fontWeight: 500,
-                                                color: "var(--color-text)",
-                                                marginBottom: "4px",
-                                            }}
-                                        >
-                                            {t("sync.incremental")}
-                                        </p>
-                                        <p
-                                            style={{
-                                                fontSize: "12px",
-                                                color: "var(--color-text-muted)",
-                                                lineHeight: 1.6,
-                                            }}
-                                        >
-                                            {t("sync.incrementalDesc")}
-                                        </p>
-                                    </div>
-                                    <motion.button
-                                        onClick={handleTriggerSync}
-                                        disabled={anyPending || isRunning}
-                                        whileHover={anyPending || isRunning ? {} : { scale: 1.02 }}
-                                        whileTap={anyPending || isRunning ? {} : { scale: 0.98 }}
+                                    <div
                                         style={{
-                                            display: "inline-flex",
+                                            display: "flex",
                                             alignItems: "center",
-                                            gap: "7px",
-                                            padding: "9px 18px",
-                                            borderRadius: "var(--radius-md)",
-                                            background:
-                                                anyPending || isRunning
-                                                    ? "var(--color-surface-3)"
-                                                    : "#7c6af7",
-                                            color:
-                                                anyPending || isRunning
-                                                    ? "var(--color-text-muted)"
-                                                    : "#fff",
-                                            fontSize: "13px",
-                                            fontWeight: 600,
-                                            border: "none",
-                                            cursor:
-                                                anyPending || isRunning ? "not-allowed" : "pointer",
-                                            flexShrink: 0,
-                                            transition: "background 0.15s",
-                                            boxShadow:
-                                                anyPending || isRunning
-                                                    ? "none"
-                                                    : "0 2px 12px rgba(124,106,247,0.4)",
+                                            gap: "8px",
+                                            marginBottom: "8px",
                                         }}
                                     >
-                                        <RefreshCw
-                                            size={14}
-                                            className={syncing ? "animate-spin" : ""}
-                                        />
-                                        {syncing ? t("sync.queued") : t("sync.syncNow")}
-                                    </motion.button>
+                                        <CheckCircle2 size={16} style={{ color: "#10b981" }} />
+                                        <span
+                                            style={{
+                                                fontSize: "13px",
+                                                fontWeight: 600,
+                                                color: "#10b981",
+                                            }}
+                                        >
+                                            {t("sync.success")}
+                                        </span>
+                                    </div>
+                                    <p
+                                        style={{
+                                            fontSize: "28px",
+                                            fontWeight: 700,
+                                            color: "var(--color-text)",
+                                            lineHeight: 1,
+                                        }}
+                                    >
+                                        {sync.total - failedShows.length}
+                                    </p>
+                                    <p
+                                        style={{
+                                            fontSize: "12px",
+                                            color: "var(--color-text-muted)",
+                                            marginTop: "4px",
+                                        }}
+                                    >
+                                        {t("sync.showsSynced")}
+                                    </p>
                                 </div>
-                            </div>
 
-                            {/* Full sync */}
-                            <div
-                                style={{
-                                    borderRadius: "var(--radius-md)",
-                                    padding: "16px",
-                                    background: "var(--color-surface-2)",
-                                    border: "1px solid var(--color-border-subtle)",
-                                }}
-                            >
+                                {/* 失败列 */}
                                 <div
                                     style={{
-                                        display: "flex",
-                                        alignItems: "flex-start",
-                                        justifyContent: "space-between",
-                                        gap: "16px",
+                                        borderRadius: "var(--radius-md)",
+                                        padding: "16px",
+                                        background:
+                                            failedShows.length > 0 ? "#ef444414" : "#6b728014",
+                                        border:
+                                            failedShows.length > 0
+                                                ? "1px solid #ef444428"
+                                                : "1px solid #6b728028",
                                     }}
                                 >
-                                    <div style={{ flex: 1 }}>
-                                        <p
-                                            style={{
-                                                fontSize: "14px",
-                                                fontWeight: 500,
-                                                color: "var(--color-text)",
-                                                marginBottom: "4px",
-                                            }}
-                                        >
-                                            {t("sync.fullSync")}
-                                        </p>
-                                        <p
-                                            style={{
-                                                fontSize: "12px",
-                                                color: "var(--color-text-muted)",
-                                                lineHeight: 1.6,
-                                            }}
-                                        >
-                                            {t("sync.fullDesc")}
-                                        </p>
-                                    </div>
-                                    <motion.button
-                                        onClick={handleTriggerFull}
-                                        disabled={anyPending || isRunning}
-                                        whileHover={anyPending || isRunning ? {} : { scale: 1.02 }}
-                                        whileTap={anyPending || isRunning ? {} : { scale: 0.98 }}
+                                    <div
                                         style={{
-                                            display: "inline-flex",
+                                            display: "flex",
                                             alignItems: "center",
-                                            gap: "7px",
-                                            padding: "9px 18px",
-                                            borderRadius: "var(--radius-md)",
-                                            background:
-                                                anyPending || isRunning
-                                                    ? "var(--color-surface-3)"
-                                                    : "#0ea5e9",
-                                            color:
-                                                anyPending || isRunning
-                                                    ? "var(--color-text-muted)"
-                                                    : "#fff",
-                                            fontSize: "13px",
-                                            fontWeight: 600,
-                                            border:
-                                                anyPending || isRunning
-                                                    ? "1px solid transparent"
-                                                    : "1px solid #38bdf840",
-                                            cursor:
-                                                anyPending || isRunning ? "not-allowed" : "pointer",
-                                            flexShrink: 0,
-                                            transition: "background 0.15s",
-                                            boxShadow:
-                                                anyPending || isRunning
-                                                    ? "none"
-                                                    : "0 2px 12px rgba(14,165,233,0.35)",
+                                            gap: "8px",
+                                            marginBottom: "8px",
                                         }}
                                     >
-                                        <Database
-                                            size={14}
-                                            className={fullSyncing ? "animate-spin" : ""}
+                                        <AlertCircle
+                                            size={16}
+                                            style={{
+                                                color:
+                                                    failedShows.length > 0 ? "#ef4444" : "#6b7280",
+                                            }}
                                         />
-                                        {fullSyncing ? t("sync.syncing") : t("sync.fullSync")}
-                                    </motion.button>
+                                        <span
+                                            style={{
+                                                fontSize: "13px",
+                                                fontWeight: 600,
+                                                color:
+                                                    failedShows.length > 0 ? "#ef4444" : "#6b7280",
+                                            }}
+                                        >
+                                            {t("sync.failed")}
+                                        </span>
+                                    </div>
+                                    <p
+                                        style={{
+                                            fontSize: "28px",
+                                            fontWeight: 700,
+                                            color: "var(--color-text)",
+                                            lineHeight: 1,
+                                        }}
+                                    >
+                                        {failedShows.length}
+                                    </p>
+                                    <p
+                                        style={{
+                                            fontSize: "12px",
+                                            color: "var(--color-text-muted)",
+                                            marginTop: "4px",
+                                        }}
+                                    >
+                                        {t("sync.showsFailed")}
+                                    </p>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                )}
-            </motion.div>
-
-            {/* Failed shows */}
-            {failedShows.length > 0 && (
-                <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    style={{
-                        borderRadius: "var(--radius-lg)",
-                        padding: "24px",
-                        background: "var(--color-surface)",
-                        border: "1px solid #f59e0b22",
-                    }}
-                >
-                    <div
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                            marginBottom: "16px",
-                        }}
-                    >
-                        <AlertTriangle size={15} style={{ color: "var(--color-airing)" }} />
-                        <h3
-                            style={{
-                                fontSize: "14px",
-                                fontWeight: 500,
-                                color: "var(--color-text)",
-                            }}
-                        >
-                            {t("sync.failedShows", { n: failedShows.length })}
-                        </h3>
-                    </div>
-                    <div
-                        style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "12px",
-                        }}
-                    >
-                        {failedShows.map((f, i) => (
-                            <div
-                                key={`${f.tmdbId}-${f.title}`}
-                                style={{
-                                    paddingBottom: i < failedShows.length - 1 ? "12px" : 0,
-                                    borderBottom:
-                                        i < failedShows.length - 1
-                                            ? "1px solid var(--color-border-subtle)"
-                                            : "none",
-                                }}
-                            >
-                                <p
-                                    style={{
-                                        fontSize: "13px",
-                                        color: "var(--color-text-secondary)",
-                                        fontWeight: 500,
-                                        marginBottom: "2px",
-                                    }}
-                                >
-                                    {f.title}
-                                </p>
-                                <p
-                                    style={{
-                                        fontSize: "12px",
-                                        color: "var(--color-error)",
-                                        opacity: 0.8,
-                                    }}
-                                >
-                                    {f.error}
-                                </p>
-                            </div>
-                        ))}
-                    </div>
-                </motion.div>
-            )}
-
-            {/* Sync Summary - 同步统计 */}
-            {sync?.status === "completed" && sync.total > 0 && (
-                <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    style={{
-                        marginTop: "16px",
-                        borderRadius: "var(--radius-lg)",
-                        padding: "24px",
-                        background: "var(--color-surface)",
-                        border: "1px solid var(--color-border-subtle)",
-                    }}
-                >
-                    <h3
-                        style={{
-                            fontSize: "14px",
-                            fontWeight: 600,
-                            color: "var(--color-text)",
-                            marginBottom: "16px",
-                        }}
-                    >
-                        {t("sync.summary")}
-                    </h3>
-                    <div
-                        style={{
-                            display: "grid",
-                            gridTemplateColumns: "1fr 1fr",
-                            gap: "16px",
-                        }}
-                    >
-                        {/* 成功列 */}
-                        <div
-                            style={{
-                                borderRadius: "var(--radius-md)",
-                                padding: "16px",
-                                background: "#10b98114",
-                                border: "1px solid #10b98128",
-                            }}
-                        >
-                            <div
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "8px",
-                                    marginBottom: "8px",
-                                }}
-                            >
-                                <CheckCircle2 size={16} style={{ color: "#10b981" }} />
-                                <span
-                                    style={{
-                                        fontSize: "13px",
-                                        fontWeight: 600,
-                                        color: "#10b981",
-                                    }}
-                                >
-                                    {t("sync.success")}
-                                </span>
-                            </div>
-                            <p
-                                style={{
-                                    fontSize: "28px",
-                                    fontWeight: 700,
-                                    color: "var(--color-text)",
-                                    lineHeight: 1,
-                                }}
-                            >
-                                {sync.total - failedShows.length}
-                            </p>
-                            <p
-                                style={{
-                                    fontSize: "12px",
-                                    color: "var(--color-text-muted)",
-                                    marginTop: "4px",
-                                }}
-                            >
-                                {t("sync.showsSynced")}
-                            </p>
-                        </div>
-
-                        {/* 失败列 */}
-                        <div
-                            style={{
-                                borderRadius: "var(--radius-md)",
-                                padding: "16px",
-                                background: failedShows.length > 0 ? "#ef444414" : "#6b728014",
-                                border:
-                                    failedShows.length > 0
-                                        ? "1px solid #ef444428"
-                                        : "1px solid #6b728028",
-                            }}
-                        >
-                            <div
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "8px",
-                                    marginBottom: "8px",
-                                }}
-                            >
-                                <AlertCircle
-                                    size={16}
-                                    style={{
-                                        color: failedShows.length > 0 ? "#ef4444" : "#6b7280",
-                                    }}
-                                />
-                                <span
-                                    style={{
-                                        fontSize: "13px",
-                                        fontWeight: 600,
-                                        color: failedShows.length > 0 ? "#ef4444" : "#6b7280",
-                                    }}
-                                >
-                                    {t("sync.failed")}
-                                </span>
-                            </div>
-                            <p
-                                style={{
-                                    fontSize: "28px",
-                                    fontWeight: 700,
-                                    color: "var(--color-text)",
-                                    lineHeight: 1,
-                                }}
-                            >
-                                {failedShows.length}
-                            </p>
-                            <p
-                                style={{
-                                    fontSize: "12px",
-                                    color: "var(--color-text-muted)",
-                                    marginTop: "4px",
-                                }}
-                            >
-                                {t("sync.showsFailed")}
-                            </p>
-                        </div>
-                    </div>
-                </motion.div>
-            )}
+                        </motion.div>
+                    )}
+                </div>
+            </div>
         </div>
     );
 }

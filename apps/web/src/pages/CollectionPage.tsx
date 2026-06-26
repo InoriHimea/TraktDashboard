@@ -808,44 +808,21 @@ export default function CollectionPage() {
     const [modalItem, setModalItem] = useState<UserCollectionItem | null>(null);
 
     return (
-        <div
-            style={{
-                minHeight: "100vh",
-                paddingTop: "var(--app-nav-height)",
-                padding: "0 0 40px",
-            }}
-        >
-            <div className="app-container" style={{ paddingTop: 32 }}>
+        <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-[var(--color-bg)]">
+            <div className="app-container py-8">
                 {/* Header */}
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "flex-end",
-                        justifyContent: "space-between",
-                        marginBottom: 24,
-                        gap: 16,
-                    }}
-                >
+                <div className="mb-6 flex items-end justify-between gap-4">
                     <div>
-                        <h1
-                            style={{
-                                margin: 0,
-                                fontSize: "clamp(28px,4vw,44px)",
-                                fontWeight: 800,
-                                letterSpacing: "-0.04em",
-                                color: "var(--color-text)",
-                            }}
-                        >
-                            {t("collection.title")}
-                        </h1>
+                        <div className="mb-2 flex items-center gap-3">
+                            <div className="flex size-11 items-center justify-center rounded-xl border border-[var(--action-cyan-border)] bg-[var(--action-cyan-surface)] text-[var(--action-cyan-text)]">
+                                <Archive className="size-5" />
+                            </div>
+                            <h1 className="text-[clamp(28px,4vw,44px)] font-bold leading-none tracking-[-0.04em]">
+                                {t("collection.title")}
+                            </h1>
+                        </div>
                         {items && (
-                            <p
-                                style={{
-                                    margin: "4px 0 0",
-                                    fontSize: 13,
-                                    color: "var(--color-text-muted)",
-                                }}
-                            >
+                            <p className="text-sm text-[var(--color-text-muted)]">
                                 {t("collection.count", { count: items.length })}
                             </p>
                         )}

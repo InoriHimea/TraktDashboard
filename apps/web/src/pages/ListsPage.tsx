@@ -281,15 +281,7 @@ export default function ListsPage() {
     const selectedList = lists?.find((l) => l.id === selectedListId);
 
     return (
-        <div
-            style={{
-                minHeight: "100vh",
-                paddingTop: "var(--app-nav-height)",
-                display: "flex",
-                maxWidth: "1400px",
-                margin: "0 auto",
-            }}
-        >
+        <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-[var(--color-bg)] flex">
             {/* Sidebar */}
             <aside
                 style={{
