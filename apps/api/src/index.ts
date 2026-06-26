@@ -22,6 +22,7 @@ import { notesRoutes } from "./routes/notes.js";
 import { listsRoutes } from "./routes/lists.js";
 import { collectionRoutes } from "./routes/collection.js";
 import { backupRoutes } from "./routes/backup.js";
+import { systemRoutes } from "./routes/system.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { startScheduler } from "./jobs/scheduler.js";
 import { encryptLegacyTokensAtRest } from "./lib/token-migration.js";
@@ -66,6 +67,7 @@ api.route("/notes", notesRoutes);
 api.route("/lists", listsRoutes);
 api.route("/collection", collectionRoutes);
 api.route("/backup", backupRoutes);
+api.route("/system", systemRoutes);
 
 const routes = app.route("/api", api);
 

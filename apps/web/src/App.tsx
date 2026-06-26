@@ -12,7 +12,6 @@ const MovieDetailPage = React.lazy(() => import("./pages/MovieDetailPage"));
 const ShowDetailPage = React.lazy(() => import("./pages/ShowDetailPage"));
 const EpisodeDetailPage = React.lazy(() => import("./pages/EpisodeDetailPage"));
 const StatsPage = React.lazy(() => import("./pages/stats"));
-const SyncPage = React.lazy(() => import("./pages/SyncPage"));
 const SettingsPage = React.lazy(() => import("./pages/SettingsPage"));
 const LoginPage = React.lazy(() => import("./pages/LoginPage"));
 const WatchlistPage = React.lazy(() => import("./pages/WatchlistPage"));
@@ -165,7 +164,10 @@ export default function App() {
                                     <Route path="/watchlist" element={<WatchlistPage />} />
                                     <Route path="/history" element={<HistoryPage />} />
                                     <Route path="/stats" element={<StatsPage />} />
-                                    <Route path="/sync" element={<SyncPage />} />
+                                    <Route
+                                        path="/sync"
+                                        element={<Navigate to="/settings" replace />}
+                                    />
                                     <Route path="/settings" element={<SettingsPage />} />
                                     <Route path="*" element={<Navigate to="/tv-shows" replace />} />
                                     <Route

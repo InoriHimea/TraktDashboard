@@ -64,15 +64,17 @@ export default function DiscoverPage() {
         <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-[var(--color-bg)]">
             <div className="app-container py-8">
                 {/* Page header */}
-                <div className="mb-6 flex items-center gap-3">
-                    <div className="flex size-11 items-center justify-center rounded-xl border border-[var(--action-cyan-border)] bg-[var(--action-cyan-surface)] text-[var(--action-cyan-text)]">
-                        <TrendingUp className="size-5" />
+                <div className="mb-6 flex items-center gap-2.5">
+                    <div className="flex size-8 items-center justify-center rounded-lg border border-[var(--action-cyan-border)] bg-[var(--action-cyan-surface)] text-[var(--action-cyan-text)]">
+                        <TrendingUp className="size-[15px]" />
                     </div>
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">{t("discover.title")}</h1>
-                        <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+                    <div className="flex items-baseline gap-2">
+                        <h1 className="text-lg font-semibold leading-tight">
+                            {t("discover.title")}
+                        </h1>
+                        <span className="text-xs text-[var(--color-text-muted)]">
                             {t("discover.subtitle")}
-                        </p>
+                        </span>
                     </div>
                 </div>
 

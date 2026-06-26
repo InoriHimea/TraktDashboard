@@ -724,3 +724,12 @@ export function useCollectionShowEpisodes(showId: number | null) {
         staleTime: 1000 * 60 * 5,
     });
 }
+
+export function useSystemMetrics() {
+    return useQuery({
+        queryKey: ["system-metrics"],
+        queryFn: () => api.system.metrics().then((r) => r.data),
+        refetchInterval: 10_000,
+        staleTime: 5_000,
+    });
+}

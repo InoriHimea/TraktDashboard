@@ -235,16 +235,21 @@ export default function HistoryPage() {
         <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-[var(--color-bg)] text-[var(--color-text)]">
             <div className="app-container py-8">
                 {/* Header */}
-                <div className="mb-7 flex items-end justify-between gap-4">
-                    <div>
-                        <h1 className="text-[clamp(28px,4vw,48px)] font-bold leading-none tracking-[-0.04em]">
-                            {t("history.title")}
-                        </h1>
-                        {total > 0 && (
-                            <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                                {t("history.count", { count: total })}
-                            </p>
-                        )}
+                <div className="mb-6 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2.5">
+                        <div className="flex size-8 items-center justify-center rounded-lg border border-[var(--action-cyan-border)] bg-[var(--action-cyan-surface)] text-[var(--action-cyan-text)]">
+                            <Clock className="size-[15px]" />
+                        </div>
+                        <div className="flex items-baseline gap-2">
+                            <h1 className="text-lg font-semibold leading-tight">
+                                {t("history.title")}
+                            </h1>
+                            {total > 0 && (
+                                <span className="text-xs text-[var(--color-text-muted)]">
+                                    {t("history.count", { count: total })}
+                                </span>
+                            )}
+                        </div>
                     </div>
                     <div className="flex items-center gap-2">
                         {/* Import JSON */}

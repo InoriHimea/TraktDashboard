@@ -811,21 +811,23 @@ export default function CollectionPage() {
         <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-[var(--color-bg)]">
             <div className="app-container py-8">
                 {/* Header */}
-                <div className="mb-6 flex items-end justify-between gap-4">
+                <div className="mb-6 flex items-start justify-between gap-4">
                     <div>
-                        <div className="mb-2 flex items-center gap-3">
-                            <div className="flex size-11 items-center justify-center rounded-xl border border-[var(--action-cyan-border)] bg-[var(--action-cyan-surface)] text-[var(--action-cyan-text)]">
-                                <Archive className="size-5" />
+                        <div className="mb-1 flex items-center gap-2.5">
+                            <div className="flex size-8 items-center justify-center rounded-lg border border-[var(--action-cyan-border)] bg-[var(--action-cyan-surface)] text-[var(--action-cyan-text)]">
+                                <Archive className="size-[15px]" />
                             </div>
-                            <h1 className="text-[clamp(28px,4vw,44px)] font-bold leading-none tracking-[-0.04em]">
-                                {t("collection.title")}
-                            </h1>
+                            <div className="flex items-baseline gap-2">
+                                <h1 className="text-lg font-semibold leading-tight">
+                                    {t("collection.title")}
+                                </h1>
+                                {items && (
+                                    <span className="text-xs text-[var(--color-text-muted)]">
+                                        {t("collection.count", { count: items.length })}
+                                    </span>
+                                )}
+                            </div>
                         </div>
-                        {items && (
-                            <p className="text-sm text-[var(--color-text-muted)]">
-                                {t("collection.count", { count: items.length })}
-                            </p>
-                        )}
                         {/* Remote capacity bar */}
                         {capacity && (
                             <div style={{ marginTop: 10, width: 220 }}>

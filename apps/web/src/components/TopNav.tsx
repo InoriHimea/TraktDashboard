@@ -50,6 +50,10 @@ function isNavActive(pathname: string, to: string) {
     if (to === "/movies") {
         return pathname.startsWith("/movies");
     }
+    // /sync redirects to /settings; treat both as active on that page
+    if (to === "/sync") {
+        return pathname === "/sync" || pathname === "/settings";
+    }
     return pathname === to || pathname.startsWith(`${to}/`);
 }
 

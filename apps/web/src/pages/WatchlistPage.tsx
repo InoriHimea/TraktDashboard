@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Tv2, Film, LayoutGrid, Trash2, Loader2, Search } from "lucide-react";
+import { Tv2, Film, LayoutGrid, Trash2, Loader2, Search, Bookmark } from "lucide-react";
 import { useWatchlist, useRemoveFromWatchlist } from "../hooks";
 import type { WatchlistShowItem, WatchlistMovieItem } from "@trakt-dashboard/types";
 import { tmdbImage } from "../lib/utils";
@@ -153,15 +153,20 @@ export default function WatchlistPage() {
         <div className="min-h-[calc(100svh-var(--app-nav-height))] bg-[var(--color-bg)] text-[var(--color-text)]">
             <div className="app-container py-8">
                 {/* Header */}
-                <div className="mb-7 flex flex-col gap-2">
-                    <h1 className="text-[clamp(28px,4vw,52px)] font-bold leading-none tracking-[-0.045em] text-[var(--color-text)]">
-                        {t("watchlist.title")}
-                    </h1>
-                    {filtered && (
-                        <p className="text-sm text-[var(--color-text-muted)]">
-                            {t("watchlist.count", { count: filtered.length })}
-                        </p>
-                    )}
+                <div className="mb-6 flex items-center gap-2.5">
+                    <div className="flex size-8 items-center justify-center rounded-lg border border-[var(--action-violet-border)] bg-[var(--action-violet-surface)] text-[var(--action-violet-text)]">
+                        <Bookmark className="size-[15px]" />
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                        <h1 className="text-lg font-semibold leading-tight">
+                            {t("watchlist.title")}
+                        </h1>
+                        {filtered && (
+                            <span className="text-xs text-[var(--color-text-muted)]">
+                                {t("watchlist.count", { count: filtered.length })}
+                            </span>
+                        )}
+                    </div>
                 </div>
 
                 {/* Filters + Search */}

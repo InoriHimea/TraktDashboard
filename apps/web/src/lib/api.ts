@@ -447,4 +447,27 @@ export const api = {
                 body: JSON.stringify({ provider, fileId }),
             }),
     },
+    system: {
+        metrics: () =>
+            request<{
+                data: {
+                    process: {
+                        heapUsed: number;
+                        heapTotal: number;
+                        rss: number;
+                        uptimeSeconds: number;
+                        nodeVersion: string;
+                        platform: string;
+                    };
+                    system: {
+                        totalMem: number;
+                        freeMem: number;
+                        usedMem: number;
+                        memPct: number;
+                        loadAvg1: number;
+                        cpuCount: number;
+                    };
+                };
+            }>("/system/metrics"),
+    },
 };
