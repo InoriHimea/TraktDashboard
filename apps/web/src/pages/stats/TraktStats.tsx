@@ -243,60 +243,6 @@ export function TraktStats({ stats }: { stats: TraktOfficialStats }) {
                     />
                 </div>
             </div>
-
-            {/* Ratings distribution mini bar */}
-            {stats.ratings.total > 0 && (
-                <div style={{ marginTop: "16px" }}>
-                    <div style={{ fontSize: "11px", color: T3, marginBottom: "8px" }}>
-                        {t("stats.traktRatingDist")}
-                    </div>
-                    <div
-                        style={{
-                            display: "flex",
-                            gap: "2px",
-                            alignItems: "flex-end",
-                            height: "28px",
-                        }}
-                    >
-                        {Array.from({ length: 10 }, (_, i) => {
-                            const score = String(i + 1);
-                            const count = stats.ratings.distribution[score] ?? 0;
-                            const maxCount = Math.max(
-                                ...Object.values(stats.ratings.distribution),
-                                1,
-                            );
-                            const pct = Math.round((count / maxCount) * 100);
-                            return (
-                                <div
-                                    key={score}
-                                    title={`${score}分: ${count}`}
-                                    style={{
-                                        flex: 1,
-                                        height: `${Math.max(pct, 4)}%`,
-                                        background:
-                                            count > 0
-                                                ? COLORS.violet.base
-                                                : "var(--color-surface-2)",
-                                        borderRadius: "2px 2px 0 0",
-                                        opacity: count > 0 ? 0.85 : 0.3,
-                                        transition: "height 0.3s ease",
-                                    }}
-                                />
-                            );
-                        })}
-                    </div>
-                    <div
-                        style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            marginTop: "3px",
-                        }}
-                    >
-                        <span style={{ fontSize: "9px", color: T3 }}>1</span>
-                        <span style={{ fontSize: "9px", color: T3 }}>10</span>
-                    </div>
-                </div>
-            )}
         </motion.div>
     );
 }
