@@ -370,6 +370,9 @@ export default function StatsPage() {
 
                         {/* Weekday patterns */}
                         <WatchPatterns weekdayDistribution={stats.weekdayDistribution ?? []} />
+
+                        {/* Screen Time */}
+                        <ScreenTime />
                     </div>
 
                     {/* ── RIGHT COLUMN: chart + recent activity ── */}
@@ -405,11 +408,6 @@ export default function StatsPage() {
                         <RatingDistribution ratingDistribution={stats.ratingDistribution ?? []} />
                     </div>
                 )}
-
-                {/* ── FULL-WIDTH: Screen Time ── */}
-                <div style={{ marginTop: "24px" }}>
-                    <ScreenTime />
-                </div>
             </div>
         </div>
     );
