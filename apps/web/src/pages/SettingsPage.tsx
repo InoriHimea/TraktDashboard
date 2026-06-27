@@ -1730,14 +1730,6 @@ export default function SettingsPage() {
                             gap: "12px",
                         }}
                     >
-                        {/* Sync panel header */}
-                        <div className="flex items-center gap-2">
-                            <div className="flex size-8 items-center justify-center rounded-lg border border-[var(--action-emerald-border)] bg-[var(--action-emerald-surface)] text-[var(--action-emerald-text)]">
-                                <Database className="size-[15px]" />
-                            </div>
-                            <span className="text-sm font-semibold">{t("sync.title")}</span>
-                        </div>
-
                         {/* Sync status card */}
                         <div
                             style={{
@@ -2086,59 +2078,6 @@ export default function SettingsPage() {
                                             />
                                         </div>
                                     </div>
-                                    {/* Process heap — heapUsed can temporarily exceed heapTotal in V8 */}
-                                    {(() => {
-                                        const hp = Math.min(
-                                            100,
-                                            Math.round(
-                                                (sysMetrics.process.heapUsed /
-                                                    sysMetrics.process.heapTotal) *
-                                                    100,
-                                            ),
-                                        );
-                                        return (
-                                            <div>
-                                                <div
-                                                    style={{
-                                                        display: "flex",
-                                                        justifyContent: "space-between",
-                                                        fontSize: 11,
-                                                        color: "var(--color-text-muted)",
-                                                        marginBottom: 4,
-                                                    }}
-                                                >
-                                                    <span>进程堆内存</span>
-                                                    <span>
-                                                        {fmtBytes(sysMetrics.process.heapUsed)} (
-                                                        {hp}%)
-                                                    </span>
-                                                </div>
-                                                <div
-                                                    style={{
-                                                        height: 4,
-                                                        borderRadius: 2,
-                                                        background: "var(--color-surface-3)",
-                                                        overflow: "hidden",
-                                                    }}
-                                                >
-                                                    <div
-                                                        style={{
-                                                            height: "100%",
-                                                            width: `${hp}%`,
-                                                            borderRadius: 2,
-                                                            background:
-                                                                hp > 85
-                                                                    ? "#ef4444"
-                                                                    : hp > 70
-                                                                      ? "#f59e0b"
-                                                                      : "#10b981",
-                                                            transition: "width 0.4s",
-                                                        }}
-                                                    />
-                                                </div>
-                                            </div>
-                                        );
-                                    })()}
                                     {/* Info grid */}
                                     <div
                                         style={{
@@ -2155,6 +2094,10 @@ export default function SettingsPage() {
                                             {
                                                 label: "RSS 内存",
                                                 value: fmtBytes(sysMetrics.process.rss),
+                                            },
+                                            {
+                                                label: "堆内存",
+                                                value: `${fmtBytes(sysMetrics.process.heapUsed)} / ${fmtBytes(sysMetrics.process.heapTotal)}`,
                                             },
                                             {
                                                 label: "Node.js",
