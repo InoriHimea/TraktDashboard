@@ -381,9 +381,10 @@ export default function SettingsPage() {
                 <div
                     style={{
                         display: "grid",
-                        gridTemplateColumns: "1fr minmax(0, 360px)",
+                        gridTemplateColumns: "minmax(0, 1fr) 380px",
                         gap: "28px",
                         alignItems: "start",
+                        maxWidth: "1160px",
                     }}
                 >
                     <div>
