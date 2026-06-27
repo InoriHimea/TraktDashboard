@@ -102,94 +102,39 @@ function HistoryPosterCard({
         >
             <Link to={href} className="block no-underline">
                 <motion.div
-                    whileHover={{ y: -5, boxShadow: "0 20px 56px rgba(0,0,0,0.6)" }}
+                    whileHover={{ y: -3, boxShadow: "var(--shadow-media-card-hover)" }}
                     transition={{ duration: 0.15 }}
-                    style={{
-                        position: "relative",
-                        paddingBottom: "150%" /* 2:3 = height is 150% of width */,
-                        borderRadius: "12px",
-                        overflow: "hidden",
-                        background: "var(--color-surface-3)",
-                        cursor: "pointer",
-                        boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
-                    }}
+                    className="flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)]"
+                    style={{ boxShadow: "var(--shadow-media-card)" }}
                 >
-                    {/* Poster — fills entire card via absolute inset */}
-                    {poster && !imgError ? (
-                        <img
-                            src={poster}
-                            alt={title}
-                            onError={() => setImgError(true)}
-                            style={{
-                                position: "absolute",
-                                inset: 0,
-                                width: "100%",
-                                height: "100%",
-                                objectFit: "cover",
-                                display: "block",
-                            }}
-                            loading="lazy"
-                        />
-                    ) : (
-                        <div
-                            style={{
-                                position: "absolute",
-                                inset: 0,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                            }}
-                        >
-                            {isEpisode ? (
-                                <Tv2
-                                    size={32}
-                                    color="var(--color-text-muted)"
-                                    style={{ opacity: 0.25 }}
-                                />
-                            ) : (
-                                <Film
-                                    size={32}
-                                    color="var(--color-text-muted)"
-                                    style={{ opacity: 0.25 }}
-                                />
-                            )}
-                        </div>
-                    )}
+                    {/* Poster */}
+                    <div className="relative aspect-[2/3] bg-[var(--color-surface-3)]">
+                        {poster && !imgError ? (
+                            <img
+                                src={poster}
+                                alt={title}
+                                onError={() => setImgError(true)}
+                                className="block h-full w-full object-cover"
+                                loading="lazy"
+                            />
+                        ) : (
+                            <div className="flex h-full w-full items-center justify-center">
+                                {isEpisode ? (
+                                    <Tv2
+                                        size={32}
+                                        className="text-[var(--color-text-muted)] opacity-30"
+                                    />
+                                ) : (
+                                    <Film
+                                        size={32}
+                                        className="text-[var(--color-text-muted)] opacity-30"
+                                    />
+                                )}
+                            </div>
+                        )}
 
-                    {/* Top row: media badge (left) + rating (right) */}
-                    <div
-                        style={{
-                            position: "absolute",
-                            top: 8,
-                            left: 8,
-                            right: 8,
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "flex-start",
-                        }}
-                    >
-                        <span
-                            style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 3,
-                                padding: "3px 7px",
-                                borderRadius: 6,
-                                fontSize: 9,
-                                fontWeight: 700,
-                                letterSpacing: "0.06em",
-                                backdropFilter: "blur(10px)",
-                                WebkitBackdropFilter: "blur(10px)",
-                                background: isEpisode
-                                    ? "rgba(99,102,241,0.82)"
-                                    : "rgba(245,158,11,0.82)",
-                                color: "#fff",
-                            }}
-                        >
-                            {isEpisode ? <Tv2 size={8} /> : <Film size={8} />}
-                            {isEpisode ? "EP" : "FILM"}
-                        </span>
-                        {rating !== undefined && (
+                        {/* Overlay badges */}
+                        <div className="absolute left-2 right-2 top-2 flex items-start justify-between">
                             <span
                                 style={{
                                     display: "inline-flex",
@@ -197,81 +142,62 @@ function HistoryPosterCard({
                                     gap: 3,
                                     padding: "3px 7px",
                                     borderRadius: 6,
-                                    fontSize: 10,
+                                    fontSize: 9,
                                     fontWeight: 700,
+                                    letterSpacing: "0.06em",
                                     backdropFilter: "blur(10px)",
                                     WebkitBackdropFilter: "blur(10px)",
-                                    background: "rgba(0,0,0,0.65)",
-                                    color: "#fbbf24",
+                                    background: isEpisode
+                                        ? "rgba(99,102,241,0.82)"
+                                        : "rgba(245,158,11,0.82)",
+                                    color: "#fff",
                                 }}
                             >
-                                ★ {rating}
+                                {isEpisode ? <Tv2 size={8} /> : <Film size={8} />}
+                                {isEpisode ? "EP" : "FILM"}
                             </span>
-                        )}
+                            {rating !== undefined && (
+                                <span
+                                    style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: 3,
+                                        padding: "3px 7px",
+                                        borderRadius: 6,
+                                        fontSize: 10,
+                                        fontWeight: 700,
+                                        backdropFilter: "blur(10px)",
+                                        WebkitBackdropFilter: "blur(10px)",
+                                        background: "rgba(0,0,0,0.65)",
+                                        color: "#fbbf24",
+                                    }}
+                                >
+                                    ★ {rating}
+                                </span>
+                            )}
+                        </div>
                     </div>
 
-                    {/* Bottom gradient overlay */}
-                    <div
-                        style={{
-                            position: "absolute",
-                            bottom: 0,
-                            left: 0,
-                            right: 0,
-                            padding: "48px 10px 10px",
-                            background:
-                                "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 60%, transparent 100%)",
-                        }}
-                    >
+                    {/* Info section — below poster */}
+                    <div className="flex flex-col p-[10px_12px_12px]">
                         {episodeCode && (
-                            <p
-                                style={{
-                                    fontSize: 10,
-                                    fontWeight: 700,
-                                    color: "#a78bfa",
-                                    margin: "0 0 3px",
-                                    letterSpacing: "0.04em",
-                                }}
-                            >
+                            <p className="mb-0.5 text-[10px] font-bold tracking-wide text-[var(--color-accent)]">
                                 {episodeCode}
                             </p>
                         )}
-                        <p
-                            style={{
-                                fontSize: 12,
-                                fontWeight: 700,
-                                color: "#fff",
-                                margin: 0,
-                                lineHeight: 1.35,
-                                display: "-webkit-box",
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: "vertical",
-                                overflow: "hidden",
-                            }}
+                        <h3
+                            className="truncate text-[12px] font-semibold leading-snug text-[var(--color-text)]"
+                            title={title}
                         >
                             {title}
-                        </p>
+                        </h3>
                         {episodeTitle && (
-                            <p
-                                style={{
-                                    fontSize: 10,
-                                    color: "rgba(255,255,255,0.5)",
-                                    margin: "2px 0 0",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                }}
-                            >
+                            <p className="mt-0.5 truncate text-[10px] text-[var(--color-text-muted)]">
                                 {episodeTitle}
                             </p>
                         )}
                         {watchTime && (
-                            <p
-                                style={{
-                                    fontSize: 9,
-                                    color: "rgba(255,255,255,0.35)",
-                                    margin: "4px 0 0",
-                                }}
-                            >
+                            <p className="mt-1 text-[9px] text-[var(--color-text-muted)] opacity-60">
                                 {watchTime}
                             </p>
                         )}
