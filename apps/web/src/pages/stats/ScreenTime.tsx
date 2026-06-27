@@ -149,15 +149,23 @@ export function ScreenTime() {
                         display: "grid",
                         gridTemplateColumns: "1fr auto",
                         gap: 24,
-                        alignItems: "start",
+                        alignItems: "stretch",
                     }}
                 >
-                    {/* LEFT: daily bars */}
-                    <div>
+                    {/* LEFT: daily bars — stretches to match right panel height */}
+                    <div style={{ display: "flex", flexDirection: "column" }}>
                         <p style={{ fontSize: 11, color: T3, marginBottom: 6 }}>每日明细</p>
 
-                        {/* Row 1: value labels (fixed height, bottom-aligned text) */}
-                        <div style={{ display: "flex", gap: 6, height: 14, marginBottom: 3 }}>
+                        {/* Row 1: value labels */}
+                        <div
+                            style={{
+                                display: "flex",
+                                gap: 6,
+                                height: 14,
+                                marginBottom: 3,
+                                flexShrink: 0,
+                            }}
+                        >
                             {data.daily.map((d) => {
                                 const val = getValue(d);
                                 return (
@@ -179,9 +187,15 @@ export function ScreenTime() {
                             })}
                         </div>
 
-                        {/* Row 2: bars — fixed height, all bars anchor to the bottom */}
+                        {/* Row 2: bars — flex:1 so they fill remaining height */}
                         <div
-                            style={{ display: "flex", gap: 6, height: 64, alignItems: "flex-end" }}
+                            style={{
+                                flex: 1,
+                                display: "flex",
+                                gap: 6,
+                                alignItems: "flex-end",
+                                minHeight: 64,
+                            }}
                         >
                             {data.daily.map((d) => {
                                 const val = getValue(d);
@@ -189,17 +203,16 @@ export function ScreenTime() {
                                 return (
                                     <motion.div
                                         key={d.date}
-                                        initial={{ height: 0 }}
-                                        animate={{
-                                            height: `${Math.max(pct * 64, val > 0 ? 4 : 0)}px`,
-                                        }}
-                                        transition={{ duration: 0.4, ease: "easeOut" }}
+                                        initial={{ scaleY: 0 }}
+                                        animate={{ scaleY: val > 0 ? 1 : 0 }}
                                         style={{
                                             flex: 1,
+                                            height: `${Math.max(pct * 100, val > 0 ? 2 : 0)}%`,
                                             borderRadius: "4px 4px 2px 2px",
-                                            background:
-                                                val > 0 ? color.base : "var(--color-surface-3)",
-                                            opacity: val > 0 ? 0.85 : 0.3,
+                                            background: val > 0 ? color.base : "transparent",
+                                            opacity: val > 0 ? 0.85 : 0,
+                                            transformOrigin: "bottom",
+                                            transition: "height 0.4s ease, background 0.2s",
                                         }}
                                     />
                                 );
@@ -207,7 +220,7 @@ export function ScreenTime() {
                         </div>
 
                         {/* Row 3: day labels */}
-                        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+                        <div style={{ display: "flex", gap: 6, marginTop: 4, flexShrink: 0 }}>
                             {data.daily.map((d) => (
                                 <div key={d.date} style={{ flex: 1, textAlign: "center" }}>
                                     <span style={{ fontSize: 9, color: T3, whiteSpace: "nowrap" }}>

@@ -359,6 +359,16 @@ export default function StatsPage() {
                         {/* Screen Time */}
                         <ScreenTime />
 
+                        {/* Watch heatmap */}
+                        <WatchHeatmap heatmap={stats.heatmap ?? []} />
+
+                        {/* Rating distribution */}
+                        {(stats.ratingDistribution ?? []).some((r) => r.count > 0) && (
+                            <RatingDistribution
+                                ratingDistribution={stats.ratingDistribution ?? []}
+                            />
+                        )}
+
                         <SignalMetrics metrics={signalMetrics} />
 
                         {/* Media composition */}
@@ -395,26 +405,6 @@ export default function StatsPage() {
                             recentlyWatchedMovies={stats.recentlyWatchedMovies}
                         />
                     </div>
-                </div>
-
-                {/* ── 热力图 + 评分分布 并排 ── */}
-                <div
-                    style={{
-                        marginTop: "24px",
-                        display: "grid",
-                        gridTemplateColumns: (stats.ratingDistribution ?? []).some(
-                            (r) => r.count > 0,
-                        )
-                            ? "1fr 1fr"
-                            : "1fr",
-                        gap: "24px",
-                        alignItems: "start",
-                    }}
-                >
-                    <WatchHeatmap heatmap={stats.heatmap ?? []} />
-                    {(stats.ratingDistribution ?? []).some((r) => r.count > 0) && (
-                        <RatingDistribution ratingDistribution={stats.ratingDistribution ?? []} />
-                    )}
                 </div>
             </div>
         </div>
