@@ -80,7 +80,7 @@ function HistoryPosterCard({
         : (entry.movie?.title ?? "—");
     const episodeCode =
         isEpisode && entry.episode
-            ? `S${String(entry.episode.seasonNumber).padStart(2, "0")} E${String(entry.episode.episodeNumber).padStart(2, "0")}`
+            ? `S${String(entry.episode.seasonNumber).padStart(2, "0")}·E${String(entry.episode.episodeNumber).padStart(2, "0")}`
             : null;
     const episodeTitle = isEpisode ? (entry.episode?.title ?? null) : null;
     const watchTime = entry.watchedAt
@@ -92,209 +92,187 @@ function HistoryPosterCard({
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{
-                duration: 0.22,
-                delay: Math.min(index * 0.015, 0.3),
+                duration: 0.25,
+                delay: Math.min(index * 0.02, 0.35),
                 ease: [0.16, 1, 0.3, 1],
             }}
         >
             <Link to={href} className="block no-underline">
                 <motion.div
-                    whileHover={{
-                        backgroundColor: "var(--color-surface-2)",
-                        boxShadow: "0 4px 24px rgba(0,0,0,0.18)",
-                    }}
-                    transition={{ duration: 0.12 }}
+                    whileHover={{ y: -5, boxShadow: "0 20px 56px rgba(0,0,0,0.6)" }}
+                    transition={{ duration: 0.15 }}
                     style={{
-                        display: "flex",
+                        position: "relative",
+                        aspectRatio: "2/3",
                         borderRadius: "12px",
                         overflow: "hidden",
-                        background: "var(--color-surface)",
-                        border: "1px solid var(--color-border-subtle)",
+                        background: "var(--color-surface-3)",
                         cursor: "pointer",
+                        boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
                     }}
                 >
-                    {/* Left: portrait poster thumbnail */}
-                    <div
-                        style={{
-                            width: 72,
-                            flexShrink: 0,
-                            background: "var(--color-surface-3)",
-                            position: "relative",
-                        }}
-                    >
-                        {poster && !imgError ? (
-                            <img
-                                src={poster}
-                                alt={title}
-                                onError={() => setImgError(true)}
-                                style={{
-                                    width: "100%",
-                                    height: "100%",
-                                    objectFit: "cover",
-                                    display: "block",
-                                }}
-                                loading="lazy"
-                            />
-                        ) : (
-                            <div
-                                style={{
-                                    width: "100%",
-                                    height: "100%",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    minHeight: 108,
-                                }}
-                            >
-                                {isEpisode ? (
-                                    <Tv2
-                                        size={20}
-                                        color="var(--color-text-muted)"
-                                        style={{ opacity: 0.3 }}
-                                    />
-                                ) : (
-                                    <Film
-                                        size={20}
-                                        color="var(--color-text-muted)"
-                                        style={{ opacity: 0.3 }}
-                                    />
-                                )}
-                            </div>
-                        )}
-                        {/* Media type badge — bottom of poster */}
+                    {/* Poster */}
+                    {poster && !imgError ? (
+                        <img
+                            src={poster}
+                            alt={title}
+                            onError={() => setImgError(true)}
+                            style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                display: "block",
+                            }}
+                            loading="lazy"
+                        />
+                    ) : (
                         <div
                             style={{
-                                position: "absolute",
-                                bottom: 0,
-                                left: 0,
-                                right: 0,
-                                padding: "12px 4px 4px",
-                                background: "linear-gradient(to top, rgba(0,0,0,0.7), transparent)",
+                                width: "100%",
+                                height: "100%",
                                 display: "flex",
+                                alignItems: "center",
                                 justifyContent: "center",
                             }}
                         >
-                            <span
-                                style={{
-                                    fontSize: 8,
-                                    fontWeight: 800,
-                                    letterSpacing: "0.08em",
-                                    color: isEpisode ? "#a5b4fc" : "#fcd34d",
-                                }}
-                            >
-                                {isEpisode ? "EP" : "FILM"}
-                            </span>
+                            {isEpisode ? (
+                                <Tv2
+                                    size={32}
+                                    color="var(--color-text-muted)"
+                                    style={{ opacity: 0.25 }}
+                                />
+                            ) : (
+                                <Film
+                                    size={32}
+                                    color="var(--color-text-muted)"
+                                    style={{ opacity: 0.25 }}
+                                />
+                            )}
                         </div>
-                    </div>
+                    )}
 
-                    {/* Right: info */}
+                    {/* Top row: media badge (left) + rating (right) */}
                     <div
                         style={{
-                            flex: 1,
-                            minWidth: 0,
-                            padding: "11px 14px",
+                            position: "absolute",
+                            top: 8,
+                            left: 8,
+                            right: 8,
                             display: "flex",
-                            flexDirection: "column",
                             justifyContent: "space-between",
-                            gap: 4,
+                            alignItems: "flex-start",
                         }}
                     >
-                        {/* Top section */}
-                        <div style={{ minWidth: 0 }}>
-                            {episodeCode && (
-                                <p
-                                    style={{
-                                        fontSize: 10,
-                                        fontWeight: 700,
-                                        color: "#818cf8",
-                                        margin: "0 0 3px",
-                                        letterSpacing: "0.04em",
-                                    }}
-                                >
-                                    {episodeCode}
-                                </p>
-                            )}
-                            <h3
-                                style={{
-                                    fontSize: 13,
-                                    fontWeight: 700,
-                                    color: "var(--color-text)",
-                                    margin: 0,
-                                    lineHeight: 1.35,
-                                    overflow: "hidden",
-                                    display: "-webkit-box",
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: "vertical",
-                                }}
-                            >
-                                {title}
-                            </h3>
-                            {episodeTitle && (
-                                <p
-                                    style={{
-                                        fontSize: 11,
-                                        color: "var(--color-text-secondary)",
-                                        margin: "3px 0 0",
-                                        overflow: "hidden",
-                                        textOverflow: "ellipsis",
-                                        whiteSpace: "nowrap",
-                                    }}
-                                >
-                                    {episodeTitle}
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Bottom: time + rating */}
-                        <div
+                        <span
                             style={{
-                                display: "flex",
+                                display: "inline-flex",
                                 alignItems: "center",
-                                justifyContent: "space-between",
-                                gap: 6,
-                                marginTop: 2,
+                                gap: 3,
+                                padding: "3px 7px",
+                                borderRadius: 6,
+                                fontSize: 9,
+                                fontWeight: 700,
+                                letterSpacing: "0.06em",
+                                backdropFilter: "blur(10px)",
+                                WebkitBackdropFilter: "blur(10px)",
+                                background: isEpisode
+                                    ? "rgba(99,102,241,0.82)"
+                                    : "rgba(245,158,11,0.82)",
+                                color: "#fff",
                             }}
                         >
-                            {watchTime && (
-                                <span
-                                    style={{
-                                        fontSize: 11,
-                                        color: "var(--color-text-muted)",
-                                    }}
-                                >
-                                    {watchTime}
-                                </span>
-                            )}
-                            {rating !== undefined ? (
-                                <span
-                                    style={{
-                                        fontSize: 11,
-                                        fontWeight: 700,
-                                        color: "#fbbf24",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 3,
-                                        flexShrink: 0,
-                                    }}
-                                >
-                                    ★ {rating}
-                                </span>
-                            ) : (
-                                <span
-                                    style={{
-                                        fontSize: 11,
-                                        color: "var(--color-text-muted)",
-                                        opacity: 0.35,
-                                        flexShrink: 0,
-                                    }}
-                                >
-                                    ☆
-                                </span>
-                            )}
-                        </div>
+                            {isEpisode ? <Tv2 size={8} /> : <Film size={8} />}
+                            {isEpisode ? "EP" : "FILM"}
+                        </span>
+                        {rating !== undefined && (
+                            <span
+                                style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 3,
+                                    padding: "3px 7px",
+                                    borderRadius: 6,
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    backdropFilter: "blur(10px)",
+                                    WebkitBackdropFilter: "blur(10px)",
+                                    background: "rgba(0,0,0,0.65)",
+                                    color: "#fbbf24",
+                                }}
+                            >
+                                ★ {rating}
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Bottom gradient overlay */}
+                    <div
+                        style={{
+                            position: "absolute",
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            padding: "48px 10px 10px",
+                            background:
+                                "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 60%, transparent 100%)",
+                        }}
+                    >
+                        {episodeCode && (
+                            <p
+                                style={{
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    color: "#a78bfa",
+                                    margin: "0 0 3px",
+                                    letterSpacing: "0.04em",
+                                }}
+                            >
+                                {episodeCode}
+                            </p>
+                        )}
+                        <p
+                            style={{
+                                fontSize: 12,
+                                fontWeight: 700,
+                                color: "#fff",
+                                margin: 0,
+                                lineHeight: 1.35,
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                            }}
+                        >
+                            {title}
+                        </p>
+                        {episodeTitle && (
+                            <p
+                                style={{
+                                    fontSize: 10,
+                                    color: "rgba(255,255,255,0.5)",
+                                    margin: "2px 0 0",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                }}
+                            >
+                                {episodeTitle}
+                            </p>
+                        )}
+                        {watchTime && (
+                            <p
+                                style={{
+                                    fontSize: 9,
+                                    color: "rgba(255,255,255,0.35)",
+                                    margin: "4px 0 0",
+                                }}
+                            >
+                                {watchTime}
+                            </p>
+                        )}
                     </div>
                 </motion.div>
             </Link>
@@ -549,10 +527,10 @@ export default function HistoryPage() {
                                             </span>
                                         </h2>
                                         <div
-                                            className="grid gap-3"
+                                            className="grid gap-4"
                                             style={{
                                                 gridTemplateColumns:
-                                                    "repeat(auto-fill, minmax(min(100%, 360px), 1fr))",
+                                                    "repeat(auto-fill, minmax(160px, 1fr))",
                                             }}
                                         >
                                             {groupEntries.map((entry, i) => {
