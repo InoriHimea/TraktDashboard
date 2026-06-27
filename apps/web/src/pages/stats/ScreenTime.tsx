@@ -161,26 +161,30 @@ export function ScreenTime() {
                             style={{
                                 display: "flex",
                                 gap: 6,
-                                height: 14,
-                                marginBottom: 3,
+                                marginBottom: 4,
                                 flexShrink: 0,
                             }}
                         >
                             {data.daily.map((d) => {
                                 const val = getValue(d);
                                 return (
-                                    <div
-                                        key={d.date}
-                                        style={{ flex: 1, textAlign: "center", overflow: "hidden" }}
-                                    >
+                                    <div key={d.date} style={{ flex: 1, textAlign: "center" }}>
                                         <span
-                                            style={{ fontSize: 8, color: T3, whiteSpace: "nowrap" }}
+                                            style={{
+                                                fontSize: 10,
+                                                fontWeight: 600,
+                                                color: val > 0 ? T2 : "transparent",
+                                                whiteSpace: "nowrap",
+                                                display: "block",
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
+                                            }}
                                         >
                                             {val > 0
                                                 ? fmtMinutes(val)
                                                       .replace(" 小时", "h")
                                                       .replace(" 分钟", "m")
-                                                : ""}
+                                                : "·"}
                                         </span>
                                     </div>
                                 );
