@@ -2037,47 +2037,6 @@ export default function SettingsPage() {
                             {sysMetrics ? (
                                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                                     {/* System memory */}
-                                    <div>
-                                        <div
-                                            style={{
-                                                display: "flex",
-                                                justifyContent: "space-between",
-                                                fontSize: 11,
-                                                color: "var(--color-text-muted)",
-                                                marginBottom: 4,
-                                            }}
-                                        >
-                                            <span>系统内存</span>
-                                            <span>
-                                                {fmtBytes(sysMetrics.system.usedMem)} /{" "}
-                                                {fmtBytes(sysMetrics.system.totalMem)} (
-                                                {sysMetrics.system.memPct}%)
-                                            </span>
-                                        </div>
-                                        <div
-                                            style={{
-                                                height: 4,
-                                                borderRadius: 2,
-                                                background: "var(--color-surface-3)",
-                                                overflow: "hidden",
-                                            }}
-                                        >
-                                            <div
-                                                style={{
-                                                    height: "100%",
-                                                    width: `${sysMetrics.system.memPct}%`,
-                                                    borderRadius: 2,
-                                                    background:
-                                                        sysMetrics.system.memPct > 85
-                                                            ? "#ef4444"
-                                                            : sysMetrics.system.memPct > 70
-                                                              ? "#f59e0b"
-                                                              : "var(--color-accent)",
-                                                    transition: "width 0.4s",
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
                                     {/* Info grid */}
                                     <div
                                         style={{
@@ -2090,6 +2049,10 @@ export default function SettingsPage() {
                                             {
                                                 label: "运行时长",
                                                 value: fmtUptime(sysMetrics.process.uptimeSeconds),
+                                            },
+                                            {
+                                                label: "系统内存",
+                                                value: `${fmtBytes(sysMetrics.system.usedMem)} / ${fmtBytes(sysMetrics.system.totalMem)}`,
                                             },
                                             {
                                                 label: "RSS 内存",
