@@ -356,6 +356,9 @@ export default function StatsPage() {
                             />
                         </div>
 
+                        {/* Screen Time */}
+                        <ScreenTime />
+
                         <SignalMetrics metrics={signalMetrics} />
 
                         {/* Media composition */}
@@ -370,9 +373,6 @@ export default function StatsPage() {
 
                         {/* Weekday patterns */}
                         <WatchPatterns weekdayDistribution={stats.weekdayDistribution ?? []} />
-
-                        {/* Screen Time */}
-                        <ScreenTime />
                     </div>
 
                     {/* ── RIGHT COLUMN: chart + recent activity ── */}
