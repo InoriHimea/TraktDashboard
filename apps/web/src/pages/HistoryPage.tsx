@@ -106,7 +106,7 @@ function HistoryPosterCard({
                     transition={{ duration: 0.15 }}
                     style={{
                         position: "relative",
-                        aspectRatio: "2/3",
+                        paddingBottom: "150%" /* 2:3 = height is 150% of width */,
                         borderRadius: "12px",
                         overflow: "hidden",
                         background: "var(--color-surface-3)",
@@ -114,13 +114,15 @@ function HistoryPosterCard({
                         boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
                     }}
                 >
-                    {/* Poster */}
+                    {/* Poster — fills entire card via absolute inset */}
                     {poster && !imgError ? (
                         <img
                             src={poster}
                             alt={title}
                             onError={() => setImgError(true)}
                             style={{
+                                position: "absolute",
+                                inset: 0,
                                 width: "100%",
                                 height: "100%",
                                 objectFit: "cover",
@@ -131,8 +133,8 @@ function HistoryPosterCard({
                     ) : (
                         <div
                             style={{
-                                width: "100%",
-                                height: "100%",
+                                position: "absolute",
+                                inset: 0,
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
