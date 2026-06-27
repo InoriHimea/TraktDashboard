@@ -12,7 +12,7 @@ import {
     Upload,
     X,
 } from "lucide-react";
-import { useInfiniteHistory } from "../hooks";
+import { useInfiniteHistory, useRatings } from "../hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "../lib/queryKeys";
 import type { HistoryEntry } from "@trakt-dashboard/types";
@@ -60,7 +60,15 @@ function groupByDate(entries: HistoryEntry[]): [string, HistoryEntry[]][] {
     return [...map.entries()];
 }
 
-function HistoryPosterCard({ entry, index }: { entry: HistoryEntry; index: number }) {
+function HistoryPosterCard({
+    entry,
+    index,
+    rating,
+}: {
+    entry: HistoryEntry;
+    index: number;
+    rating?: number;
+}) {
     const isEpisode = entry.mediaType === "episode";
     const [imgError, setImgError] = useState(false);
     const poster = isEpisode
@@ -75,6 +83,12 @@ function HistoryPosterCard({ entry, index }: { entry: HistoryEntry; index: numbe
             ? `S${String(entry.episode.seasonNumber).padStart(2, "0")}·E${String(entry.episode.episodeNumber).padStart(2, "0")}`
             : null;
     const episodeTitle = isEpisode ? (entry.episode?.title ?? null) : null;
+    const watchTime = entry.watchedAt
+        ? new Date(entry.watchedAt).toLocaleTimeString(getLocale(), {
+              hour: "2-digit",
+              minute: "2-digit",
+          })
+        : null;
 
     return (
         <motion.div
@@ -88,86 +102,175 @@ function HistoryPosterCard({ entry, index }: { entry: HistoryEntry; index: numbe
         >
             <Link to={href} className="block no-underline">
                 <motion.div
-                    whileHover={{ y: -3, boxShadow: "0 12px 40px rgba(0,0,0,0.5)" }}
+                    whileHover={{ y: -5, boxShadow: "0 20px 56px rgba(0,0,0,0.6)" }}
                     transition={{ duration: 0.15 }}
-                    className="overflow-hidden rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] cursor-pointer"
-                    style={{ boxShadow: "var(--shadow-media-card)" }}
+                    style={{
+                        position: "relative",
+                        aspectRatio: "2/3",
+                        borderRadius: "12px",
+                        overflow: "hidden",
+                        background: "var(--color-surface-3)",
+                        cursor: "pointer",
+                        boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+                    }}
                 >
-                    {/* Poster 2:3 */}
-                    <div className="relative aspect-[2/3] bg-[var(--color-surface-3)]">
-                        {poster && !imgError ? (
-                            <img
-                                src={poster}
-                                alt={title}
-                                onError={() => setImgError(true)}
-                                className="w-full h-full object-cover block"
-                                loading="lazy"
-                            />
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                                {isEpisode ? (
-                                    <Tv2
-                                        size={28}
-                                        className="text-[var(--color-text-muted)] opacity-30"
-                                    />
-                                ) : (
-                                    <Film
-                                        size={28}
-                                        className="text-[var(--color-text-muted)] opacity-30"
-                                    />
-                                )}
-                            </div>
-                        )}
-
-                        {/* Media type badge */}
-                        <div className="absolute top-2 right-2">
-                            <span
-                                className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold backdrop-blur-sm"
-                                style={{
-                                    background: isEpisode
-                                        ? "rgba(99,102,241,0.75)"
-                                        : "rgba(16,185,129,0.75)",
-                                    color: "#fff",
-                                }}
-                            >
-                                {isEpisode ? <Tv2 size={8} /> : <Film size={8} />}
-                                {isEpisode ? "EP" : "FILM"}
-                            </span>
-                        </div>
-
-                        {/* Bottom gradient overlay */}
-                        <div
-                            className="absolute bottom-0 left-0 right-0 px-2.5 pt-8 pb-2"
+                    {/* Poster */}
+                    {poster && !imgError ? (
+                        <img
+                            src={poster}
+                            alt={title}
+                            onError={() => setImgError(true)}
                             style={{
-                                background:
-                                    "linear-gradient(to top, rgba(0,0,0,0.82) 0%, transparent 100%)",
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                display: "block",
+                            }}
+                            loading="lazy"
+                        />
+                    ) : (
+                        <div
+                            style={{
+                                width: "100%",
+                                height: "100%",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
                             }}
                         >
-                            {episodeCode && (
-                                <p className="text-[10px] font-bold text-white/90 leading-tight mb-0.5">
-                                    {episodeCode}
-                                </p>
+                            {isEpisode ? (
+                                <Tv2
+                                    size={32}
+                                    color="var(--color-text-muted)"
+                                    style={{ opacity: 0.25 }}
+                                />
+                            ) : (
+                                <Film
+                                    size={32}
+                                    color="var(--color-text-muted)"
+                                    style={{ opacity: 0.25 }}
+                                />
                             )}
-                            <p className="text-[9px] text-white/60 leading-tight">
-                                {formatWatchedAt(entry.watchedAt)}
-                            </p>
                         </div>
+                    )}
+
+                    {/* Top row: media badge (left) + rating (right) */}
+                    <div
+                        style={{
+                            position: "absolute",
+                            top: 8,
+                            left: 8,
+                            right: 8,
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "flex-start",
+                        }}
+                    >
+                        <span
+                            style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 3,
+                                padding: "3px 7px",
+                                borderRadius: 6,
+                                fontSize: 9,
+                                fontWeight: 700,
+                                letterSpacing: "0.06em",
+                                backdropFilter: "blur(10px)",
+                                WebkitBackdropFilter: "blur(10px)",
+                                background: isEpisode
+                                    ? "rgba(99,102,241,0.82)"
+                                    : "rgba(245,158,11,0.82)",
+                                color: "#fff",
+                            }}
+                        >
+                            {isEpisode ? <Tv2 size={8} /> : <Film size={8} />}
+                            {isEpisode ? "EP" : "FILM"}
+                        </span>
+                        {rating !== undefined && (
+                            <span
+                                style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 3,
+                                    padding: "3px 7px",
+                                    borderRadius: 6,
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    backdropFilter: "blur(10px)",
+                                    WebkitBackdropFilter: "blur(10px)",
+                                    background: "rgba(0,0,0,0.65)",
+                                    color: "#fbbf24",
+                                }}
+                            >
+                                ★ {rating}
+                            </span>
+                        )}
                     </div>
 
-                    {/* Footer info */}
-                    <div className="p-[10px_12px_12px] min-h-[54px]">
-                        <h3
-                            className="truncate text-[12px] font-semibold text-[var(--color-text)] leading-tight"
-                            title={title}
+                    {/* Bottom gradient overlay */}
+                    <div
+                        style={{
+                            position: "absolute",
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            padding: "48px 10px 10px",
+                            background:
+                                "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 60%, transparent 100%)",
+                        }}
+                    >
+                        {episodeCode && (
+                            <p
+                                style={{
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    color: "#a78bfa",
+                                    margin: "0 0 3px",
+                                    letterSpacing: "0.04em",
+                                }}
+                            >
+                                {episodeCode}
+                            </p>
+                        )}
+                        <p
+                            style={{
+                                fontSize: 12,
+                                fontWeight: 700,
+                                color: "#fff",
+                                margin: 0,
+                                lineHeight: 1.35,
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                            }}
                         >
                             {title}
-                        </h3>
+                        </p>
                         {episodeTitle && (
                             <p
-                                className="truncate text-[10px] text-[var(--color-text-muted)] mt-0.5"
-                                title={episodeTitle}
+                                style={{
+                                    fontSize: 10,
+                                    color: "rgba(255,255,255,0.5)",
+                                    margin: "2px 0 0",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                }}
                             >
                                 {episodeTitle}
+                            </p>
+                        )}
+                        {watchTime && (
+                            <p
+                                style={{
+                                    fontSize: 9,
+                                    color: "rgba(255,255,255,0.35)",
+                                    margin: "4px 0 0",
+                                }}
+                            >
+                                {watchTime}
                             </p>
                         )}
                     </div>
@@ -215,6 +318,15 @@ export default function HistoryPage() {
         } finally {
             setImporting(false);
         }
+    }
+
+    const { data: ratingsData } = useRatings();
+    const ratingsMap = new Map<string, number>();
+    for (const r of ratingsData ?? []) {
+        if (r.mediaType === "show" && r.showId != null)
+            ratingsMap.set(`show:${r.showId}`, r.rating);
+        if (r.mediaType === "movie" && r.movieId != null)
+            ratingsMap.set(`movie:${r.movieId}`, r.rating);
     }
 
     const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage, error, refetch } =
@@ -406,28 +518,35 @@ export default function HistoryPage() {
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: gi * 0.04 }}
                                     >
-                                        <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-[var(--color-text-muted)]">
+                                        <h2 className="mb-4 text-sm font-bold text-[var(--color-text)]">
                                             {dateKey === "unknown"
                                                 ? t("common.unknown")
                                                 : formatDateGroup(dateKey)}
-                                            <span className="ml-2 font-normal opacity-50">
-                                                ({groupEntries.length})
+                                            <span className="ml-2 text-xs font-normal text-[var(--color-text-muted)]">
+                                                {groupEntries.length} 条
                                             </span>
                                         </h2>
                                         <div
-                                            className="grid gap-3"
+                                            className="grid gap-4"
                                             style={{
                                                 gridTemplateColumns:
-                                                    "repeat(auto-fill, minmax(130px, 1fr))",
+                                                    "repeat(auto-fill, minmax(160px, 1fr))",
                                             }}
                                         >
-                                            {groupEntries.map((entry, i) => (
-                                                <HistoryPosterCard
-                                                    key={entry.id}
-                                                    entry={entry}
-                                                    index={startIdx + i}
-                                                />
-                                            ))}
+                                            {groupEntries.map((entry, i) => {
+                                                const ratingKey =
+                                                    entry.mediaType === "episode"
+                                                        ? `show:${entry.show?.id}`
+                                                        : `movie:${entry.movie?.id}`;
+                                                return (
+                                                    <HistoryPosterCard
+                                                        key={entry.id}
+                                                        entry={entry}
+                                                        index={startIdx + i}
+                                                        rating={ratingsMap.get(ratingKey)}
+                                                    />
+                                                );
+                                            })}
                                         </div>
                                     </motion.section>
                                 );
