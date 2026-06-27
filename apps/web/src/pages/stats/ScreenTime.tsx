@@ -154,61 +154,67 @@ export function ScreenTime() {
                 >
                     {/* LEFT: daily bars */}
                     <div>
-                        <p style={{ fontSize: 11, color: T3, marginBottom: 10 }}>每日明细</p>
-                        <div
-                            style={{
-                                display: "flex",
-                                gap: 6,
-                                alignItems: "flex-end",
-                                height: 100,
-                            }}
-                        >
+                        <p style={{ fontSize: 11, color: T3, marginBottom: 6 }}>每日明细</p>
+
+                        {/* Row 1: value labels (fixed height, bottom-aligned text) */}
+                        <div style={{ display: "flex", gap: 6, height: 14, marginBottom: 3 }}>
                             {data.daily.map((d) => {
                                 const val = getValue(d);
-                                const pct = val / maxBar;
-                                const label = shortDate(d.date);
                                 return (
                                     <div
                                         key={d.date}
-                                        style={{
-                                            flex: 1,
-                                            display: "flex",
-                                            flexDirection: "column",
-                                            alignItems: "center",
-                                            gap: 4,
-                                            height: "100%",
-                                            justifyContent: "flex-end",
-                                        }}
+                                        style={{ flex: 1, textAlign: "center", overflow: "hidden" }}
                                     >
-                                        <span style={{ fontSize: 9, color: T3 }}>
+                                        <span
+                                            style={{ fontSize: 8, color: T3, whiteSpace: "nowrap" }}
+                                        >
                                             {val > 0
                                                 ? fmtMinutes(val)
                                                       .replace(" 小时", "h")
                                                       .replace(" 分钟", "m")
                                                 : ""}
                                         </span>
-                                        <motion.div
-                                            initial={{ height: 0 }}
-                                            animate={{
-                                                height: `${Math.max(pct * 68, val > 0 ? 4 : 0)}px`,
-                                            }}
-                                            transition={{ duration: 0.4, ease: "easeOut" }}
-                                            style={{
-                                                width: "100%",
-                                                borderRadius: "4px 4px 2px 2px",
-                                                background:
-                                                    val > 0 ? color.base : "var(--color-surface-3)",
-                                                opacity: val > 0 ? 0.85 : 0.3,
-                                            }}
-                                        />
-                                        <span
-                                            style={{ fontSize: 9, color: T3, whiteSpace: "nowrap" }}
-                                        >
-                                            {label}
-                                        </span>
                                     </div>
                                 );
                             })}
+                        </div>
+
+                        {/* Row 2: bars — fixed height, all bars anchor to the bottom */}
+                        <div
+                            style={{ display: "flex", gap: 6, height: 64, alignItems: "flex-end" }}
+                        >
+                            {data.daily.map((d) => {
+                                const val = getValue(d);
+                                const pct = val / maxBar;
+                                return (
+                                    <motion.div
+                                        key={d.date}
+                                        initial={{ height: 0 }}
+                                        animate={{
+                                            height: `${Math.max(pct * 64, val > 0 ? 4 : 0)}px`,
+                                        }}
+                                        transition={{ duration: 0.4, ease: "easeOut" }}
+                                        style={{
+                                            flex: 1,
+                                            borderRadius: "4px 4px 2px 2px",
+                                            background:
+                                                val > 0 ? color.base : "var(--color-surface-3)",
+                                            opacity: val > 0 ? 0.85 : 0.3,
+                                        }}
+                                    />
+                                );
+                            })}
+                        </div>
+
+                        {/* Row 3: day labels */}
+                        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+                            {data.daily.map((d) => (
+                                <div key={d.date} style={{ flex: 1, textAlign: "center" }}>
+                                    <span style={{ fontSize: 9, color: T3, whiteSpace: "nowrap" }}>
+                                        {shortDate(d.date)}
+                                    </span>
+                                </div>
+                            ))}
                         </div>
                     </div>
 

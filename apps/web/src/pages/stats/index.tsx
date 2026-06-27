@@ -397,17 +397,25 @@ export default function StatsPage() {
                     </div>
                 </div>
 
-                {/* ── FULL-WIDTH: Watch heatmap ── */}
-                <div style={{ marginTop: "24px" }}>
+                {/* ── 热力图 + 评分分布 并排 ── */}
+                <div
+                    style={{
+                        marginTop: "24px",
+                        display: "grid",
+                        gridTemplateColumns: (stats.ratingDistribution ?? []).some(
+                            (r) => r.count > 0,
+                        )
+                            ? "1fr 1fr"
+                            : "1fr",
+                        gap: "24px",
+                        alignItems: "start",
+                    }}
+                >
                     <WatchHeatmap heatmap={stats.heatmap ?? []} />
-                </div>
-
-                {/* ── FULL-WIDTH: Rating distribution ── */}
-                {(stats.ratingDistribution ?? []).some((r) => r.count > 0) && (
-                    <div style={{ marginTop: "24px" }}>
+                    {(stats.ratingDistribution ?? []).some((r) => r.count > 0) && (
                         <RatingDistribution ratingDistribution={stats.ratingDistribution ?? []} />
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
         </div>
     );
