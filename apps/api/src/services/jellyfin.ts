@@ -18,15 +18,23 @@ function jellyfinFetch(cfg: JellyfinConfig, path: string, init?: RequestInit) {
 }
 
 export async function fetchJellyfinLibraries(cfg: JellyfinConfig): Promise<JellyfinLibrary[]> {
-    const res = await jellyfinFetch(cfg, "/Library/VirtualFolders");
-    if (!res.ok) throw new Error(`Jellyfin libraries fetch failed: ${res.status}`);
-    const data = (await res.json()) as Array<{
-        ItemId: string;
-        Name: string;
-        CollectionType: string;
-    }>;
-    return data.map((lib) => ({
-        id: lib.ItemId,
+    // /Library/VirtualFolders can return empty for non-admin keys or certain Jellyfin builds.
+    // Use /Users/{id}/Views instead — it returns the libraries visible to that user.
+    const usersRes = await jellyfinFetch(cfg, "/Users");
+    if (!usersRes.ok) throw new Error(`Jellyfin users fetch failed: ${usersRes.status}`);
+    const users = (await usersRes.json()) as Array<{ Id: string; Name: string }>;
+    if (!users.length) return [];
+
+    const jellyfinUser = process.env.JELLYFIN_USER;
+    const user = jellyfinUser ? (users.find((u) => u.Name === jellyfinUser) ?? users[0]) : users[0];
+
+    const viewsRes = await jellyfinFetch(cfg, `/Users/${user.Id}/Views`);
+    if (!viewsRes.ok) throw new Error(`Jellyfin views fetch failed: ${viewsRes.status}`);
+    const data = (await viewsRes.json()) as {
+        Items: Array<{ Id: string; Name: string; CollectionType: string }>;
+    };
+    return (data.Items ?? []).map((lib) => ({
+        id: lib.Id,
         name: lib.Name,
         collectionType: lib.CollectionType ?? "",
     }));
