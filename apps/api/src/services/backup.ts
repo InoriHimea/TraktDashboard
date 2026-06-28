@@ -22,7 +22,7 @@ export interface BackupFile {
     fileId: string;
     sizeBytes: number;
     createdAt: string; // ISO
-    provider: "gdrive" | "webdav";
+    provider: "gdrive" | "webdav" | "onedrive" | "s3";
 }
 
 // ─── Google Drive OAuth Device Flow ──────────────────────────────────────────
@@ -35,7 +35,7 @@ const GDRIVE_DEVICE_AUTH_URL = "https://oauth2.googleapis.com/device/code";
 const GDRIVE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GDRIVE_UPLOAD_URL = "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
 const GDRIVE_LIST_URL = "https://www.googleapis.com/drive/v3/files";
-const GDRIVE_FOLDER_NAME = "TraktDashboardBackups";
+const GDRIVE_FOLDER_NAME = "MediaDashBackups";
 
 export interface DeviceAuthResponse {
     device_code: string;
@@ -237,12 +237,12 @@ function webdavAuth(cfg: WebDAVConfig): string {
 
 function webdavBackupPath(cfg: WebDAVConfig, filename: string): string {
     const base = cfg.url.replace(/\/$/, "");
-    return `${base}/TraktDashboardBackups/${filename}`;
+    return `${base}/MediaDashBackups/${filename}`;
 }
 
 export async function ensureWebDAVFolder(cfg: WebDAVConfig): Promise<void> {
     const base = cfg.url.replace(/\/$/, "");
-    const folderUrl = `${base}/TraktDashboardBackups`;
+    const folderUrl = `${base}/MediaDashBackups`;
     const res = await fetch(folderUrl, {
         method: "MKCOL",
         headers: { Authorization: webdavAuth(cfg) },
@@ -276,7 +276,7 @@ export async function uploadToWebDAV(
 
 export async function listWebDAVBackups(cfg: WebDAVConfig): Promise<BackupFile[]> {
     const base = cfg.url.replace(/\/$/, "");
-    const folderUrl = `${base}/TraktDashboardBackups/`;
+    const folderUrl = `${base}/MediaDashBackups/`;
     const body = `<?xml version="1.0" encoding="utf-8"?>
 <D:propfind xmlns:D="DAV:">
   <D:prop><D:displayname/><D:getcontentlength/><D:creationdate/></D:prop>
@@ -325,9 +325,9 @@ export async function deleteWebDAVFile(cfg: WebDAVConfig, filePath: string): Pro
     }
     // Check the raw (percent-encoded) pathname — do NOT decode before checking.
     // decodeURIComponent() would turn %2F into "/" which lets a crafted path like
-    // /TraktDashboardBackups%2F..%2Fetc pass the substring check while the actual
+    // /MediaDashBackups%2F..%2Fetc pass the substring check while the actual
     // request targets a path outside the backup folder on servers that decode %2F.
-    if (!resolved.pathname.includes("/TraktDashboardBackups/")) {
+    if (!resolved.pathname.includes("/MediaDashBackups/")) {
         throw new Error("WebDAV delete target is outside the backup folder");
     }
     const res = await fetch(resolved.toString(), {
@@ -449,6 +449,359 @@ export async function pruneOldWebDAVBackups(
     for (const f of files) {
         if (new Date(f.createdAt).getTime() < cutoff) {
             await deleteWebDAVFile(cfg, f.fileId).catch(() => null);
+        }
+    }
+}
+
+// ─── OneDrive (Microsoft Graph Device Code Flow) ──────────────────────────────
+
+export interface OneDriveToken {
+    access_token: string;
+    refresh_token: string;
+    expires_at: number; // ms epoch
+    scope: string;
+}
+
+const ONEDRIVE_CLIENT_ID = process.env.ONEDRIVE_CLIENT_ID ?? "";
+const ONEDRIVE_TENANT = "common";
+const ONEDRIVE_SCOPE = "https://graph.microsoft.com/Files.ReadWrite offline_access";
+const ONEDRIVE_DEVICE_URL = `https://login.microsoftonline.com/${ONEDRIVE_TENANT}/oauth2/v2.0/devicecode`;
+const ONEDRIVE_TOKEN_URL = `https://login.microsoftonline.com/${ONEDRIVE_TENANT}/oauth2/v2.0/token`;
+const ONEDRIVE_FOLDER = "MediaDashBackups";
+
+export async function startOneDriveDeviceFlow(): Promise<DeviceAuthResponse> {
+    if (!ONEDRIVE_CLIENT_ID) throw new Error("ONEDRIVE_CLIENT_ID 未配置");
+    const res = await fetch(ONEDRIVE_DEVICE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ client_id: ONEDRIVE_CLIENT_ID, scope: ONEDRIVE_SCOPE }),
+    });
+    if (!res.ok) throw new Error(`OneDrive device auth failed: ${await res.text()}`);
+    const data = (await res.json()) as Record<string, unknown>;
+    // Microsoft returns "user_code", "device_code", "verification_uri", "expires_in", "interval"
+    return {
+        device_code: String(data.device_code),
+        user_code: String(data.user_code),
+        verification_url: String(data.verification_uri ?? data.verification_url ?? ""),
+        expires_in: Number(data.expires_in ?? 900),
+        interval: Number(data.interval ?? 5),
+    };
+}
+
+export async function pollOneDriveToken(deviceCode: string): Promise<OneDriveToken | null> {
+    const res = await fetch(ONEDRIVE_TOKEN_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+            client_id: ONEDRIVE_CLIENT_ID,
+            device_code: deviceCode,
+            grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+        }),
+    });
+    const data = (await res.json()) as Record<string, unknown>;
+    if (data.error === "authorization_pending" || data.error === "slow_down") return null;
+    if (data.error) throw new Error(`OneDrive poll error: ${String(data.error)}`);
+    return {
+        access_token: String(data.access_token),
+        refresh_token: String(data.refresh_token ?? ""),
+        expires_at: Date.now() + Number(data.expires_in ?? 3600) * 1000,
+        scope: String(data.scope ?? ONEDRIVE_SCOPE),
+    };
+}
+
+async function refreshOneDriveToken(token: OneDriveToken): Promise<OneDriveToken> {
+    if (Date.now() < token.expires_at - 60_000) return token;
+    const res = await fetch(ONEDRIVE_TOKEN_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+            client_id: ONEDRIVE_CLIENT_ID,
+            refresh_token: token.refresh_token,
+            grant_type: "refresh_token",
+            scope: ONEDRIVE_SCOPE,
+        }),
+    });
+    const data = (await res.json()) as Record<string, unknown>;
+    if (!res.ok || data.error)
+        throw new Error(`OneDrive token refresh failed: ${String(data.error ?? res.status)}`);
+    return {
+        ...token,
+        access_token: String(data.access_token),
+        refresh_token: String(data.refresh_token ?? token.refresh_token),
+        expires_at: Date.now() + Number(data.expires_in ?? 3600) * 1000,
+    };
+}
+
+export async function uploadToOneDrive(
+    token: OneDriveToken,
+    buffer: Buffer,
+    filename: string,
+): Promise<{ itemId: string; refreshedToken: OneDriveToken }> {
+    const refreshedToken = await refreshOneDriveToken(token);
+    const auth = `Bearer ${refreshedToken.access_token}`;
+    const graphBase = "https://graph.microsoft.com/v1.0";
+
+    // For files > 4 MB create an upload session; otherwise PUT directly.
+    if (buffer.byteLength > 4 * 1024 * 1024) {
+        const sessionRes = await fetch(
+            `${graphBase}/me/drive/root:/${ONEDRIVE_FOLDER}/${filename}:/createUploadSession`,
+            {
+                method: "POST",
+                headers: { Authorization: auth, "Content-Type": "application/json" },
+                body: JSON.stringify({ item: { "@microsoft.graph.conflictBehavior": "replace" } }),
+            },
+        );
+        if (!sessionRes.ok)
+            throw new Error(`OneDrive createUploadSession failed (${sessionRes.status})`);
+        const { uploadUrl } = (await sessionRes.json()) as { uploadUrl: string };
+        const chunkSize = 10 * 1024 * 1024; // 10 MB
+        let start = 0;
+        let lastJson: { id?: string } = {};
+        while (start < buffer.byteLength) {
+            const end = Math.min(start + chunkSize, buffer.byteLength);
+            const chunk = buffer.subarray(start, end);
+            const r = await fetch(uploadUrl, {
+                method: "PUT",
+                headers: {
+                    "Content-Range": `bytes ${start}-${end - 1}/${buffer.byteLength}`,
+                    "Content-Length": String(chunk.byteLength),
+                },
+                body: new Uint8Array(chunk),
+            });
+            if (!r.ok && r.status !== 202)
+                throw new Error(`OneDrive chunk upload failed (${r.status})`);
+            lastJson = (await r.json().catch(() => ({}))) as { id?: string };
+            start = end;
+        }
+        return { itemId: String(lastJson.id ?? ""), refreshedToken };
+    }
+
+    const putRes = await fetch(
+        `${graphBase}/me/drive/root:/${ONEDRIVE_FOLDER}/${filename}:/content`,
+        {
+            method: "PUT",
+            headers: {
+                Authorization: auth,
+                "Content-Type": "application/octet-stream",
+                "Content-Length": String(buffer.byteLength),
+            },
+            body: new Uint8Array(buffer),
+        },
+    );
+    if (!putRes.ok)
+        throw new Error(`OneDrive PUT failed (${putRes.status}): ${await putRes.text()}`);
+    const file = (await putRes.json()) as { id: string };
+    return { itemId: file.id, refreshedToken };
+}
+
+export async function listOneDriveBackups(
+    token: OneDriveToken,
+): Promise<{ files: BackupFile[]; refreshedToken: OneDriveToken }> {
+    const refreshedToken = await refreshOneDriveToken(token);
+    const auth = `Bearer ${refreshedToken.access_token}`;
+    const url = `https://graph.microsoft.com/v1.0/me/drive/root:/${ONEDRIVE_FOLDER}:/children?$orderby=createdDateTime desc&$select=id,name,size,createdDateTime`;
+    const res = await fetch(url, { headers: { Authorization: auth } });
+    if (res.status === 404) return { files: [], refreshedToken };
+    if (!res.ok) throw new Error(`OneDrive list failed (${res.status})`);
+    const data = (await res.json()) as {
+        value: Array<{ id: string; name: string; size: number; createdDateTime: string }>;
+    };
+    const files: BackupFile[] = (data.value ?? [])
+        .filter((f) => f.name.endsWith(".gz"))
+        .map((f) => ({
+            name: f.name,
+            fileId: f.id,
+            sizeBytes: f.size ?? 0,
+            createdAt: f.createdDateTime,
+            provider: "onedrive",
+        }));
+    return { files, refreshedToken };
+}
+
+export async function deleteOneDriveFile(token: OneDriveToken, itemId: string): Promise<void> {
+    const refreshedToken = await refreshOneDriveToken(token);
+    const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/items/${itemId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${refreshedToken.access_token}` },
+    });
+    if (!res.ok && res.status !== 404) throw new Error(`OneDrive DELETE failed (${res.status})`);
+}
+
+export async function pruneOldOneDriveBackups(
+    token: OneDriveToken,
+    retentionDays: number,
+): Promise<OneDriveToken> {
+    const { files, refreshedToken } = await listOneDriveBackups(token);
+    const cutoff = Date.now() - retentionDays * 86_400_000;
+    for (const f of files) {
+        if (new Date(f.createdAt).getTime() < cutoff) {
+            await deleteOneDriveFile(refreshedToken, f.fileId).catch(() => null);
+        }
+    }
+    return refreshedToken;
+}
+
+// ─── S3-compatible Storage (AWS Signature V4) ────────────────────────────────
+
+export interface S3Config {
+    endpoint: string; // e.g. "https://s3.amazonaws.com" or "https://abc.r2.cloudflarestorage.com"
+    region: string; // e.g. "us-east-1" or "auto"
+    bucket: string;
+    accessKeyId: string;
+    secretAccessKey: string;
+}
+
+const S3_PREFIX = "mediadash-backups/";
+
+function toArrayBuffer(buf: ArrayBuffer | Uint8Array): ArrayBuffer {
+    if (buf instanceof ArrayBuffer) return buf;
+    return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
+}
+
+async function sha256hex(data: string | Uint8Array): Promise<string> {
+    const bytes = typeof data === "string" ? new TextEncoder().encode(data) : data;
+    const hash = await crypto.subtle.digest("SHA-256", toArrayBuffer(bytes));
+    return Array.from(new Uint8Array(hash))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+}
+
+async function hmacSHA256(key: ArrayBuffer | Uint8Array, data: string): Promise<ArrayBuffer> {
+    const k = await crypto.subtle.importKey(
+        "raw",
+        toArrayBuffer(key),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"],
+    );
+    return crypto.subtle.sign("HMAC", k, new TextEncoder().encode(data));
+}
+
+async function s3SigningKey(secret: string, date: string, region: string): Promise<ArrayBuffer> {
+    const kDate = await hmacSHA256(new TextEncoder().encode(`AWS4${secret}`), date);
+    const kRegion = await hmacSHA256(kDate, region);
+    const kService = await hmacSHA256(kRegion, "s3");
+    return hmacSHA256(kService, "aws4_request");
+}
+
+async function s3Sign(
+    cfg: S3Config,
+    method: string,
+    path: string,
+    query: string,
+    extraHeaders: Record<string, string>,
+    bodyHash: string,
+): Promise<Record<string, string>> {
+    const now = new Date();
+    const amzDate =
+        now
+            .toISOString()
+            .replace(/[:\-]/g, "")
+            .replace(/\.\d{3}/, "")
+            .slice(0, 15) + "Z";
+    const dateStr = amzDate.slice(0, 8);
+    const host = new URL(cfg.endpoint).host;
+
+    const allHeaders: Record<string, string> = {
+        host,
+        "x-amz-content-sha256": bodyHash,
+        "x-amz-date": amzDate,
+        ...extraHeaders,
+    };
+
+    const sortedKeys = Object.keys(allHeaders).sort();
+    const canonicalHeaders =
+        sortedKeys.map((k) => `${k}:${allHeaders[k].trim()}`).join("\n") + "\n";
+    const signedHeaders = sortedKeys.join(";");
+
+    const canonicalRequest = [method, path, query, canonicalHeaders, signedHeaders, bodyHash].join(
+        "\n",
+    );
+
+    const credScope = `${dateStr}/${cfg.region}/s3/aws4_request`;
+    const stringToSign = [
+        "AWS4-HMAC-SHA256",
+        amzDate,
+        credScope,
+        await sha256hex(canonicalRequest),
+    ].join("\n");
+
+    const sigKey = await s3SigningKey(cfg.secretAccessKey, dateStr, cfg.region);
+    const sigBytes = await hmacSHA256(sigKey, stringToSign);
+    const signature = Array.from(new Uint8Array(sigBytes))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+
+    return {
+        ...allHeaders,
+        Authorization: `AWS4-HMAC-SHA256 Credential=${cfg.accessKeyId}/${credScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`,
+    };
+}
+
+export async function uploadToS3(cfg: S3Config, buffer: Buffer, filename: string): Promise<void> {
+    const key = `${S3_PREFIX}${filename}`;
+    const endpoint = cfg.endpoint.replace(/\/$/, "");
+    const url = `${endpoint}/${cfg.bucket}/${key}`;
+    const bodyHash = await sha256hex(new Uint8Array(buffer));
+    const headers = await s3Sign(
+        cfg,
+        "PUT",
+        `/${cfg.bucket}/${key}`,
+        "",
+        {
+            "content-type": "application/gzip",
+            "content-length": String(buffer.byteLength),
+        },
+        bodyHash,
+    );
+    const res = await fetch(url, {
+        method: "PUT",
+        headers,
+        body: new Uint8Array(buffer),
+    });
+    if (!res.ok) throw new Error(`S3 PUT failed (${res.status}): ${await res.text()}`);
+}
+
+export async function listS3Backups(cfg: S3Config): Promise<BackupFile[]> {
+    const endpoint = cfg.endpoint.replace(/\/$/, "");
+    const query = `list-type=2&prefix=${encodeURIComponent(S3_PREFIX)}&max-keys=200`;
+    const emptyHash = await sha256hex("");
+    const headers = await s3Sign(cfg, "GET", `/${cfg.bucket}`, query, {}, emptyHash);
+    const url = `${endpoint}/${cfg.bucket}?${query}`;
+    const res = await fetch(url, { headers });
+    if (!res.ok) throw new Error(`S3 LIST failed (${res.status}): ${await res.text()}`);
+    const xml = await res.text();
+    const files: BackupFile[] = [];
+    const re = /<Contents>([\s\S]*?)<\/Contents>/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(xml)) !== null) {
+        const block = m[1];
+        const key = /<Key>(.*?)<\/Key>/.exec(block)?.[1] ?? "";
+        const size = Number(/<Size>(.*?)<\/Size>/.exec(block)?.[1] ?? 0);
+        const lastMod = /<LastModified>(.*?)<\/LastModified>/.exec(block)?.[1] ?? "";
+        const name = key.split("/").pop() ?? key;
+        if (!name.endsWith(".gz")) continue;
+        files.push({ name, fileId: key, sizeBytes: size, createdAt: lastMod, provider: "s3" });
+    }
+    return files.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function deleteS3File(cfg: S3Config, key: string): Promise<void> {
+    const endpoint = cfg.endpoint.replace(/\/$/, "");
+    const url = `${endpoint}/${cfg.bucket}/${key}`;
+    const emptyHash = await sha256hex("");
+    const headers = await s3Sign(cfg, "DELETE", `/${cfg.bucket}/${key}`, "", {}, emptyHash);
+    const res = await fetch(url, { method: "DELETE", headers });
+    if (!res.ok && res.status !== 204 && res.status !== 404)
+        throw new Error(`S3 DELETE failed (${res.status})`);
+}
+
+export async function pruneOldS3Backups(cfg: S3Config, retentionDays: number): Promise<void> {
+    const files = await listS3Backups(cfg);
+    const cutoff = Date.now() - retentionDays * 86_400_000;
+    for (const f of files) {
+        if (new Date(f.createdAt).getTime() < cutoff) {
+            await deleteS3File(cfg, f.fileId).catch(() => null);
         }
     }
 }

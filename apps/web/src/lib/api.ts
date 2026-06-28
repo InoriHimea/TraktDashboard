@@ -439,6 +439,23 @@ export const api = {
             ),
         gdriveRevoke: () => request<{ ok: boolean }>("/backup/gdrive/revoke", { method: "DELETE" }),
         gdriveStatus: () => request<{ connected: boolean }>("/backup/gdrive/status"),
+
+        onedriveStartAuth: () =>
+            request<{ ok: boolean; data: DeviceAuthInfo }>("/backup/onedrive/auth", {
+                method: "POST",
+            }),
+        onedrivePoll: (device_code: string) =>
+            request<{ ok: boolean; connected?: boolean; pending?: boolean }>(
+                "/backup/onedrive/poll",
+                {
+                    method: "POST",
+                    body: JSON.stringify({ device_code }),
+                },
+            ),
+        onedriveRevoke: () =>
+            request<{ ok: boolean }>("/backup/onedrive/revoke", { method: "DELETE" }),
+        onedriveStatus: () => request<{ connected: boolean }>("/backup/onedrive/status"),
+
         webdavSave: (cfg: { url: string; username: string; password: string }) =>
             request<{ ok: boolean }>("/backup/webdav", {
                 method: "PUT",
@@ -448,12 +465,40 @@ export const api = {
             request<{ ok: boolean }>("/backup/webdav", { method: "PUT", body: JSON.stringify({}) }),
         webdavStatus: () =>
             request<{ connected: boolean; url: string | null }>("/backup/webdav/status"),
-        saveSettings: (s: { autoEnabled?: boolean; retentionDays?: number }) =>
+
+        s3Save: (cfg: {
+            endpoint: string;
+            region: string;
+            bucket: string;
+            accessKeyId: string;
+            secretAccessKey: string;
+        }) => request<{ ok: boolean }>("/backup/s3", { method: "PUT", body: JSON.stringify(cfg) }),
+        s3Clear: () =>
+            request<{ ok: boolean }>("/backup/s3", { method: "PUT", body: JSON.stringify({}) }),
+        s3Status: () =>
+            request<{ connected: boolean; endpoint: string | null; bucket: string | null }>(
+                "/backup/s3/status",
+            ),
+
+        saveSettings: (s: {
+            autoEnabled?: boolean;
+            retentionDays?: number;
+            scheduleHours?: number;
+            activeProvider?: string | null;
+        }) =>
             request<{ ok: boolean }>("/backup/settings", {
                 method: "PUT",
                 body: JSON.stringify(s),
             }),
-        trigger: (provider: "gdrive" | "webdav" | "all" = "all") =>
+        getSettings: () =>
+            request<{
+                scheduleHours: number;
+                activeProvider: string | null;
+                retentionDays: number;
+                autoEnabled: boolean;
+            }>("/backup/settings"),
+
+        trigger: (provider: "gdrive" | "webdav" | "onedrive" | "s3" | "all" = "all") =>
             request<{
                 ok: boolean;
                 results: Array<{
@@ -464,11 +509,11 @@ export const api = {
                 }>;
             }>("/backup/trigger", { method: "POST", body: JSON.stringify({ provider }) }),
         runs: (limit = 20) => request<{ data: BackupRun[] }>(`/backup/runs?limit=${limit}`),
-        files: (provider?: "gdrive" | "webdav") =>
+        files: (provider?: "gdrive" | "webdav" | "onedrive" | "s3") =>
             request<{ data: BackupFile[] }>(
                 `/backup/files${provider ? `?provider=${provider}` : ""}`,
             ),
-        deleteFile: (provider: "gdrive" | "webdav", fileId: string) =>
+        deleteFile: (provider: "gdrive" | "webdav" | "onedrive" | "s3", fileId: string) =>
             request<{ ok: boolean }>("/backup/files", {
                 method: "DELETE",
                 body: JSON.stringify({ provider, fileId }),

@@ -97,26 +97,44 @@ export default function SettingsPage() {
     const [theme, setTheme] = useState<Theme>(loadTheme);
 
     // ── 备份状态 ──────────────────────────────────────────────────────────────
-    const [gdriveConnected, setGdriveConnected] = useState(false);
-    const [gdriveLoading, setGdriveLoading] = useState(false);
-    const [deviceAuth, setDeviceAuth] = useState<{
+    type DeviceAuthState = {
         user_code: string;
         verification_url: string;
         device_code: string;
         interval: number;
-    } | null>(null);
+        expires_in: number;
+    } | null;
+    const [gdriveConnected, setGdriveConnected] = useState(false);
+    const [gdriveLoading, setGdriveLoading] = useState(false);
+    const [gdriveDeviceAuth, setGdriveDeviceAuth] = useState<DeviceAuthState>(null);
     const [gdrivePollTimer, setGdrivePollTimer] = useState<ReturnType<typeof setInterval> | null>(
         null,
     );
-    // Ref that always mirrors gdrivePollTimer so the unmount cleanup effect can read the
-    // current value without re-running (a [gdrivePollTimer] dependency would re-run the
-    // cleanup on every timer change, clearing an already-running interval in StrictMode).
     const gdrivePollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    const [onedriveConnected, setOnedriveConnected] = useState(false);
+    const [onedriveLoading, setOnedriveLoading] = useState(false);
+    const [onedriveDeviceAuth, setOnedriveDeviceAuth] = useState<DeviceAuthState>(null);
+    const [onedrivePollTimer, setOnedrivePollTimer] = useState<ReturnType<
+        typeof setInterval
+    > | null>(null);
+    const onedrivePollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
     const [webdavUrl, setWebdavUrl] = useState("");
     const [webdavUsername, setWebdavUsername] = useState("");
     const [webdavPassword, setWebdavPassword] = useState("");
     const [webdavConnected, setWebdavConnected] = useState(false);
     const [webdavSaving, setWebdavSaving] = useState(false);
+
+    const [s3Endpoint, setS3Endpoint] = useState("");
+    const [s3Region, setS3Region] = useState("");
+    const [s3Bucket, setS3Bucket] = useState("");
+    const [s3AccessKeyId, setS3AccessKeyId] = useState("");
+    const [s3SecretAccessKey, setS3SecretAccessKey] = useState("");
+    const [s3Connected, setS3Connected] = useState(false);
+    const [s3Saving, setS3Saving] = useState(false);
+
+    const [backupScheduleHours, setBackupScheduleHours] = useState(0);
     const [backupTriggerLoading, setBackupTriggerLoading] = useState(false);
     const [backupRuns, setBackupRuns] = useState<
         Array<{
@@ -152,17 +170,16 @@ export default function SettingsPage() {
         hasSeededRef.current = true;
     }, [settings]);
 
-    // Keep ref in sync so the unmount cleanup always sees the latest timer.
     useEffect(() => {
         gdrivePollTimerRef.current = gdrivePollTimer;
     }, [gdrivePollTimer]);
-
-    // Clear the Google Drive device-auth poll interval on unmount. Empty deps so this
-    // runs cleanup exactly once (on unmount) via the ref — avoids re-running on every
-    // timer state change which would clear a live interval in React 18 Strict Mode.
+    useEffect(() => {
+        onedrivePollTimerRef.current = onedrivePollTimer;
+    }, [onedrivePollTimer]);
     useEffect(() => {
         return () => {
             if (gdrivePollTimerRef.current) clearInterval(gdrivePollTimerRef.current);
+            if (onedrivePollTimerRef.current) clearInterval(onedrivePollTimerRef.current);
         };
     }, []);
 
@@ -173,10 +190,28 @@ export default function SettingsPage() {
             .then((r) => setGdriveConnected(r.connected))
             .catch(() => null);
         api.backup
+            .onedriveStatus()
+            .then((r) => setOnedriveConnected(r.connected))
+            .catch(() => null);
+        api.backup
             .webdavStatus()
             .then((r) => {
                 setWebdavConnected(r.connected);
                 if (r.url) setWebdavUrl(r.url);
+            })
+            .catch(() => null);
+        api.backup
+            .s3Status()
+            .then((r) => {
+                setS3Connected(r.connected);
+                if (r.endpoint) setS3Endpoint(r.endpoint);
+                if (r.bucket) setS3Bucket(r.bucket);
+            })
+            .catch(() => null);
+        api.backup
+            .getSettings()
+            .then((r) => {
+                setBackupScheduleHours(r.scheduleHours);
             })
             .catch(() => null);
         setBackupRunsLoading(true);
@@ -987,7 +1022,7 @@ export default function SettingsPage() {
                                                     padding: "14px 16px",
                                                     borderRadius: 12,
                                                     border: "1px solid var(--color-border-subtle)",
-                                                    background: "var(--color-surface)",
+                                                    background: "var(--color-surface-2)",
                                                 }}
                                             >
                                                 <div
@@ -1059,7 +1094,7 @@ export default function SettingsPage() {
                                                                 try {
                                                                     const res =
                                                                         await api.backup.gdriveStartAuth();
-                                                                    setDeviceAuth(res.data);
+                                                                    setGdriveDeviceAuth(res.data);
                                                                     // Stop polling once the device code expires.
                                                                     const deadline =
                                                                         Date.now() +
@@ -1071,7 +1106,7 @@ export default function SettingsPage() {
                                                                     ) => {
                                                                         clearInterval(timer);
                                                                         setGdrivePollTimer(null);
-                                                                        setDeviceAuth(null);
+                                                                        setGdriveDeviceAuth(null);
                                                                         setGdriveLoading(false);
                                                                     };
                                                                     const timer = setInterval(
@@ -1168,7 +1203,7 @@ export default function SettingsPage() {
                                                     )}
                                                 </div>
                                                 {/* Device Flow 提示 */}
-                                                {deviceAuth && (
+                                                {gdriveDeviceAuth && (
                                                     <div
                                                         style={{
                                                             marginTop: 10,
@@ -1196,10 +1231,12 @@ export default function SettingsPage() {
                                                                 color: "var(--color-text)",
                                                             }}
                                                         >
-                                                            {deviceAuth.user_code}
+                                                            {gdriveDeviceAuth!.user_code}
                                                         </p>
                                                         <a
-                                                            href={deviceAuth.verification_url}
+                                                            href={
+                                                                gdriveDeviceAuth!.verification_url
+                                                            }
                                                             target="_blank"
                                                             rel="noreferrer"
                                                             style={{
@@ -1209,7 +1246,7 @@ export default function SettingsPage() {
                                                                 display: "block",
                                                             }}
                                                         >
-                                                            {deviceAuth.verification_url}
+                                                            {gdriveDeviceAuth!.verification_url}
                                                         </a>
                                                         <button
                                                             type="button"
@@ -1217,8 +1254,262 @@ export default function SettingsPage() {
                                                                 if (gdrivePollTimer)
                                                                     clearInterval(gdrivePollTimer);
                                                                 setGdrivePollTimer(null);
-                                                                setDeviceAuth(null);
+                                                                setGdriveDeviceAuth(null);
                                                                 setGdriveLoading(false);
+                                                            }}
+                                                            style={{
+                                                                marginTop: 8,
+                                                                fontSize: 11,
+                                                                color: "var(--color-text-muted)",
+                                                                background: "none",
+                                                                border: "none",
+                                                                cursor: "pointer",
+                                                            }}
+                                                        >
+                                                            {t("common.cancel")}
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* OneDrive */}
+                                            <div
+                                                style={{
+                                                    padding: "14px 16px",
+                                                    borderRadius: 12,
+                                                    border: "1px solid var(--color-border-subtle)",
+                                                    background: "var(--color-surface-2)",
+                                                }}
+                                            >
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        justifyContent: "space-between",
+                                                        marginBottom: 8,
+                                                    }}
+                                                >
+                                                    <span
+                                                        style={{
+                                                            fontWeight: 600,
+                                                            fontSize: 13,
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            gap: 6,
+                                                        }}
+                                                    >
+                                                        <Cloud size={14} />
+                                                        OneDrive
+                                                        {onedriveConnected && (
+                                                            <span
+                                                                style={{
+                                                                    fontSize: 10,
+                                                                    padding: "2px 7px",
+                                                                    borderRadius: 10,
+                                                                    background:
+                                                                        "rgba(16,185,129,0.15)",
+                                                                    color: "#10b981",
+                                                                    fontWeight: 700,
+                                                                }}
+                                                            >
+                                                                {t("settings.backup.connected")}
+                                                            </span>
+                                                        )}
+                                                    </span>
+                                                    {onedriveConnected ? (
+                                                        <button
+                                                            type="button"
+                                                            onClick={async () => {
+                                                                await api.backup
+                                                                    .onedriveRevoke()
+                                                                    .catch(() => null);
+                                                                setOnedriveConnected(false);
+                                                                toast(
+                                                                    t(
+                                                                        "settings.backup.onedriveDisconnected",
+                                                                    ),
+                                                                    "success",
+                                                                );
+                                                            }}
+                                                            style={{
+                                                                fontSize: 12,
+                                                                color: "#ef4444",
+                                                                background: "none",
+                                                                border: "none",
+                                                                cursor: "pointer",
+                                                            }}
+                                                        >
+                                                            {t("settings.backup.disconnect")}
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            disabled={onedriveLoading}
+                                                            onClick={async () => {
+                                                                setOnedriveLoading(true);
+                                                                try {
+                                                                    const res =
+                                                                        await api.backup.onedriveStartAuth();
+                                                                    setOnedriveDeviceAuth(res.data);
+                                                                    const deadline =
+                                                                        Date.now() +
+                                                                        res.data.expires_in * 1000;
+                                                                    const stopPolling = (
+                                                                        timer: ReturnType<
+                                                                            typeof setInterval
+                                                                        >,
+                                                                    ) => {
+                                                                        clearInterval(timer);
+                                                                        setOnedrivePollTimer(null);
+                                                                        setOnedriveDeviceAuth(null);
+                                                                        setOnedriveLoading(false);
+                                                                    };
+                                                                    const timer = setInterval(
+                                                                        async () => {
+                                                                            if (
+                                                                                Date.now() >=
+                                                                                deadline
+                                                                            ) {
+                                                                                stopPolling(timer);
+                                                                                toast(
+                                                                                    t(
+                                                                                        "settings.backup.onedriveAuthFailed",
+                                                                                    ),
+                                                                                    "error",
+                                                                                );
+                                                                                return;
+                                                                            }
+                                                                            try {
+                                                                                const poll =
+                                                                                    await api.backup.onedrivePoll(
+                                                                                        res.data
+                                                                                            .device_code,
+                                                                                    );
+                                                                                if (
+                                                                                    poll.connected
+                                                                                ) {
+                                                                                    stopPolling(
+                                                                                        timer,
+                                                                                    );
+                                                                                    setOnedriveConnected(
+                                                                                        true,
+                                                                                    );
+                                                                                    toast(
+                                                                                        t(
+                                                                                            "settings.backup.onedriveConnected",
+                                                                                        ),
+                                                                                        "success",
+                                                                                    );
+                                                                                }
+                                                                            } catch {
+                                                                                stopPolling(timer);
+                                                                                toast(
+                                                                                    t(
+                                                                                        "settings.backup.onedriveAuthFailed",
+                                                                                    ),
+                                                                                    "error",
+                                                                                );
+                                                                            }
+                                                                        },
+                                                                        (res.data.interval + 1) *
+                                                                            1000,
+                                                                    );
+                                                                    setOnedrivePollTimer(timer);
+                                                                } catch {
+                                                                    setOnedriveLoading(false);
+                                                                    toast(
+                                                                        t(
+                                                                            "settings.backup.onedriveAuthFailed",
+                                                                        ),
+                                                                        "error",
+                                                                    );
+                                                                }
+                                                            }}
+                                                            style={{
+                                                                fontSize: 12,
+                                                                fontWeight: 600,
+                                                                padding: "5px 12px",
+                                                                borderRadius: 7,
+                                                                border: "1px solid var(--color-border)",
+                                                                background:
+                                                                    "var(--color-surface-2)",
+                                                                color: "var(--color-text)",
+                                                                cursor: "pointer",
+                                                                display: "inline-flex",
+                                                                alignItems: "center",
+                                                                gap: 5,
+                                                            }}
+                                                        >
+                                                            {onedriveLoading ? (
+                                                                <Loader2
+                                                                    size={12}
+                                                                    style={{
+                                                                        animation:
+                                                                            "spin 1s linear infinite",
+                                                                    }}
+                                                                />
+                                                            ) : (
+                                                                <Cloud size={12} />
+                                                            )}
+                                                            {t("settings.backup.connect")}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                {onedriveDeviceAuth && (
+                                                    <div
+                                                        style={{
+                                                            marginTop: 10,
+                                                            padding: "10px 14px",
+                                                            borderRadius: 8,
+                                                            background: "var(--color-surface-2)",
+                                                            border: "1px solid var(--color-border-subtle)",
+                                                        }}
+                                                    >
+                                                        <p
+                                                            style={{
+                                                                margin: 0,
+                                                                fontSize: 12,
+                                                                color: "var(--color-text-muted)",
+                                                            }}
+                                                        >
+                                                            {t("settings.backup.deviceFlowHint")}
+                                                        </p>
+                                                        <p
+                                                            style={{
+                                                                margin: "6px 0 0",
+                                                                fontSize: 14,
+                                                                fontWeight: 700,
+                                                                letterSpacing: "0.1em",
+                                                                color: "var(--color-text)",
+                                                            }}
+                                                        >
+                                                            {onedriveDeviceAuth.user_code}
+                                                        </p>
+                                                        <a
+                                                            href={
+                                                                onedriveDeviceAuth.verification_url
+                                                            }
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            style={{
+                                                                fontSize: 11,
+                                                                color: "var(--color-accent)",
+                                                                marginTop: 4,
+                                                                display: "block",
+                                                            }}
+                                                        >
+                                                            {onedriveDeviceAuth.verification_url}
+                                                        </a>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                if (onedrivePollTimer)
+                                                                    clearInterval(
+                                                                        onedrivePollTimer,
+                                                                    );
+                                                                setOnedrivePollTimer(null);
+                                                                setOnedriveDeviceAuth(null);
+                                                                setOnedriveLoading(false);
                                                             }}
                                                             style={{
                                                                 marginTop: 8,
@@ -1241,7 +1532,7 @@ export default function SettingsPage() {
                                                     padding: "14px 16px",
                                                     borderRadius: 12,
                                                     border: "1px solid var(--color-border-subtle)",
-                                                    background: "var(--color-surface)",
+                                                    background: "var(--color-surface-2)",
                                                 }}
                                             >
                                                 <div
@@ -1463,8 +1754,318 @@ export default function SettingsPage() {
                                                 </div>
                                             </div>
 
+                                            {/* S3-compatible Storage */}
+                                            <div
+                                                style={{
+                                                    padding: "14px 16px",
+                                                    borderRadius: 12,
+                                                    border: "1px solid var(--color-border-subtle)",
+                                                    background: "var(--color-surface-2)",
+                                                }}
+                                            >
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        justifyContent: "space-between",
+                                                        marginBottom: 10,
+                                                    }}
+                                                >
+                                                    <span
+                                                        style={{
+                                                            fontWeight: 600,
+                                                            fontSize: 13,
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            gap: 6,
+                                                        }}
+                                                    >
+                                                        <Database size={14} />
+                                                        S3
+                                                        {s3Connected && (
+                                                            <span
+                                                                style={{
+                                                                    fontSize: 10,
+                                                                    padding: "2px 7px",
+                                                                    borderRadius: 10,
+                                                                    background:
+                                                                        "rgba(16,185,129,0.15)",
+                                                                    color: "#10b981",
+                                                                    fontWeight: 700,
+                                                                }}
+                                                            >
+                                                                {t("settings.backup.connected")}
+                                                            </span>
+                                                        )}
+                                                    </span>
+                                                    {s3Connected && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={async () => {
+                                                                await api.backup
+                                                                    .s3Clear()
+                                                                    .catch(() => null);
+                                                                setS3Connected(false);
+                                                                setS3Endpoint("");
+                                                                setS3Region("");
+                                                                setS3Bucket("");
+                                                                setS3AccessKeyId("");
+                                                                setS3SecretAccessKey("");
+                                                                toast(
+                                                                    t("settings.backup.s3Cleared"),
+                                                                    "success",
+                                                                );
+                                                            }}
+                                                            style={{
+                                                                fontSize: 12,
+                                                                color: "#ef4444",
+                                                                background: "none",
+                                                                border: "none",
+                                                                cursor: "pointer",
+                                                            }}
+                                                        >
+                                                            {t("settings.backup.disconnect")}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        flexDirection: "column",
+                                                        gap: 8,
+                                                    }}
+                                                >
+                                                    {(
+                                                        [
+                                                            {
+                                                                label: "Endpoint",
+                                                                value: s3Endpoint,
+                                                                onChange: setS3Endpoint,
+                                                                placeholder:
+                                                                    "https://s3.amazonaws.com",
+                                                            },
+                                                            {
+                                                                label: "Region",
+                                                                value: s3Region,
+                                                                onChange: setS3Region,
+                                                                placeholder: "us-east-1",
+                                                            },
+                                                            {
+                                                                label: "Bucket",
+                                                                value: s3Bucket,
+                                                                onChange: setS3Bucket,
+                                                                placeholder: "my-backup-bucket",
+                                                            },
+                                                            {
+                                                                label: "Access Key",
+                                                                value: s3AccessKeyId,
+                                                                onChange: setS3AccessKeyId,
+                                                                placeholder: "AKIAIOSFODNN7EXAMPLE",
+                                                            },
+                                                            {
+                                                                label: "Secret Key",
+                                                                value: s3SecretAccessKey,
+                                                                onChange: setS3SecretAccessKey,
+                                                                placeholder: "••••••••",
+                                                                type: "password" as const,
+                                                            },
+                                                        ] as Array<{
+                                                            label: string;
+                                                            value: string;
+                                                            onChange: (v: string) => void;
+                                                            placeholder: string;
+                                                            type?: string;
+                                                        }>
+                                                    ).map(
+                                                        ({
+                                                            label,
+                                                            value,
+                                                            onChange,
+                                                            placeholder,
+                                                            type,
+                                                        }) => (
+                                                            <div
+                                                                key={label}
+                                                                style={{
+                                                                    display: "flex",
+                                                                    alignItems: "center",
+                                                                    gap: 10,
+                                                                }}
+                                                            >
+                                                                <span
+                                                                    style={{
+                                                                        fontSize: 12,
+                                                                        color: "var(--color-text-muted)",
+                                                                        width: 80,
+                                                                        flexShrink: 0,
+                                                                    }}
+                                                                >
+                                                                    {label}
+                                                                </span>
+                                                                <input
+                                                                    type={type ?? "text"}
+                                                                    value={value}
+                                                                    onChange={(e) =>
+                                                                        onChange(e.target.value)
+                                                                    }
+                                                                    placeholder={placeholder}
+                                                                    style={{
+                                                                        flex: 1,
+                                                                        padding: "6px 10px",
+                                                                        borderRadius: 7,
+                                                                        border: "1px solid var(--color-border)",
+                                                                        background:
+                                                                            "var(--color-surface-2)",
+                                                                        color: "var(--color-text)",
+                                                                        fontSize: 12,
+                                                                        fontFamily: "inherit",
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        ),
+                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        disabled={
+                                                            s3Saving ||
+                                                            !s3Endpoint ||
+                                                            !s3Region ||
+                                                            !s3Bucket ||
+                                                            !s3AccessKeyId ||
+                                                            !s3SecretAccessKey
+                                                        }
+                                                        onClick={async () => {
+                                                            setS3Saving(true);
+                                                            try {
+                                                                await api.backup.s3Save({
+                                                                    endpoint: s3Endpoint,
+                                                                    region: s3Region,
+                                                                    bucket: s3Bucket,
+                                                                    accessKeyId: s3AccessKeyId,
+                                                                    secretAccessKey:
+                                                                        s3SecretAccessKey,
+                                                                });
+                                                                setS3Connected(true);
+                                                                setS3SecretAccessKey("");
+                                                                toast(
+                                                                    t("settings.backup.s3Saved"),
+                                                                    "success",
+                                                                );
+                                                            } catch (e) {
+                                                                toast(
+                                                                    (e as Error).message ||
+                                                                        t(
+                                                                            "settings.backup.s3Failed",
+                                                                        ),
+                                                                    "error",
+                                                                );
+                                                            } finally {
+                                                                setS3Saving(false);
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            alignSelf: "flex-start",
+                                                            marginTop: 4,
+                                                            fontSize: 12,
+                                                            fontWeight: 600,
+                                                            padding: "6px 14px",
+                                                            borderRadius: 7,
+                                                            border: "none",
+                                                            background: "#10b981",
+                                                            color: "#fff",
+                                                            cursor: "pointer",
+                                                            display: "inline-flex",
+                                                            alignItems: "center",
+                                                            gap: 5,
+                                                            opacity:
+                                                                !s3Endpoint ||
+                                                                !s3Region ||
+                                                                !s3Bucket ||
+                                                                !s3AccessKeyId ||
+                                                                !s3SecretAccessKey
+                                                                    ? 0.45
+                                                                    : 1,
+                                                        }}
+                                                    >
+                                                        {s3Saving ? (
+                                                            <Loader2
+                                                                size={11}
+                                                                style={{
+                                                                    animation:
+                                                                        "spin 1s linear infinite",
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <Check size={11} />
+                                                        )}
+                                                        {t("settings.backup.s3Test")}
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* 定时备份 */}
+                                            <div
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: 12,
+                                                    padding: "12px 16px",
+                                                    borderRadius: 12,
+                                                    border: "1px solid var(--color-border-subtle)",
+                                                    background: "var(--color-surface-2)",
+                                                }}
+                                            >
+                                                <HardDrive
+                                                    size={14}
+                                                    style={{
+                                                        color: "var(--color-text-muted)",
+                                                        flexShrink: 0,
+                                                    }}
+                                                />
+                                                <span
+                                                    style={{
+                                                        fontSize: 13,
+                                                        color: "var(--color-text-muted)",
+                                                        flex: 1,
+                                                    }}
+                                                >
+                                                    {t("settings.backup.scheduleLabel")}
+                                                </span>
+                                                <select
+                                                    value={backupScheduleHours}
+                                                    onChange={async (e) => {
+                                                        const h = Number(e.target.value);
+                                                        setBackupScheduleHours(h);
+                                                        await api.backup
+                                                            .saveSettings({ scheduleHours: h })
+                                                            .catch(() => null);
+                                                    }}
+                                                    style={{
+                                                        fontSize: 12,
+                                                        padding: "4px 8px",
+                                                        borderRadius: 7,
+                                                        border: "1px solid var(--color-border)",
+                                                        background: "var(--color-surface-2)",
+                                                        color: "var(--color-text)",
+                                                        cursor: "pointer",
+                                                    }}
+                                                >
+                                                    <option value={0}>
+                                                        {t("settings.backup.scheduleOff")}
+                                                    </option>
+                                                    <option value={6}>6h</option>
+                                                    <option value={12}>12h</option>
+                                                    <option value={24}>24h</option>
+                                                    <option value={48}>48h</option>
+                                                    <option value={168}>7 days</option>
+                                                </select>
+                                            </div>
+
                                             {/* 立即备份 */}
-                                            {(gdriveConnected || webdavConnected) && (
+                                            {(gdriveConnected ||
+                                                webdavConnected ||
+                                                onedriveConnected ||
+                                                s3Connected) && (
                                                 <div
                                                     style={{
                                                         display: "flex",

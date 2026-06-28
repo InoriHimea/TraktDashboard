@@ -3,6 +3,7 @@ import IORedis from "ioredis";
 import { getDb, users, userSettings, metadataCache } from "@trakt-dashboard/db";
 import { eq, lt } from "drizzle-orm";
 import { triggerIncrementalSync, resetStaleRunningSyncs } from "../services/sync.js";
+import { runScheduledBackup } from "../routes/backup.js";
 import { withTimeout } from "../lib/timeout.js";
 import { METADATA_MAX_AGE_HOURS } from "../services/tmdb.js";
 
@@ -88,6 +89,42 @@ async function upsertRepeatableJob(
     });
 }
 
+export async function registerUserBackupJob(userId: number) {
+    const db = getDb();
+    const [row] = await db
+        .select({ backupScheduleHours: userSettings.backupScheduleHours })
+        .from(userSettings)
+        .where(eq(userSettings.userId, userId));
+    const hours = row?.backupScheduleHours ?? 0;
+    const queue = getSyncQueue();
+    const jobId = `backup-user-${userId}`;
+    if (hours <= 0) {
+        // Remove any existing job
+        try {
+            const jobs = await queue.getRepeatableJobs();
+            const existing = jobs.find((j) => j.id === jobId);
+            if (existing) await queue.removeRepeatableByKey(existing.key);
+        } catch {
+            // Best-effort removal
+        }
+        return;
+    }
+    try {
+        await upsertRepeatableJob(
+            queue,
+            "scheduled-backup",
+            jobId,
+            { userId },
+            {
+                every: hours * 60 * 60 * 1000,
+            },
+        );
+        console.log(`[scheduler] Registered backup job for user ${userId} every ${hours}h`);
+    } catch (e) {
+        console.warn(`[scheduler] Could not register backup job for user ${userId}:`, e);
+    }
+}
+
 export async function registerUserSyncJob(userId: number) {
     const queue = getSyncQueue();
     const intervalMinutes = await getUserSyncInterval(userId);
@@ -150,6 +187,12 @@ export async function startScheduler() {
                     console.error(`[scheduler] Airing reminders failed:`, e);
                     throw e;
                 }
+            } else if (job.name === "scheduled-backup") {
+                const { userId } = job.data as { userId: number };
+                console.log(`[scheduler] Running scheduled backup for user ${userId}`);
+                await runScheduledBackup(userId).catch((e) =>
+                    console.error(`[scheduler] Scheduled backup failed for user ${userId}:`, e),
+                );
             }
         },
         { connection: redis, concurrency: 1 },
@@ -164,6 +207,7 @@ export async function startScheduler() {
     const allUsers = await db.select({ id: users.id }).from(users);
     for (const user of allUsers) {
         await registerUserSyncJob(user.id);
+        await registerUserBackupJob(user.id);
     }
 
     // Register daily metadata cache cleanup job — cron anchors the time to

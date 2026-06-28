@@ -276,6 +276,15 @@ export const userSettings = pgTable("user_settings", {
     webdavPassword: text("webdav_password"),
     backupAutoEnabled: boolean("backup_auto_enabled").notNull().default(false),
     backupRetentionDays: integer("backup_retention_days").notNull().default(30),
+    // F14-ext: OneDrive + S3 + 定时备份
+    onedriveToken: text("onedrive_token"),
+    s3Endpoint: text("s3_endpoint"),
+    s3Region: text("s3_region"),
+    s3Bucket: text("s3_bucket"),
+    s3AccessKeyId: text("s3_access_key_id"),
+    s3SecretAccessKey: text("s3_secret_access_key"),
+    backupScheduleHours: integer("backup_schedule_hours").notNull().default(0),
+    backupActiveProvider: text("backup_active_provider"),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

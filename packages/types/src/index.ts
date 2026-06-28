@@ -641,7 +641,7 @@ export interface BackupFile {
     fileId: string;
     sizeBytes: number;
     createdAt: string;
-    provider: "gdrive" | "webdav";
+    provider: "gdrive" | "webdav" | "onedrive" | "s3";
 }
 
 export interface BackupRun {

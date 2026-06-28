@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { getDb, userSettings, backupRuns } from "@trakt-dashboard/db";
+import { registerUserBackupJob } from "../jobs/scheduler.js";
 import { eq, and, desc } from "drizzle-orm";
 import { encryptToken, decryptToken } from "../lib/encrypt.js";
 import { resolveApiSecret } from "../lib/secret.js";
@@ -15,9 +16,21 @@ import {
     listWebDAVBackups,
     deleteWebDAVFile,
     pruneOldWebDAVBackups,
+    startOneDriveDeviceFlow,
+    pollOneDriveToken,
+    uploadToOneDrive,
+    listOneDriveBackups,
+    deleteOneDriveFile,
+    pruneOldOneDriveBackups,
+    uploadToS3,
+    listS3Backups,
+    deleteS3File,
+    pruneOldS3Backups,
     dumpDatabase,
     type GDriveToken,
+    type OneDriveToken,
     type WebDAVConfig,
+    type S3Config,
 } from "../services/backup.js";
 
 export const backupRoutes = new Hono<{ Variables: { userId: number } }>();
@@ -42,6 +55,14 @@ async function getSettings(userId: number) {
             webdavPassword: userSettings.webdavPassword,
             backupAutoEnabled: userSettings.backupAutoEnabled,
             backupRetentionDays: userSettings.backupRetentionDays,
+            onedriveToken: userSettings.onedriveToken,
+            s3Endpoint: userSettings.s3Endpoint,
+            s3Region: userSettings.s3Region,
+            s3Bucket: userSettings.s3Bucket,
+            s3AccessKeyId: userSettings.s3AccessKeyId,
+            s3SecretAccessKey: userSettings.s3SecretAccessKey,
+            backupScheduleHours: userSettings.backupScheduleHours,
+            backupActiveProvider: userSettings.backupActiveProvider,
         })
         .from(userSettings)
         .where(eq(userSettings.userId, userId))
@@ -84,7 +105,52 @@ function buildWebDAVConfig(row: {
 }
 
 function makeFilename(): string {
-    return `trakt-dash-backup-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.pgdump.gz`;
+    return `mediadash-backup-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.pgdump.gz`;
+}
+
+function parseOneDriveToken(raw: string | null | undefined): OneDriveToken | null {
+    if (!raw) return null;
+    try {
+        return JSON.parse(decryptSecret(raw)) as OneDriveToken;
+    } catch {
+        return null;
+    }
+}
+
+async function saveOneDriveToken(userId: number, token: OneDriveToken): Promise<void> {
+    const db = getDb();
+    const encrypted = encryptSecret(JSON.stringify(token));
+    await db
+        .insert(userSettings)
+        .values({ userId, onedriveToken: encrypted })
+        .onConflictDoUpdate({
+            target: [userSettings.userId],
+            set: { onedriveToken: encrypted, updatedAt: new Date() },
+        });
+}
+
+function buildS3Config(row: {
+    s3Endpoint: string | null;
+    s3Region: string | null;
+    s3Bucket: string | null;
+    s3AccessKeyId: string | null;
+    s3SecretAccessKey: string | null;
+}): S3Config | null {
+    if (
+        !row.s3Endpoint ||
+        !row.s3Region ||
+        !row.s3Bucket ||
+        !row.s3AccessKeyId ||
+        !row.s3SecretAccessKey
+    )
+        return null;
+    return {
+        endpoint: row.s3Endpoint,
+        region: row.s3Region,
+        bucket: row.s3Bucket,
+        accessKeyId: row.s3AccessKeyId,
+        secretAccessKey: decryptSecret(row.s3SecretAccessKey),
+    };
 }
 
 // ─── Google Drive OAuth Device Flow ──────────────────────────────────────────
@@ -149,6 +215,54 @@ backupRoutes.get("/gdrive/status", async (c) => {
     const userId = c.get("userId");
     const row = await getSettings(userId);
     const connected = !!parseGDriveToken(row?.gdriveToken);
+    return c.json({ connected });
+});
+
+// ─── OneDrive Device Code Flow ───────────────────────────────────────────────
+
+backupRoutes.post("/onedrive/auth", async (c) => {
+    try {
+        const data = await startOneDriveDeviceFlow();
+        return c.json({ ok: true, data });
+    } catch (err) {
+        return c.json({ error: (err as Error).message }, 502);
+    }
+});
+
+backupRoutes.post("/onedrive/poll", async (c) => {
+    const userId = c.get("userId");
+    const body = (await c.req.json().catch(() => ({}))) as { device_code?: string };
+    if (!body.device_code) return c.json({ error: "device_code required" }, 400);
+
+    let token: Awaited<ReturnType<typeof pollOneDriveToken>>;
+    try {
+        token = await pollOneDriveToken(body.device_code);
+    } catch (err) {
+        return c.json({ ok: false, pending: false, error: (err as Error).message }, 400);
+    }
+    if (!token) return c.json({ ok: false, pending: true });
+
+    await saveOneDriveToken(userId, token);
+    return c.json({ ok: true, connected: true });
+});
+
+backupRoutes.delete("/onedrive/revoke", async (c) => {
+    const userId = c.get("userId");
+    const db = getDb();
+    await db
+        .insert(userSettings)
+        .values({ userId, onedriveToken: null })
+        .onConflictDoUpdate({
+            target: [userSettings.userId],
+            set: { onedriveToken: null, updatedAt: new Date() },
+        });
+    return c.json({ ok: true });
+});
+
+backupRoutes.get("/onedrive/status", async (c) => {
+    const userId = c.get("userId");
+    const row = await getSettings(userId);
+    const connected = !!parseOneDriveToken(row?.onedriveToken);
     return c.json({ connected });
 });
 
@@ -227,6 +341,124 @@ backupRoutes.get("/webdav/status", async (c) => {
     return c.json({ connected, url: row?.webdavUrl ?? null });
 });
 
+// ─── S3-compatible Storage ────────────────────────────────────────────────────
+
+// PUT /api/backup/s3 — save S3 config (also tests connectivity by listing)
+backupRoutes.put("/s3", async (c) => {
+    const userId = c.get("userId");
+    const body = (await c.req.json().catch(() => ({}))) as {
+        endpoint?: string;
+        region?: string;
+        bucket?: string;
+        accessKeyId?: string;
+        secretAccessKey?: string;
+    };
+
+    if (
+        !body.endpoint &&
+        !body.region &&
+        !body.bucket &&
+        !body.accessKeyId &&
+        !body.secretAccessKey
+    ) {
+        // Clear S3 config
+        const db = getDb();
+        await db
+            .insert(userSettings)
+            .values({
+                userId,
+                s3Endpoint: null,
+                s3Region: null,
+                s3Bucket: null,
+                s3AccessKeyId: null,
+                s3SecretAccessKey: null,
+            })
+            .onConflictDoUpdate({
+                target: [userSettings.userId],
+                set: {
+                    s3Endpoint: null,
+                    s3Region: null,
+                    s3Bucket: null,
+                    s3AccessKeyId: null,
+                    s3SecretAccessKey: null,
+                    updatedAt: new Date(),
+                },
+            });
+        return c.json({ ok: true });
+    }
+
+    if (
+        !body.endpoint ||
+        !body.region ||
+        !body.bucket ||
+        !body.accessKeyId ||
+        !body.secretAccessKey
+    ) {
+        return c.json(
+            { error: "endpoint, region, bucket, accessKeyId, secretAccessKey are all required" },
+            400,
+        );
+    }
+
+    const testCfg: S3Config = {
+        endpoint: body.endpoint,
+        region: body.region,
+        bucket: body.bucket,
+        accessKeyId: body.accessKeyId,
+        secretAccessKey: body.secretAccessKey,
+    };
+    try {
+        await listS3Backups(testCfg);
+    } catch {
+        return c.json(
+            { error: "S3 connection test failed — check endpoint, region, bucket and credentials" },
+            400,
+        );
+    }
+
+    const db = getDb();
+    const encSecret = encryptSecret(body.secretAccessKey);
+    await db
+        .insert(userSettings)
+        .values({
+            userId,
+            s3Endpoint: body.endpoint,
+            s3Region: body.region,
+            s3Bucket: body.bucket,
+            s3AccessKeyId: body.accessKeyId,
+            s3SecretAccessKey: encSecret,
+        })
+        .onConflictDoUpdate({
+            target: [userSettings.userId],
+            set: {
+                s3Endpoint: body.endpoint,
+                s3Region: body.region,
+                s3Bucket: body.bucket,
+                s3AccessKeyId: body.accessKeyId,
+                s3SecretAccessKey: encSecret,
+                updatedAt: new Date(),
+            },
+        });
+    return c.json({ ok: true });
+});
+
+// GET /api/backup/s3/status
+backupRoutes.get("/s3/status", async (c) => {
+    const userId = c.get("userId");
+    const row = await getSettings(userId);
+    const connected = !!(
+        row?.s3Endpoint &&
+        row?.s3Bucket &&
+        row?.s3AccessKeyId &&
+        row?.s3SecretAccessKey
+    );
+    return c.json({
+        connected,
+        endpoint: row?.s3Endpoint ?? null,
+        bucket: row?.s3Bucket ?? null,
+    });
+});
+
 // ─── Backup Settings ──────────────────────────────────────────────────────────
 
 // PUT /api/backup/settings
@@ -235,6 +467,8 @@ backupRoutes.put("/settings", async (c) => {
     const body = (await c.req.json().catch(() => ({}))) as {
         autoEnabled?: boolean;
         retentionDays?: number;
+        scheduleHours?: number;
+        activeProvider?: string | null;
     };
     const db = getDb();
     await db
@@ -247,10 +481,32 @@ backupRoutes.put("/settings", async (c) => {
                 ...(body.retentionDays !== undefined
                     ? { backupRetentionDays: body.retentionDays }
                     : {}),
+                ...(body.scheduleHours !== undefined
+                    ? { backupScheduleHours: body.scheduleHours }
+                    : {}),
+                ...(body.activeProvider !== undefined
+                    ? { backupActiveProvider: body.activeProvider }
+                    : {}),
                 updatedAt: new Date(),
             },
         });
+    // Re-register backup job so schedule change takes effect without a restart
+    if (body.scheduleHours !== undefined) {
+        await registerUserBackupJob(userId).catch(() => null);
+    }
     return c.json({ ok: true });
+});
+
+// GET /api/backup/settings
+backupRoutes.get("/settings", async (c) => {
+    const userId = c.get("userId");
+    const row = await getSettings(userId);
+    return c.json({
+        scheduleHours: row?.backupScheduleHours ?? 0,
+        activeProvider: row?.backupActiveProvider ?? null,
+        retentionDays: row?.backupRetentionDays ?? 30,
+        autoEnabled: row?.backupAutoEnabled ?? false,
+    });
 });
 
 // ─── Trigger Backup ───────────────────────────────────────────────────────────
@@ -259,17 +515,26 @@ backupRoutes.put("/settings", async (c) => {
 backupRoutes.post("/trigger", async (c) => {
     const userId = c.get("userId");
     const body = (await c.req.json().catch(() => ({}))) as {
-        provider?: "gdrive" | "webdav" | "all";
+        provider?: "gdrive" | "webdav" | "onedrive" | "s3" | "all";
     };
-    const providers =
-        body.provider === "gdrive"
-            ? ["gdrive"]
-            : body.provider === "webdav"
-              ? ["webdav"]
-              : ["gdrive", "webdav"];
 
     const row = await getSettings(userId);
     if (!row) return c.json({ error: "No backup configuration found" }, 400);
+
+    // Expand "all" to whatever providers are currently connected
+    let providers: string[];
+    if (!body.provider || body.provider === "all") {
+        providers = [];
+        if (parseGDriveToken(row.gdriveToken)) providers.push("gdrive");
+        if (row.webdavUrl && row.webdavUsername && row.webdavPassword) providers.push("webdav");
+        if (parseOneDriveToken(row.onedriveToken)) providers.push("onedrive");
+        if (row.s3Endpoint && row.s3Bucket && row.s3AccessKeyId && row.s3SecretAccessKey)
+            providers.push("s3");
+    } else {
+        providers = [body.provider];
+    }
+
+    if (providers.length === 0) return c.json({ error: "No providers connected" }, 400);
 
     const retentionDays = row.backupRetentionDays ?? 30;
     const results: Array<{ provider: string; ok: boolean; error?: string; filename?: string }> = [];
@@ -301,22 +566,10 @@ backupRoutes.post("/trigger", async (c) => {
             continue;
         }
 
-        if (provider === "gdrive") {
-            const token = parseGDriveToken(row.gdriveToken);
-            if (!token) {
-                await db.insert(backupRuns).values({
-                    userId,
-                    provider,
-                    status: "failed",
-                    filename,
-                    error: "Google Drive not connected",
-                    startedAt,
-                    finishedAt: new Date(),
-                });
-                results.push({ provider, ok: false, error: "Google Drive not connected" });
-                continue;
-            }
-            try {
+        try {
+            if (provider === "gdrive") {
+                const token = parseGDriveToken(row.gdriveToken);
+                if (!token) throw new Error("Google Drive not connected");
                 const { fileId, refreshedToken } = await uploadToGDrive(
                     token,
                     dumpBuffer,
@@ -339,35 +592,9 @@ backupRoutes.post("/trigger", async (c) => {
                     finishedAt: new Date(),
                 });
                 results.push({ provider, ok: true, filename });
-            } catch (err) {
-                const error = (err as Error).message;
-                await db.insert(backupRuns).values({
-                    userId,
-                    provider,
-                    status: "failed",
-                    filename,
-                    error,
-                    startedAt,
-                    finishedAt: new Date(),
-                });
-                results.push({ provider, ok: false, error });
-            }
-        } else if (provider === "webdav") {
-            const cfg = buildWebDAVConfig(row);
-            if (!cfg) {
-                await db.insert(backupRuns).values({
-                    userId,
-                    provider,
-                    status: "failed",
-                    filename,
-                    error: "WebDAV not configured",
-                    startedAt,
-                    finishedAt: new Date(),
-                });
-                results.push({ provider, ok: false, error: "WebDAV not configured" });
-                continue;
-            }
-            try {
+            } else if (provider === "webdav") {
+                const cfg = buildWebDAVConfig(row);
+                if (!cfg) throw new Error("WebDAV not configured");
                 await uploadToWebDAV(cfg, dumpBuffer, filename);
                 await pruneOldWebDAVBackups(cfg, retentionDays).catch(() => null);
                 await db.insert(backupRuns).values({
@@ -381,19 +608,60 @@ backupRoutes.post("/trigger", async (c) => {
                     finishedAt: new Date(),
                 });
                 results.push({ provider, ok: true, filename });
-            } catch (err) {
-                const error = (err as Error).message;
+            } else if (provider === "onedrive") {
+                const token = parseOneDriveToken(row.onedriveToken);
+                if (!token) throw new Error("OneDrive not connected");
+                const { itemId, refreshedToken } = await uploadToOneDrive(
+                    token,
+                    dumpBuffer,
+                    filename,
+                );
+                await saveOneDriveToken(userId, refreshedToken);
+                const prunedToken = await pruneOldOneDriveBackups(
+                    refreshedToken,
+                    retentionDays,
+                ).catch(() => refreshedToken);
+                await saveOneDriveToken(userId, prunedToken);
                 await db.insert(backupRuns).values({
                     userId,
                     provider,
-                    status: "failed",
+                    status: "success",
                     filename,
-                    error,
+                    sizeBytes: dumpBuffer.byteLength,
+                    fileId: itemId,
                     startedAt,
                     finishedAt: new Date(),
                 });
-                results.push({ provider, ok: false, error });
+                results.push({ provider, ok: true, filename });
+            } else if (provider === "s3") {
+                const cfg = buildS3Config(row);
+                if (!cfg) throw new Error("S3 not configured");
+                await uploadToS3(cfg, dumpBuffer, filename);
+                await pruneOldS3Backups(cfg, retentionDays).catch(() => null);
+                await db.insert(backupRuns).values({
+                    userId,
+                    provider,
+                    status: "success",
+                    filename,
+                    sizeBytes: dumpBuffer.byteLength,
+                    fileId: filename,
+                    startedAt,
+                    finishedAt: new Date(),
+                });
+                results.push({ provider, ok: true, filename });
             }
+        } catch (err) {
+            const error = (err as Error).message;
+            await db.insert(backupRuns).values({
+                userId,
+                provider,
+                status: "failed",
+                filename,
+                error,
+                startedAt,
+                finishedAt: new Date(),
+            });
+            results.push({ provider, ok: false, error });
         }
     }
 
@@ -419,10 +687,10 @@ backupRoutes.get("/runs", async (c) => {
 
 // ─── List / Delete Remote Files ───────────────────────────────────────────────
 
-// GET /api/backup/files?provider=gdrive|webdav
+// GET /api/backup/files?provider=gdrive|webdav|onedrive|s3
 backupRoutes.get("/files", async (c) => {
     const userId = c.get("userId");
-    const provider = c.req.query("provider") as "gdrive" | "webdav" | undefined;
+    const provider = c.req.query("provider") as "gdrive" | "webdav" | "onedrive" | "s3" | undefined;
     const row = await getSettings(userId);
     if (!row) return c.json({ data: [] });
 
@@ -440,10 +708,21 @@ backupRoutes.get("/files", async (c) => {
     }
     if (!provider || provider === "webdav") {
         const cfg = buildWebDAVConfig(row);
-        if (cfg) {
-            const wFiles = await listWebDAVBackups(cfg).catch(() => []);
-            files.push(...wFiles);
+        if (cfg) files.push(...(await listWebDAVBackups(cfg).catch(() => [])));
+    }
+    if (!provider || provider === "onedrive") {
+        const token = parseOneDriveToken(row.onedriveToken);
+        if (token) {
+            const { files: oFiles, refreshedToken } = await listOneDriveBackups(token).catch(
+                () => ({ files: [], refreshedToken: token }),
+            );
+            await saveOneDriveToken(userId, refreshedToken).catch(() => null);
+            files.push(...oFiles);
         }
+    }
+    if (!provider || provider === "s3") {
+        const cfg = buildS3Config(row);
+        if (cfg) files.push(...(await listS3Backups(cfg).catch(() => [])));
     }
 
     return c.json({ data: files });
@@ -453,12 +732,11 @@ backupRoutes.get("/files", async (c) => {
 backupRoutes.delete("/files", async (c) => {
     const userId = c.get("userId");
     const body = (await c.req.json().catch(() => ({}))) as {
-        provider: "gdrive" | "webdav";
+        provider: "gdrive" | "webdav" | "onedrive" | "s3";
         fileId: string;
     };
-    if (!body.provider || !body.fileId) {
+    if (!body.provider || !body.fileId)
         return c.json({ error: "provider and fileId required" }, 400);
-    }
 
     const row = await getSettings(userId);
     if (!row) return c.json({ error: "No backup config" }, 400);
@@ -467,11 +745,148 @@ backupRoutes.delete("/files", async (c) => {
         const token = parseGDriveToken(row.gdriveToken);
         if (!token) return c.json({ error: "GDrive not connected" }, 400);
         await deleteGDriveFile(token, body.fileId);
-    } else {
+    } else if (body.provider === "webdav") {
         const cfg = buildWebDAVConfig(row);
         if (!cfg) return c.json({ error: "WebDAV not configured" }, 400);
         await deleteWebDAVFile(cfg, body.fileId);
+    } else if (body.provider === "onedrive") {
+        const token = parseOneDriveToken(row.onedriveToken);
+        if (!token) return c.json({ error: "OneDrive not connected" }, 400);
+        await deleteOneDriveFile(token, body.fileId);
+    } else if (body.provider === "s3") {
+        const cfg = buildS3Config(row);
+        if (!cfg) return c.json({ error: "S3 not configured" }, 400);
+        await deleteS3File(cfg, body.fileId);
     }
 
     return c.json({ ok: true });
 });
+
+// ─── Exported helper for scheduler ───────────────────────────────────────────
+
+export async function runScheduledBackup(userId: number): Promise<void> {
+    const row = await getSettings(userId);
+    if (!row || !row.backupScheduleHours || row.backupScheduleHours <= 0) return;
+
+    const retentionDays = row.backupRetentionDays ?? 30;
+    const db = getDb();
+    const filename = makeFilename();
+
+    let dumpBuffer: Buffer;
+    try {
+        dumpBuffer = await dumpDatabase();
+    } catch (err) {
+        console.error(`[backup] Scheduled dump failed for user ${userId}:`, err);
+        return;
+    }
+
+    const connected: string[] = [];
+    if (parseGDriveToken(row.gdriveToken)) connected.push("gdrive");
+    if (row.webdavUrl && row.webdavUsername && row.webdavPassword) connected.push("webdav");
+    if (parseOneDriveToken(row.onedriveToken)) connected.push("onedrive");
+    if (row.s3Endpoint && row.s3Bucket && row.s3AccessKeyId && row.s3SecretAccessKey)
+        connected.push("s3");
+
+    const target = row.backupActiveProvider;
+    const targets = target && connected.includes(target) ? [target] : connected;
+
+    for (const provider of targets) {
+        const startedAt = new Date();
+        try {
+            if (provider === "gdrive") {
+                const token = parseGDriveToken(row.gdriveToken)!;
+                const { fileId, refreshedToken } = await uploadToGDrive(
+                    token,
+                    dumpBuffer,
+                    filename,
+                );
+                await saveGDriveToken(userId, refreshedToken);
+                await pruneOldGDriveBackups(refreshedToken, retentionDays).catch(() => null);
+                await db
+                    .insert(backupRuns)
+                    .values({
+                        userId,
+                        provider,
+                        status: "success",
+                        filename,
+                        sizeBytes: dumpBuffer.byteLength,
+                        fileId,
+                        startedAt,
+                        finishedAt: new Date(),
+                    });
+            } else if (provider === "webdav") {
+                const cfg = buildWebDAVConfig(row)!;
+                await uploadToWebDAV(cfg, dumpBuffer, filename);
+                await pruneOldWebDAVBackups(cfg, retentionDays).catch(() => null);
+                await db
+                    .insert(backupRuns)
+                    .values({
+                        userId,
+                        provider,
+                        status: "success",
+                        filename,
+                        sizeBytes: dumpBuffer.byteLength,
+                        fileId: filename,
+                        startedAt,
+                        finishedAt: new Date(),
+                    });
+            } else if (provider === "onedrive") {
+                const token = parseOneDriveToken(row.onedriveToken)!;
+                const { itemId, refreshedToken } = await uploadToOneDrive(
+                    token,
+                    dumpBuffer,
+                    filename,
+                );
+                await saveOneDriveToken(userId, refreshedToken);
+                await pruneOldOneDriveBackups(refreshedToken, retentionDays).catch(() => null);
+                await db
+                    .insert(backupRuns)
+                    .values({
+                        userId,
+                        provider,
+                        status: "success",
+                        filename,
+                        sizeBytes: dumpBuffer.byteLength,
+                        fileId: itemId,
+                        startedAt,
+                        finishedAt: new Date(),
+                    });
+            } else if (provider === "s3") {
+                const cfg = buildS3Config(row)!;
+                await uploadToS3(cfg, dumpBuffer, filename);
+                await pruneOldS3Backups(cfg, retentionDays).catch(() => null);
+                await db
+                    .insert(backupRuns)
+                    .values({
+                        userId,
+                        provider,
+                        status: "success",
+                        filename,
+                        sizeBytes: dumpBuffer.byteLength,
+                        fileId: filename,
+                        startedAt,
+                        finishedAt: new Date(),
+                    });
+            }
+            console.log(`[backup] Scheduled backup to ${provider} succeeded for user ${userId}`);
+        } catch (err) {
+            const error = (err as Error).message;
+            console.error(
+                `[backup] Scheduled backup to ${provider} failed for user ${userId}:`,
+                error,
+            );
+            await db
+                .insert(backupRuns)
+                .values({
+                    userId,
+                    provider,
+                    status: "failed",
+                    filename,
+                    error,
+                    startedAt,
+                    finishedAt: new Date(),
+                })
+                .catch(() => null);
+        }
+    }
+}

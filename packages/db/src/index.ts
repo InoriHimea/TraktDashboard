@@ -204,6 +204,19 @@ export async function runMigrations() {
         sql`CREATE INDEX IF NOT EXISTS "backup_runs_user_idx" ON "backup_runs" ("user_id")`,
     );
 
+    // 0018 — OneDrive + S3 + 定时备份列
+    await db.execute(sql`
+        ALTER TABLE "user_settings"
+        ADD COLUMN IF NOT EXISTS "onedrive_token" text,
+        ADD COLUMN IF NOT EXISTS "s3_endpoint" text,
+        ADD COLUMN IF NOT EXISTS "s3_region" text,
+        ADD COLUMN IF NOT EXISTS "s3_bucket" text,
+        ADD COLUMN IF NOT EXISTS "s3_access_key_id" text,
+        ADD COLUMN IF NOT EXISTS "s3_secret_access_key" text,
+        ADD COLUMN IF NOT EXISTS "backup_schedule_hours" integer NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS "backup_active_provider" text
+    `);
+
     await client.end();
     console.log("[db] Migrations complete");
 }
