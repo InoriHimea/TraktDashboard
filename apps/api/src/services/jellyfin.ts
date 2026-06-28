@@ -40,19 +40,43 @@ export async function fetchJellyfinLibraries(cfg: JellyfinConfig): Promise<Jelly
     }));
 }
 
+async function findJellyfinSeriesId(
+    cfg: JellyfinConfig,
+    showTmdbId: number,
+): Promise<string | null> {
+    // AnyProviderIdEquals is broken in some Jellyfin builds (returns unfiltered results).
+    // Fetch all Series with their ProviderIds and filter client-side instead.
+    const params = new URLSearchParams({
+        IncludeItemTypes: "Series",
+        Recursive: "true",
+        Fields: "ProviderIds",
+        Limit: "2000",
+    });
+    const res = await jellyfinFetch(cfg, `/Items?${params}`);
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+        Items: Array<{ Id: string; ProviderIds?: Record<string, string> }>;
+    };
+    const target = String(showTmdbId);
+    const match = (data.Items ?? []).find((item) => item.ProviderIds?.["Tmdb"] === target);
+    return match?.Id ?? null;
+}
+
 export async function findJellyfinSeasonEpisodes(
     cfg: JellyfinConfig,
     showTmdbId: number,
     seasonNumber: number,
 ): Promise<JellyfinEpisode[]> {
+    const seriesId = await findJellyfinSeriesId(cfg, showTmdbId);
+    if (!seriesId) return [];
+
+    // /Items with AncestorIds/AnyProviderIdEquals are broken in some Jellyfin builds.
+    // Use the dedicated /Shows/{id}/Episodes endpoint which filters correctly.
     const params = new URLSearchParams({
-        IncludeItemTypes: "Episode",
-        Recursive: "true",
+        Season: String(seasonNumber),
         Fields: "Path",
-        AnyProviderIdEquals: `Tmdb.${showTmdbId}`,
-        ParentIndexNumber: String(seasonNumber),
     });
-    const res = await jellyfinFetch(cfg, `/Items?${params}`);
+    const res = await jellyfinFetch(cfg, `/Shows/${seriesId}/Episodes?${params}`);
     if (!res.ok) throw new Error(`Jellyfin season episodes fetch failed: ${res.status}`);
     const data = (await res.json()) as {
         Items: Array<{ Id: string; Name: string; SeriesName?: string; Path?: string }>;
