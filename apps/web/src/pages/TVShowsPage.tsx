@@ -54,7 +54,7 @@ export default function TVShowsPage() {
             emptyLabel={t("progress.empty")}
             searchEmptyLabel={t("common.noSearchResults", { query: debouncedSearch })}
             importHint={t("common.importHint")}
-            headerSlot={<UpNextBanner />}
+            headerSlot={debouncedSearch ? undefined : <UpNextBanner />}
             renderItem={(progress, i) => (
                 <ShowCard key={progress.show.id} progress={progress} index={i} />
             )}
