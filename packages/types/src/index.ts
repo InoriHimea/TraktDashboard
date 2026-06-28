@@ -454,6 +454,38 @@ export interface JellyfinMovie {
     path: string | null;
 }
 
+export interface JellyfinLibrarySummary {
+    movieCount: number;
+    seriesCount: number;
+    episodeCount: number;
+}
+
+export interface JellyfinActivityEntry {
+    date: string;
+    name: string;
+    type: string;
+    userName: string | null;
+    itemId: string | null;
+}
+
+export interface JellyfinTopItem {
+    id: string;
+    name: string;
+    playCount: number;
+    type: "Movie" | "Series";
+}
+
+export interface JellyfinStatsTopContent {
+    movies: JellyfinTopItem[];
+    series: JellyfinTopItem[];
+}
+
+export interface JellyfinHeatmapCell {
+    dayOfWeek: number;
+    hour: number;
+    count: number;
+}
+
 // ─── Episode Detail ───────────────────────────────────────────────────────────
 
 export interface EpisodeDetailData {

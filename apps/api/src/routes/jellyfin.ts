@@ -9,6 +9,10 @@ import {
     findJellyfinMovie,
     deleteJellyfinItem,
     getActiveSessions,
+    getJellyfinLibrarySummary,
+    getJellyfinActivityLog,
+    getJellyfinTopItems,
+    getJellyfinPlayHeatmap,
 } from "../services/jellyfin.js";
 import { parseBoundedInt } from "../lib/number.js";
 import { decryptToken } from "../lib/encrypt.js";
@@ -218,6 +222,61 @@ jellyfinRoutes.delete("/items/:jellyfinItemId", async (c) => {
     try {
         await deleteJellyfinItem(cfg, itemId);
         return c.json({ ok: true });
+    } catch (err) {
+        return c.json({ error: String(err) }, 502);
+    }
+});
+
+// ─── Stats ────────────────────────────────────────────────────────────────────
+
+// GET /api/jellyfin/stats/overview
+jellyfinRoutes.get("/stats/overview", async (c) => {
+    const userId = c.get("userId");
+    const cfg = await getJellyfinConfig(userId);
+    if (!cfg) return c.json({ error: "Jellyfin not configured" }, 503);
+    try {
+        const data = await getJellyfinLibrarySummary(cfg);
+        return c.json({ data });
+    } catch (err) {
+        return c.json({ error: String(err) }, 502);
+    }
+});
+
+// GET /api/jellyfin/stats/activity?limit=50
+jellyfinRoutes.get("/stats/activity", async (c) => {
+    const userId = c.get("userId");
+    const cfg = await getJellyfinConfig(userId);
+    if (!cfg) return c.json({ error: "Jellyfin not configured" }, 503);
+    const limit = Math.min(200, Math.max(1, Number(c.req.query("limit") ?? 50)));
+    try {
+        const data = await getJellyfinActivityLog(cfg, limit);
+        return c.json({ data });
+    } catch (err) {
+        return c.json({ error: String(err) }, 502);
+    }
+});
+
+// GET /api/jellyfin/stats/top-content
+jellyfinRoutes.get("/stats/top-content", async (c) => {
+    const userId = c.get("userId");
+    const cfg = await getJellyfinConfig(userId);
+    if (!cfg) return c.json({ error: "Jellyfin not configured" }, 503);
+    try {
+        const data = await getJellyfinTopItems(cfg);
+        return c.json({ data });
+    } catch (err) {
+        return c.json({ error: String(err) }, 502);
+    }
+});
+
+// GET /api/jellyfin/stats/heatmap
+jellyfinRoutes.get("/stats/heatmap", async (c) => {
+    const userId = c.get("userId");
+    const cfg = await getJellyfinConfig(userId);
+    if (!cfg) return c.json({ error: "Jellyfin not configured" }, 503);
+    try {
+        const data = await getJellyfinPlayHeatmap(cfg);
+        return c.json({ data });
     } catch (err) {
         return c.json({ error: String(err) }, 502);
     }

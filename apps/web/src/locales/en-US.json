@@ -57,6 +57,7 @@
         "watchlist": "Watchlist",
         "history": "History",
         "statistics": "Statistics",
+        "jellyfin": "Jellyfin",
         "sync": "Sync",
         "settings": "Settings",
         "collection": "Library"
@@ -562,5 +563,23 @@
         "pruneAlreadyUnder": "Already below target — nothing to prune",
         "clearSuccess": "Remote library cleared ({{removed}} items) — local archive kept",
         "clearFailed": "Clear remote failed, please try again"
+    },
+    "jellyfinStats": {
+        "subtitle": "Jellyfin server statistics overview",
+        "libraryOverview": "Library Overview",
+        "movies": "Movies",
+        "series": "Series",
+        "episodes": "Episodes",
+        "recentActivity": "Recent Activity",
+        "noActivity": "No playback activity yet",
+        "topContent": "Top Content",
+        "topMovies": "Most Played Movies",
+        "topSeries": "Most Played Series",
+        "noData": "No data available",
+        "playHeatmap": "Play Heatmap",
+        "less": "Less",
+        "more": "More",
+        "notConfigured": "Jellyfin not configured",
+        "notConfiguredDesc": "Go to Settings to add your Jellyfin server URL and API key, then come back here."
     }
 }

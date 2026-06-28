@@ -57,6 +57,7 @@
         "watchlist": "待看列表",
         "history": "观看历史",
         "statistics": "统计",
+        "jellyfin": "Jellyfin",
         "sync": "同步",
         "settings": "设置",
         "collection": "媒体库"
@@ -562,5 +563,23 @@
         "pruneAlreadyUnder": "当前用量已在目标以下，无需清理",
         "clearSuccess": "已清空远端媒体库（{{removed}} 条），本地归档保留",
         "clearFailed": "清空远端失败，请重试"
+    },
+    "jellyfinStats": {
+        "subtitle": "Jellyfin 服务器统计概览",
+        "libraryOverview": "媒体库概览",
+        "movies": "电影",
+        "series": "剧集",
+        "episodes": "单集",
+        "recentActivity": "最近播放",
+        "noActivity": "暂无播放记录",
+        "topContent": "热门内容",
+        "topMovies": "最多播放的电影",
+        "topSeries": "最多播放的剧集",
+        "noData": "暂无数据",
+        "playHeatmap": "播放热图",
+        "less": "少",
+        "more": "多",
+        "notConfigured": "Jellyfin 未配置",
+        "notConfiguredDesc": "请前往设置页面配置 Jellyfin 服务器地址和 API Key 后再查看统计。"
     }
 }

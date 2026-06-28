@@ -14,6 +14,7 @@ import {
     Compass,
     ListOrdered,
     Archive,
+    Server,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNowPlaying, useJellyfinNowPlaying } from "../hooks/index";
@@ -36,6 +37,7 @@ const NAV = [
     { to: "/watchlist", icon: Bookmark, labelKey: "nav.watchlist" },
     { to: "/history", icon: Clock, labelKey: "nav.history" },
     { to: "/stats", icon: BarChart3, labelKey: "nav.statistics" },
+    { to: "/jellyfin", icon: Server, labelKey: "nav.jellyfin" },
     { to: "/settings", icon: Settings, labelKey: "nav.settings" },
 ];
 
@@ -117,7 +119,7 @@ export default function TopNav({ username, onLogout }: TopNavProps) {
                             textShadow: "0 0 18px var(--color-accent-glow)",
                         }}
                     >
-                        trakt<span style={{ color: "var(--color-accent)" }}>·</span>dash
+                        media<span style={{ color: "var(--color-accent)" }}>·</span>dash
                     </span>
                     {username && (
                         <span

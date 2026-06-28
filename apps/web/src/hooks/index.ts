@@ -18,6 +18,10 @@ import type {
     JellyfinEpisode,
     JellyfinMovie,
     JellyfinNowPlaying,
+    JellyfinLibrarySummary,
+    JellyfinActivityEntry,
+    JellyfinStatsTopContent,
+    JellyfinHeatmapCell,
     DiscoverItem,
     UpNextItem,
     UserRating,
@@ -760,5 +764,48 @@ export function useScreenTime(days = 7) {
         queryKey: ["screen-time", days],
         queryFn: () => api.stats.screenTime(days).then((r) => r.data),
         staleTime: 1000 * 60 * 5,
+    });
+}
+
+// ─── Jellyfin Stats ───────────────────────────────────────────────────────────
+
+export function useJellyfinStatsOverview(enabled = true) {
+    return useQuery<JellyfinLibrarySummary | null>({
+        queryKey: ["jellyfin-stats-overview"],
+        queryFn: () => api.jellyfin.statsOverview().then((r) => r.data ?? null),
+        enabled,
+        staleTime: 1000 * 60 * 5,
+        retry: false,
+    });
+}
+
+export function useJellyfinStatsActivity(limit = 50, enabled = true) {
+    return useQuery<JellyfinActivityEntry[]>({
+        queryKey: ["jellyfin-stats-activity", limit],
+        queryFn: () => api.jellyfin.statsActivity(limit).then((r) => r.data ?? []),
+        enabled,
+        staleTime: 1000 * 60 * 2,
+        retry: false,
+    });
+}
+
+export function useJellyfinStatsTopContent(enabled = true) {
+    return useQuery<JellyfinStatsTopContent>({
+        queryKey: ["jellyfin-stats-top-content"],
+        queryFn: () =>
+            api.jellyfin.statsTopContent().then((r) => r.data ?? { movies: [], series: [] }),
+        enabled,
+        staleTime: 1000 * 60 * 10,
+        retry: false,
+    });
+}
+
+export function useJellyfinStatsHeatmap(enabled = true) {
+    return useQuery<JellyfinHeatmapCell[]>({
+        queryKey: ["jellyfin-stats-heatmap"],
+        queryFn: () => api.jellyfin.statsHeatmap().then((r) => r.data ?? []),
+        enabled,
+        staleTime: 1000 * 60 * 10,
+        retry: false,
     });
 }

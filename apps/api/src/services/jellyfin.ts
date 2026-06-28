@@ -1,4 +1,13 @@
-import type { JellyfinLibrary, JellyfinEpisode, JellyfinMovie } from "@trakt-dashboard/types";
+import type {
+    JellyfinLibrary,
+    JellyfinEpisode,
+    JellyfinMovie,
+    JellyfinLibrarySummary,
+    JellyfinActivityEntry,
+    JellyfinTopItem,
+    JellyfinStatsTopContent,
+    JellyfinHeatmapCell,
+} from "@trakt-dashboard/types";
 
 export interface JellyfinConfig {
     url: string;
@@ -266,4 +275,134 @@ export async function autoDeleteJellyfinEpisode(
     if (!episode) return;
 
     await deleteJellyfinItem(cfg, episode.id);
+}
+
+// ─── Jellyfin Statistics ──────────────────────────────────────────────────────
+
+async function getJellyfinFirstUserId(cfg: JellyfinConfig): Promise<string | null> {
+    const res = await jellyfinFetch(cfg, "/Users");
+    if (!res.ok) return null;
+    const users = (await res.json()) as Array<{ Id: string; Name: string }>;
+    if (!users.length) return null;
+    const wanted = process.env.JELLYFIN_USER?.trim().toLowerCase();
+    const user = wanted
+        ? (users.find((u) => u.Name.toLowerCase() === wanted) ?? users[0])
+        : users[0];
+    return user.Id;
+}
+
+export async function getJellyfinLibrarySummary(
+    cfg: JellyfinConfig,
+): Promise<JellyfinLibrarySummary> {
+    const makeUrl = (type: string) => `/Items?IncludeItemTypes=${type}&Recursive=true&Limit=0`;
+    const [moviesRes, seriesRes, episodesRes] = await Promise.all([
+        jellyfinFetch(cfg, makeUrl("Movie")),
+        jellyfinFetch(cfg, makeUrl("Series")),
+        jellyfinFetch(cfg, makeUrl("Episode")),
+    ]);
+    const getCount = async (res: Response) => {
+        if (!res.ok) return 0;
+        const d = (await res.json()) as { TotalRecordCount?: number };
+        return d.TotalRecordCount ?? 0;
+    };
+    const [movieCount, seriesCount, episodeCount] = await Promise.all([
+        getCount(moviesRes),
+        getCount(seriesRes),
+        getCount(episodesRes),
+    ]);
+    return { movieCount, seriesCount, episodeCount };
+}
+
+export async function getJellyfinActivityLog(
+    cfg: JellyfinConfig,
+    limit = 50,
+): Promise<JellyfinActivityEntry[]> {
+    const params = new URLSearchParams({ limit: String(limit), hasUserId: "true" });
+    const res = await jellyfinFetch(cfg, `/System/ActivityLog/Entries?${params}`);
+    if (!res.ok) return [];
+    const data = (await res.json()) as {
+        Items: Array<{
+            Date: string;
+            Name: string;
+            Type: string;
+            UserName?: string;
+            ItemId?: string;
+        }>;
+    };
+    return (data.Items ?? [])
+        .filter((e) => e.Type === "VideoPlaybackStopped" || e.Type === "VideoPlayback")
+        .map((e) => ({
+            date: e.Date,
+            name: e.Name,
+            type: e.Type,
+            userName: e.UserName ?? null,
+            itemId: e.ItemId ?? null,
+        }));
+}
+
+export async function getJellyfinTopItems(cfg: JellyfinConfig): Promise<JellyfinStatsTopContent> {
+    const userId = await getJellyfinFirstUserId(cfg);
+    if (!userId) return { movies: [], series: [] };
+
+    const makeParams = (type: string) =>
+        new URLSearchParams({
+            SortBy: "PlayCount",
+            SortOrder: "Descending",
+            IncludeItemTypes: type,
+            Recursive: "true",
+            Fields: "UserData",
+            Filters: "IsPlayed",
+            Limit: "10",
+        });
+
+    const [moviesRes, seriesRes] = await Promise.all([
+        jellyfinFetch(cfg, `/Users/${userId}/Items?${makeParams("Movie")}`),
+        jellyfinFetch(cfg, `/Users/${userId}/Items?${makeParams("Series")}`),
+    ]);
+
+    const parseItems = async (
+        res: Response,
+        type: JellyfinTopItem["type"],
+    ): Promise<JellyfinTopItem[]> => {
+        if (!res.ok) return [];
+        const d = (await res.json()) as {
+            Items: Array<{ Id: string; Name: string; UserData?: { PlayCount?: number } }>;
+        };
+        return (d.Items ?? [])
+            .filter((item) => (item.UserData?.PlayCount ?? 0) > 0)
+            .map((item) => ({
+                id: item.Id,
+                name: item.Name,
+                playCount: item.UserData?.PlayCount ?? 0,
+                type,
+            }));
+    };
+
+    const [movies, series] = await Promise.all([
+        parseItems(moviesRes, "Movie"),
+        parseItems(seriesRes, "Series"),
+    ]);
+    return { movies, series };
+}
+
+export async function getJellyfinPlayHeatmap(cfg: JellyfinConfig): Promise<JellyfinHeatmapCell[]> {
+    const params = new URLSearchParams({ limit: "1000", hasUserId: "true" });
+    const res = await jellyfinFetch(cfg, `/System/ActivityLog/Entries?${params}`);
+    if (!res.ok) return [];
+    const data = (await res.json()) as {
+        Items: Array<{ Date: string; Type: string }>;
+    };
+
+    const counts = new Map<string, number>();
+    for (const item of data.Items ?? []) {
+        if (item.Type !== "VideoPlaybackStopped" && item.Type !== "VideoPlayback") continue;
+        const d = new Date(item.Date);
+        const key = `${d.getUTCDay()}_${d.getUTCHours()}`;
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+
+    return Array.from(counts.entries()).map(([key, count]) => {
+        const [day, hour] = key.split("_").map(Number);
+        return { dayOfWeek: day, hour, count };
+    });
 }

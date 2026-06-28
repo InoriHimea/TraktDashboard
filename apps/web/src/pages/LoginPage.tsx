@@ -134,7 +134,7 @@ export default function LoginPage() {
                                 textShadow: "0 28px 90px rgba(124, 106, 247, 0.26)",
                             }}
                         >
-                            trakt
+                            media
                             <span style={{ color: "var(--color-accent)" }}>·</span>
                             dash
                         </h1>

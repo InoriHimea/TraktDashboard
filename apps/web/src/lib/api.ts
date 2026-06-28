@@ -20,6 +20,10 @@ import type {
     JellyfinEpisode,
     JellyfinMovie,
     JellyfinNowPlaying,
+    JellyfinLibrarySummary,
+    JellyfinActivityEntry,
+    JellyfinStatsTopContent,
+    JellyfinHeatmapCell,
     SearchResult,
     DiscoverItem,
     UpNextItem,
@@ -306,6 +310,15 @@ export const api = {
                 method: "DELETE",
             }),
         nowPlaying: () => request<ApiResponse<JellyfinNowPlaying | null>>("/jellyfin/now-playing"),
+        statsOverview: () =>
+            request<ApiResponse<JellyfinLibrarySummary>>("/jellyfin/stats/overview"),
+        statsActivity: (limit = 50) =>
+            request<ApiResponse<JellyfinActivityEntry[]>>(
+                `/jellyfin/stats/activity?limit=${limit}`,
+            ),
+        statsTopContent: () =>
+            request<ApiResponse<JellyfinStatsTopContent>>("/jellyfin/stats/top-content"),
+        statsHeatmap: () => request<ApiResponse<JellyfinHeatmapCell[]>>("/jellyfin/stats/heatmap"),
     },
     discover: {
         list: (mediaType: "show" | "movie", tab: "trending" | "popular", limit = 20) =>

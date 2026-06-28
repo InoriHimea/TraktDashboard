@@ -20,6 +20,7 @@ const HistoryPage = React.lazy(() => import("./pages/HistoryPage"));
 const DiscoverPage = React.lazy(() => import("./pages/DiscoverPage"));
 const ListsPage = React.lazy(() => import("./pages/ListsPage"));
 const CollectionPage = React.lazy(() => import("./pages/CollectionPage"));
+const JellyfinStatsPage = React.lazy(() => import("./pages/JellyfinStatsPage"));
 
 // Error Boundary component
 class ErrorBoundary extends React.Component<
@@ -164,6 +165,7 @@ export default function App() {
                                     <Route path="/watchlist" element={<WatchlistPage />} />
                                     <Route path="/history" element={<HistoryPage />} />
                                     <Route path="/stats" element={<StatsPage />} />
+                                    <Route path="/jellyfin" element={<JellyfinStatsPage />} />
                                     <Route
                                         path="/sync"
                                         element={<Navigate to="/settings" replace />}
