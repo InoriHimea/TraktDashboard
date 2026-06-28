@@ -895,7 +895,13 @@ async function upsertShowFromTrakt(
 
                 // Step 1: Always fetch base season (no language) for still_path
                 try {
-                    const baseTmdbSeason = await getTmdbSeason(tmdbId, s.number, undefined, userId);
+                    const baseTmdbSeason = await getTmdbSeason(
+                        tmdbId,
+                        s.number,
+                        undefined,
+                        userId,
+                        forceRefreshMetadata,
+                    );
                     for (const ep of baseTmdbSeason.episodes || []) {
                         tmdbEpisodeMap.set(ep.episode_number, {
                             translatedTitle: null,
@@ -921,7 +927,13 @@ async function upsertShowFromTrakt(
                 const fetchedSeasons = new Map<string, import("./tmdb.js").TmdbSeason>();
                 for (const lang of languageFallbackChain) {
                     try {
-                        const tmdbSeason = await getTmdbSeason(tmdbId, s.number, lang, userId);
+                        const tmdbSeason = await getTmdbSeason(
+                            tmdbId,
+                            s.number,
+                            lang,
+                            userId,
+                            forceRefreshMetadata,
+                        );
                         fetchedSeasons.set(lang, tmdbSeason);
                     } catch (e) {
                         console.warn(
