@@ -411,7 +411,7 @@ export function useJellyfinSeason(showTmdbId: number | null | undefined, season:
         queryKey: ["jellyfin-season", showTmdbId, season],
         queryFn: () => api.jellyfin.seasonEpisodes(showTmdbId!, season).then((r) => r.data ?? []),
         enabled: showTmdbId != null && showTmdbId > 0,
-        staleTime: 1000 * 60 * 10,
+        staleTime: 0,
         retry: false,
     });
 }
