@@ -22,6 +22,7 @@ import {
     useWatchlist,
     useAddToWatchlist,
     useRemoveFromWatchlist,
+    useSettings,
     useJellyfinMovie,
     useDeleteJellyfinItem,
     useCollectionCheck,
@@ -112,7 +113,11 @@ export default function MovieDetailPage() {
     const { data: collectionData } = useCollectionCheck(isValidId ? { movieId } : {});
     const inCollection = collectionData?.inCollection ?? false;
 
-    const { data: jellyfinMovie = null } = useJellyfinMovie(progress?.movie.tmdbId ?? null);
+    const { data: settings } = useSettings();
+    const jellyfinConfigured = !!settings?.jellyfinUrl;
+    const { data: jellyfinMovie = null } = useJellyfinMovie(
+        jellyfinConfigured ? (progress?.movie.tmdbId ?? null) : null,
+    );
     const deleteJellyfinItem = useDeleteJellyfinItem();
     const [confirmJellyfinDeleteOpen, setConfirmJellyfinDeleteOpen] = useState(false);
 

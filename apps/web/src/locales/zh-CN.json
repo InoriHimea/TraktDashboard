@@ -179,7 +179,13 @@
         "markSeasonWatchedError": "标记失败，请重试",
         "seasonLabel": "第 {{number}} 季",
         "specials": "特别篇",
-        "episodeCount": "{{watched}}/{{total}} 集"
+        "episodeCount": "{{watched}}/{{total}} 集",
+        "deleteSeasonJellyfin": "删除本季 Jellyfin 文件",
+        "deleteSeasonJellyfinTitle": "从 Jellyfin 删除本季",
+        "deleteSeasonJellyfinDesc": "将删除第 {{season}} 季共 {{count}} 集的本地文件，此操作不可恢复。",
+        "deleteSeasonJellyfinConfirm": "确认删除",
+        "deleteSeasonJellyfinSuccess": "已从 Jellyfin 删除本季文件",
+        "deleteSeasonJellyfinFailed": "删除失败，请重试"
     },
     "history": {
         "title": "观看历史",

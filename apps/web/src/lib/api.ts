@@ -290,6 +290,17 @@ export const api = {
             ),
         movie: (movieTmdbId: number) =>
             request<ApiResponse<JellyfinMovie | null>>(`/jellyfin/movie/${movieTmdbId}`),
+        seasonEpisodes: (showTmdbId: number, season: number) =>
+            request<ApiResponse<JellyfinEpisode[]>>(
+                `/jellyfin/show/${showTmdbId}/season/${season}`,
+            ),
+        deleteSeasonEpisodes: (showTmdbId: number, season: number) =>
+            request<{ ok: boolean; deleted: number }>(
+                `/jellyfin/show/${showTmdbId}/season/${season}`,
+                {
+                    method: "DELETE",
+                },
+            ),
         deleteItem: (jellyfinItemId: string) =>
             request<{ ok: boolean }>(`/jellyfin/items/${jellyfinItemId}`, {
                 method: "DELETE",

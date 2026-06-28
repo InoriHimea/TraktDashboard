@@ -5,6 +5,7 @@ import { z } from "zod";
 import {
     fetchJellyfinLibraries,
     findJellyfinEpisode,
+    findJellyfinSeasonEpisodes,
     findJellyfinMovie,
     deleteJellyfinItem,
     getActiveSessions,
@@ -163,6 +164,43 @@ jellyfinRoutes.get("/movie/:movieTmdbId", async (c) => {
     try {
         const movie = await findJellyfinMovie(cfg, movieTmdbId);
         return c.json({ data: movie });
+    } catch (err) {
+        return c.json({ error: String(err) }, 502);
+    }
+});
+
+// GET /api/jellyfin/show/:showTmdbId/season/:season — list episodes in Jellyfin for a season
+jellyfinRoutes.get("/show/:showTmdbId/season/:season", async (c) => {
+    const userId = c.get("userId");
+    const cfg = await getJellyfinConfig(userId);
+    if (!cfg) return c.json({ error: "Jellyfin not configured" }, 503);
+
+    const showTmdbId = parseBoundedInt(c.req.param("showTmdbId"), -1, 1, Number.MAX_SAFE_INTEGER);
+    const season = parseBoundedInt(c.req.param("season"), -1, 0, 1000);
+    if (showTmdbId < 1 || season < 0) return c.json({ error: "Invalid parameters" }, 400);
+
+    try {
+        const episodes = await findJellyfinSeasonEpisodes(cfg, showTmdbId, season);
+        return c.json({ data: episodes });
+    } catch (err) {
+        return c.json({ error: String(err) }, 502);
+    }
+});
+
+// DELETE /api/jellyfin/show/:showTmdbId/season/:season — delete all episode files of a season
+jellyfinRoutes.delete("/show/:showTmdbId/season/:season", async (c) => {
+    const userId = c.get("userId");
+    const cfg = await getJellyfinConfig(userId);
+    if (!cfg) return c.json({ error: "Jellyfin not configured" }, 503);
+
+    const showTmdbId = parseBoundedInt(c.req.param("showTmdbId"), -1, 1, Number.MAX_SAFE_INTEGER);
+    const season = parseBoundedInt(c.req.param("season"), -1, 0, 1000);
+    if (showTmdbId < 1 || season < 0) return c.json({ error: "Invalid parameters" }, 400);
+
+    try {
+        const episodes = await findJellyfinSeasonEpisodes(cfg, showTmdbId, season);
+        await Promise.all(episodes.map((ep) => deleteJellyfinItem(cfg, ep.id)));
+        return c.json({ ok: true, deleted: episodes.length });
     } catch (err) {
         return c.json({ error: String(err) }, 502);
     }

@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, RefreshCw, CheckCheck, Archive } from "lucide-react";
+import { ArrowLeft, RefreshCw, CheckCheck, Archive, Trash2 } from "lucide-react";
 import {
     useShowDetail,
     useResetProgress,
@@ -11,6 +11,9 @@ import {
     useAddToWatchlist,
     useRemoveFromWatchlist,
     useCollectionCheck,
+    useSettings,
+    useJellyfinSeason,
+    useDeleteJellyfinSeason,
 } from "../hooks";
 import { HeroSection } from "../components/HeroSection";
 import { SeasonTab } from "../components/SeasonTab";
@@ -116,6 +119,19 @@ export default function ShowDetailPage() {
     const { toast } = useToast();
     const { data: collectionData } = useCollectionCheck(isValidId ? { showId } : {});
     const inCollection = collectionData?.inCollection ?? false;
+
+    const { data: settings } = useSettings();
+    const jellyfinConfigured = !!settings?.jellyfinUrl;
+
+    const [jellyfinDeleteSeasonConfirmOpen, setJellyfinDeleteSeasonConfirmOpen] = useState(false);
+    const deleteJellyfinSeason = useDeleteJellyfinSeason();
+
+    // Query Jellyfin for the currently active season — enabled only once show data is loaded
+    const jellyfinSeasonNumber = activeSeason ?? progress?.seasons?.[0]?.seasonNumber ?? 1;
+    const { data: jellyfinSeasonEpisodes = [] } = useJellyfinSeason(
+        jellyfinConfigured ? (progress?.show?.tmdbId ?? null) : null,
+        jellyfinSeasonNumber,
+    );
 
     if (isLoading) return <PageSkeleton />;
     if (error) return <PageError onRetry={() => refetch()} />;
@@ -374,43 +390,65 @@ export default function ShowDetailPage() {
                                     total: currentSeason.airedCount,
                                 })}
                             </span>
-                            {currentSeason.watchedCount < currentSeason.airedCount && (
-                                <Button
-                                    type="button"
-                                    variant="primary"
-                                    color="emerald"
-                                    size="sm"
-                                    loading={markSeasonWatched.isPending}
-                                    icon={<CheckCheck className="h-3.5 w-3.5" />}
-                                    onClick={() =>
-                                        markSeasonWatched.mutate(
-                                            { season: currentSeason.seasonNumber, watchedAt: null },
-                                            {
-                                                onSuccess: () =>
-                                                    toast(
-                                                        t("shows.markSeasonWatchedSuccess"),
-                                                        "success",
-                                                    ),
-                                                onError: () =>
-                                                    toast(
-                                                        t("shows.markSeasonWatchedError"),
-                                                        "error",
-                                                        {
-                                                            label: t("common.retry"),
-                                                            onClick: () =>
-                                                                markSeasonWatched.mutate({
-                                                                    season: currentSeason.seasonNumber,
-                                                                    watchedAt: null,
-                                                                }),
-                                                        },
-                                                    ),
-                                            },
-                                        )
-                                    }
-                                >
-                                    {t("shows.markSeasonWatched")}
-                                </Button>
-                            )}
+                            <div className="flex items-center gap-2">
+                                {/* 从 Jellyfin 删除本季 — 只在已看完且 Jellyfin 存在文件时显示 */}
+                                {jellyfinConfigured &&
+                                    jellyfinSeasonEpisodes.length > 0 &&
+                                    currentSeason.watchedCount > 0 &&
+                                    currentSeason.watchedCount >= currentSeason.airedCount && (
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            color="rose"
+                                            size="sm"
+                                            loading={deleteJellyfinSeason.isPending}
+                                            icon={<Trash2 className="h-3.5 w-3.5" />}
+                                            onClick={() => setJellyfinDeleteSeasonConfirmOpen(true)}
+                                        >
+                                            {t("shows.deleteSeasonJellyfin")}
+                                        </Button>
+                                    )}
+                                {currentSeason.watchedCount < currentSeason.airedCount && (
+                                    <Button
+                                        type="button"
+                                        variant="primary"
+                                        color="emerald"
+                                        size="sm"
+                                        loading={markSeasonWatched.isPending}
+                                        icon={<CheckCheck className="h-3.5 w-3.5" />}
+                                        onClick={() =>
+                                            markSeasonWatched.mutate(
+                                                {
+                                                    season: currentSeason.seasonNumber,
+                                                    watchedAt: null,
+                                                },
+                                                {
+                                                    onSuccess: () =>
+                                                        toast(
+                                                            t("shows.markSeasonWatchedSuccess"),
+                                                            "success",
+                                                        ),
+                                                    onError: () =>
+                                                        toast(
+                                                            t("shows.markSeasonWatchedError"),
+                                                            "error",
+                                                            {
+                                                                label: t("common.retry"),
+                                                                onClick: () =>
+                                                                    markSeasonWatched.mutate({
+                                                                        season: currentSeason.seasonNumber,
+                                                                        watchedAt: null,
+                                                                    }),
+                                                            },
+                                                        ),
+                                                },
+                                            )
+                                        }
+                                    >
+                                        {t("shows.markSeasonWatched")}
+                                    </Button>
+                                )}
+                            </div>
                         </div>
                     )}
 
@@ -462,6 +500,32 @@ export default function ShowDetailPage() {
                     setResetConfirmOpen(false);
                     setResetError(null);
                 }}
+            />
+
+            <ConfirmDialog
+                isOpen={jellyfinDeleteSeasonConfirmOpen}
+                title={t("shows.deleteSeasonJellyfinTitle")}
+                description={t("shows.deleteSeasonJellyfinDesc", {
+                    season: String(currentSeasonNumber),
+                    count: String(jellyfinSeasonEpisodes.length),
+                })}
+                confirmText={t("shows.deleteSeasonJellyfinConfirm")}
+                confirmColor="rose"
+                cancelText={t("common.cancel")}
+                isLoading={deleteJellyfinSeason.isPending}
+                onConfirm={async () => {
+                    try {
+                        await deleteJellyfinSeason.mutateAsync({
+                            showTmdbId: show.tmdbId!,
+                            season: currentSeasonNumber,
+                        });
+                        toast(t("shows.deleteSeasonJellyfinSuccess"), "success");
+                    } catch {
+                        toast(t("shows.deleteSeasonJellyfinFailed"), "error");
+                    }
+                    setJellyfinDeleteSeasonConfirmOpen(false);
+                }}
+                onCancel={() => setJellyfinDeleteSeasonConfirmOpen(false)}
             />
 
             {/* Watch History Panel */}

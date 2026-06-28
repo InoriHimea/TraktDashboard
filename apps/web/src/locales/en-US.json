@@ -179,7 +179,13 @@
         "markSeasonWatchedError": "Failed to mark season, please try again",
         "seasonLabel": "Season {{number}}",
         "specials": "Specials",
-        "episodeCount": "{{watched}}/{{total}} episodes"
+        "episodeCount": "{{watched}}/{{total}} episodes",
+        "deleteSeasonJellyfin": "Delete from Jellyfin",
+        "deleteSeasonJellyfinTitle": "Delete Season from Jellyfin",
+        "deleteSeasonJellyfinDesc": "This will permanently delete {{count}} episode file(s) for Season {{season}} from Jellyfin. This cannot be undone.",
+        "deleteSeasonJellyfinConfirm": "Delete Files",
+        "deleteSeasonJellyfinSuccess": "Season files deleted from Jellyfin",
+        "deleteSeasonJellyfinFailed": "Delete failed, please try again"
     },
     "history": {
         "title": "Watch History",

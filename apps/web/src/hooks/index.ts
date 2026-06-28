@@ -406,6 +406,27 @@ export function useJellyfinMovie(movieTmdbId: number | null | undefined) {
     });
 }
 
+export function useJellyfinSeason(showTmdbId: number | null | undefined, season: number) {
+    return useQuery<JellyfinEpisode[]>({
+        queryKey: ["jellyfin-season", showTmdbId, season],
+        queryFn: () => api.jellyfin.seasonEpisodes(showTmdbId!, season).then((r) => r.data ?? []),
+        enabled: showTmdbId != null && showTmdbId > 0,
+        staleTime: 1000 * 60 * 10,
+        retry: false,
+    });
+}
+
+export function useDeleteJellyfinSeason() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ showTmdbId, season }: { showTmdbId: number; season: number }) =>
+            api.jellyfin.deleteSeasonEpisodes(showTmdbId, season),
+        onSuccess: (_data, { showTmdbId }) => {
+            qc.invalidateQueries({ queryKey: ["jellyfin-season", showTmdbId] });
+        },
+    });
+}
+
 export function useDeleteJellyfinItem() {
     const qc = useQueryClient();
     return useMutation({

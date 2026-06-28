@@ -40,6 +40,31 @@ export async function fetchJellyfinLibraries(cfg: JellyfinConfig): Promise<Jelly
     }));
 }
 
+export async function findJellyfinSeasonEpisodes(
+    cfg: JellyfinConfig,
+    showTmdbId: number,
+    seasonNumber: number,
+): Promise<JellyfinEpisode[]> {
+    const params = new URLSearchParams({
+        IncludeItemTypes: "Episode",
+        Recursive: "true",
+        Fields: "Path",
+        AnyProviderIdEquals: `Tmdb.${showTmdbId}`,
+        ParentIndexNumber: String(seasonNumber),
+    });
+    const res = await jellyfinFetch(cfg, `/Items?${params}`);
+    if (!res.ok) throw new Error(`Jellyfin season episodes fetch failed: ${res.status}`);
+    const data = (await res.json()) as {
+        Items: Array<{ Id: string; Name: string; SeriesName?: string; Path?: string }>;
+    };
+    return (data.Items ?? []).map((item) => ({
+        id: item.Id,
+        name: item.Name ?? "",
+        seriesName: item.SeriesName ?? "",
+        path: item.Path ?? null,
+    }));
+}
+
 export async function findJellyfinEpisode(
     cfg: JellyfinConfig,
     showTmdbId: number,
