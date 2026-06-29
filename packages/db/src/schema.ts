@@ -113,7 +113,7 @@ export const movies = pgTable(
     "movies",
     {
         id: serial("id").primaryKey(),
-        tmdbId: integer("tmdb_id").notNull().unique(),
+        tmdbId: integer("tmdb_id").unique(),
         imdbId: text("imdb_id"),
         traktId: integer("trakt_id"),
         traktSlug: text("trakt_slug"),

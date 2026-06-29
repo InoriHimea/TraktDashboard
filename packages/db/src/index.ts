@@ -217,6 +217,12 @@ export async function runMigrations() {
         ADD COLUMN IF NOT EXISTS "backup_active_provider" text
     `);
 
+    // 0019 — movies.tmdb_id 允许为空，为无 TMDB 链接的电影（如部分中文影片）保存 Trakt 记录
+    await db.execute(sql`ALTER TABLE "movies" ALTER COLUMN "tmdb_id" DROP NOT NULL`);
+    await db.execute(
+        sql`CREATE UNIQUE INDEX IF NOT EXISTS "movies_trakt_id_unique_idx" ON "movies"("trakt_id") WHERE "trakt_id" IS NOT NULL`,
+    );
+
     await client.end();
     console.log("[db] Migrations complete");
 }

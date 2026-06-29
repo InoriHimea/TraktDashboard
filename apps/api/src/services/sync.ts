@@ -460,13 +460,8 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
                             let movieId: number;
                             if (existingMovie) {
                                 movieId = existingMovie.id;
-                            } else {
-                                if (!tmdbId) {
-                                    console.warn(
-                                        `[sync:incr] Skipping movie "${movieTitle}" — missing TMDB id`,
-                                    );
-                                    return;
-                                }
+                            } else if (tmdbId) {
+                                // 新电影且有 TMDB ID：拉取元数据后 upsert
                                 let title = movieTitle;
                                 let posterPath: string | null = null;
                                 let backdropPath: string | null = null;
@@ -492,7 +487,7 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
                                 const [upserted] = await db
                                     .insert(movies)
                                     .values({
-                                        tmdbId: tmdbId,
+                                        tmdbId,
                                         traktId: mov.ids.trakt,
                                         traktSlug: mov.ids.slug,
                                         imdbId: mov.ids.imdb ?? null,
@@ -511,6 +506,30 @@ export async function triggerIncrementalSync(userId: number): Promise<void> {
                                     })
                                     .returning({ id: movies.id });
                                 movieId = upserted.id;
+                            } else {
+                                // 无 TMDB ID 的新电影（如部分中文电影）：仅存 Trakt 元数据
+                                console.warn(
+                                    `[sync:incr] "${movieTitle}" 无 TMDB ID，使用 Trakt 元数据存储`,
+                                );
+                                const mov = entries[0].movie;
+                                const [newMovie] = await db
+                                    .insert(movies)
+                                    .values({
+                                        tmdbId: null,
+                                        traktId: movieTraktId,
+                                        traktSlug: mov.ids.slug,
+                                        imdbId: mov.ids.imdb ?? null,
+                                        title: movieTitle,
+                                        overview: null,
+                                        releaseDate: null,
+                                        runtime: null,
+                                        posterPath: null,
+                                        backdropPath: null,
+                                        genres: [],
+                                        lastSyncedAt: new Date(),
+                                    })
+                                    .returning({ id: movies.id });
+                                movieId = newMovie.id;
                             }
 
                             for (const entry of entries) {
@@ -1553,90 +1572,72 @@ export async function syncMovies(userId: number): Promise<void> {
                 const tmdbId = remoteMovie?.ids.tmdb;
                 let title = remoteMovie?.title ?? `trakt:${traktId}`;
 
-                if (!tmdbId) {
-                    console.warn(`[sync:movies] Skipping "${title}" — missing TMDB id`);
-                    return;
-                }
-
                 try {
-                    // Fetch TMDB images (degrade gracefully on failure)
-                    let posterPath: string | null = null;
-                    let backdropPath: string | null = null;
-                    let overview: string | null = null;
-                    let releaseDate: string | null = null;
-                    let runtime: number | null = null;
-                    let genres: string[] = [];
+                    let movieId: number;
 
-                    try {
-                        const baseMovie = await getTmdbMovie(tmdbId, userId);
-                        let localizedTitle: string | null = null;
-                        let localizedOverview: string | null = null;
+                    if (tmdbId) {
+                        // 有 TMDB ID：拉取完整元数据并 upsert
+                        let posterPath: string | null = null;
+                        let backdropPath: string | null = null;
+                        let overview: string | null = null;
+                        let releaseDate: string | null = null;
+                        let runtime: number | null = null;
+                        let genres: string[] = [];
 
-                        if (displayLanguage) {
-                            const languageFallbackChain = buildLanguageFallbackChain(
-                                displayLanguage,
-                                baseMovie.original_language,
-                            );
-                            const translations = baseMovie.translations?.translations || [];
+                        try {
+                            const baseMovie = await getTmdbMovie(tmdbId, userId);
+                            let localizedTitle: string | null = null;
+                            let localizedOverview: string | null = null;
 
-                            for (const language of languageFallbackChain) {
-                                const [langCode, countryCode] = language.split("-");
-                                const match = translations.find((t) =>
-                                    countryCode
-                                        ? t.iso_639_1 === langCode &&
-                                          t.iso_3166_1 === countryCode.toUpperCase()
-                                        : t.iso_639_1 === langCode,
+                            if (displayLanguage) {
+                                const languageFallbackChain = buildLanguageFallbackChain(
+                                    displayLanguage,
+                                    baseMovie.original_language,
                                 );
+                                const translations = baseMovie.translations?.translations || [];
 
-                                if (match && match.data) {
-                                    if (
-                                        !localizedTitle &&
-                                        match.data.title &&
-                                        match.data.title !== baseMovie.original_title
-                                    ) {
-                                        localizedTitle = match.data.title;
+                                for (const language of languageFallbackChain) {
+                                    const [langCode, countryCode] = language.split("-");
+                                    const match = translations.find((t) =>
+                                        countryCode
+                                            ? t.iso_639_1 === langCode &&
+                                              t.iso_3166_1 === countryCode.toUpperCase()
+                                            : t.iso_639_1 === langCode,
+                                    );
+
+                                    if (match && match.data) {
+                                        if (
+                                            !localizedTitle &&
+                                            match.data.title &&
+                                            match.data.title !== baseMovie.original_title
+                                        ) {
+                                            localizedTitle = match.data.title;
+                                        }
+                                        if (!localizedOverview && match.data.overview) {
+                                            localizedOverview = match.data.overview;
+                                        }
+                                        if (localizedTitle && localizedOverview) break;
                                     }
-                                    if (!localizedOverview && match.data.overview) {
-                                        localizedOverview = match.data.overview;
-                                    }
-                                    if (localizedTitle && localizedOverview) break;
                                 }
                             }
+
+                            title = localizedTitle || baseMovie.title || title;
+                            posterPath = baseMovie.poster_path || null;
+                            backdropPath = baseMovie.backdrop_path || null;
+                            overview = localizedOverview || baseMovie.overview || null;
+                            releaseDate = baseMovie.release_date || null;
+                            runtime = baseMovie.runtime ?? null;
+                            genres = baseMovie.genres?.map((g) => g.name) || [];
+                        } catch (e) {
+                            console.warn(
+                                `[sync:movies] TMDB fetch failed for "${title}" (tmdb:${tmdbId}): ${toErrorMessage(e)}`,
+                            );
                         }
 
-                        title = localizedTitle || baseMovie.title || title;
-                        posterPath = baseMovie.poster_path || null;
-                        backdropPath = baseMovie.backdrop_path || null;
-                        overview = localizedOverview || baseMovie.overview || null;
-                        releaseDate = baseMovie.release_date || null;
-                        runtime = baseMovie.runtime ?? null;
-                        genres = baseMovie.genres?.map((g) => g.name) || [];
-                    } catch (e) {
-                        console.warn(
-                            `[sync:movies] TMDB fetch failed for "${title}" (tmdb:${tmdbId}): ${toErrorMessage(e)}`,
-                        );
-                    }
-
-                    // Upsert movie record
-                    const [movie] = await db
-                        .insert(movies)
-                        .values({
-                            tmdbId,
-                            traktId: remoteMovie.ids.trakt,
-                            traktSlug: remoteMovie.ids.slug,
-                            imdbId: remoteMovie.ids.imdb || null,
-                            title,
-                            overview,
-                            releaseDate,
-                            runtime,
-                            posterPath,
-                            backdropPath,
-                            genres,
-                            lastSyncedAt: new Date(),
-                        })
-                        .onConflictDoUpdate({
-                            target: [movies.tmdbId],
-                            set: {
+                        const [movie] = await db
+                            .insert(movies)
+                            .values({
+                                tmdbId,
                                 traktId: remoteMovie.ids.trakt,
                                 traktSlug: remoteMovie.ids.slug,
                                 imdbId: remoteMovie.ids.imdb || null,
@@ -1648,18 +1649,66 @@ export async function syncMovies(userId: number): Promise<void> {
                                 backdropPath,
                                 genres,
                                 lastSyncedAt: new Date(),
-                            },
-                        })
-                        .returning({ id: movies.id });
+                            })
+                            .onConflictDoUpdate({
+                                target: [movies.tmdbId],
+                                set: {
+                                    traktId: remoteMovie.ids.trakt,
+                                    traktSlug: remoteMovie.ids.slug,
+                                    imdbId: remoteMovie.ids.imdb || null,
+                                    title,
+                                    overview,
+                                    releaseDate,
+                                    runtime,
+                                    posterPath,
+                                    backdropPath,
+                                    genres,
+                                    lastSyncedAt: new Date(),
+                                },
+                            })
+                            .returning({ id: movies.id });
+                        movieId = movie.id;
+                    } else {
+                        // 无 TMDB ID（如部分中文电影）：按 traktId 查找或插入，保留 Trakt 元数据
+                        console.warn(`[sync:movies] "${title}" 无 TMDB ID，使用 Trakt 元数据存储`);
+                        const [existing] = await db
+                            .select({ id: movies.id })
+                            .from(movies)
+                            .where(eq(movies.traktId, traktId));
 
-                    affectedMovieIds.add(movie.id);
+                        if (existing) {
+                            movieId = existing.id;
+                        } else {
+                            const [newMovie] = await db
+                                .insert(movies)
+                                .values({
+                                    tmdbId: null,
+                                    traktId,
+                                    traktSlug: remoteMovie.ids.slug,
+                                    imdbId: remoteMovie.ids.imdb || null,
+                                    title,
+                                    overview: null,
+                                    releaseDate: null,
+                                    runtime: null,
+                                    posterPath: null,
+                                    backdropPath: null,
+                                    genres: [],
+                                    lastSyncedAt: new Date(),
+                                })
+                                .returning({ id: movies.id });
+                            movieId = newMovie.id;
+                        }
+                    }
 
+                    affectedMovieIds.add(movieId);
+
+                    // 有历史条目时同步每次观看记录
                     for (const entry of historyEntries) {
                         await db
                             .insert(watchHistory)
                             .values({
                                 userId,
-                                movieId: movie.id,
+                                movieId,
                                 episodeId: null,
                                 mediaType: "movie",
                                 watchedAt: new Date(entry.watched_at),
@@ -1670,13 +1719,40 @@ export async function syncMovies(userId: number): Promise<void> {
                                 target: watchHistory.traktPlayId,
                                 set: {
                                     userId,
-                                    movieId: movie.id,
+                                    movieId,
                                     episodeId: null,
                                     mediaType: "movie",
                                     watchedAt: new Date(entry.watched_at),
                                     source: "trakt",
                                 },
                             });
+                    }
+
+                    // 兜底：watched 摘要中 plays>0 但无 history 条目时（Trakt 旧数据或手动清除过），
+                    // 直接用摘要数据写入进度，避免 watchCount 被重置为 0
+                    if (historyEntries.length === 0 && wm && (wm.plays ?? 0) > 0) {
+                        await db
+                            .insert(userMovieProgress)
+                            .values({
+                                userId,
+                                movieId,
+                                watchCount: wm.plays,
+                                lastWatchedAt: wm.last_watched_at
+                                    ? new Date(wm.last_watched_at)
+                                    : null,
+                            })
+                            .onConflictDoUpdate({
+                                target: [userMovieProgress.userId, userMovieProgress.movieId],
+                                set: {
+                                    watchCount: wm.plays,
+                                    lastWatchedAt: wm.last_watched_at
+                                        ? new Date(wm.last_watched_at)
+                                        : null,
+                                    updatedAt: new Date(),
+                                },
+                            });
+                        // 不需要 recalcMovieProgress，已直接写入
+                        affectedMovieIds.delete(movieId);
                     }
 
                     console.log(`[sync:movies] Synced "${title}"`);

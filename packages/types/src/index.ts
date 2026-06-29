@@ -541,7 +541,7 @@ export interface WatchResetCursor {
 
 export interface Movie {
     id: number;
-    tmdbId: number;
+    tmdbId: number | null;
     imdbId: string | null;
     traktId: number | null;
     traktSlug: string | null;

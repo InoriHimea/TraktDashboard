@@ -18,12 +18,12 @@ type TraktIds = { trakt?: number; tmdb?: number; imdb?: string };
 
 function toTraktIds(media: {
     traktId: number | null;
-    tmdbId: number;
+    tmdbId: number | null;
     imdbId: string | null;
 }): TraktIds {
     return {
         ...(media.traktId ? { trakt: media.traktId } : {}),
-        tmdb: media.tmdbId,
+        ...(media.tmdbId ? { tmdb: media.tmdbId } : {}),
         ...(media.imdbId ? { imdb: media.imdbId } : {}),
     };
 }
