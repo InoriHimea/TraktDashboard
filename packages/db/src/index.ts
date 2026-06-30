@@ -223,6 +223,26 @@ export async function runMigrations() {
         sql`CREATE UNIQUE INDEX IF NOT EXISTS "movies_trakt_id_unique_idx" ON "movies"("trakt_id") WHERE "trakt_id" IS NOT NULL`,
     );
 
+    // 0020 — Jellyfin 两阶段自动删除队列
+    await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS "jellyfin_delete_queue" (
+            "id" serial PRIMARY KEY NOT NULL,
+            "user_id" integer NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+            "show_id" integer NOT NULL REFERENCES "shows"("id") ON DELETE cascade,
+            "season_number" integer,
+            "queued_at" timestamp with time zone DEFAULT now() NOT NULL
+        )
+    `);
+    await db.execute(
+        sql`CREATE UNIQUE INDEX IF NOT EXISTS "jdq_show_idx" ON "jellyfin_delete_queue" ("user_id", "show_id") WHERE "season_number" IS NULL`,
+    );
+    await db.execute(
+        sql`CREATE UNIQUE INDEX IF NOT EXISTS "jdq_season_idx" ON "jellyfin_delete_queue" ("user_id", "show_id", "season_number") WHERE "season_number" IS NOT NULL`,
+    );
+    await db.execute(
+        sql`CREATE INDEX IF NOT EXISTS "jdq_user_queued_idx" ON "jellyfin_delete_queue" ("user_id", "queued_at")`,
+    );
+
     await client.end();
     console.log("[db] Migrations complete");
 }

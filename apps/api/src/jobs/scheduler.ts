@@ -193,6 +193,17 @@ export async function startScheduler() {
                 await runScheduledBackup(userId).catch((e) =>
                     console.error(`[scheduler] Scheduled backup failed for user ${userId}:`, e),
                 );
+            } else if (job.name === "jellyfin-auto-delete") {
+                try {
+                    const { runJellyfinAutoDelete } = await import("./jellyfin-auto-delete.js");
+                    const { deleted, queued } = await runJellyfinAutoDelete();
+                    console.log(
+                        `[scheduler] Jellyfin auto-delete: deleted=${deleted} queued=${queued}`,
+                    );
+                } catch (e) {
+                    console.error(`[scheduler] Jellyfin auto-delete failed:`, e);
+                    throw e;
+                }
             }
         },
         { connection: redis, concurrency: 1 },
@@ -241,6 +252,22 @@ export async function startScheduler() {
         console.log(`[scheduler] Registered daily airing-reminder job`);
     } catch (e) {
         console.error(`[scheduler] Failed to register airing-reminder job:`, e);
+    }
+
+    // Register daily Jellyfin auto-delete job — 04:00 UTC daily.
+    try {
+        await upsertRepeatableJob(
+            queue,
+            "jellyfin-auto-delete",
+            "jellyfin-auto-delete-daily",
+            {},
+            {
+                pattern: "0 4 * * *",
+            },
+        );
+        console.log(`[scheduler] Registered daily Jellyfin auto-delete job`);
+    } catch (e) {
+        console.error(`[scheduler] Failed to register Jellyfin auto-delete job:`, e);
     }
 
     console.log(`[scheduler] Scheduler started`);

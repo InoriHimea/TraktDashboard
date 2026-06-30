@@ -52,6 +52,7 @@ export async function fetchJellyfinLibraries(cfg: JellyfinConfig): Promise<Jelly
 async function findJellyfinSeriesId(
     cfg: JellyfinConfig,
     showTmdbId: number,
+    ancestorIds?: string[],
 ): Promise<string | null> {
     // AnyProviderIdEquals is broken in some Jellyfin builds (returns unfiltered results).
     // Fetch all Series with their ProviderIds and filter client-side instead.
@@ -61,6 +62,9 @@ async function findJellyfinSeriesId(
         Fields: "ProviderIds",
         Limit: "2000",
     });
+    if (ancestorIds && ancestorIds.length > 0) {
+        params.set("AncestorIds", ancestorIds.join(","));
+    }
     const res = await jellyfinFetch(cfg, `/Items?${params}`);
     if (!res.ok) return null;
     const data = (await res.json()) as {
@@ -69,6 +73,39 @@ async function findJellyfinSeriesId(
     const target = String(showTmdbId);
     const match = (data.Items ?? []).find((item) => item.ProviderIds?.["Tmdb"] === target);
     return match?.Id ?? null;
+}
+
+export async function deleteJellyfinSeries(
+    cfg: JellyfinConfig,
+    showTmdbId: number,
+    ancestorIds?: string[],
+): Promise<boolean> {
+    const seriesId = await findJellyfinSeriesId(cfg, showTmdbId, ancestorIds);
+    if (!seriesId) return false;
+    await deleteJellyfinItem(cfg, seriesId);
+    return true;
+}
+
+export async function deleteJellyfinSeason(
+    cfg: JellyfinConfig,
+    showTmdbId: number,
+    seasonNumber: number,
+    ancestorIds?: string[],
+): Promise<boolean> {
+    const seriesId = await findJellyfinSeriesId(cfg, showTmdbId, ancestorIds);
+    if (!seriesId) return false;
+
+    // GET /Shows/{seriesId}/Seasons returns season items with their IndexNumber
+    const res = await jellyfinFetch(cfg, `/Shows/${seriesId}/Seasons`);
+    if (!res.ok) throw new Error(`Jellyfin seasons fetch failed: ${res.status}`);
+    const data = (await res.json()) as {
+        Items: Array<{ Id: string; IndexNumber?: number }>;
+    };
+    const seasonItem = (data.Items ?? []).find((s) => s.IndexNumber === seasonNumber);
+    if (!seasonItem) return false;
+
+    await deleteJellyfinItem(cfg, seasonItem.Id);
+    return true;
 }
 
 export async function findJellyfinSeasonEpisodes(

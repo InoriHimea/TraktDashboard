@@ -520,3 +520,22 @@ export const backupRuns = pgTable(
     },
     (t) => [index("backup_runs_user_idx").on(t.userId)],
 );
+
+// ─── Jellyfin Delete Queue ──────────────────────────────────────────────────────
+
+export const jellyfinDeleteQueue = pgTable(
+    "jellyfin_delete_queue",
+    {
+        id: serial("id").primaryKey(),
+        userId: integer("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
+        showId: integer("show_id")
+            .notNull()
+            .references(() => shows.id, { onDelete: "cascade" }),
+        // null = 整剧删除，非 null = 指定季
+        seasonNumber: integer("season_number"),
+        queuedAt: timestamp("queued_at", { withTimezone: true }).defaultNow().notNull(),
+    },
+    (t) => [index("jdq_user_idx").on(t.userId)],
+);
