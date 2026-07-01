@@ -24,6 +24,8 @@ import type {
     JellyfinActivityEntry,
     JellyfinStatsTopContent,
     JellyfinHeatmapCell,
+    JellyfinDeleteQueueEntry,
+    JellyfinDeleteHistoryEntry,
     SearchResult,
     DiscoverItem,
     UpNextItem,
@@ -319,6 +321,14 @@ export const api = {
         statsTopContent: () =>
             request<ApiResponse<JellyfinStatsTopContent>>("/jellyfin/stats/top-content"),
         statsHeatmap: () => request<ApiResponse<JellyfinHeatmapCell[]>>("/jellyfin/stats/heatmap"),
+        deleteQueue: () =>
+            request<ApiResponse<JellyfinDeleteQueueEntry[]>>("/jellyfin/delete-queue"),
+        cancelDeleteQueue: (id: number) =>
+            request<{ ok: boolean }>(`/jellyfin/delete-queue/${id}`, { method: "DELETE" }),
+        deleteHistory: (limit = 20) =>
+            request<ApiResponse<JellyfinDeleteHistoryEntry[]>>(
+                `/jellyfin/delete-history?limit=${limit}`,
+            ),
     },
     discover: {
         list: (mediaType: "show" | "movie", tab: "trending" | "popular", limit = 20) =>

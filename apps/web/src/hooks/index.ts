@@ -22,6 +22,8 @@ import type {
     JellyfinActivityEntry,
     JellyfinStatsTopContent,
     JellyfinHeatmapCell,
+    JellyfinDeleteQueueEntry,
+    JellyfinDeleteHistoryEntry,
     DiscoverItem,
     UpNextItem,
     UserRating,
@@ -428,6 +430,32 @@ export function useDeleteJellyfinSeason() {
         onSuccess: (_data, { showTmdbId }) => {
             qc.invalidateQueries({ queryKey: ["jellyfin-season", showTmdbId] });
         },
+    });
+}
+
+// ─── Jellyfin Auto-Delete Queue / History ─────────────────────────────────────
+
+export function useJellyfinDeleteQueue() {
+    return useQuery<JellyfinDeleteQueueEntry[]>({
+        queryKey: queryKeys.jellyfinDeleteQueue,
+        queryFn: () => api.jellyfin.deleteQueue().then((r) => r.data),
+        staleTime: 1000 * 60,
+    });
+}
+
+export function useCancelJellyfinDelete() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => api.jellyfin.cancelDeleteQueue(id),
+        onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.jellyfinDeleteQueue }),
+    });
+}
+
+export function useJellyfinDeleteHistory(limit = 20) {
+    return useQuery<JellyfinDeleteHistoryEntry[]>({
+        queryKey: queryKeys.jellyfinDeleteHistory(limit),
+        queryFn: () => api.jellyfin.deleteHistory(limit).then((r) => r.data),
+        staleTime: 1000 * 60,
     });
 }
 

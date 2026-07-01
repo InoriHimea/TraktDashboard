@@ -486,6 +486,25 @@ export interface JellyfinHeatmapCell {
     count: number;
 }
 
+export interface JellyfinDeleteQueueEntry {
+    id: number;
+    seasonNumber: number | null; // null = 整剧（仅 show 场景有意义）
+    queuedAt: string;
+    show: { id: number; title: string; posterPath: string | null } | null;
+    movie: { id: number; title: string; posterPath: string | null } | null;
+}
+
+export interface JellyfinDeleteHistoryEntry {
+    id: number;
+    showId: number | null;
+    movieId: number | null;
+    seasonNumber: number | null;
+    title: string;
+    status: "deleted" | "not_found" | "failed";
+    errorMessage: string | null;
+    processedAt: string;
+}
+
 // ─── Episode Detail ───────────────────────────────────────────────────────────
 
 export interface EpisodeDetailData {

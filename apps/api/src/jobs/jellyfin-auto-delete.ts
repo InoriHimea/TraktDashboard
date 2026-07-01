@@ -2,12 +2,14 @@ import {
     getDb,
     userSettings,
     jellyfinDeleteQueue,
+    jellyfinDeleteHistory,
     userShowProgress,
     shows,
+    seasons,
     episodes,
     watchHistory,
 } from "@trakt-dashboard/db";
-import { and, eq, gt, inArray, isNotNull, isNull, lte, not, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, isNotNull, not, sql } from "drizzle-orm";
 import {
     deleteJellyfinSeries,
     deleteJellyfinSeason,
@@ -71,17 +73,21 @@ async function processUser(
 
     // ── Phase 2: execute pending deletions ──────────────────────────────────────
 
-    const pendingEntries = await db
-        .select({
-            id: jellyfinDeleteQueue.id,
-            showId: jellyfinDeleteQueue.showId,
-            seasonNumber: jellyfinDeleteQueue.seasonNumber,
-            tmdbId: shows.tmdbId,
-            title: shows.title,
-        })
-        .from(jellyfinDeleteQueue)
-        .innerJoin(shows, eq(shows.id, jellyfinDeleteQueue.showId))
-        .where(eq(jellyfinDeleteQueue.userId, userId));
+    const pendingEntries = (
+        await db
+            .select({
+                id: jellyfinDeleteQueue.id,
+                showId: jellyfinDeleteQueue.showId,
+                seasonNumber: jellyfinDeleteQueue.seasonNumber,
+                tmdbId: shows.tmdbId,
+                title: shows.title,
+            })
+            .from(jellyfinDeleteQueue)
+            .innerJoin(shows, eq(shows.id, jellyfinDeleteQueue.showId))
+            .where(
+                and(eq(jellyfinDeleteQueue.userId, userId), isNotNull(jellyfinDeleteQueue.showId)),
+            )
+    ).map((e) => ({ ...e, showId: e.showId! }));
 
     const wholeShowEntries = pendingEntries.filter((e) => e.seasonNumber === null);
     const seasonEntries = pendingEntries.filter((e) => e.seasonNumber !== null);
@@ -89,18 +95,31 @@ async function processUser(
     // Delete whole shows first; track which showIds were handled so we skip stray season entries
     const handledShowIds = new Set<number>();
     for (const entry of wholeShowEntries) {
+        let status: "deleted" | "not_found" | "failed" = "not_found";
+        let errorMessage: string | null = null;
         try {
             const found = await deleteJellyfinSeries(cfg, entry.tmdbId, autoDeleteIds);
+            status = found ? "deleted" : "not_found";
             console.log(
                 `[jellyfin-delete] ${found ? "Deleted" : "Not found"} series "${entry.title}" (TMDB ${entry.tmdbId}) for user ${userId}`,
             );
             deleted++;
         } catch (e) {
+            status = "failed";
+            errorMessage = e instanceof Error ? e.message : String(e);
             console.error(
                 `[jellyfin-delete] Failed to delete series "${entry.title}" for user ${userId}:`,
                 e,
             );
         }
+        await db.insert(jellyfinDeleteHistory).values({
+            userId,
+            showId: entry.showId,
+            seasonNumber: null,
+            title: entry.title,
+            status,
+            errorMessage,
+        });
         // Remove all queue entries for this show (including any stray season entries)
         await db
             .delete(jellyfinDeleteQueue)
@@ -117,18 +136,31 @@ async function processUser(
     for (const entry of seasonEntries) {
         if (handledShowIds.has(entry.showId)) continue;
         const season = entry.seasonNumber!;
+        let status: "deleted" | "not_found" | "failed" = "not_found";
+        let errorMessage: string | null = null;
         try {
             const found = await deleteJellyfinSeason(cfg, entry.tmdbId, season, autoDeleteIds);
+            status = found ? "deleted" : "not_found";
             console.log(
                 `[jellyfin-delete] ${found ? "Deleted" : "Not found"} S${season} of "${entry.title}" for user ${userId}`,
             );
             deleted++;
         } catch (e) {
+            status = "failed";
+            errorMessage = e instanceof Error ? e.message : String(e);
             console.error(
                 `[jellyfin-delete] Failed to delete S${season} of "${entry.title}" for user ${userId}:`,
                 e,
             );
         }
+        await db.insert(jellyfinDeleteHistory).values({
+            userId,
+            showId: entry.showId,
+            seasonNumber: season,
+            title: entry.title,
+            status,
+            errorMessage,
+        });
         await db.delete(jellyfinDeleteQueue).where(eq(jellyfinDeleteQueue.id, entry.id));
     }
 
@@ -167,7 +199,8 @@ async function processUser(
     }
 
     // 1b. Season-level deletion: not eligible for whole-show deletion
-    //     All aired episodes in the season are watched + last aired > 7 days ago
+    //     Season has fully aired (reached its TMDB episode count) AND all of its
+    //     episodes are watched AND the last episode aired > 7 days ago
     const userShowIds = (
         await db
             .select({ showId: userShowProgress.showId })
@@ -188,15 +221,29 @@ async function processUser(
             .toISOString()
             .split("T")[0]!;
 
+        // seasonTotal comes from the synced `seasons.episode_count` (TMDB's stated total for
+        // the season), NOT from counting locally-aired episode rows. Using "aired-so-far" as
+        // the denominator would mark a still-airing season (e.g. weekly releases) as complete
+        // the moment the user catches up with the latest episode — wrongly queuing it for
+        // deletion mid-broadcast. Requiring airedCount to reach the TMDB total ensures the
+        // season has actually finished airing before it's considered done.
         const seasonStats = await db
             .select({
                 showId: episodes.showId,
                 seasonNumber: episodes.seasonNumber,
-                totalAired: sql<number>`cast(count(distinct ${episodes.id}) as integer)`,
+                seasonTotal: seasons.episodeCount,
+                airedCount: sql<number>`cast(count(distinct case when ${episodes.airDate} is not null and ${episodes.airDate} <= ${today} then ${episodes.id} end) as integer)`,
                 watched: sql<number>`cast(count(distinct ${watchHistory.episodeId}) as integer)`,
                 lastAirDate: sql<string | null>`max(${episodes.airDate})`,
             })
             .from(episodes)
+            .innerJoin(
+                seasons,
+                and(
+                    eq(seasons.showId, episodes.showId),
+                    eq(seasons.seasonNumber, episodes.seasonNumber),
+                ),
+            )
             .leftJoin(
                 watchHistory,
                 and(
@@ -205,20 +252,14 @@ async function processUser(
                     eq(watchHistory.mediaType, "episode"),
                 ),
             )
-            .where(
-                and(
-                    inArray(episodes.showId, userShowIds),
-                    gt(episodes.seasonNumber, 0),
-                    isNotNull(episodes.airDate),
-                    lte(episodes.airDate, today),
-                ),
-            )
-            .groupBy(episodes.showId, episodes.seasonNumber);
+            .where(and(inArray(episodes.showId, userShowIds), gt(episodes.seasonNumber, 0)))
+            .groupBy(episodes.showId, episodes.seasonNumber, seasons.episodeCount);
 
         for (const stat of seasonStats) {
             if (
-                stat.totalAired > 0 &&
-                stat.watched >= stat.totalAired &&
+                stat.seasonTotal > 0 &&
+                stat.airedCount >= stat.seasonTotal &&
+                stat.watched >= stat.seasonTotal &&
                 stat.lastAirDate !== null &&
                 stat.lastAirDate < sevenDaysAgo
             ) {

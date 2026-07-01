@@ -5,7 +5,10 @@ import { Tv2, PlayCircle } from "lucide-react";
 import type { ShowProgress } from "@trakt-dashboard/types";
 import { ProgressBar } from "./ProgressBar";
 import { WatchedBadge } from "./ui/WatchedBadge";
+import { PendingDeleteBadge } from "./ui/PendingDeleteBadge";
 import { tmdbImage, formatEpisode } from "../lib/utils";
+import { useJellyfinDeleteQueue } from "../hooks";
+import { t } from "../lib/i18n";
 
 interface ShowCardProps {
     progress: ShowProgress;
@@ -24,6 +27,9 @@ export function ShowCard({ progress, index }: ShowCardProps) {
     const poster = tmdbImage(show.posterPath, "w500");
     const statusColor = STATUS_COLOR[show.status] || "var(--color-text-muted)";
     const [imgError, setImgError] = useState(false);
+
+    const { data: deleteQueue } = useJellyfinDeleteQueue();
+    const pendingDelete = deleteQueue?.find((e) => e.show?.id === show.id);
 
     // Task 13: multilingual title logic
     const primaryTitle = show.translatedName ?? show.title;
@@ -73,6 +79,22 @@ export function ShowCard({ progress, index }: ShowCardProps) {
                         {completed && (
                             <div className="absolute top-2 right-2">
                                 <WatchedBadge size="sm" />
+                            </div>
+                        )}
+
+                        {/* Pending Jellyfin auto-delete badge */}
+                        {pendingDelete && (
+                            <div className="absolute top-2 left-2">
+                                <PendingDeleteBadge
+                                    queueId={pendingDelete.id}
+                                    label={
+                                        pendingDelete.seasonNumber === null
+                                            ? t("media.pendingDeleteWholeShow")
+                                            : t("media.pendingDeleteSeason", {
+                                                  season: pendingDelete.seasonNumber,
+                                              })
+                                    }
+                                />
                             </div>
                         )}
 

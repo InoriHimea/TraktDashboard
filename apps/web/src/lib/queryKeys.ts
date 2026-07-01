@@ -49,6 +49,8 @@ export const queryKeys = {
     upNext: ["up-next"] as const,
     ratings: ["ratings"] as const,
     jellyfinNowPlaying: ["jellyfin-now-playing"] as const,
+    jellyfinDeleteQueue: ["jellyfin-delete-queue"] as const,
+    jellyfinDeleteHistory: (limit: number) => ["jellyfin-delete-history", limit] as const,
     notes: {
         all: ["notes"] as const,
         get: (

@@ -1,6 +1,13 @@
 import { Hono } from "hono";
-import { getDb, userSettings, shows, movies } from "@trakt-dashboard/db";
-import { eq } from "drizzle-orm";
+import {
+    getDb,
+    userSettings,
+    shows,
+    movies,
+    jellyfinDeleteQueue,
+    jellyfinDeleteHistory,
+} from "@trakt-dashboard/db";
+import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import {
     fetchJellyfinLibraries,
@@ -225,6 +232,87 @@ jellyfinRoutes.delete("/items/:jellyfinItemId", async (c) => {
     } catch (err) {
         return c.json({ error: String(err) }, 502);
     }
+});
+
+// ─── Auto-Delete Queue / History ────────────────────────────────────────────────
+
+// GET /api/jellyfin/delete-queue — pending two-phase auto-delete entries for the user
+jellyfinRoutes.get("/delete-queue", async (c) => {
+    const userId = c.get("userId");
+    const db = getDb();
+
+    const rows = await db
+        .select({
+            id: jellyfinDeleteQueue.id,
+            seasonNumber: jellyfinDeleteQueue.seasonNumber,
+            queuedAt: jellyfinDeleteQueue.queuedAt,
+            showId: shows.id,
+            showTitle: shows.title,
+            showPoster: shows.posterPath,
+            movieId: movies.id,
+            movieTitle: movies.title,
+            moviePoster: movies.posterPath,
+        })
+        .from(jellyfinDeleteQueue)
+        .leftJoin(shows, eq(shows.id, jellyfinDeleteQueue.showId))
+        .leftJoin(movies, eq(movies.id, jellyfinDeleteQueue.movieId))
+        .where(eq(jellyfinDeleteQueue.userId, userId))
+        .orderBy(desc(jellyfinDeleteQueue.queuedAt));
+
+    const data = rows.map((r) => ({
+        id: r.id,
+        seasonNumber: r.seasonNumber,
+        queuedAt: r.queuedAt.toISOString(),
+        show: r.showId ? { id: r.showId, title: r.showTitle!, posterPath: r.showPoster } : null,
+        movie: r.movieId
+            ? { id: r.movieId, title: r.movieTitle!, posterPath: r.moviePoster }
+            : null,
+    }));
+
+    return c.json({ data });
+});
+
+// DELETE /api/jellyfin/delete-queue/:id — cancel a pending auto-delete entry
+jellyfinRoutes.delete("/delete-queue/:id", async (c) => {
+    const userId = c.get("userId");
+    const id = parseBoundedInt(c.req.param("id"), -1, 1, Number.MAX_SAFE_INTEGER);
+    if (id < 1) return c.json({ error: "Invalid id" }, 400);
+
+    const db = getDb();
+    const deleted = await db
+        .delete(jellyfinDeleteQueue)
+        .where(and(eq(jellyfinDeleteQueue.id, id), eq(jellyfinDeleteQueue.userId, userId)))
+        .returning({ id: jellyfinDeleteQueue.id });
+
+    if (deleted.length === 0) return c.json({ error: "Not found" }, 404);
+    return c.json({ ok: true });
+});
+
+// GET /api/jellyfin/delete-history?limit=20 — recent auto-delete outcomes
+jellyfinRoutes.get("/delete-history", async (c) => {
+    const userId = c.get("userId");
+    const limit = Math.min(100, Math.max(1, Number(c.req.query("limit") ?? 20)));
+
+    const db = getDb();
+    const rows = await db
+        .select()
+        .from(jellyfinDeleteHistory)
+        .where(eq(jellyfinDeleteHistory.userId, userId))
+        .orderBy(desc(jellyfinDeleteHistory.processedAt))
+        .limit(limit);
+
+    const data = rows.map((r) => ({
+        id: r.id,
+        showId: r.showId,
+        movieId: r.movieId,
+        seasonNumber: r.seasonNumber,
+        title: r.title,
+        status: r.status as "deleted" | "not_found" | "failed",
+        errorMessage: r.errorMessage,
+        processedAt: r.processedAt.toISOString(),
+    }));
+
+    return c.json({ data });
 });
 
 // ─── Stats ────────────────────────────────────────────────────────────────────

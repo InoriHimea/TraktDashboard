@@ -530,12 +530,31 @@ export const jellyfinDeleteQueue = pgTable(
         userId: integer("user_id")
             .notNull()
             .references(() => users.id, { onDelete: "cascade" }),
-        showId: integer("show_id")
-            .notNull()
-            .references(() => shows.id, { onDelete: "cascade" }),
-        // null = 整剧删除，非 null = 指定季
+        showId: integer("show_id").references(() => shows.id, { onDelete: "cascade" }),
+        movieId: integer("movie_id").references(() => movies.id, { onDelete: "cascade" }),
+        // null = 整剧删除，非 null = 指定季（仅 showId 场景使用）
         seasonNumber: integer("season_number"),
         queuedAt: timestamp("queued_at", { withTimezone: true }).defaultNow().notNull(),
     },
     (t) => [index("jdq_user_idx").on(t.userId)],
+);
+
+// ─── Jellyfin Delete History ────────────────────────────────────────────────────
+
+export const jellyfinDeleteHistory = pgTable(
+    "jellyfin_delete_history",
+    {
+        id: serial("id").primaryKey(),
+        userId: integer("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
+        showId: integer("show_id").references(() => shows.id, { onDelete: "set null" }),
+        movieId: integer("movie_id").references(() => movies.id, { onDelete: "set null" }),
+        seasonNumber: integer("season_number"),
+        title: text("title").notNull(),
+        status: text("status").notNull(), // 'deleted' | 'not_found' | 'failed'
+        errorMessage: text("error_message"),
+        processedAt: timestamp("processed_at", { withTimezone: true }).defaultNow().notNull(),
+    },
+    (t) => [index("jdh_user_processed_idx").on(t.userId, t.processedAt)],
 );

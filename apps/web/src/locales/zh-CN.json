@@ -117,6 +117,18 @@
         "jellyfinLoadLibrariesFailed": "无法加载媒体库，请检查服务器地址和 API Key",
         "jellyfinLoadLibraries": "加载媒体库",
         "jellyfinNotConfigured": "请先填写服务器地址和 API Key 后加载媒体库",
+        "jellyfinDeleteQueueTitle": "待删除队列",
+        "jellyfinDeleteQueueHint": "已判定符合条件、将在下次定时任务中从 Jellyfin 删除的剧集或电影。",
+        "jellyfinDeleteQueueEmpty": "暂无待删除项目",
+        "jellyfinDeleteQueueWholeShow": "整剧",
+        "jellyfinDeleteQueueSeason": "第 {{season}} 季",
+        "jellyfinDeleteQueueCancelSuccess": "已取消删除计划",
+        "jellyfinDeleteQueueCancelFailed": "取消失败，请重试",
+        "jellyfinDeleteHistoryTitle": "删除历史",
+        "jellyfinDeleteHistoryEmpty": "暂无删除记录",
+        "jellyfinDeleteStatusDeleted": "已删除",
+        "jellyfinDeleteStatusNotFound": "未在 Jellyfin 中找到",
+        "jellyfinDeleteStatusFailed": "删除失败",
         "notifEventTypesTitle": "提醒类型",
         "notifEventTypesHint": "选择哪些播出事件会触发推送通知。",
         "notifSeriesPremiere": "首播（S1E1）",
@@ -154,6 +166,13 @@
             "triggerFailed": "备份失败，请查看历史记录",
             "history": "备份历史"
         }
+    },
+    "media": {
+        "pendingDeleteWholeShow": "待删除 · 整剧",
+        "pendingDeleteSeason": "待删除 · 第 {{season}} 季",
+        "pendingDelete": "待删除",
+        "pendingDeleteCancelSuccess": "已取消删除计划",
+        "pendingDeleteCancelFailed": "取消失败，请重试"
     },
     "progress": {
         "watching": "追剧中",

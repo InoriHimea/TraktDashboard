@@ -5,6 +5,8 @@ import { Film } from "lucide-react";
 import type { MovieProgress } from "@trakt-dashboard/types";
 import { tmdbImage } from "../lib/utils";
 import { getLocale, t } from "../lib/i18n";
+import { useJellyfinDeleteQueue } from "../hooks";
+import { PendingDeleteBadge } from "./ui/PendingDeleteBadge";
 
 interface MovieCardProps {
     movie: MovieProgress;
@@ -15,6 +17,9 @@ export function MovieCard({ movie, index }: MovieCardProps) {
     const { movie: movieData, watchCount, lastWatchedAt } = movie;
     const poster = tmdbImage(movieData.posterPath, "w500");
     const [imgError, setImgError] = useState(false);
+
+    const { data: deleteQueue } = useJellyfinDeleteQueue();
+    const pendingDelete = deleteQueue?.find((e) => e.movie?.id === movieData.id);
 
     // Format last watched date
     const formatDate = (dateStr: string | null) => {
@@ -90,6 +95,16 @@ export function MovieCard({ movie, index }: MovieCardProps) {
                                 ? t("movies.watchedNTimes", { count: watchCount })
                                 : t("movies.notWatched")}
                         </div>
+
+                        {/* Pending Jellyfin auto-delete badge */}
+                        {pendingDelete && (
+                            <div style={{ position: "absolute", top: "8px", left: "8px" }}>
+                                <PendingDeleteBadge
+                                    queueId={pendingDelete.id}
+                                    label={t("media.pendingDelete")}
+                                />
+                            </div>
+                        )}
                     </div>
 
                     {/* Info section */}

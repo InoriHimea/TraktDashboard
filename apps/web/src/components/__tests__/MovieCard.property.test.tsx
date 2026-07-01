@@ -1,9 +1,13 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import fc from "fast-check";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { MovieCard } from "../MovieCard";
 import type { MovieProgress } from "@trakt-dashboard/types";
+
+vi.mock("../../hooks", () => ({
+    useJellyfinDeleteQueue: () => ({ data: [] }),
+}));
 
 const safeText = fc
     .string({ minLength: 1 })

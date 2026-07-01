@@ -117,6 +117,18 @@
         "jellyfinLoadLibrariesFailed": "Failed to load libraries. Check server URL and API Key.",
         "jellyfinLoadLibraries": "Load libraries",
         "jellyfinNotConfigured": "Enter the server URL and API Key first, then load libraries.",
+        "jellyfinDeleteQueueTitle": "Pending deletions",
+        "jellyfinDeleteQueueHint": "Shows or movies that qualified for auto-delete and will be removed from Jellyfin on the next scheduled run.",
+        "jellyfinDeleteQueueEmpty": "No pending deletions",
+        "jellyfinDeleteQueueWholeShow": "Whole show",
+        "jellyfinDeleteQueueSeason": "Season {{season}}",
+        "jellyfinDeleteQueueCancelSuccess": "Deletion cancelled",
+        "jellyfinDeleteQueueCancelFailed": "Failed to cancel, please retry",
+        "jellyfinDeleteHistoryTitle": "Deletion history",
+        "jellyfinDeleteHistoryEmpty": "No deletion history yet",
+        "jellyfinDeleteStatusDeleted": "Deleted",
+        "jellyfinDeleteStatusNotFound": "Not found on Jellyfin",
+        "jellyfinDeleteStatusFailed": "Failed",
         "notifEventTypesTitle": "Notification types",
         "notifEventTypesHint": "Choose which airing events trigger a push notification.",
         "notifSeriesPremiere": "Series premiere (S1E1)",
@@ -154,6 +166,13 @@
             "triggerFailed": "Backup failed, check history for details",
             "history": "Backup History"
         }
+    },
+    "media": {
+        "pendingDeleteWholeShow": "Pending delete · Whole show",
+        "pendingDeleteSeason": "Pending delete · Season {{season}}",
+        "pendingDelete": "Pending delete",
+        "pendingDeleteCancelSuccess": "Deletion cancelled",
+        "pendingDeleteCancelFailed": "Failed to cancel, please retry"
     },
     "progress": {
         "watching": "Watching",

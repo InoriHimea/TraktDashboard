@@ -243,6 +243,31 @@ export async function runMigrations() {
         sql`CREATE INDEX IF NOT EXISTS "jdq_user_queued_idx" ON "jellyfin_delete_queue" ("user_id", "queued_at")`,
     );
 
+    // 0021 — Jellyfin 删除队列支持电影（预留，暂无自动入队逻辑）+ 删除历史记录
+    await db.execute(sql`ALTER TABLE "jellyfin_delete_queue" ALTER COLUMN "show_id" DROP NOT NULL`);
+    await db.execute(
+        sql`ALTER TABLE "jellyfin_delete_queue" ADD COLUMN IF NOT EXISTS "movie_id" integer REFERENCES "movies"("id") ON DELETE cascade`,
+    );
+    await db.execute(
+        sql`CREATE UNIQUE INDEX IF NOT EXISTS "jdq_movie_idx" ON "jellyfin_delete_queue" ("user_id", "movie_id") WHERE "movie_id" IS NOT NULL`,
+    );
+    await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS "jellyfin_delete_history" (
+            "id" serial PRIMARY KEY NOT NULL,
+            "user_id" integer NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+            "show_id" integer REFERENCES "shows"("id") ON DELETE set null,
+            "movie_id" integer REFERENCES "movies"("id") ON DELETE set null,
+            "season_number" integer,
+            "title" text NOT NULL,
+            "status" text NOT NULL,
+            "error_message" text,
+            "processed_at" timestamp with time zone DEFAULT now() NOT NULL
+        )
+    `);
+    await db.execute(
+        sql`CREATE INDEX IF NOT EXISTS "jdh_user_processed_idx" ON "jellyfin_delete_history" ("user_id", "processed_at" DESC)`,
+    );
+
     await client.end();
     console.log("[db] Migrations complete");
 }

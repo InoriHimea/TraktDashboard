@@ -9,6 +9,15 @@
                 "cd /Users/inorihimea/kiro/trakt-dashboard/apps/web && node_modules/.bin/vite --host 0.0.0.0 --port 5174"
             ],
             "port": 5174
+        },
+        {
+            "name": "api",
+            "runtimeExecutable": "bash",
+            "runtimeArgs": [
+                "-c",
+                "cd /Users/inorihimea/kiro/trakt-dashboard/apps/api && /opt/homebrew/bin/bun --watch src/index.ts"
+            ],
+            "port": 3001
         }
     ]
 }

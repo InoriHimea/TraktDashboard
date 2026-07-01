@@ -26,6 +26,9 @@ import {
     useTriggerSync,
     useTriggerFullSync,
     useSystemMetrics,
+    useJellyfinDeleteQueue,
+    useCancelJellyfinDelete,
+    useJellyfinDeleteHistory,
 } from "../hooks";
 import { api } from "../lib/api";
 import {
@@ -376,6 +379,18 @@ export default function SettingsPage() {
     const { mutate: triggerFull, isPending: fullSyncing } = useTriggerFullSync();
     const [syncError, setSyncError] = useState<string | null>(null);
     const { data: sysMetrics } = useSystemMetrics();
+
+    // ── Jellyfin 自动删除队列 / 历史 ──────────────────────────────────────────
+    const { data: deleteQueue, isLoading: deleteQueueLoading } = useJellyfinDeleteQueue();
+    const { data: deleteHistory, isLoading: deleteHistoryLoading } = useJellyfinDeleteHistory(20);
+    const { mutate: cancelDelete, isPending: isCancellingDelete } = useCancelJellyfinDelete();
+
+    function handleCancelDelete(id: number) {
+        cancelDelete(id, {
+            onSuccess: () => toast(t("settings.jellyfinDeleteQueueCancelSuccess"), "success"),
+            onError: () => toast(t("settings.jellyfinDeleteQueueCancelFailed"), "error"),
+        });
+    }
 
     const isRunning = sync?.status === "running";
     const anyPending = syncing || fullSyncing;
@@ -929,6 +944,303 @@ export default function SettingsPage() {
                                                                 )}
                                                             </label>
                                                         ))}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* 待删除队列 */}
+                                            <div>
+                                                <span
+                                                    style={{
+                                                        ...labelStyle,
+                                                        marginBottom: "4px",
+                                                    }}
+                                                >
+                                                    {t("settings.jellyfinDeleteQueueTitle")}
+                                                </span>
+                                                <p
+                                                    style={{
+                                                        fontSize: "12px",
+                                                        color: "var(--color-text-muted)",
+                                                        marginBottom: "8px",
+                                                        lineHeight: 1.5,
+                                                    }}
+                                                >
+                                                    {t("settings.jellyfinDeleteQueueHint")}
+                                                </p>
+                                                {deleteQueueLoading ? (
+                                                    <div
+                                                        style={{
+                                                            display: "flex",
+                                                            justifyContent: "center",
+                                                            padding: "8px 0",
+                                                        }}
+                                                    >
+                                                        <Loader2
+                                                            size={16}
+                                                            style={{
+                                                                animation:
+                                                                    "spin 1s linear infinite",
+                                                                color: "var(--color-text-muted)",
+                                                            }}
+                                                        />
+                                                    </div>
+                                                ) : (deleteQueue?.length ?? 0) === 0 ? (
+                                                    <p
+                                                        style={{
+                                                            fontSize: "12px",
+                                                            color: "var(--color-text-muted)",
+                                                        }}
+                                                    >
+                                                        {t("settings.jellyfinDeleteQueueEmpty")}
+                                                    </p>
+                                                ) : (
+                                                    <div
+                                                        style={{
+                                                            display: "flex",
+                                                            flexDirection: "column",
+                                                            gap: "5px",
+                                                        }}
+                                                    >
+                                                        {deleteQueue!.map((entry) => {
+                                                            const title =
+                                                                entry.show?.title ??
+                                                                entry.movie?.title ??
+                                                                "—";
+                                                            const scope = entry.show
+                                                                ? entry.seasonNumber === null
+                                                                    ? t(
+                                                                          "settings.jellyfinDeleteQueueWholeShow",
+                                                                      )
+                                                                    : t(
+                                                                          "settings.jellyfinDeleteQueueSeason",
+                                                                          {
+                                                                              season: entry.seasonNumber,
+                                                                          },
+                                                                      )
+                                                                : null;
+                                                            return (
+                                                                <div
+                                                                    key={entry.id}
+                                                                    style={{
+                                                                        display: "flex",
+                                                                        alignItems: "center",
+                                                                        gap: "8px",
+                                                                        padding: "7px 10px",
+                                                                        borderRadius: 8,
+                                                                        background:
+                                                                            "var(--color-surface-2)",
+                                                                        border: "1px solid rgba(248,113,113,0.2)",
+                                                                    }}
+                                                                >
+                                                                    <span
+                                                                        style={{
+                                                                            fontSize: "11px",
+                                                                            color: "var(--color-text)",
+                                                                            flex: 1,
+                                                                            overflow: "hidden",
+                                                                            textOverflow:
+                                                                                "ellipsis",
+                                                                            whiteSpace: "nowrap",
+                                                                        }}
+                                                                    >
+                                                                        {title}
+                                                                        {scope ? ` · ${scope}` : ""}
+                                                                    </span>
+                                                                    <span
+                                                                        style={{
+                                                                            fontSize: "10px",
+                                                                            color: "var(--color-text-muted)",
+                                                                            flexShrink: 0,
+                                                                        }}
+                                                                    >
+                                                                        {new Date(
+                                                                            entry.queuedAt,
+                                                                        ).toLocaleDateString()}
+                                                                    </span>
+                                                                    <button
+                                                                        type="button"
+                                                                        disabled={
+                                                                            isCancellingDelete
+                                                                        }
+                                                                        onClick={() =>
+                                                                            handleCancelDelete(
+                                                                                entry.id,
+                                                                            )
+                                                                        }
+                                                                        title={t("common.cancel")}
+                                                                        style={{
+                                                                            display: "inline-flex",
+                                                                            alignItems: "center",
+                                                                            justifyContent:
+                                                                                "center",
+                                                                            width: 20,
+                                                                            height: 20,
+                                                                            borderRadius: "50%",
+                                                                            border: "none",
+                                                                            background:
+                                                                                "var(--color-surface-3)",
+                                                                            color: "var(--color-text-secondary)",
+                                                                            cursor: isCancellingDelete
+                                                                                ? "not-allowed"
+                                                                                : "pointer",
+                                                                            flexShrink: 0,
+                                                                        }}
+                                                                    >
+                                                                        <X size={12} />
+                                                                    </button>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* 删除历史 */}
+                                            <div>
+                                                <span
+                                                    style={{
+                                                        ...labelStyle,
+                                                        marginBottom: "4px",
+                                                    }}
+                                                >
+                                                    {t("settings.jellyfinDeleteHistoryTitle")}
+                                                </span>
+                                                {deleteHistoryLoading ? (
+                                                    <div
+                                                        style={{
+                                                            display: "flex",
+                                                            justifyContent: "center",
+                                                            padding: "8px 0",
+                                                        }}
+                                                    >
+                                                        <Loader2
+                                                            size={16}
+                                                            style={{
+                                                                animation:
+                                                                    "spin 1s linear infinite",
+                                                                color: "var(--color-text-muted)",
+                                                            }}
+                                                        />
+                                                    </div>
+                                                ) : (deleteHistory?.length ?? 0) === 0 ? (
+                                                    <p
+                                                        style={{
+                                                            fontSize: "12px",
+                                                            color: "var(--color-text-muted)",
+                                                        }}
+                                                    >
+                                                        {t("settings.jellyfinDeleteHistoryEmpty")}
+                                                    </p>
+                                                ) : (
+                                                    <div
+                                                        style={{
+                                                            display: "flex",
+                                                            flexDirection: "column",
+                                                            gap: "5px",
+                                                        }}
+                                                    >
+                                                        {deleteHistory!.map((entry) => {
+                                                            const statusColor =
+                                                                entry.status === "deleted"
+                                                                    ? "#10b981"
+                                                                    : entry.status === "failed"
+                                                                      ? "#ef4444"
+                                                                      : "#f59e0b";
+                                                            const statusLabel =
+                                                                entry.status === "deleted"
+                                                                    ? t(
+                                                                          "settings.jellyfinDeleteStatusDeleted",
+                                                                      )
+                                                                    : entry.status === "failed"
+                                                                      ? t(
+                                                                            "settings.jellyfinDeleteStatusFailed",
+                                                                        )
+                                                                      : t(
+                                                                            "settings.jellyfinDeleteStatusNotFound",
+                                                                        );
+                                                            const scope =
+                                                                entry.seasonNumber !== null
+                                                                    ? t(
+                                                                          "settings.jellyfinDeleteQueueSeason",
+                                                                          {
+                                                                              season: entry.seasonNumber,
+                                                                          },
+                                                                      )
+                                                                    : entry.showId
+                                                                      ? t(
+                                                                            "settings.jellyfinDeleteQueueWholeShow",
+                                                                        )
+                                                                      : null;
+                                                            return (
+                                                                <div
+                                                                    key={entry.id}
+                                                                    style={{
+                                                                        display: "flex",
+                                                                        alignItems: "center",
+                                                                        gap: "8px",
+                                                                        padding: "7px 10px",
+                                                                        borderRadius: 8,
+                                                                        background:
+                                                                            "var(--color-surface-2)",
+                                                                        border: `1px solid ${statusColor}33`,
+                                                                    }}
+                                                                >
+                                                                    {entry.status === "deleted" ? (
+                                                                        <Check
+                                                                            size={12}
+                                                                            style={{
+                                                                                color: statusColor,
+                                                                                flexShrink: 0,
+                                                                            }}
+                                                                        />
+                                                                    ) : (
+                                                                        <X
+                                                                            size={12}
+                                                                            style={{
+                                                                                color: statusColor,
+                                                                                flexShrink: 0,
+                                                                            }}
+                                                                        />
+                                                                    )}
+                                                                    <span
+                                                                        style={{
+                                                                            fontSize: "11px",
+                                                                            color: "var(--color-text)",
+                                                                            flex: 1,
+                                                                            overflow: "hidden",
+                                                                            textOverflow:
+                                                                                "ellipsis",
+                                                                            whiteSpace: "nowrap",
+                                                                        }}
+                                                                    >
+                                                                        {entry.title}
+                                                                        {scope ? ` · ${scope}` : ""}
+                                                                    </span>
+                                                                    <span
+                                                                        style={{
+                                                                            fontSize: "10px",
+                                                                            color: statusColor,
+                                                                            flexShrink: 0,
+                                                                            fontWeight: 600,
+                                                                        }}
+                                                                    >
+                                                                        {statusLabel}
+                                                                    </span>
+                                                                    <span
+                                                                        style={{
+                                                                            fontSize: "10px",
+                                                                            color: "var(--color-text-muted)",
+                                                                            flexShrink: 0,
+                                                                        }}
+                                                                    >
+                                                                        {new Date(
+                                                                            entry.processedAt,
+                                                                        ).toLocaleDateString()}
+                                                                    </span>
+                                                                </div>
+                                                            );
+                                                        })}
                                                     </div>
                                                 )}
                                             </div>
