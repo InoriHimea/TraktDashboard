@@ -242,9 +242,7 @@ async function processUser(
 
     if (userShowIds.length > 0) {
         const today = new Date().toISOString().split("T")[0]!;
-        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-            .toISOString()
-            .split("T")[0]!;
+        const sevenDaysAgoMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
 
         // seasonTotal comes from the synced `seasons.episode_count` (TMDB's stated total for
         // the season), NOT from counting locally-aired episode rows. Using "aired-so-far" as
@@ -252,13 +250,20 @@ async function processUser(
         // the moment the user catches up with the latest episode — wrongly queuing it for
         // deletion mid-broadcast. Requiring airedCount to reach the TMDB total ensures the
         // season has actually finished airing before it's considered done.
+        //
+        // Both date comparisons below cast to ::date / compare epoch millis rather than doing
+        // plain string comparison — episodes.airDate stores a full ISO timestamp (e.g.
+        // "2026-06-24T14:30:00.000Z"), and a plain string compare against a date-only cutoff
+        // ("2026-06-24") always evaluates the timestamp as "greater than" its own date prefix,
+        // incorrectly excluding anything whose air date falls exactly on the boundary day
+        // regardless of what time it aired.
         const seasonStats = await db
             .select({
                 showId: episodes.showId,
                 tmdbId: shows.tmdbId,
                 seasonNumber: episodes.seasonNumber,
                 seasonTotal: seasons.episodeCount,
-                airedCount: sql<number>`cast(count(distinct case when ${episodes.airDate} is not null and ${episodes.airDate} <= ${today} then ${episodes.id} end) as integer)`,
+                airedCount: sql<number>`cast(count(distinct case when ${episodes.airDate} is not null and ${episodes.airDate}::date <= ${today}::date then ${episodes.id} end) as integer)`,
                 watched: sql<number>`cast(count(distinct ${watchHistory.episodeId}) as integer)`,
                 lastAirDate: sql<string | null>`max(${episodes.airDate})`,
             })
@@ -283,12 +288,14 @@ async function processUser(
             .groupBy(episodes.showId, shows.tmdbId, episodes.seasonNumber, seasons.episodeCount);
 
         for (const stat of seasonStats) {
+            const lastAirMs =
+                stat.lastAirDate !== null ? new Date(stat.lastAirDate).getTime() : null;
             if (
                 stat.seasonTotal > 0 &&
                 stat.airedCount >= stat.seasonTotal &&
                 stat.watched >= stat.seasonTotal &&
-                stat.lastAirDate !== null &&
-                stat.lastAirDate < sevenDaysAgo
+                lastAirMs !== null &&
+                lastAirMs < sevenDaysAgoMs
             ) {
                 // Same existence guard as the whole-show branch above: only queue a season
                 // that's actually resolvable in Jellyfin within the scoped libraries.
