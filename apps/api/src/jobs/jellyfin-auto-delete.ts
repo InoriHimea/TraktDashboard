@@ -11,10 +11,13 @@ import {
 } from "@trakt-dashboard/db";
 import { and, eq, gt, inArray, isNotNull, not, sql } from "drizzle-orm";
 import {
-    deleteJellyfinSeries,
-    deleteJellyfinSeason,
+    fetchJellyfinSeriesTmdbMap,
+    findJellyfinSeasonIdBySeriesId,
+    deleteJellyfinItem,
     type JellyfinConfig,
 } from "../services/jellyfin.js";
+import { decryptToken } from "../lib/encrypt.js";
+import { resolveApiSecret } from "../lib/secret.js";
 
 export interface AutoDeleteResult {
     deleted: number;
@@ -51,7 +54,10 @@ export async function runJellyfinAutoDelete(): Promise<AutoDeleteResult> {
         }
         if (!Array.isArray(autoDeleteIds) || autoDeleteIds.length === 0) continue;
 
-        const cfg: JellyfinConfig = { url: user.jellyfinUrl!, apiKey: user.jellyfinApiKey! };
+        const cfg: JellyfinConfig = {
+            url: user.jellyfinUrl!,
+            apiKey: decryptToken(user.jellyfinApiKey!, resolveApiSecret()),
+        };
         const userId = user.userId;
 
         const result = await processUser(db, cfg, userId, autoDeleteIds);
@@ -70,6 +76,10 @@ async function processUser(
 ): Promise<AutoDeleteResult> {
     let deleted = 0;
     let queued = 0;
+
+    // Fetched once and reused for both phases below: avoids re-fetching the full Jellyfin
+    // series list (scoped to the user's auto-delete libraries) once per candidate.
+    const seriesMap = await fetchJellyfinSeriesTmdbMap(cfg, autoDeleteIds);
 
     // ── Phase 2: execute pending deletions ──────────────────────────────────────
 
@@ -98,10 +108,13 @@ async function processUser(
         let status: "deleted" | "not_found" | "failed" = "not_found";
         let errorMessage: string | null = null;
         try {
-            const found = await deleteJellyfinSeries(cfg, entry.tmdbId, autoDeleteIds);
-            status = found ? "deleted" : "not_found";
+            const seriesId = seriesMap.get(String(entry.tmdbId));
+            if (seriesId) {
+                await deleteJellyfinItem(cfg, seriesId);
+                status = "deleted";
+            }
             console.log(
-                `[jellyfin-delete] ${found ? "Deleted" : "Not found"} series "${entry.title}" (TMDB ${entry.tmdbId}) for user ${userId}`,
+                `[jellyfin-delete] ${status === "deleted" ? "Deleted" : "Not found"} series "${entry.title}" (TMDB ${entry.tmdbId}) for user ${userId}`,
             );
             deleted++;
         } catch (e) {
@@ -139,10 +152,16 @@ async function processUser(
         let status: "deleted" | "not_found" | "failed" = "not_found";
         let errorMessage: string | null = null;
         try {
-            const found = await deleteJellyfinSeason(cfg, entry.tmdbId, season, autoDeleteIds);
-            status = found ? "deleted" : "not_found";
+            const seriesId = seriesMap.get(String(entry.tmdbId));
+            const seasonId = seriesId
+                ? await findJellyfinSeasonIdBySeriesId(cfg, seriesId, season)
+                : null;
+            if (seasonId) {
+                await deleteJellyfinItem(cfg, seasonId);
+                status = "deleted";
+            }
             console.log(
-                `[jellyfin-delete] ${found ? "Deleted" : "Not found"} S${season} of "${entry.title}" for user ${userId}`,
+                `[jellyfin-delete] ${status === "deleted" ? "Deleted" : "Not found"} S${season} of "${entry.title}" for user ${userId}`,
             );
             deleted++;
         } catch (e) {
@@ -170,6 +189,7 @@ async function processUser(
     const completedEndedShows = await db
         .select({
             showId: userShowProgress.showId,
+            tmdbId: shows.tmdbId,
             title: shows.title,
         })
         .from(userShowProgress)
@@ -185,6 +205,11 @@ async function processUser(
     const wholeShowEligibleIds = new Set(completedEndedShows.map((s) => s.showId));
 
     for (const show of completedEndedShows) {
+        // Skip shows that don't actually exist in one of the user's auto-delete libraries —
+        // otherwise they'd be badged as "pending delete" even though there's nothing to
+        // delete, and Phase 2 would later log a misleading "not_found" for them.
+        if (!seriesMap.has(String(show.tmdbId))) continue;
+
         const inserted = await db
             .insert(jellyfinDeleteQueue)
             .values({ userId, showId: show.showId, seasonNumber: null })
@@ -230,6 +255,7 @@ async function processUser(
         const seasonStats = await db
             .select({
                 showId: episodes.showId,
+                tmdbId: shows.tmdbId,
                 seasonNumber: episodes.seasonNumber,
                 seasonTotal: seasons.episodeCount,
                 airedCount: sql<number>`cast(count(distinct case when ${episodes.airDate} is not null and ${episodes.airDate} <= ${today} then ${episodes.id} end) as integer)`,
@@ -237,6 +263,7 @@ async function processUser(
                 lastAirDate: sql<string | null>`max(${episodes.airDate})`,
             })
             .from(episodes)
+            .innerJoin(shows, eq(shows.id, episodes.showId))
             .innerJoin(
                 seasons,
                 and(
@@ -253,7 +280,7 @@ async function processUser(
                 ),
             )
             .where(and(inArray(episodes.showId, userShowIds), gt(episodes.seasonNumber, 0)))
-            .groupBy(episodes.showId, episodes.seasonNumber, seasons.episodeCount);
+            .groupBy(episodes.showId, shows.tmdbId, episodes.seasonNumber, seasons.episodeCount);
 
         for (const stat of seasonStats) {
             if (
@@ -263,6 +290,14 @@ async function processUser(
                 stat.lastAirDate !== null &&
                 stat.lastAirDate < sevenDaysAgo
             ) {
+                // Same existence guard as the whole-show branch above: only queue a season
+                // that's actually resolvable in Jellyfin within the scoped libraries.
+                const seriesId = seriesMap.get(String(stat.tmdbId));
+                const seasonId = seriesId
+                    ? await findJellyfinSeasonIdBySeriesId(cfg, seriesId, stat.seasonNumber)
+                    : null;
+                if (!seasonId) continue;
+
                 const inserted = await db
                     .insert(jellyfinDeleteQueue)
                     .values({ userId, showId: stat.showId, seasonNumber: stat.seasonNumber })

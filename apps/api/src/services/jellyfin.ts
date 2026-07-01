@@ -49,11 +49,14 @@ export async function fetchJellyfinLibraries(cfg: JellyfinConfig): Promise<Jelly
     }));
 }
 
-async function findJellyfinSeriesId(
+// Fetches every Series visible within `ancestorIds` (or the whole server if omitted) and
+// returns a tmdbId -> Jellyfin seriesId map. Callers that need to check/act on many shows in
+// one run (e.g. the daily auto-delete job) should fetch this ONCE and reuse it, rather than
+// re-fetching the full series list per candidate.
+export async function fetchJellyfinSeriesTmdbMap(
     cfg: JellyfinConfig,
-    showTmdbId: number,
     ancestorIds?: string[],
-): Promise<string | null> {
+): Promise<Map<string, string>> {
     // AnyProviderIdEquals is broken in some Jellyfin builds (returns unfiltered results).
     // Fetch all Series with their ProviderIds and filter client-side instead.
     const params = new URLSearchParams({
@@ -66,35 +69,35 @@ async function findJellyfinSeriesId(
         params.set("AncestorIds", ancestorIds.join(","));
     }
     const res = await jellyfinFetch(cfg, `/Items?${params}`);
-    if (!res.ok) return null;
+    if (!res.ok) return new Map();
     const data = (await res.json()) as {
         Items: Array<{ Id: string; ProviderIds?: Record<string, string> }>;
     };
-    const target = String(showTmdbId);
-    const match = (data.Items ?? []).find((item) => item.ProviderIds?.["Tmdb"] === target);
-    return match?.Id ?? null;
+    const map = new Map<string, string>();
+    for (const item of data.Items ?? []) {
+        const tmdbId = item.ProviderIds?.["Tmdb"];
+        if (tmdbId && !map.has(tmdbId)) map.set(tmdbId, item.Id);
+    }
+    return map;
 }
 
-export async function deleteJellyfinSeries(
+async function findJellyfinSeriesId(
     cfg: JellyfinConfig,
     showTmdbId: number,
     ancestorIds?: string[],
-): Promise<boolean> {
-    const seriesId = await findJellyfinSeriesId(cfg, showTmdbId, ancestorIds);
-    if (!seriesId) return false;
-    await deleteJellyfinItem(cfg, seriesId);
-    return true;
+): Promise<string | null> {
+    const map = await fetchJellyfinSeriesTmdbMap(cfg, ancestorIds);
+    return map.get(String(showTmdbId)) ?? null;
 }
 
-export async function deleteJellyfinSeason(
+// Given an already-resolved Jellyfin seriesId, finds the item ID of one of its seasons.
+// Exported so callers holding a seriesId from fetchJellyfinSeriesTmdbMap (e.g. the auto-delete
+// job checking many seasons against one series) don't need to re-resolve the series each time.
+export async function findJellyfinSeasonIdBySeriesId(
     cfg: JellyfinConfig,
-    showTmdbId: number,
+    seriesId: string,
     seasonNumber: number,
-    ancestorIds?: string[],
-): Promise<boolean> {
-    const seriesId = await findJellyfinSeriesId(cfg, showTmdbId, ancestorIds);
-    if (!seriesId) return false;
-
+): Promise<string | null> {
     // GET /Shows/{seriesId}/Seasons returns season items with their IndexNumber
     const res = await jellyfinFetch(cfg, `/Shows/${seriesId}/Seasons`);
     if (!res.ok) throw new Error(`Jellyfin seasons fetch failed: ${res.status}`);
@@ -102,10 +105,7 @@ export async function deleteJellyfinSeason(
         Items: Array<{ Id: string; IndexNumber?: number }>;
     };
     const seasonItem = (data.Items ?? []).find((s) => s.IndexNumber === seasonNumber);
-    if (!seasonItem) return false;
-
-    await deleteJellyfinItem(cfg, seasonItem.Id);
-    return true;
+    return seasonItem?.Id ?? null;
 }
 
 export async function findJellyfinSeasonEpisodes(
