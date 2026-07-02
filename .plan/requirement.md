@@ -58,7 +58,9 @@ privacy-first (data stays on the user's server).
   `jellyfinApiKey` encrypted at rest (AES-256-GCM via `encryptToken`) and masked as `"***"` in API responses;
   `start` script sets `NODE_ENV=production` so missing `API_SECRET` causes a hard fail (no dev-fallback secret in prod);
   `runMigrations()` failure exits the process rather than serving requests on a broken schema;
-  Jellyfin auto-delete scoped to configured library IDs via `AncestorIds` parameter — never touches other libraries;
+  Jellyfin auto-delete scoped to configured library IDs via per-library `ParentId` queries — never touches
+  other libraries (`AncestorIds` is silently IGNORED by Jellyfin 10.11 /Items and must not be relied on;
+  `AnyProviderIdEquals` returns unfiltered results — all provider-id matching is done client-side);
   push subscription capped at 10 per user (429 on overflow; same-endpoint re-subscribe
   excluded from count so VAPID-rotation re-register is never blocked);
   airing-reminder title correct for same-show multi-episode airings (no "+0");

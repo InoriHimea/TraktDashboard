@@ -49,34 +49,41 @@ export async function fetchJellyfinLibraries(cfg: JellyfinConfig): Promise<Jelly
     }));
 }
 
-// Fetches every Series visible within `ancestorIds` (or the whole server if omitted) and
+// Fetches every Series visible within `libraryIds` (or the whole server if omitted) and
 // returns a tmdbId -> Jellyfin seriesId map. Callers that need to check/act on many shows in
 // one run (e.g. the daily auto-delete job) should fetch this ONCE and reuse it, rather than
 // re-fetching the full series list per candidate.
+//
+// Library scoping uses ParentId, NOT AncestorIds: AncestorIds is silently ignored by
+// Jellyfin 10.11's /Items controller (verified live 2026-07-02 — a movie-library
+// AncestorIds still returned every series on the server), which would void the scoping
+// guarantee entirely. ParentId is honored but takes a single id, so scoped lookups fan
+// out one request per configured library and merge.
 export async function fetchJellyfinSeriesTmdbMap(
     cfg: JellyfinConfig,
-    ancestorIds?: string[],
+    libraryIds?: string[],
 ): Promise<Map<string, string>> {
-    // AnyProviderIdEquals is broken in some Jellyfin builds (returns unfiltered results).
-    // Fetch all Series with their ProviderIds and filter client-side instead.
-    const params = new URLSearchParams({
-        IncludeItemTypes: "Series",
-        Recursive: "true",
-        Fields: "ProviderIds",
-        Limit: "2000",
-    });
-    if (ancestorIds && ancestorIds.length > 0) {
-        params.set("AncestorIds", ancestorIds.join(","));
-    }
-    const res = await jellyfinFetch(cfg, `/Items?${params}`);
-    if (!res.ok) return new Map();
-    const data = (await res.json()) as {
-        Items: Array<{ Id: string; ProviderIds?: Record<string, string> }>;
-    };
     const map = new Map<string, string>();
-    for (const item of data.Items ?? []) {
-        const tmdbId = item.ProviderIds?.["Tmdb"];
-        if (tmdbId && !map.has(tmdbId)) map.set(tmdbId, item.Id);
+    const scopes: Array<string | null> = libraryIds && libraryIds.length > 0 ? libraryIds : [null];
+    for (const lib of scopes) {
+        // AnyProviderIdEquals is broken in some Jellyfin builds (returns unfiltered results).
+        // Fetch all Series with their ProviderIds and filter client-side instead.
+        const params = new URLSearchParams({
+            IncludeItemTypes: "Series",
+            Recursive: "true",
+            Fields: "ProviderIds",
+            Limit: "2000",
+        });
+        if (lib) params.set("ParentId", lib);
+        const res = await jellyfinFetch(cfg, `/Items?${params}`);
+        if (!res.ok) continue;
+        const data = (await res.json()) as {
+            Items: Array<{ Id: string; ProviderIds?: Record<string, string> }>;
+        };
+        for (const item of data.Items ?? []) {
+            const tmdbId = item.ProviderIds?.["Tmdb"];
+            if (tmdbId && !map.has(tmdbId)) map.set(tmdbId, item.Id);
+        }
     }
     return map;
 }
@@ -84,9 +91,9 @@ export async function fetchJellyfinSeriesTmdbMap(
 async function findJellyfinSeriesId(
     cfg: JellyfinConfig,
     showTmdbId: number,
-    ancestorIds?: string[],
+    libraryIds?: string[],
 ): Promise<string | null> {
-    const map = await fetchJellyfinSeriesTmdbMap(cfg, ancestorIds);
+    const map = await fetchJellyfinSeriesTmdbMap(cfg, libraryIds);
     return map.get(String(showTmdbId)) ?? null;
 }
 
@@ -140,32 +147,32 @@ export async function findJellyfinEpisode(
     showTmdbId: number,
     seasonNumber: number,
     episodeNumber: number,
-    ancestorIds?: string[],
+    libraryIds?: string[],
 ): Promise<JellyfinEpisode | null> {
+    // The old implementation filtered server-side via AnyProviderIdEquals + AncestorIds.
+    // Both are unreliable on current Jellyfin builds (unfiltered results / silently
+    // ignored), which for a delete-adjacent lookup means potentially returning a random
+    // same-numbered episode of a DIFFERENT show. Resolve the series by TMDB id
+    // client-side, then use /Shows/{id}/Episodes which filters correctly.
+    const seriesId = await findJellyfinSeriesId(cfg, showTmdbId, libraryIds);
+    if (!seriesId) return null;
+
     const params = new URLSearchParams({
-        IncludeItemTypes: "Episode",
-        Recursive: "true",
-        Fields: "Path,ProviderIds",
-        AnyProviderIdEquals: `Tmdb.${showTmdbId}`,
-        ParentIndexNumber: String(seasonNumber),
-        IndexNumber: String(episodeNumber),
+        Season: String(seasonNumber),
+        Fields: "Path",
     });
-    if (ancestorIds && ancestorIds.length > 0) {
-        params.set("AncestorIds", ancestorIds.join(","));
-    }
-    const res = await jellyfinFetch(cfg, `/Items?${params}`);
+    const res = await jellyfinFetch(cfg, `/Shows/${seriesId}/Episodes?${params}`);
     if (!res.ok) throw new Error(`Jellyfin episode lookup failed: ${res.status}`);
     const data = (await res.json()) as {
         Items: Array<{
             Id: string;
             Name: string;
-            SeriesName: string;
+            SeriesName?: string;
             Path?: string;
-            ParentIndexNumber?: number;
             IndexNumber?: number;
         }>;
     };
-    const item = data.Items?.[0] ?? null;
+    const item = (data.Items ?? []).find((e) => e.IndexNumber === episodeNumber) ?? null;
     if (!item) return null;
     return {
         id: item.Id,
@@ -179,18 +186,28 @@ export async function findJellyfinMovie(
     cfg: JellyfinConfig,
     movieTmdbId: number,
 ): Promise<JellyfinMovie | null> {
+    // Same rationale as the series lookup: AnyProviderIdEquals returns unfiltered results
+    // on some builds, and the movie id from this lookup feeds the manual delete button —
+    // trusting it server-side risks deleting a random unrelated movie. Fetch with
+    // ProviderIds and match the TMDB id client-side.
     const params = new URLSearchParams({
         IncludeItemTypes: "Movie",
         Recursive: "true",
         Fields: "Path,ProviderIds",
-        AnyProviderIdEquals: `Tmdb.${movieTmdbId}`,
+        Limit: "2000",
     });
     const res = await jellyfinFetch(cfg, `/Items?${params}`);
     if (!res.ok) throw new Error(`Jellyfin movie lookup failed: ${res.status}`);
     const data = (await res.json()) as {
-        Items: Array<{ Id: string; Name: string; Path?: string }>;
+        Items: Array<{
+            Id: string;
+            Name: string;
+            Path?: string;
+            ProviderIds?: Record<string, string>;
+        }>;
     };
-    const item = data.Items?.[0] ?? null;
+    const target = String(movieTmdbId);
+    const item = (data.Items ?? []).find((m) => m.ProviderIds?.["Tmdb"] === target) ?? null;
     if (!item) return null;
     return { id: item.Id, name: item.Name ?? "", path: item.Path ?? null };
 }
@@ -300,8 +317,8 @@ export async function autoDeleteJellyfinEpisode(
 ): Promise<void> {
     if (autoDeleteLibraryIds.length === 0) return;
 
-    // Restrict search to the configured auto-delete libraries via AncestorIds so we
-    // never touch media in libraries the user didn't opt into.
+    // Restrict search to the configured auto-delete libraries (ParentId per library,
+    // see fetchJellyfinSeriesTmdbMap) so we never touch media the user didn't opt into.
     const episode = await findJellyfinEpisode(
         cfg,
         showTmdbId,
