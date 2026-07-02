@@ -116,7 +116,7 @@ async function processUser(
             console.log(
                 `[jellyfin-delete] ${status === "deleted" ? "Deleted" : "Not found"} series "${entry.title}" (TMDB ${entry.tmdbId}) for user ${userId}`,
             );
-            deleted++;
+            if (status === "deleted") deleted++;
         } catch (e) {
             status = "failed";
             errorMessage = e instanceof Error ? e.message : String(e);
@@ -163,7 +163,7 @@ async function processUser(
             console.log(
                 `[jellyfin-delete] ${status === "deleted" ? "Deleted" : "Not found"} S${season} of "${entry.title}" for user ${userId}`,
             );
-            deleted++;
+            if (status === "deleted") deleted++;
         } catch (e) {
             status = "failed";
             errorMessage = e instanceof Error ? e.message : String(e);
