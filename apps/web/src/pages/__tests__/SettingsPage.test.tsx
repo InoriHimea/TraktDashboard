@@ -14,6 +14,7 @@ const settings: UserSettings = {
     jellyfinUrl: null,
     jellyfinApiKey: null,
     jellyfinAutoDeleteLibraryIds: null,
+    jellyfinAutoDeleteEnabled: false,
     notificationEventTypes: ["series_premiere", "season_premiere", "finale", "regular"],
 };
 
@@ -26,6 +27,16 @@ vi.mock("../../hooks", () => ({
         mutateAsync: updateSettingsMock,
         isPending: false,
     }),
+    useSyncStatus: () => ({ data: undefined }),
+    useTriggerSync: () => ({ mutate: vi.fn(), isPending: false }),
+    useTriggerFullSync: () => ({ mutate: vi.fn(), isPending: false }),
+    useSystemMetrics: () => ({ data: undefined }),
+    useJellyfinDeleteQueue: () => ({ data: [], isLoading: false }),
+    useJellyfinDeleteHistory: () => ({ data: [], isLoading: false }),
+    useJellyfinDeleteExclusions: () => ({ data: [], isLoading: false }),
+    useDeferJellyfinDelete: () => ({ mutate: vi.fn(), isPending: false }),
+    useNeverJellyfinDelete: () => ({ mutate: vi.fn(), isPending: false }),
+    useRemoveJellyfinExclusion: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 vi.mock("../../lib/toast", () => ({
@@ -69,6 +80,7 @@ describe("SettingsPage", () => {
                 jellyfinUrl: null,
                 jellyfinApiKey: null,
                 jellyfinAutoDeleteLibraryIds: [],
+                jellyfinAutoDeleteEnabled: false,
                 notificationEventTypes: ["series_premiere", "season_premiere", "finale", "regular"],
             }),
         );

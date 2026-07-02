@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, RefreshCw, CheckCheck, Archive, Trash2 } from "lucide-react";
+import { ArrowLeft, RefreshCw, CheckCheck, Archive, Trash2, ShieldOff } from "lucide-react";
 import {
     useShowDetail,
     useResetProgress,
@@ -14,6 +14,9 @@ import {
     useSettings,
     useJellyfinSeason,
     useDeleteJellyfinSeason,
+    useJellyfinDeleteExclusions,
+    useCreateJellyfinExclusion,
+    useRemoveJellyfinExclusion,
 } from "../hooks";
 import { HeroSection } from "../components/HeroSection";
 import { SeasonTab } from "../components/SeasonTab";
@@ -125,6 +128,32 @@ export default function ShowDetailPage() {
 
     const [jellyfinDeleteSeasonConfirmOpen, setJellyfinDeleteSeasonConfirmOpen] = useState(false);
     const deleteJellyfinSeason = useDeleteJellyfinSeason();
+
+    // 永不自动删除：整剧粒度排除（存在 seasonNumber=null 的 never 排除即视为开启）
+    const { data: deleteExclusions } = useJellyfinDeleteExclusions();
+    const showNeverExclusion = deleteExclusions?.find(
+        (ex) => ex.showId === showId && ex.seasonNumber === null && ex.mode === "never",
+    );
+    const createExclusion = useCreateJellyfinExclusion();
+    const removeExclusion = useRemoveJellyfinExclusion();
+    const isExclusionPending = createExclusion.isPending || removeExclusion.isPending;
+
+    function handleToggleNeverDelete() {
+        if (showNeverExclusion) {
+            removeExclusion.mutate(showNeverExclusion.id, {
+                onSuccess: () => toast(t("showDetail.neverAutoDeleteOff"), "success"),
+                onError: () => toast(t("common.loadFailed"), "error"),
+            });
+        } else {
+            createExclusion.mutate(
+                { showId },
+                {
+                    onSuccess: () => toast(t("showDetail.neverAutoDeleteOn"), "success"),
+                    onError: () => toast(t("common.loadFailed"), "error"),
+                },
+            );
+        }
+    }
 
     // Query Jellyfin for the currently active season — enabled only once show data is loaded
     const jellyfinSeasonNumber = activeSeason ?? progress?.seasons?.[0]?.seasonNumber ?? 1;
@@ -247,6 +276,37 @@ export default function ShowDetailPage() {
                     inWatchlist={inWatchlist}
                     isComplete={isComplete}
                 />
+
+                {/* 永不自动删除开关（Jellyfin 已配置时显示） */}
+                {isValidId && jellyfinConfigured && (
+                    <label
+                        style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            padding: "10px 16px",
+                            borderRadius: "12px",
+                            border: `1px solid ${showNeverExclusion ? "rgba(248,113,113,0.4)" : "var(--color-border-subtle)"}`,
+                            background: showNeverExclusion
+                                ? "rgba(248,113,113,0.08)"
+                                : "var(--color-surface)",
+                            width: "fit-content",
+                            fontSize: "13px",
+                            color: showNeverExclusion ? "#f87171" : "var(--color-text-secondary)",
+                            cursor: isExclusionPending ? "wait" : "pointer",
+                        }}
+                    >
+                        <input
+                            type="checkbox"
+                            checked={!!showNeverExclusion}
+                            disabled={isExclusionPending}
+                            onChange={handleToggleNeverDelete}
+                            style={{ accentColor: "#f87171" }}
+                        />
+                        <ShieldOff size={13} />
+                        {t("showDetail.neverAutoDelete")}
+                    </label>
+                )}
 
                 {/* 我的评分 */}
                 {isValidId && (

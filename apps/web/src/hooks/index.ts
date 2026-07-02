@@ -24,6 +24,7 @@ import type {
     JellyfinHeatmapCell,
     JellyfinDeleteQueueEntry,
     JellyfinDeleteHistoryEntry,
+    JellyfinDeleteExclusion,
     DiscoverItem,
     UpNextItem,
     UserRating,
@@ -443,11 +444,56 @@ export function useJellyfinDeleteQueue() {
     });
 }
 
-export function useCancelJellyfinDelete() {
+export function useDeferJellyfinDelete() {
     const qc = useQueryClient();
     return useMutation({
-        mutationFn: (id: number) => api.jellyfin.cancelDeleteQueue(id),
-        onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.jellyfinDeleteQueue }),
+        mutationFn: (id: number) => api.jellyfin.deferDeleteQueue(id),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: queryKeys.jellyfinDeleteQueue });
+            qc.invalidateQueries({ queryKey: queryKeys.jellyfinDeleteExclusions });
+        },
+    });
+}
+
+export function useNeverJellyfinDelete() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => api.jellyfin.neverDeleteQueue(id),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: queryKeys.jellyfinDeleteQueue });
+            qc.invalidateQueries({ queryKey: queryKeys.jellyfinDeleteExclusions });
+        },
+    });
+}
+
+export function useJellyfinDeleteExclusions() {
+    return useQuery<JellyfinDeleteExclusion[]>({
+        queryKey: queryKeys.jellyfinDeleteExclusions,
+        queryFn: () => api.jellyfin.deleteExclusions().then((r) => r.data),
+        staleTime: 1000 * 60,
+    });
+}
+
+export function useCreateJellyfinExclusion() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (body: { showId?: number; movieId?: number; seasonNumber?: number | null }) =>
+            api.jellyfin.createDeleteExclusion(body),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: queryKeys.jellyfinDeleteExclusions });
+            qc.invalidateQueries({ queryKey: queryKeys.jellyfinDeleteQueue });
+        },
+    });
+}
+
+export function useRemoveJellyfinExclusion() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => api.jellyfin.removeDeleteExclusion(id),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: queryKeys.jellyfinDeleteExclusions });
+            qc.invalidateQueries({ queryKey: queryKeys.jellyfinDeleteQueue });
+        },
     });
 }
 

@@ -430,6 +430,7 @@ export interface UserSettings {
     jellyfinUrl: string | null;
     jellyfinApiKey: string | null;
     jellyfinAutoDeleteLibraryIds: string[] | null;
+    jellyfinAutoDeleteEnabled: boolean;
     notificationEventTypes: string[];
 }
 
@@ -503,6 +504,17 @@ export interface JellyfinDeleteHistoryEntry {
     status: "deleted" | "not_found" | "failed";
     errorMessage: string | null;
     processedAt: string;
+}
+
+export interface JellyfinDeleteExclusion {
+    id: number;
+    showId: number | null;
+    movieId: number | null;
+    seasonNumber: number | null; // null = 整剧排除
+    mode: "never" | "defer";
+    deferUntil: string | null;
+    createdAt: string;
+    title: string;
 }
 
 // ─── Episode Detail ───────────────────────────────────────────────────────────

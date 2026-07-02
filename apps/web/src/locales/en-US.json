@@ -165,14 +165,30 @@
             "triggerSuccess": "Backup succeeded ({{n}} target(s))",
             "triggerFailed": "Backup failed, check history for details",
             "history": "Backup History"
-        }
+        },
+        "jellyfinAutoDeleteEnabled": "Enable auto-delete",
+        "jellyfinAutoDeleteEnabledHint": "Daily job active: qualifying content is marked, then deleted from Jellyfin the next day.",
+        "jellyfinAutoDeleteDisabledHint": "Auto-delete is disabled: nothing new is marked and queued entries will not be deleted.",
+        "jellyfinDeleteDefer": "Defer 7 days",
+        "jellyfinDeleteNever": "Never delete",
+        "jellyfinDeleteDeferSuccess": "Deferred 7 days; re-enters the deletion flow after expiry",
+        "jellyfinDeleteNeverSuccess": "Added to never-delete list",
+        "jellyfinExclusionsTitle": "Exclusions",
+        "jellyfinExclusionsHint": "Never-delete and deferred items. Remove to restore automatic eligibility.",
+        "jellyfinExclusionsEmpty": "No exclusions",
+        "jellyfinExclusionNever": "Never delete",
+        "jellyfinExclusionDeferUntil": "Deferred until {{date}}",
+        "jellyfinExclusionRemove": "Remove exclusion",
+        "jellyfinExclusionRemoved": "Removed; automatic eligibility restored"
     },
     "media": {
         "pendingDeleteWholeShow": "Pending delete · Whole show",
         "pendingDeleteSeason": "Pending delete · Season {{season}}",
         "pendingDelete": "Pending delete",
         "pendingDeleteCancelSuccess": "Deletion cancelled",
-        "pendingDeleteCancelFailed": "Failed to cancel, please retry"
+        "pendingDeleteCancelFailed": "Failed to cancel, please retry",
+        "pendingDeleteDefer": "Defer 7 days",
+        "pendingDeleteDeferSuccess": "Deferred 7 days"
     },
     "progress": {
         "watching": "Watching",
@@ -282,7 +298,10 @@
         "totalCount": "{{seasons}}S · {{episodes}} eps",
         "seasonAllWatched": "{{total}} eps · All watched",
         "seasonNotStarted": "{{total}} eps · Not started",
-        "seasonPartial": "{{total}} eps · {{watched}} watched"
+        "seasonPartial": "{{total}} eps · {{watched}} watched",
+        "neverAutoDelete": "Never auto-delete",
+        "neverAutoDeleteOn": "Never auto-delete enabled",
+        "neverAutoDeleteOff": "Never auto-delete disabled; automatic eligibility restored"
     },
     "movieDetail": {
         "markWatched": "Mark as watched",

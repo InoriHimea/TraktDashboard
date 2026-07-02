@@ -268,6 +268,8 @@ export const userSettings = pgTable("user_settings", {
     jellyfinUrl: text("jellyfin_url"),
     jellyfinApiKey: text("jellyfin_api_key"),
     jellyfinAutoDeleteLibraryIds: text("jellyfin_auto_delete_library_ids"),
+    // 自动删除总开关：默认关闭，job 开头检查；关闭时 Phase 1/2 均不执行
+    jellyfinAutoDeleteEnabled: boolean("jellyfin_auto_delete_enabled").notNull().default(false),
     notificationEventTypes: text("notification_event_types"),
     // F14: 云端备份配置
     gdriveToken: text("gdrive_token"),
@@ -537,6 +539,27 @@ export const jellyfinDeleteQueue = pgTable(
         queuedAt: timestamp("queued_at", { withTimezone: true }).defaultNow().notNull(),
     },
     (t) => [index("jdq_user_idx").on(t.userId)],
+);
+
+// ─── Jellyfin Delete Exclusions ─────────────────────────────────────────────────
+// 取消入队的两种模式：mode='never' 永不自动删除；mode='defer' 推迟（deferUntil 前不入队，
+// 过期行由每日 job 清理，之后重新进入两段式流程）。season_number NULL = 整剧排除。
+
+export const jellyfinDeleteExclusions = pgTable(
+    "jellyfin_delete_exclusions",
+    {
+        id: serial("id").primaryKey(),
+        userId: integer("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
+        showId: integer("show_id").references(() => shows.id, { onDelete: "cascade" }),
+        movieId: integer("movie_id").references(() => movies.id, { onDelete: "cascade" }),
+        seasonNumber: integer("season_number"),
+        mode: text("mode").notNull(), // 'never' | 'defer'
+        deferUntil: timestamp("defer_until", { withTimezone: true }),
+        createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    },
+    (t) => [index("jde_user_idx").on(t.userId)],
 );
 
 // ─── Jellyfin Delete History ────────────────────────────────────────────────────

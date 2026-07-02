@@ -312,6 +312,7 @@ describe("settings routes", () => {
                 jellyfinUrl: null,
                 jellyfinApiKey: null,
                 jellyfinAutoDeleteLibraryIds: null,
+                jellyfinAutoDeleteEnabled: false,
                 notificationEventTypes: ["series_premiere", "season_premiere", "finale", "regular"],
             },
         });

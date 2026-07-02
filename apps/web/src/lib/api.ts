@@ -26,6 +26,7 @@ import type {
     JellyfinHeatmapCell,
     JellyfinDeleteQueueEntry,
     JellyfinDeleteHistoryEntry,
+    JellyfinDeleteExclusion,
     SearchResult,
     DiscoverItem,
     UpNextItem,
@@ -323,12 +324,27 @@ export const api = {
         statsHeatmap: () => request<ApiResponse<JellyfinHeatmapCell[]>>("/jellyfin/stats/heatmap"),
         deleteQueue: () =>
             request<ApiResponse<JellyfinDeleteQueueEntry[]>>("/jellyfin/delete-queue"),
-        cancelDeleteQueue: (id: number) =>
-            request<{ ok: boolean }>(`/jellyfin/delete-queue/${id}`, { method: "DELETE" }),
+        deferDeleteQueue: (id: number) =>
+            request<{ ok: boolean }>(`/jellyfin/delete-queue/${id}/defer`, { method: "POST" }),
+        neverDeleteQueue: (id: number) =>
+            request<{ ok: boolean }>(`/jellyfin/delete-queue/${id}/never`, { method: "POST" }),
         deleteHistory: (limit = 20) =>
             request<ApiResponse<JellyfinDeleteHistoryEntry[]>>(
                 `/jellyfin/delete-history?limit=${limit}`,
             ),
+        deleteExclusions: () =>
+            request<ApiResponse<JellyfinDeleteExclusion[]>>("/jellyfin/delete-exclusions"),
+        createDeleteExclusion: (body: {
+            showId?: number;
+            movieId?: number;
+            seasonNumber?: number | null;
+        }) =>
+            request<ApiResponse<{ id: number }>>("/jellyfin/delete-exclusions", {
+                method: "POST",
+                body: JSON.stringify(body),
+            }),
+        removeDeleteExclusion: (id: number) =>
+            request<{ ok: boolean }>(`/jellyfin/delete-exclusions/${id}`, { method: "DELETE" }),
     },
     discover: {
         list: (mediaType: "show" | "movie", tab: "trending" | "popular", limit = 20) =>

@@ -268,6 +268,36 @@ export async function runMigrations() {
         sql`CREATE INDEX IF NOT EXISTS "jdh_user_processed_idx" ON "jellyfin_delete_history" ("user_id", "processed_at" DESC)`,
     );
 
+    // 0022 — 自动删除总开关（默认关闭）+ 取消拆分的排除表（永不删除/推迟删除）
+    await db.execute(
+        sql`ALTER TABLE "user_settings" ADD COLUMN IF NOT EXISTS "jellyfin_auto_delete_enabled" boolean DEFAULT false NOT NULL`,
+    );
+    await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS "jellyfin_delete_exclusions" (
+            "id" serial PRIMARY KEY NOT NULL,
+            "user_id" integer NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+            "show_id" integer REFERENCES "shows"("id") ON DELETE cascade,
+            "movie_id" integer REFERENCES "movies"("id") ON DELETE cascade,
+            "season_number" integer,
+            "mode" text NOT NULL,
+            "defer_until" timestamp with time zone,
+            "created_at" timestamp with time zone DEFAULT now() NOT NULL
+        )
+    `);
+    await db.execute(
+        sql`CREATE INDEX IF NOT EXISTS "jde_user_idx" ON "jellyfin_delete_exclusions" ("user_id")`,
+    );
+    // 同一条目只允许一条排除记录（整剧/季度/电影 各自唯一）
+    await db.execute(
+        sql`CREATE UNIQUE INDEX IF NOT EXISTS "jde_show_idx" ON "jellyfin_delete_exclusions" ("user_id", "show_id") WHERE "season_number" IS NULL AND "show_id" IS NOT NULL`,
+    );
+    await db.execute(
+        sql`CREATE UNIQUE INDEX IF NOT EXISTS "jde_season_idx" ON "jellyfin_delete_exclusions" ("user_id", "show_id", "season_number") WHERE "season_number" IS NOT NULL`,
+    );
+    await db.execute(
+        sql`CREATE UNIQUE INDEX IF NOT EXISTS "jde_movie_idx" ON "jellyfin_delete_exclusions" ("user_id", "movie_id") WHERE "movie_id" IS NOT NULL`,
+    );
+
     await client.end();
     console.log("[db] Migrations complete");
 }

@@ -27,7 +27,10 @@ import {
     useTriggerFullSync,
     useSystemMetrics,
     useJellyfinDeleteQueue,
-    useCancelJellyfinDelete,
+    useDeferJellyfinDelete,
+    useNeverJellyfinDelete,
+    useJellyfinDeleteExclusions,
+    useRemoveJellyfinExclusion,
     useJellyfinDeleteHistory,
 } from "../hooks";
 import { api } from "../lib/api";
@@ -88,6 +91,7 @@ export default function SettingsPage() {
     const [jellyfinUrl, setJellyfinUrl] = useState("");
     const [jellyfinApiKey, setJellyfinApiKey] = useState("");
     const [jellyfinAutoDeleteIds, setJellyfinAutoDeleteIds] = useState<string[]>([]);
+    const [jellyfinAutoDeleteEnabled, setJellyfinAutoDeleteEnabled] = useState(false);
     const [notifEventTypes, setNotifEventTypes] = useState<string[]>([
         "series_premiere",
         "season_premiere",
@@ -165,6 +169,7 @@ export default function SettingsPage() {
         setJellyfinUrl(settings.jellyfinUrl ?? "");
         setJellyfinApiKey(settings.jellyfinApiKey ?? "");
         setJellyfinAutoDeleteIds(settings.jellyfinAutoDeleteLibraryIds ?? []);
+        setJellyfinAutoDeleteEnabled(settings.jellyfinAutoDeleteEnabled ?? false);
         setNotifEventTypes(
             settings.notificationEventTypes.length > 0
                 ? settings.notificationEventTypes
@@ -359,6 +364,7 @@ export default function SettingsPage() {
                 jellyfinUrl: jellyfinUrl.trim() || null,
                 jellyfinApiKey: jellyfinApiKey.trim() || null,
                 jellyfinAutoDeleteLibraryIds: jellyfinAutoDeleteIds,
+                jellyfinAutoDeleteEnabled,
                 notificationEventTypes: notifEventTypes,
             });
             hasSeededRef.current = false;
@@ -383,11 +389,30 @@ export default function SettingsPage() {
     // ── Jellyfin 自动删除队列 / 历史 ──────────────────────────────────────────
     const { data: deleteQueue, isLoading: deleteQueueLoading } = useJellyfinDeleteQueue();
     const { data: deleteHistory, isLoading: deleteHistoryLoading } = useJellyfinDeleteHistory(20);
-    const { mutate: cancelDelete, isPending: isCancellingDelete } = useCancelJellyfinDelete();
+    const { mutate: deferDelete, isPending: isDeferring } = useDeferJellyfinDelete();
+    const { mutate: neverDelete, isPending: isNevering } = useNeverJellyfinDelete();
+    const { data: deleteExclusions, isLoading: exclusionsLoading } = useJellyfinDeleteExclusions();
+    const { mutate: removeExclusion, isPending: isRemovingExclusion } =
+        useRemoveJellyfinExclusion();
+    const isQueueActionPending = isDeferring || isNevering;
 
-    function handleCancelDelete(id: number) {
-        cancelDelete(id, {
-            onSuccess: () => toast(t("settings.jellyfinDeleteQueueCancelSuccess"), "success"),
+    function handleDeferDelete(id: number) {
+        deferDelete(id, {
+            onSuccess: () => toast(t("settings.jellyfinDeleteDeferSuccess"), "success"),
+            onError: () => toast(t("settings.jellyfinDeleteQueueCancelFailed"), "error"),
+        });
+    }
+
+    function handleNeverDelete(id: number) {
+        neverDelete(id, {
+            onSuccess: () => toast(t("settings.jellyfinDeleteNeverSuccess"), "success"),
+            onError: () => toast(t("settings.jellyfinDeleteQueueCancelFailed"), "error"),
+        });
+    }
+
+    function handleRemoveExclusion(id: number) {
+        removeExclusion(id, {
+            onSuccess: () => toast(t("settings.jellyfinExclusionRemoved"), "success"),
             onError: () => toast(t("settings.jellyfinDeleteQueueCancelFailed"), "error"),
         });
     }
@@ -948,6 +973,52 @@ export default function SettingsPage() {
                                                 )}
                                             </div>
 
+                                            {/* 自动删除总开关 */}
+                                            <div>
+                                                <label
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: "8px",
+                                                        fontSize: "13px",
+                                                        color: "var(--color-text)",
+                                                        cursor: "pointer",
+                                                    }}
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={jellyfinAutoDeleteEnabled}
+                                                        onChange={(e) =>
+                                                            setJellyfinAutoDeleteEnabled(
+                                                                e.target.checked,
+                                                            )
+                                                        }
+                                                        style={{
+                                                            accentColor: "var(--color-accent)",
+                                                        }}
+                                                    />
+                                                    {t("settings.jellyfinAutoDeleteEnabled")}
+                                                </label>
+                                                <p
+                                                    style={{
+                                                        fontSize: "12px",
+                                                        color: jellyfinAutoDeleteEnabled
+                                                            ? "var(--color-text-muted)"
+                                                            : "#f59e0b",
+                                                        marginTop: "6px",
+                                                        lineHeight: 1.5,
+                                                    }}
+                                                >
+                                                    {jellyfinAutoDeleteEnabled
+                                                        ? t(
+                                                              "settings.jellyfinAutoDeleteEnabledHint",
+                                                          )
+                                                        : t(
+                                                              "settings.jellyfinAutoDeleteDisabledHint",
+                                                          )}
+                                                </p>
+                                            </div>
+
                                             {/* 待删除队列 */}
                                             <div>
                                                 <span
@@ -1061,14 +1132,205 @@ export default function SettingsPage() {
                                                                     <button
                                                                         type="button"
                                                                         disabled={
-                                                                            isCancellingDelete
+                                                                            isQueueActionPending
                                                                         }
                                                                         onClick={() =>
-                                                                            handleCancelDelete(
+                                                                            handleDeferDelete(
                                                                                 entry.id,
                                                                             )
                                                                         }
-                                                                        title={t("common.cancel")}
+                                                                        style={{
+                                                                            fontSize: "10px",
+                                                                            padding: "3px 8px",
+                                                                            borderRadius: 6,
+                                                                            border: "1px solid var(--color-border)",
+                                                                            background:
+                                                                                "var(--color-surface-3)",
+                                                                            color: "var(--color-text-secondary)",
+                                                                            cursor: isQueueActionPending
+                                                                                ? "not-allowed"
+                                                                                : "pointer",
+                                                                            flexShrink: 0,
+                                                                            whiteSpace: "nowrap",
+                                                                        }}
+                                                                    >
+                                                                        {t(
+                                                                            "settings.jellyfinDeleteDefer",
+                                                                        )}
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        disabled={
+                                                                            isQueueActionPending
+                                                                        }
+                                                                        onClick={() =>
+                                                                            handleNeverDelete(
+                                                                                entry.id,
+                                                                            )
+                                                                        }
+                                                                        style={{
+                                                                            fontSize: "10px",
+                                                                            padding: "3px 8px",
+                                                                            borderRadius: 6,
+                                                                            border: "1px solid rgba(248,113,113,0.35)",
+                                                                            background:
+                                                                                "rgba(248,113,113,0.08)",
+                                                                            color: "#f87171",
+                                                                            cursor: isQueueActionPending
+                                                                                ? "not-allowed"
+                                                                                : "pointer",
+                                                                            flexShrink: 0,
+                                                                            whiteSpace: "nowrap",
+                                                                        }}
+                                                                    >
+                                                                        {t(
+                                                                            "settings.jellyfinDeleteNever",
+                                                                        )}
+                                                                    </button>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* 排除列表（永不删除 / 推迟中） */}
+                                            <div>
+                                                <span
+                                                    style={{
+                                                        ...labelStyle,
+                                                        marginBottom: "4px",
+                                                    }}
+                                                >
+                                                    {t("settings.jellyfinExclusionsTitle")}
+                                                </span>
+                                                <p
+                                                    style={{
+                                                        fontSize: "12px",
+                                                        color: "var(--color-text-muted)",
+                                                        marginBottom: "8px",
+                                                        lineHeight: 1.5,
+                                                    }}
+                                                >
+                                                    {t("settings.jellyfinExclusionsHint")}
+                                                </p>
+                                                {exclusionsLoading ? (
+                                                    <div
+                                                        style={{
+                                                            display: "flex",
+                                                            justifyContent: "center",
+                                                            padding: "8px 0",
+                                                        }}
+                                                    >
+                                                        <Loader2
+                                                            size={16}
+                                                            style={{
+                                                                animation:
+                                                                    "spin 1s linear infinite",
+                                                                color: "var(--color-text-muted)",
+                                                            }}
+                                                        />
+                                                    </div>
+                                                ) : (deleteExclusions?.length ?? 0) === 0 ? (
+                                                    <p
+                                                        style={{
+                                                            fontSize: "12px",
+                                                            color: "var(--color-text-muted)",
+                                                        }}
+                                                    >
+                                                        {t("settings.jellyfinExclusionsEmpty")}
+                                                    </p>
+                                                ) : (
+                                                    <div
+                                                        style={{
+                                                            display: "flex",
+                                                            flexDirection: "column",
+                                                            gap: "5px",
+                                                        }}
+                                                    >
+                                                        {deleteExclusions!.map((ex) => {
+                                                            const scope =
+                                                                ex.seasonNumber !== null
+                                                                    ? t(
+                                                                          "settings.jellyfinDeleteQueueSeason",
+                                                                          {
+                                                                              season: ex.seasonNumber,
+                                                                          },
+                                                                      )
+                                                                    : ex.showId
+                                                                      ? t(
+                                                                            "settings.jellyfinDeleteQueueWholeShow",
+                                                                        )
+                                                                      : null;
+                                                            const modeLabel =
+                                                                ex.mode === "never"
+                                                                    ? t(
+                                                                          "settings.jellyfinExclusionNever",
+                                                                      )
+                                                                    : t(
+                                                                          "settings.jellyfinExclusionDeferUntil",
+                                                                          {
+                                                                              date: ex.deferUntil
+                                                                                  ? new Date(
+                                                                                        ex.deferUntil,
+                                                                                    ).toLocaleDateString()
+                                                                                  : "—",
+                                                                          },
+                                                                      );
+                                                            return (
+                                                                <div
+                                                                    key={ex.id}
+                                                                    style={{
+                                                                        display: "flex",
+                                                                        alignItems: "center",
+                                                                        gap: "8px",
+                                                                        padding: "7px 10px",
+                                                                        borderRadius: 8,
+                                                                        background:
+                                                                            "var(--color-surface-2)",
+                                                                        border: `1px solid ${ex.mode === "never" ? "rgba(248,113,113,0.25)" : "rgba(245,158,11,0.25)"}`,
+                                                                    }}
+                                                                >
+                                                                    <span
+                                                                        style={{
+                                                                            fontSize: "11px",
+                                                                            color: "var(--color-text)",
+                                                                            flex: 1,
+                                                                            overflow: "hidden",
+                                                                            textOverflow:
+                                                                                "ellipsis",
+                                                                            whiteSpace: "nowrap",
+                                                                        }}
+                                                                    >
+                                                                        {ex.title}
+                                                                        {scope ? ` · ${scope}` : ""}
+                                                                    </span>
+                                                                    <span
+                                                                        style={{
+                                                                            fontSize: "10px",
+                                                                            color:
+                                                                                ex.mode === "never"
+                                                                                    ? "#f87171"
+                                                                                    : "#f59e0b",
+                                                                            fontWeight: 600,
+                                                                            flexShrink: 0,
+                                                                        }}
+                                                                    >
+                                                                        {modeLabel}
+                                                                    </span>
+                                                                    <button
+                                                                        type="button"
+                                                                        disabled={
+                                                                            isRemovingExclusion
+                                                                        }
+                                                                        onClick={() =>
+                                                                            handleRemoveExclusion(
+                                                                                ex.id,
+                                                                            )
+                                                                        }
+                                                                        title={t(
+                                                                            "settings.jellyfinExclusionRemove",
+                                                                        )}
                                                                         style={{
                                                                             display: "inline-flex",
                                                                             alignItems: "center",
@@ -1081,7 +1343,7 @@ export default function SettingsPage() {
                                                                             background:
                                                                                 "var(--color-surface-3)",
                                                                             color: "var(--color-text-secondary)",
-                                                                            cursor: isCancellingDelete
+                                                                            cursor: isRemovingExclusion
                                                                                 ? "not-allowed"
                                                                                 : "pointer",
                                                                             flexShrink: 0,

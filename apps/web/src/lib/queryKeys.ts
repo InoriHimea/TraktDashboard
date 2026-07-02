@@ -51,6 +51,7 @@ export const queryKeys = {
     jellyfinNowPlaying: ["jellyfin-now-playing"] as const,
     jellyfinDeleteQueue: ["jellyfin-delete-queue"] as const,
     jellyfinDeleteHistory: (limit: number) => ["jellyfin-delete-history", limit] as const,
+    jellyfinDeleteExclusions: ["jellyfin-delete-exclusions"] as const,
     notes: {
         all: ["notes"] as const,
         get: (

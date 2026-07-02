@@ -1,5 +1,5 @@
 import { Trash2, X } from "lucide-react";
-import { useCancelJellyfinDelete } from "../../hooks";
+import { useDeferJellyfinDelete } from "../../hooks";
 import { t } from "../../lib/i18n";
 import { useToast } from "../../lib/toast";
 
@@ -10,18 +10,20 @@ interface PendingDeleteBadgeProps {
 }
 
 /**
- * 待自动删除角标 —— 展示条目已进入 Jellyfin 两阶段自动删除队列，并提供取消入口。
+ * 待自动删除角标 —— 展示条目已进入 Jellyfin 两阶段自动删除队列。
+ * 角标上的 X = 推迟 7 天（软取消，到期后重新进入两段式流程）；
+ * "永不删除"入口在设置页队列面板和剧集详情页开关。
  * 用于卡片海报之上，由父级绝对定位容器决定位置。
  */
 export function PendingDeleteBadge({ queueId, label, className }: PendingDeleteBadgeProps) {
-    const { mutate: cancel, isPending } = useCancelJellyfinDelete();
+    const { mutate: defer, isPending } = useDeferJellyfinDelete();
     const { toast } = useToast();
 
-    function handleCancel(e: React.MouseEvent) {
+    function handleDefer(e: React.MouseEvent) {
         e.preventDefault();
         e.stopPropagation();
-        cancel(queueId, {
-            onSuccess: () => toast(t("media.pendingDeleteCancelSuccess"), "success"),
+        defer(queueId, {
+            onSuccess: () => toast(t("media.pendingDeleteDeferSuccess"), "success"),
             onError: () => toast(t("media.pendingDeleteCancelFailed"), "error"),
         });
     }
@@ -59,8 +61,8 @@ export function PendingDeleteBadge({ queueId, label, className }: PendingDeleteB
             <button
                 type="button"
                 disabled={isPending}
-                onClick={handleCancel}
-                title={t("common.cancel")}
+                onClick={handleDefer}
+                title={t("media.pendingDeleteDefer")}
                 style={{
                     display: "inline-flex",
                     alignItems: "center",

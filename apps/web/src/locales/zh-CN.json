@@ -165,14 +165,30 @@
             "triggerSuccess": "备份成功（{{n}} 个目标）",
             "triggerFailed": "备份失败，请查看历史记录",
             "history": "备份历史"
-        }
+        },
+        "jellyfinAutoDeleteEnabled": "启用自动删除",
+        "jellyfinAutoDeleteEnabledHint": "每日定时任务运行中：符合条件的内容将被标记，次日从 Jellyfin 删除文件。",
+        "jellyfinAutoDeleteDisabledHint": "自动删除已停用：不会标记新内容，队列中已有条目也不会被删除。",
+        "jellyfinDeleteDefer": "推迟 7 天",
+        "jellyfinDeleteNever": "永不删除",
+        "jellyfinDeleteDeferSuccess": "已推迟 7 天，到期后重新进入删除流程",
+        "jellyfinDeleteNeverSuccess": "已加入永不删除列表",
+        "jellyfinExclusionsTitle": "排除列表",
+        "jellyfinExclusionsHint": "永不删除或推迟中的内容。移除后恢复自动判定。",
+        "jellyfinExclusionsEmpty": "暂无排除项目",
+        "jellyfinExclusionNever": "永不删除",
+        "jellyfinExclusionDeferUntil": "推迟至 {{date}}",
+        "jellyfinExclusionRemove": "移除排除",
+        "jellyfinExclusionRemoved": "已移除，恢复自动判定"
     },
     "media": {
         "pendingDeleteWholeShow": "待删除 · 整剧",
         "pendingDeleteSeason": "待删除 · 第 {{season}} 季",
         "pendingDelete": "待删除",
         "pendingDeleteCancelSuccess": "已取消删除计划",
-        "pendingDeleteCancelFailed": "取消失败，请重试"
+        "pendingDeleteCancelFailed": "取消失败，请重试",
+        "pendingDeleteDefer": "推迟 7 天",
+        "pendingDeleteDeferSuccess": "已推迟 7 天"
     },
     "progress": {
         "watching": "追剧中",
@@ -282,7 +298,10 @@
         "totalCount": "{{seasons}}S · {{episodes}}集",
         "seasonAllWatched": "{{total}}集 · 全部看完",
         "seasonNotStarted": "{{total}}集 · 未开始",
-        "seasonPartial": "{{total}}集 · 已看 {{watched}}集"
+        "seasonPartial": "{{total}}集 · 已看 {{watched}}集",
+        "neverAutoDelete": "永不自动删除",
+        "neverAutoDeleteOn": "已开启永不自动删除",
+        "neverAutoDeleteOff": "已关闭永不自动删除，恢复自动判定"
     },
     "movieDetail": {
         "markWatched": "标记为已观看",

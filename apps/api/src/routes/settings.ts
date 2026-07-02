@@ -55,6 +55,7 @@ const DEFAULTS = {
     jellyfinUrl: null as string | null,
     jellyfinApiKey: null as string | null,
     jellyfinAutoDeleteLibraryIds: null as string[] | null,
+    jellyfinAutoDeleteEnabled: false,
     notificationEventTypes: DEFAULT_NOTIFICATION_TYPES as NotificationEventType[],
 };
 
@@ -80,6 +81,7 @@ const updateSettingsSchema = z.object({
         .optional(),
     jellyfinApiKey: z.union([z.string(), z.null()]).optional(),
     jellyfinAutoDeleteLibraryIds: z.union([z.array(z.string()), z.null()]).optional(),
+    jellyfinAutoDeleteEnabled: z.boolean().optional(),
     notificationEventTypes: z
         .union([z.array(z.enum(NOTIFICATION_EVENT_TYPES)), z.null()])
         .optional(),
@@ -99,6 +101,7 @@ settingsRoutes.get("/", async (c) => {
         jellyfinUrl?: string | null;
         jellyfinApiKey?: string | null;
         jellyfinAutoDeleteLibraryIds?: string | null;
+        jellyfinAutoDeleteEnabled?: boolean;
         notificationEventTypes?: string | null;
     };
     let row: SettingsRow | undefined;
@@ -137,6 +140,8 @@ settingsRoutes.get("/", async (c) => {
             jellyfinUrl: row?.jellyfinUrl ?? DEFAULTS.jellyfinUrl,
             jellyfinApiKey: row?.jellyfinApiKey ? "***" : null,
             jellyfinAutoDeleteLibraryIds,
+            jellyfinAutoDeleteEnabled:
+                row?.jellyfinAutoDeleteEnabled ?? DEFAULTS.jellyfinAutoDeleteEnabled,
             notificationEventTypes: parseNotificationEventTypes(row?.notificationEventTypes),
         },
     });
@@ -155,6 +160,7 @@ settingsRoutes.put("/", async (c) => {
         jellyfinUrl,
         jellyfinApiKey,
         jellyfinAutoDeleteLibraryIds,
+        jellyfinAutoDeleteEnabled,
         notificationEventTypes,
     } = parsed.data;
 
@@ -168,6 +174,7 @@ settingsRoutes.put("/", async (c) => {
         jellyfinUrl?: string | null;
         jellyfinApiKey?: string | null;
         jellyfinAutoDeleteLibraryIds?: string | null;
+        jellyfinAutoDeleteEnabled?: boolean;
         notificationEventTypes?: string | null;
     };
     let existing: ExistingRow | undefined;
@@ -181,6 +188,7 @@ settingsRoutes.put("/", async (c) => {
                 jellyfinUrl: userSettings.jellyfinUrl,
                 jellyfinApiKey: userSettings.jellyfinApiKey,
                 jellyfinAutoDeleteLibraryIds: userSettings.jellyfinAutoDeleteLibraryIds,
+                jellyfinAutoDeleteEnabled: userSettings.jellyfinAutoDeleteEnabled,
                 notificationEventTypes: userSettings.notificationEventTypes,
             })
             .from(userSettings)
@@ -242,6 +250,10 @@ settingsRoutes.put("/", async (c) => {
             jellyfinAutoDeleteLibraryIds: newAutoDeleteIds
                 ? JSON.stringify(newAutoDeleteIds)
                 : null,
+            jellyfinAutoDeleteEnabled:
+                jellyfinAutoDeleteEnabled ??
+                existing?.jellyfinAutoDeleteEnabled ??
+                DEFAULTS.jellyfinAutoDeleteEnabled,
             notificationEventTypes: newNotifTypes ? JSON.stringify(newNotifTypes) : null,
         };
         await db
@@ -256,6 +268,7 @@ settingsRoutes.put("/", async (c) => {
                     jellyfinUrl: newValues.jellyfinUrl,
                     jellyfinApiKey: newValues.jellyfinApiKey,
                     jellyfinAutoDeleteLibraryIds: newValues.jellyfinAutoDeleteLibraryIds,
+                    jellyfinAutoDeleteEnabled: newValues.jellyfinAutoDeleteEnabled,
                     notificationEventTypes: newValues.notificationEventTypes,
                     updatedAt: newValues.updatedAt,
                 },
@@ -299,6 +312,7 @@ settingsRoutes.put("/", async (c) => {
                 jellyfinUrl: DEFAULTS.jellyfinUrl,
                 jellyfinApiKey: DEFAULTS.jellyfinApiKey,
                 jellyfinAutoDeleteLibraryIds: DEFAULTS.jellyfinAutoDeleteLibraryIds,
+                jellyfinAutoDeleteEnabled: DEFAULTS.jellyfinAutoDeleteEnabled,
                 notificationEventTypes: DEFAULTS.notificationEventTypes,
             },
         });

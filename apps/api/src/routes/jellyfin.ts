@@ -6,8 +6,9 @@ import {
     movies,
     jellyfinDeleteQueue,
     jellyfinDeleteHistory,
+    jellyfinDeleteExclusions,
 } from "@trakt-dashboard/db";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
     fetchJellyfinLibraries,
@@ -284,6 +285,189 @@ jellyfinRoutes.delete("/delete-queue/:id", async (c) => {
         .where(and(eq(jellyfinDeleteQueue.id, id), eq(jellyfinDeleteQueue.userId, userId)))
         .returning({ id: jellyfinDeleteQueue.id });
 
+    if (deleted.length === 0) return c.json({ error: "Not found" }, 404);
+    return c.json({ ok: true });
+});
+
+// 取消拆分：推迟 7 天 / 永不删除。两者都把队列行转成排除记录——直接删队列行的话
+// 次日 Phase 1 会重新入队，取消形同虚设。
+const DEFER_DAYS = 7;
+
+async function excludeQueueEntry(userId: number, queueId: number, mode: "never" | "defer") {
+    const db = getDb();
+    const [entry] = await db
+        .select({
+            id: jellyfinDeleteQueue.id,
+            showId: jellyfinDeleteQueue.showId,
+            movieId: jellyfinDeleteQueue.movieId,
+            seasonNumber: jellyfinDeleteQueue.seasonNumber,
+        })
+        .from(jellyfinDeleteQueue)
+        .where(and(eq(jellyfinDeleteQueue.id, queueId), eq(jellyfinDeleteQueue.userId, userId)));
+    if (!entry) return false;
+
+    // Replace any existing exclusion for the same target (e.g. defer → never upgrade).
+    await db
+        .delete(jellyfinDeleteExclusions)
+        .where(
+            and(
+                eq(jellyfinDeleteExclusions.userId, userId),
+                entry.showId !== null
+                    ? eq(jellyfinDeleteExclusions.showId, entry.showId)
+                    : eq(jellyfinDeleteExclusions.movieId, entry.movieId!),
+                entry.seasonNumber !== null
+                    ? eq(jellyfinDeleteExclusions.seasonNumber, entry.seasonNumber)
+                    : isNull(jellyfinDeleteExclusions.seasonNumber),
+            ),
+        );
+    await db.insert(jellyfinDeleteExclusions).values({
+        userId,
+        showId: entry.showId,
+        movieId: entry.movieId,
+        seasonNumber: entry.seasonNumber,
+        mode,
+        deferUntil:
+            mode === "defer" ? new Date(Date.now() + DEFER_DAYS * 24 * 60 * 60 * 1000) : null,
+    });
+    await db.delete(jellyfinDeleteQueue).where(eq(jellyfinDeleteQueue.id, entry.id));
+    return true;
+}
+
+// POST /api/jellyfin/delete-queue/:id/defer — 推迟 7 天后重新进入两段式流程
+jellyfinRoutes.post("/delete-queue/:id/defer", async (c) => {
+    const userId = c.get("userId");
+    const id = parseBoundedInt(c.req.param("id"), -1, 1, Number.MAX_SAFE_INTEGER);
+    if (id < 1) return c.json({ error: "Invalid id" }, 400);
+    const ok = await excludeQueueEntry(userId, id, "defer");
+    if (!ok) return c.json({ error: "Not found" }, 404);
+    return c.json({ ok: true });
+});
+
+// POST /api/jellyfin/delete-queue/:id/never — 永不自动删除该条目
+jellyfinRoutes.post("/delete-queue/:id/never", async (c) => {
+    const userId = c.get("userId");
+    const id = parseBoundedInt(c.req.param("id"), -1, 1, Number.MAX_SAFE_INTEGER);
+    if (id < 1) return c.json({ error: "Invalid id" }, 400);
+    const ok = await excludeQueueEntry(userId, id, "never");
+    if (!ok) return c.json({ error: "Not found" }, 404);
+    return c.json({ ok: true });
+});
+
+// GET /api/jellyfin/delete-exclusions — 排除列表（永不删除 + 未到期的推迟）
+jellyfinRoutes.get("/delete-exclusions", async (c) => {
+    const userId = c.get("userId");
+    const db = getDb();
+    const rows = await db
+        .select({
+            id: jellyfinDeleteExclusions.id,
+            showId: jellyfinDeleteExclusions.showId,
+            movieId: jellyfinDeleteExclusions.movieId,
+            seasonNumber: jellyfinDeleteExclusions.seasonNumber,
+            mode: jellyfinDeleteExclusions.mode,
+            deferUntil: jellyfinDeleteExclusions.deferUntil,
+            createdAt: jellyfinDeleteExclusions.createdAt,
+            showTitle: shows.title,
+            movieTitle: movies.title,
+        })
+        .from(jellyfinDeleteExclusions)
+        .leftJoin(shows, eq(shows.id, jellyfinDeleteExclusions.showId))
+        .leftJoin(movies, eq(movies.id, jellyfinDeleteExclusions.movieId))
+        .where(eq(jellyfinDeleteExclusions.userId, userId))
+        .orderBy(desc(jellyfinDeleteExclusions.createdAt));
+
+    const data = rows.map((r) => ({
+        id: r.id,
+        showId: r.showId,
+        movieId: r.movieId,
+        seasonNumber: r.seasonNumber,
+        mode: r.mode as "never" | "defer",
+        deferUntil: r.deferUntil?.toISOString() ?? null,
+        createdAt: r.createdAt.toISOString(),
+        title: r.showTitle ?? r.movieTitle ?? "—",
+    }));
+    return c.json({ data });
+});
+
+const createExclusionSchema = z.object({
+    showId: z.number().int().positive().optional(),
+    movieId: z.number().int().positive().optional(),
+    seasonNumber: z.number().int().min(0).nullable().optional(),
+});
+
+// POST /api/jellyfin/delete-exclusions — 详情页"永不自动删除"开关（直接按媒体创建）
+jellyfinRoutes.post("/delete-exclusions", async (c) => {
+    const userId = c.get("userId");
+    const parsed = await validateBody(c, createExclusionSchema);
+    if (parsed instanceof Response) return parsed;
+    const { showId, movieId, seasonNumber } = parsed.data;
+    if (!showId && !movieId) return c.json({ error: "showId or movieId required" }, 400);
+
+    const db = getDb();
+    const season = seasonNumber ?? null;
+    await db
+        .delete(jellyfinDeleteExclusions)
+        .where(
+            and(
+                eq(jellyfinDeleteExclusions.userId, userId),
+                showId
+                    ? eq(jellyfinDeleteExclusions.showId, showId)
+                    : eq(jellyfinDeleteExclusions.movieId, movieId!),
+                season !== null
+                    ? eq(jellyfinDeleteExclusions.seasonNumber, season)
+                    : isNull(jellyfinDeleteExclusions.seasonNumber),
+            ),
+        );
+    const [created] = await db
+        .insert(jellyfinDeleteExclusions)
+        .values({
+            userId,
+            showId: showId ?? null,
+            movieId: movieId ?? null,
+            seasonNumber: season,
+            mode: "never",
+            deferUntil: null,
+        })
+        .returning({ id: jellyfinDeleteExclusions.id });
+
+    // Purge already-queued entries the new exclusion covers. A season exclusion also removes
+    // the whole-show queue entry (deleting the series would delete the protected season).
+    if (showId) {
+        await db
+            .delete(jellyfinDeleteQueue)
+            .where(
+                and(
+                    eq(jellyfinDeleteQueue.userId, userId),
+                    eq(jellyfinDeleteQueue.showId, showId),
+                    season !== null
+                        ? sql`(${jellyfinDeleteQueue.seasonNumber} = ${season} OR ${jellyfinDeleteQueue.seasonNumber} IS NULL)`
+                        : sql`TRUE`,
+                ),
+            );
+    } else if (movieId) {
+        await db
+            .delete(jellyfinDeleteQueue)
+            .where(
+                and(
+                    eq(jellyfinDeleteQueue.userId, userId),
+                    eq(jellyfinDeleteQueue.movieId, movieId),
+                ),
+            );
+    }
+    return c.json({ data: { id: created.id } });
+});
+
+// DELETE /api/jellyfin/delete-exclusions/:id — 移除排除，恢复自动判定
+jellyfinRoutes.delete("/delete-exclusions/:id", async (c) => {
+    const userId = c.get("userId");
+    const id = parseBoundedInt(c.req.param("id"), -1, 1, Number.MAX_SAFE_INTEGER);
+    if (id < 1) return c.json({ error: "Invalid id" }, 400);
+    const db = getDb();
+    const deleted = await db
+        .delete(jellyfinDeleteExclusions)
+        .where(
+            and(eq(jellyfinDeleteExclusions.id, id), eq(jellyfinDeleteExclusions.userId, userId)),
+        )
+        .returning({ id: jellyfinDeleteExclusions.id });
     if (deleted.length === 0) return c.json({ error: "Not found" }, 404);
     return c.json({ ok: true });
 });

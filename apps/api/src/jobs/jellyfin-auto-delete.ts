@@ -3,13 +3,14 @@ import {
     userSettings,
     jellyfinDeleteQueue,
     jellyfinDeleteHistory,
+    jellyfinDeleteExclusions,
     userShowProgress,
     shows,
     seasons,
     episodes,
     watchHistory,
 } from "@trakt-dashboard/db";
-import { and, eq, gt, inArray, isNotNull, not, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, isNotNull, lte, not, sql } from "drizzle-orm";
 import {
     fetchJellyfinSeriesTmdbMap,
     findJellyfinSeasonIdBySeriesId,
@@ -39,6 +40,7 @@ export async function runJellyfinAutoDelete(): Promise<AutoDeleteResult> {
         .from(userSettings)
         .where(
             and(
+                eq(userSettings.jellyfinAutoDeleteEnabled, true),
                 isNotNull(userSettings.jellyfinUrl),
                 isNotNull(userSettings.jellyfinApiKey),
                 isNotNull(userSettings.jellyfinAutoDeleteLibraryIds),
@@ -80,6 +82,44 @@ async function processUser(
     // Fetched once and reused for both phases below: avoids re-fetching the full Jellyfin
     // series list (scoped to the user's auto-delete libraries) once per candidate.
     const seriesMap = await fetchJellyfinSeriesTmdbMap(cfg, autoDeleteIds);
+
+    // ── Exclusions (永不删除 / 推迟删除) ─────────────────────────────────────────
+    // Expired defers are pruned first so the entry naturally re-enters the two-phase flow.
+    await db
+        .delete(jellyfinDeleteExclusions)
+        .where(
+            and(
+                eq(jellyfinDeleteExclusions.userId, userId),
+                eq(jellyfinDeleteExclusions.mode, "defer"),
+                lte(jellyfinDeleteExclusions.deferUntil, new Date()),
+            ),
+        );
+    const exclusions = await db
+        .select({
+            showId: jellyfinDeleteExclusions.showId,
+            seasonNumber: jellyfinDeleteExclusions.seasonNumber,
+        })
+        .from(jellyfinDeleteExclusions)
+        .where(
+            and(
+                eq(jellyfinDeleteExclusions.userId, userId),
+                isNotNull(jellyfinDeleteExclusions.showId),
+            ),
+        );
+    // Whole-show exclusion (seasonNumber null) blocks both whole-show and season queueing.
+    // A season exclusion also blocks whole-show queueing for that show — deleting the whole
+    // series would delete the protected season's files, violating the protection semantics.
+    const excludedShowIds = new Set(exclusions.map((e) => e.showId!));
+    const excludedWholeShowIds = new Set(
+        exclusions.filter((e) => e.seasonNumber === null).map((e) => e.showId!),
+    );
+    const excludedSeasonKeys = new Set(
+        exclusions
+            .filter((e) => e.seasonNumber !== null)
+            .map((e) => `${e.showId}:${e.seasonNumber}`),
+    );
+    const isSeasonExcluded = (showId: number, season: number) =>
+        excludedWholeShowIds.has(showId) || excludedSeasonKeys.has(`${showId}:${season}`);
 
     // ── Phase 2: execute pending deletions ──────────────────────────────────────
 
@@ -205,6 +245,8 @@ async function processUser(
     const wholeShowEligibleIds = new Set(completedEndedShows.map((s) => s.showId));
 
     for (const show of completedEndedShows) {
+        // Any exclusion on the show (whole-show or single-season) blocks whole-show queueing.
+        if (excludedShowIds.has(show.showId)) continue;
         // Skip shows that don't actually exist in one of the user's auto-delete libraries —
         // otherwise they'd be badged as "pending delete" even though there's nothing to
         // delete, and Phase 2 would later log a misleading "not_found" for them.
@@ -297,6 +339,7 @@ async function processUser(
                 lastAirMs !== null &&
                 lastAirMs < sevenDaysAgoMs
             ) {
+                if (isSeasonExcluded(stat.showId, stat.seasonNumber)) continue;
                 // Same existence guard as the whole-show branch above: only queue a season
                 // that's actually resolvable in Jellyfin within the scoped libraries.
                 const seriesId = seriesMap.get(String(stat.tmdbId));
