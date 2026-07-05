@@ -25,6 +25,103 @@ export interface AutoDeleteResult {
     queued: number;
 }
 
+export type DeleteNowStatus = "deleted" | "not_found" | "failed" | "no-jellyfin-config";
+
+/**
+ * Deletes one queue entry right now, bypassing the daily schedule (N5-T02). Shares the
+ * single-item deletion logic Phase 2 uses, but resolves the series map for just this one
+ * show instead of the whole library — cheap for a one-off, on-demand action.
+ */
+export async function deleteQueueEntryNow(
+    userId: number,
+    queueId: number,
+): Promise<{ status: DeleteNowStatus; errorMessage?: string }> {
+    const db = getDb();
+
+    const [user] = await db
+        .select({
+            jellyfinUrl: userSettings.jellyfinUrl,
+            jellyfinApiKey: userSettings.jellyfinApiKey,
+            jellyfinAutoDeleteLibraryIds: userSettings.jellyfinAutoDeleteLibraryIds,
+        })
+        .from(userSettings)
+        .where(eq(userSettings.userId, userId));
+    if (!user?.jellyfinUrl || !user.jellyfinApiKey || !user.jellyfinAutoDeleteLibraryIds) {
+        return { status: "no-jellyfin-config" };
+    }
+    let autoDeleteIds: string[];
+    try {
+        autoDeleteIds = JSON.parse(user.jellyfinAutoDeleteLibraryIds) as string[];
+    } catch {
+        return { status: "no-jellyfin-config" };
+    }
+    if (!Array.isArray(autoDeleteIds) || autoDeleteIds.length === 0) {
+        return { status: "no-jellyfin-config" };
+    }
+
+    const [entry] = await db
+        .select({
+            id: jellyfinDeleteQueue.id,
+            showId: jellyfinDeleteQueue.showId,
+            seasonNumber: jellyfinDeleteQueue.seasonNumber,
+            tmdbId: shows.tmdbId,
+            title: shows.title,
+        })
+        .from(jellyfinDeleteQueue)
+        .innerJoin(shows, eq(shows.id, jellyfinDeleteQueue.showId))
+        .where(and(eq(jellyfinDeleteQueue.id, queueId), eq(jellyfinDeleteQueue.userId, userId)));
+    if (!entry || entry.showId === null) return { status: "not_found" };
+    const showId = entry.showId;
+
+    const cfg: JellyfinConfig = {
+        url: user.jellyfinUrl,
+        apiKey: decryptToken(user.jellyfinApiKey, resolveApiSecret()),
+    };
+    const seriesMap = await fetchJellyfinSeriesTmdbMap(cfg, autoDeleteIds);
+    const seriesId = seriesMap.get(String(entry.tmdbId));
+
+    let status: "deleted" | "not_found" | "failed" = "not_found";
+    let errorMessage: string | null = null;
+    try {
+        const targetId =
+            entry.seasonNumber === null
+                ? seriesId
+                : seriesId
+                  ? await findJellyfinSeasonIdBySeriesId(cfg, seriesId, entry.seasonNumber)
+                  : null;
+        if (targetId) {
+            await deleteJellyfinItem(cfg, targetId);
+            status = "deleted";
+        }
+    } catch (e) {
+        status = "failed";
+        errorMessage = e instanceof Error ? e.message : String(e);
+    }
+
+    await db.insert(jellyfinDeleteHistory).values({
+        userId,
+        showId,
+        seasonNumber: entry.seasonNumber,
+        title: entry.title,
+        status,
+        errorMessage,
+    });
+
+    // Whole-show deletion also clears any stray season entries for the same show,
+    // matching Phase 2's behavior.
+    if (entry.seasonNumber === null) {
+        await db
+            .delete(jellyfinDeleteQueue)
+            .where(
+                and(eq(jellyfinDeleteQueue.userId, userId), eq(jellyfinDeleteQueue.showId, showId)),
+            );
+    } else {
+        await db.delete(jellyfinDeleteQueue).where(eq(jellyfinDeleteQueue.id, entry.id));
+    }
+
+    return { status, errorMessage: errorMessage ?? undefined };
+}
+
 export async function runJellyfinAutoDelete(): Promise<AutoDeleteResult> {
     const db = getDb();
     let deleted = 0;

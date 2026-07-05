@@ -29,11 +29,13 @@ import {
     useJellyfinDeleteQueue,
     useDeferJellyfinDelete,
     useNeverJellyfinDelete,
+    useDeleteNowJellyfinDelete,
     useJellyfinDeleteExclusions,
     useRemoveJellyfinExclusion,
     useJellyfinDeleteHistory,
 } from "../hooks";
 import { api } from "../lib/api";
+import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import {
     isPushSupported,
     getExistingSubscription,
@@ -391,10 +393,14 @@ export default function SettingsPage() {
     const { data: deleteHistory, isLoading: deleteHistoryLoading } = useJellyfinDeleteHistory(20);
     const { mutate: deferDelete, isPending: isDeferring } = useDeferJellyfinDelete();
     const { mutate: neverDelete, isPending: isNevering } = useNeverJellyfinDelete();
+    const { mutate: deleteNow, isPending: isDeletingNow } = useDeleteNowJellyfinDelete();
     const { data: deleteExclusions, isLoading: exclusionsLoading } = useJellyfinDeleteExclusions();
     const { mutate: removeExclusion, isPending: isRemovingExclusion } =
         useRemoveJellyfinExclusion();
-    const isQueueActionPending = isDeferring || isNevering;
+    const isQueueActionPending = isDeferring || isNevering || isDeletingNow;
+    const [deleteNowTarget, setDeleteNowTarget] = useState<{ id: number; title: string } | null>(
+        null,
+    );
 
     function handleDeferDelete(id: number) {
         deferDelete(id, {
@@ -407,6 +413,25 @@ export default function SettingsPage() {
         neverDelete(id, {
             onSuccess: () => toast(t("settings.jellyfinDeleteNeverSuccess"), "success"),
             onError: () => toast(t("settings.jellyfinDeleteQueueCancelFailed"), "error"),
+        });
+    }
+
+    function handleDeleteNowConfirm() {
+        if (!deleteNowTarget) return;
+        const { id } = deleteNowTarget;
+        deleteNow(id, {
+            onSuccess: (res) => {
+                setDeleteNowTarget(null);
+                if (res.status === "deleted") {
+                    toast(t("settings.jellyfinDeleteNowSuccess"), "success");
+                } else {
+                    toast(t("settings.jellyfinDeleteNowFailed"), "error");
+                }
+            },
+            onError: () => {
+                setDeleteNowTarget(null);
+                toast(t("settings.jellyfinDeleteNowFailed"), "error");
+            },
         });
     }
 
@@ -1185,6 +1210,40 @@ export default function SettingsPage() {
                                                                     >
                                                                         {t(
                                                                             "settings.jellyfinDeleteNever",
+                                                                        )}
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        disabled={
+                                                                            isQueueActionPending
+                                                                        }
+                                                                        onClick={() =>
+                                                                            setDeleteNowTarget({
+                                                                                id: entry.id,
+                                                                                title:
+                                                                                    title +
+                                                                                    (scope
+                                                                                        ? ` · ${scope}`
+                                                                                        : ""),
+                                                                            })
+                                                                        }
+                                                                        style={{
+                                                                            fontSize: "10px",
+                                                                            padding: "3px 8px",
+                                                                            borderRadius: 6,
+                                                                            border: "1px solid rgba(248,113,113,0.5)",
+                                                                            background:
+                                                                                "rgba(248,113,113,0.16)",
+                                                                            color: "#f87171",
+                                                                            cursor: isQueueActionPending
+                                                                                ? "not-allowed"
+                                                                                : "pointer",
+                                                                            flexShrink: 0,
+                                                                            whiteSpace: "nowrap",
+                                                                        }}
+                                                                    >
+                                                                        {t(
+                                                                            "settings.jellyfinDeleteNow",
                                                                         )}
                                                                     </button>
                                                                 </div>
@@ -3294,6 +3353,20 @@ export default function SettingsPage() {
                 </div>
                 {/* end two-column grid */}
             </div>
+
+            <ConfirmDialog
+                isOpen={deleteNowTarget !== null}
+                title={t("settings.jellyfinDeleteNowConfirmTitle")}
+                description={t("settings.jellyfinDeleteNowConfirmDesc", {
+                    title: deleteNowTarget?.title ?? "",
+                })}
+                confirmText={t("settings.jellyfinDeleteNow")}
+                confirmColor="rose"
+                cancelText={t("common.cancel")}
+                isLoading={isDeletingNow}
+                onConfirm={handleDeleteNowConfirm}
+                onCancel={() => setDeleteNowTarget(null)}
+            />
         </div>
     );
 }

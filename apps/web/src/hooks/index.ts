@@ -466,6 +466,17 @@ export function useNeverJellyfinDelete() {
     });
 }
 
+export function useDeleteNowJellyfinDelete() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => api.jellyfin.deleteQueueNow(id),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: queryKeys.jellyfinDeleteQueue });
+            qc.invalidateQueries({ queryKey: queryKeys.jellyfinDeleteHistory(20) });
+        },
+    });
+}
+
 export function useJellyfinDeleteExclusions() {
     return useQuery<JellyfinDeleteExclusion[]>({
         queryKey: queryKeys.jellyfinDeleteExclusions,

@@ -328,6 +328,11 @@ export const api = {
             request<{ ok: boolean }>(`/jellyfin/delete-queue/${id}/defer`, { method: "POST" }),
         neverDeleteQueue: (id: number) =>
             request<{ ok: boolean }>(`/jellyfin/delete-queue/${id}/never`, { method: "POST" }),
+        deleteQueueNow: (id: number) =>
+            request<{ ok: boolean; status: string; errorMessage: string | null }>(
+                `/jellyfin/delete-queue/${id}/now`,
+                { method: "POST" },
+            ),
         deleteHistory: (limit = 20) =>
             request<ApiResponse<JellyfinDeleteHistoryEntry[]>>(
                 `/jellyfin/delete-history?limit=${limit}`,

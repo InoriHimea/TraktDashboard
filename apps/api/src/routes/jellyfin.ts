@@ -353,6 +353,21 @@ jellyfinRoutes.post("/delete-queue/:id/never", async (c) => {
     return c.json({ ok: true });
 });
 
+// POST /api/jellyfin/delete-queue/:id/now — 立即删除，不等次日定时任务（N5-T02）
+jellyfinRoutes.post("/delete-queue/:id/now", async (c) => {
+    const userId = c.get("userId");
+    const id = parseBoundedInt(c.req.param("id"), -1, 1, Number.MAX_SAFE_INTEGER);
+    if (id < 1) return c.json({ error: "Invalid id" }, 400);
+
+    const { deleteQueueEntryNow } = await import("../jobs/jellyfin-auto-delete.js");
+    const result = await deleteQueueEntryNow(userId, id);
+    if (result.status === "no-jellyfin-config") {
+        return c.json({ error: "Jellyfin not configured" }, 503);
+    }
+    if (result.status === "not_found") return c.json({ error: "Not found" }, 404);
+    return c.json({ ok: true, status: result.status, errorMessage: result.errorMessage ?? null });
+});
+
 // GET /api/jellyfin/delete-exclusions — 排除列表（永不删除 + 未到期的推迟）
 jellyfinRoutes.get("/delete-exclusions", async (c) => {
     const userId = c.get("userId");
