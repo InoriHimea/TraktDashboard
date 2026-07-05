@@ -182,6 +182,38 @@ export async function findJellyfinEpisode(
     };
 }
 
+// Movie counterpart to fetchJellyfinSeriesTmdbMap (N5-T04) — fetches every Movie visible
+// within `libraryIds` (or the whole server if omitted) and returns a tmdbId -> Jellyfin
+// itemId map. Same ParentId-per-library scoping rationale: AncestorIds is silently ignored
+// by Jellyfin 10.11's /Items controller. Callers acting on many movies in one run (the
+// daily auto-delete job) should fetch this ONCE and reuse it.
+export async function fetchJellyfinMoviesTmdbMap(
+    cfg: JellyfinConfig,
+    libraryIds?: string[],
+): Promise<Map<string, string>> {
+    const map = new Map<string, string>();
+    const scopes: Array<string | null> = libraryIds && libraryIds.length > 0 ? libraryIds : [null];
+    for (const lib of scopes) {
+        const params = new URLSearchParams({
+            IncludeItemTypes: "Movie",
+            Recursive: "true",
+            Fields: "ProviderIds",
+            Limit: "2000",
+        });
+        if (lib) params.set("ParentId", lib);
+        const res = await jellyfinFetch(cfg, `/Items?${params}`);
+        if (!res.ok) continue;
+        const data = (await res.json()) as {
+            Items: Array<{ Id: string; ProviderIds?: Record<string, string> }>;
+        };
+        for (const item of data.Items ?? []) {
+            const tmdbId = item.ProviderIds?.["Tmdb"];
+            if (tmdbId && !map.has(tmdbId)) map.set(tmdbId, item.Id);
+        }
+    }
+    return map;
+}
+
 export async function findJellyfinMovie(
     cfg: JellyfinConfig,
     movieTmdbId: number,

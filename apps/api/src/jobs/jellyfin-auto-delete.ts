@@ -10,10 +10,12 @@ import {
     seasons,
     episodes,
     watchHistory,
+    movies,
 } from "@trakt-dashboard/db";
 import { and, eq, gt, inArray, isNotNull, lte, not, sql } from "drizzle-orm";
 import {
     fetchJellyfinSeriesTmdbMap,
+    fetchJellyfinMoviesTmdbMap,
     findJellyfinSeasonIdBySeriesId,
     deleteJellyfinItem,
     type JellyfinConfig,
@@ -107,36 +109,61 @@ export async function deleteQueueEntryNow(
         return { status: "no-jellyfin-config" };
     }
 
-    const [entry] = await db
+    const [queueRow] = await db
         .select({
             id: jellyfinDeleteQueue.id,
             showId: jellyfinDeleteQueue.showId,
+            movieId: jellyfinDeleteQueue.movieId,
             seasonNumber: jellyfinDeleteQueue.seasonNumber,
-            tmdbId: shows.tmdbId,
-            title: shows.title,
         })
         .from(jellyfinDeleteQueue)
-        .innerJoin(shows, eq(shows.id, jellyfinDeleteQueue.showId))
         .where(and(eq(jellyfinDeleteQueue.id, queueId), eq(jellyfinDeleteQueue.userId, userId)));
-    if (!entry || entry.showId === null) return { status: "not_found" };
-    const showId = entry.showId;
+    if (!queueRow) return { status: "not_found" };
+
+    let tmdbId: number | null;
+    let title: string;
+    if (queueRow.showId !== null) {
+        const [show] = await db
+            .select({ tmdbId: shows.tmdbId, title: shows.title })
+            .from(shows)
+            .where(eq(shows.id, queueRow.showId));
+        if (!show) return { status: "not_found" };
+        tmdbId = show.tmdbId;
+        title = show.title;
+    } else if (queueRow.movieId !== null) {
+        const [movie] = await db
+            .select({ tmdbId: movies.tmdbId, title: movies.title })
+            .from(movies)
+            .where(eq(movies.id, queueRow.movieId));
+        if (!movie) return { status: "not_found" };
+        tmdbId = movie.tmdbId;
+        title = movie.title;
+    } else {
+        return { status: "not_found" };
+    }
 
     const cfg: JellyfinConfig = {
         url: user.jellyfinUrl,
         apiKey: decryptToken(user.jellyfinApiKey, resolveApiSecret()),
     };
-    const seriesMap = await fetchJellyfinSeriesTmdbMap(cfg, autoDeleteIds);
-    const seriesId = seriesMap.get(String(entry.tmdbId));
 
     let status: "deleted" | "not_found" | "failed" = "not_found";
     let errorMessage: string | null = null;
     try {
-        const targetId =
-            entry.seasonNumber === null
-                ? seriesId
-                : seriesId
-                  ? await findJellyfinSeasonIdBySeriesId(cfg, seriesId, entry.seasonNumber)
-                  : null;
+        let targetId: string | null = null;
+        if (queueRow.showId !== null) {
+            const seriesMap = await fetchJellyfinSeriesTmdbMap(cfg, autoDeleteIds);
+            const seriesId = seriesMap.get(String(tmdbId)) ?? null;
+            targetId =
+                queueRow.seasonNumber === null
+                    ? seriesId
+                    : seriesId
+                      ? await findJellyfinSeasonIdBySeriesId(cfg, seriesId, queueRow.seasonNumber)
+                      : null;
+        } else {
+            const movieMap = await fetchJellyfinMoviesTmdbMap(cfg, autoDeleteIds);
+            targetId = movieMap.get(String(tmdbId)) ?? null;
+        }
         if (targetId) {
             await deleteJellyfinItem(cfg, targetId);
             status = "deleted";
@@ -148,23 +175,27 @@ export async function deleteQueueEntryNow(
 
     await db.insert(jellyfinDeleteHistory).values({
         userId,
-        showId,
-        seasonNumber: entry.seasonNumber,
-        title: entry.title,
+        showId: queueRow.showId,
+        movieId: queueRow.movieId,
+        seasonNumber: queueRow.seasonNumber,
+        title,
         status,
         errorMessage,
     });
 
     // Whole-show deletion also clears any stray season entries for the same show,
     // matching Phase 2's behavior.
-    if (entry.seasonNumber === null) {
+    if (queueRow.showId !== null && queueRow.seasonNumber === null) {
         await db
             .delete(jellyfinDeleteQueue)
             .where(
-                and(eq(jellyfinDeleteQueue.userId, userId), eq(jellyfinDeleteQueue.showId, showId)),
+                and(
+                    eq(jellyfinDeleteQueue.userId, userId),
+                    eq(jellyfinDeleteQueue.showId, queueRow.showId),
+                ),
             );
     } else {
-        await db.delete(jellyfinDeleteQueue).where(eq(jellyfinDeleteQueue.id, entry.id));
+        await db.delete(jellyfinDeleteQueue).where(eq(jellyfinDeleteQueue.id, queueRow.id));
     }
 
     return { status, errorMessage: errorMessage ?? undefined };
@@ -236,8 +267,9 @@ async function processUser(
     let queued = 0;
 
     // Fetched once and reused for both phases below: avoids re-fetching the full Jellyfin
-    // series list (scoped to the user's auto-delete libraries) once per candidate.
+    // series/movie lists (scoped to the user's auto-delete libraries) once per candidate.
     const seriesMap = await fetchJellyfinSeriesTmdbMap(cfg, autoDeleteIds);
+    const movieMap = await fetchJellyfinMoviesTmdbMap(cfg, autoDeleteIds);
 
     // ── Exclusions (永不删除 / 推迟删除) ─────────────────────────────────────────
     // Expired defers are pruned first so the entry naturally re-enters the two-phase flow.
@@ -253,29 +285,29 @@ async function processUser(
     const exclusions = await db
         .select({
             showId: jellyfinDeleteExclusions.showId,
+            movieId: jellyfinDeleteExclusions.movieId,
             seasonNumber: jellyfinDeleteExclusions.seasonNumber,
         })
         .from(jellyfinDeleteExclusions)
-        .where(
-            and(
-                eq(jellyfinDeleteExclusions.userId, userId),
-                isNotNull(jellyfinDeleteExclusions.showId),
-            ),
-        );
+        .where(eq(jellyfinDeleteExclusions.userId, userId));
+    const showExclusions = exclusions.filter((e) => e.showId !== null);
     // Whole-show exclusion (seasonNumber null) blocks both whole-show and season queueing.
     // A season exclusion also blocks whole-show queueing for that show — deleting the whole
     // series would delete the protected season's files, violating the protection semantics.
-    const excludedShowIds = new Set(exclusions.map((e) => e.showId!));
+    const excludedShowIds = new Set(showExclusions.map((e) => e.showId!));
     const excludedWholeShowIds = new Set(
-        exclusions.filter((e) => e.seasonNumber === null).map((e) => e.showId!),
+        showExclusions.filter((e) => e.seasonNumber === null).map((e) => e.showId!),
     );
     const excludedSeasonKeys = new Set(
-        exclusions
+        showExclusions
             .filter((e) => e.seasonNumber !== null)
             .map((e) => `${e.showId}:${e.seasonNumber}`),
     );
     const isSeasonExcluded = (showId: number, season: number) =>
         excludedWholeShowIds.has(showId) || excludedSeasonKeys.has(`${showId}:${season}`);
+    const excludedMovieIds = new Set(
+        exclusions.filter((e) => e.movieId !== null).map((e) => e.movieId!),
+    );
 
     // ── Phase 2: execute pending deletions ──────────────────────────────────────
 
@@ -379,7 +411,55 @@ async function processUser(
         await db.delete(jellyfinDeleteQueue).where(eq(jellyfinDeleteQueue.id, entry.id));
     }
 
-    // ── Phase 1: queue newly eligible shows/seasons ──────────────────────────────
+    // Delete queued movies (N5-T04)
+    const pendingMovieEntries = (
+        await db
+            .select({
+                id: jellyfinDeleteQueue.id,
+                movieId: jellyfinDeleteQueue.movieId,
+                tmdbId: movies.tmdbId,
+                title: movies.title,
+            })
+            .from(jellyfinDeleteQueue)
+            .innerJoin(movies, eq(movies.id, jellyfinDeleteQueue.movieId))
+            .where(
+                and(eq(jellyfinDeleteQueue.userId, userId), isNotNull(jellyfinDeleteQueue.movieId)),
+            )
+    ).map((e) => ({ ...e, movieId: e.movieId! }));
+
+    for (const entry of pendingMovieEntries) {
+        let status: "deleted" | "not_found" | "failed" = "not_found";
+        let errorMessage: string | null = null;
+        try {
+            const itemId = movieMap.get(String(entry.tmdbId));
+            if (itemId) {
+                await deleteJellyfinItem(cfg, itemId);
+                status = "deleted";
+            }
+            console.log(
+                `[jellyfin-delete] ${status === "deleted" ? "Deleted" : "Not found"} movie "${entry.title}" (TMDB ${entry.tmdbId}) for user ${userId}`,
+            );
+            if (status === "deleted") deleted++;
+        } catch (e) {
+            status = "failed";
+            errorMessage = e instanceof Error ? e.message : String(e);
+            console.error(
+                `[jellyfin-delete] Failed to delete movie "${entry.title}" for user ${userId}:`,
+                e,
+            );
+        }
+        await db.insert(jellyfinDeleteHistory).values({
+            userId,
+            movieId: entry.movieId,
+            seasonNumber: null,
+            title: entry.title,
+            status,
+            errorMessage,
+        });
+        await db.delete(jellyfinDeleteQueue).where(eq(jellyfinDeleteQueue.id, entry.id));
+    }
+
+    // ── Phase 1: queue newly eligible shows/seasons/movies ───────────────────────
 
     // 1a. Whole-show deletion: ended/canceled + all watched (completed)
     const completedEndedShows = await db
@@ -534,6 +614,47 @@ async function processUser(
                         );
                     }
                 }
+            }
+        }
+    }
+
+    // 1c. Movie deletion (N5-T04): watched (any watch_history row) AND the most recent
+    //     watch was more than MOVIE_DELETE_BUFFER_DAYS ago. A rewatch pushes the buffer
+    //     out again — the max(), not the first watch, is what's compared.
+    const MOVIE_DELETE_BUFFER_DAYS = 30;
+    const movieBufferMs = Date.now() - MOVIE_DELETE_BUFFER_DAYS * 24 * 60 * 60 * 1000;
+
+    const watchedMovies = await db
+        .select({
+            movieId: movies.id,
+            tmdbId: movies.tmdbId,
+            title: movies.title,
+            lastWatchedAt: sql<string | null>`max(${watchHistory.watchedAt})`,
+        })
+        .from(watchHistory)
+        .innerJoin(movies, eq(movies.id, watchHistory.movieId))
+        .where(and(eq(watchHistory.userId, userId), eq(watchHistory.mediaType, "movie")))
+        .groupBy(movies.id, movies.tmdbId, movies.title);
+
+    for (const movie of watchedMovies) {
+        if (excludedMovieIds.has(movie.movieId)) continue;
+        if (movie.tmdbId === null || !movieMap.has(String(movie.tmdbId))) continue;
+        const lastWatchedMs =
+            movie.lastWatchedAt !== null ? new Date(movie.lastWatchedAt).getTime() : null;
+        if (lastWatchedMs === null || lastWatchedMs >= movieBufferMs) continue;
+
+        const inserted = await db
+            .insert(jellyfinDeleteQueue)
+            .values({ userId, movieId: movie.movieId, seasonNumber: null })
+            .onConflictDoNothing()
+            .returning({ id: jellyfinDeleteQueue.id });
+        if (inserted.length > 0) {
+            queued++;
+            console.log(
+                `[jellyfin-delete] Queued movie "${movie.title}" (movieId=${movie.movieId}) for user ${userId}`,
+            );
+            if (notifyLanguage !== null) {
+                await notifyQueuedForDeletion(db, userId, notifyLanguage, movie.title, null);
             }
         }
     }
