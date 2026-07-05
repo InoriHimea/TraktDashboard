@@ -58,7 +58,6 @@
         "history": "观看历史",
         "statistics": "统计",
         "jellyfin": "Jellyfin",
-        "sync": "同步",
         "settings": "设置",
         "collection": "媒体库"
     },
@@ -499,27 +498,17 @@
     "sync": {
         "triggerFailed": "触发同步失败",
         "triggerFullFailed": "触发全量同步失败",
-        "title": "同步",
-        "subtitle": "将 Trakt 观看记录与 TMDB 元数据同步到本地。",
-        "loadingStatus": "正在加载同步状态…",
         "syncingProgress": "同步中… {{current}}/{{total}}",
         "statusFailed": "同步失败",
         "statusDone": "同步完成",
         "statusReady": "准备就绪",
         "lastSync": "上次同步：",
-        "incremental": "增量同步",
-        "incrementalDesc": "仅同步上次以来的新观看记录，速度快。同时会拉取 TMDB 的本地化标题（根据设置中的显示语言）。",
         "queued": "排队中…",
         "syncNow": "立即同步",
-        "fullDesc": "重新同步全部历史记录，并强制刷新所有剧集的 TMDB 元数据（含本地化标题、简介）。耗时较长，适合首次使用或修复数据。",
         "syncing": "同步中…",
         "fullSync": "全量同步",
-        "failedShows": "{{n}} 部剧集同步失败",
-        "summary": "同步统计",
         "success": "成功",
-        "showsSynced": "部剧集已同步",
-        "failed": "失败",
-        "showsFailed": "部剧集同步失败"
+        "failed": "失败"
     },
     "app": {
         "error": "应用出错",

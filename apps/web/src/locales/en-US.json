@@ -58,7 +58,6 @@
         "history": "History",
         "statistics": "Statistics",
         "jellyfin": "Jellyfin",
-        "sync": "Sync",
         "settings": "Settings",
         "collection": "Library"
     },
@@ -499,27 +498,17 @@
     "sync": {
         "triggerFailed": "Failed to trigger sync",
         "triggerFullFailed": "Failed to trigger full sync",
-        "title": "Sync",
-        "subtitle": "Sync your Trakt watch history and TMDB metadata locally.",
-        "loadingStatus": "Loading sync status…",
         "syncingProgress": "Syncing… {{current}}/{{total}}",
         "statusFailed": "Sync failed",
         "statusDone": "Sync complete",
         "statusReady": "Ready",
         "lastSync": "Last sync: ",
-        "incremental": "Incremental sync",
-        "incrementalDesc": "Sync only new watches since the last run — fast. Also fetches localized titles from TMDB (based on the display language in Settings).",
         "queued": "Queued…",
         "syncNow": "Sync now",
-        "fullDesc": "Re-sync all history and force-refresh every show's TMDB metadata (including localized titles and synopses). Takes longer; ideal for first use or repairing data.",
         "syncing": "Syncing…",
         "fullSync": "Full sync",
-        "failedShows": "{{n}} shows failed to sync",
-        "summary": "Sync summary",
         "success": "Success",
-        "showsSynced": "shows synced",
-        "failed": "Failed",
-        "showsFailed": "shows failed to sync"
+        "failed": "Failed"
     },
     "app": {
         "error": "Something went wrong",
