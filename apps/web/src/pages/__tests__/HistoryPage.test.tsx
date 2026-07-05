@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("../../hooks", () => ({
     useInfiniteHistory: mocks.useInfiniteHistory,
+    useRatings: () => ({ data: [] }),
 }));
 
 vi.mock("../../lib/api", () => ({

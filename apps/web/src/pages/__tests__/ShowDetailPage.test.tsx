@@ -30,6 +30,12 @@ vi.mock("../../hooks", () => ({
     useRatings: () => ({ data: [] }),
     useSetRating: () => ({ mutate: vi.fn(), isPending: false }),
     useRemoveRating: () => ({ mutate: vi.fn(), isPending: false }),
+    useSettings: () => ({ data: undefined }),
+    useJellyfinSeason: () => ({ data: [] }),
+    useDeleteJellyfinSeason: () => ({ mutateAsync: vi.fn(), isPending: false }),
+    useJellyfinDeleteExclusions: () => ({ data: [] }),
+    useCreateJellyfinExclusion: () => ({ mutate: vi.fn(), isPending: false }),
+    useRemoveJellyfinExclusion: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 vi.mock("../../lib/toast", () => ({

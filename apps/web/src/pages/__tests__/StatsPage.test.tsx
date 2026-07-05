@@ -5,7 +5,10 @@ import type { StatsOverview } from "@trakt-dashboard/types";
 
 const mocks = vi.hoisted(() => ({ useStats: vi.fn() }));
 
-vi.mock("../../hooks", () => ({ useStats: mocks.useStats }));
+vi.mock("../../hooks", () => ({
+    useStats: mocks.useStats,
+    useTraktStats: () => ({ data: undefined }),
+}));
 
 // Mock the heavy sibling charts/cards so only SignalMetrics renders real values,
 // keeping the new-metric assertions free of collisions with KPI numbers.
@@ -16,6 +19,7 @@ vi.mock("../stats/TopGenres", () => ({ TopGenres: () => null }));
 vi.mock("../stats/RecentActivity", () => ({ RecentActivity: () => null }));
 vi.mock("../stats/WatchHeatmap", () => ({ WatchHeatmap: () => null }));
 vi.mock("../stats/WatchPatterns", () => ({ WatchPatterns: () => null }));
+vi.mock("../stats/ScreenTime", () => ({ ScreenTime: () => null }));
 
 function makeStats(over: Partial<StatsOverview> = {}): StatsOverview {
     return {
