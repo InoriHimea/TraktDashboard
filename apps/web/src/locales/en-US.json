@@ -75,6 +75,12 @@
     "settings": {
         "title": "Settings",
         "subtitle": "Configure display language, sync interval, and proxy.",
+        "tabs": {
+            "general": "General",
+            "jellyfin": "Jellyfin",
+            "notifications": "Notifications",
+            "backup": "Backup"
+        },
         "theme": "Theme",
         "themeDark": "Dark",
         "themeLight": "Light",

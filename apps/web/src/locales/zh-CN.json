@@ -75,6 +75,12 @@
     "settings": {
         "title": "设置",
         "subtitle": "配置显示语言、同步间隔和代理。",
+        "tabs": {
+            "general": "常规",
+            "jellyfin": "Jellyfin",
+            "notifications": "通知",
+            "backup": "备份"
+        },
         "theme": "主题",
         "themeDark": "深色",
         "themeLight": "浅色",

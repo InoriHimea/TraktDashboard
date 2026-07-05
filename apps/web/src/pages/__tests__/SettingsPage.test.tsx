@@ -36,6 +36,7 @@ vi.mock("../../hooks", () => ({
     useJellyfinDeleteExclusions: () => ({ data: [], isLoading: false }),
     useDeferJellyfinDelete: () => ({ mutate: vi.fn(), isPending: false }),
     useNeverJellyfinDelete: () => ({ mutate: vi.fn(), isPending: false }),
+    useDeleteNowJellyfinDelete: () => ({ mutate: vi.fn(), isPending: false }),
     useRemoveJellyfinExclusion: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
@@ -115,5 +116,24 @@ describe("SettingsPage", () => {
             "代理地址必须以 http:// 或 https:// 开头。",
             "error",
         );
+    });
+
+    it("switches between tabs, showing only the active tab's fields (N5-T07)", async () => {
+        render(<SettingsPage />);
+
+        // Defaults to the "常规" (General) tab.
+        await screen.findByPlaceholderText("例如：zh-CN、en-US、ja-JP");
+        expect(screen.queryByPlaceholderText("http://nas:8096")).not.toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole("button", { name: "Jellyfin" }));
+        expect(screen.getByPlaceholderText("http://nas:8096")).toBeInTheDocument();
+        expect(screen.queryByPlaceholderText("例如：zh-CN、en-US、ja-JP")).not.toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole("button", { name: "备份" }));
+        expect(screen.getByText("Google Drive")).toBeInTheDocument();
+        expect(screen.queryByPlaceholderText("http://nas:8096")).not.toBeInTheDocument();
+
+        // The save button stays visible regardless of which tab is active.
+        expect(screen.getByRole("button", { name: "保存" })).toBeInTheDocument();
     });
 });
