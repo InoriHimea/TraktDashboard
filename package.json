@@ -1,6 +1,6 @@
 {
     "name": "trakt-dashboard",
-    "version": "0.82.3",
+    "version": "0.83.0",
     "private": true,
     "scripts": {
         "dev": "turbo run dev",
