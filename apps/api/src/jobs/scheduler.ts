@@ -58,35 +58,47 @@ async function getUserSyncInterval(userId: number): Promise<number> {
 }
 
 /**
- * Upsert a repeatable job: removes the existing key (if any) then adds a fresh
- * one. This prevents duplicate repeatable keys from accumulating across restarts.
+ * Upsert a scheduled job via BullMQ's Job Scheduler API (upsertJobScheduler). Unlike the
+ * old `queue.add(..., { repeat })` + manual dedup pattern, this is a single atomic
+ * update-in-place keyed by `schedulerId` — no listing/matching required, so it can never
+ * silently fail to dedup and accumulate duplicates across restarts (see
+ * purgeLegacyRepeatableJobs for why that used to happen).
  */
-async function upsertRepeatableJob(
+async function upsertScheduledJob(
     queue: Queue,
+    schedulerId: string,
     jobName: string,
-    jobId: string,
     data: Record<string, unknown>,
     repeatOpts: { pattern?: string; every?: number },
 ): Promise<void> {
-    // Best-effort removal: if listing/removing the old key fails, log a warning
-    // but always proceed to queue.add() so the job is never silently absent.
-    // Known limitation: getRepeatableJobs() fetches ALL repeatable keys from Redis
-    // (O(n) per call); registering n users on startup is O(n²) round-trips. For
-    // typical single-user deployments this is negligible. At large scale, migrate to
-    // BullMQ v5's addJobScheduler/removeJobScheduler APIs which do O(1) direct removal.
-    try {
-        const jobs = await queue.getRepeatableJobs();
-        const existing = jobs.find((j) => j.id === jobId);
-        if (existing) await queue.removeRepeatableByKey(existing.key);
-    } catch (e) {
-        console.warn(`[scheduler] Could not remove existing repeatable job "${jobId}":`, e);
-    }
-    await queue.add(jobName, data, {
-        jobId,
-        repeat: repeatOpts,
-        removeOnComplete: 10,
-        removeOnFail: 5,
+    await queue.upsertJobScheduler(schedulerId, repeatOpts, {
+        name: jobName,
+        data,
+        opts: { removeOnComplete: 10, removeOnFail: 5 },
     });
+}
+
+/**
+ * One-time migration cleanup: jobs registered before this fix used `queue.add(..., {
+ * repeat })` directly, deduped by listing `getRepeatableJobs()` and matching on `.id` —
+ * but that field doesn't exist on this BullMQ version's repeatable-job objects, so the
+ * match always missed and every restart added a fresh duplicate (confirmed in production:
+ * airing-reminders and cleanup-cache each had 2 copies). Since every job is immediately
+ * re-registered via upsertScheduledJob right after this runs, wiping all legacy
+ * repeatable-job metadata here is safe — nothing is left unregistered.
+ */
+async function purgeLegacyRepeatableJobs(queue: Queue): Promise<void> {
+    try {
+        const legacy = await queue.getRepeatableJobs();
+        for (const job of legacy) {
+            await queue.removeRepeatableByKey(job.key);
+        }
+        if (legacy.length > 0) {
+            console.log(`[scheduler] Purged ${legacy.length} legacy repeatable job(s)`);
+        }
+    } catch (e) {
+        console.warn(`[scheduler] Could not purge legacy repeatable jobs:`, e);
+    }
 }
 
 export async function registerUserBackupJob(userId: number) {
@@ -97,23 +109,18 @@ export async function registerUserBackupJob(userId: number) {
         .where(eq(userSettings.userId, userId));
     const hours = row?.backupScheduleHours ?? 0;
     const queue = getSyncQueue();
-    const jobId = `backup-user-${userId}`;
+    const schedulerId = `backup-user-${userId}`;
     if (hours <= 0) {
-        // Remove any existing job
-        try {
-            const jobs = await queue.getRepeatableJobs();
-            const existing = jobs.find((j) => j.id === jobId);
-            if (existing) await queue.removeRepeatableByKey(existing.key);
-        } catch {
-            // Best-effort removal
-        }
+        await queue.removeJobScheduler(schedulerId).catch(() => {
+            // Best-effort removal — fine if there was nothing to remove.
+        });
         return;
     }
     try {
-        await upsertRepeatableJob(
+        await upsertScheduledJob(
             queue,
+            schedulerId,
             "scheduled-backup",
-            jobId,
             { userId },
             {
                 every: hours * 60 * 60 * 1000,
@@ -128,12 +135,12 @@ export async function registerUserBackupJob(userId: number) {
 export async function registerUserSyncJob(userId: number) {
     const queue = getSyncQueue();
     const intervalMinutes = await getUserSyncInterval(userId);
-    const jobId = `sync-user-${userId}`;
+    const schedulerId = `sync-user-${userId}`;
     try {
-        await upsertRepeatableJob(
+        await upsertScheduledJob(
             queue,
+            schedulerId,
             "incremental-sync",
-            jobId,
             { userId },
             {
                 every: intervalMinutes * 60 * 1000,
@@ -154,6 +161,7 @@ export async function startScheduler() {
 
     // Reset any sync states left in "running" from a previous crashed/killed process
     await resetStaleRunningSyncs();
+    await purgeLegacyRepeatableJobs(queue);
 
     // Worker processes sync jobs
     const worker = new Worker(
@@ -224,10 +232,10 @@ export async function startScheduler() {
     // Register daily metadata cache cleanup job — cron anchors the time to
     // 03:00 UTC so it doesn't drift on every restart the way repeat.every would.
     try {
-        await upsertRepeatableJob(
+        await upsertScheduledJob(
             queue,
-            "cleanup-cache",
             "cleanup-metadata-cache",
+            "cleanup-cache",
             {},
             {
                 pattern: "0 3 * * *",
@@ -240,10 +248,10 @@ export async function startScheduler() {
 
     // Register daily airing-reminder digest job (N2-T05) — 08:00 UTC daily.
     try {
-        await upsertRepeatableJob(
+        await upsertScheduledJob(
             queue,
-            "airing-reminders",
             "airing-reminders-daily",
+            "airing-reminders",
             {},
             {
                 pattern: "0 8 * * *",
@@ -256,10 +264,10 @@ export async function startScheduler() {
 
     // Register daily Jellyfin auto-delete job — 04:00 UTC daily.
     try {
-        await upsertRepeatableJob(
+        await upsertScheduledJob(
             queue,
-            "jellyfin-auto-delete",
             "jellyfin-auto-delete-daily",
+            "jellyfin-auto-delete",
             {},
             {
                 pattern: "0 4 * * *",
