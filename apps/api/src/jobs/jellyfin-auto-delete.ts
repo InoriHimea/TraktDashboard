@@ -4,6 +4,7 @@ import {
     jellyfinDeleteQueue,
     jellyfinDeleteHistory,
     jellyfinDeleteExclusions,
+    pushSubscriptions,
     userShowProgress,
     shows,
     seasons,
@@ -19,6 +20,53 @@ import {
 } from "../services/jellyfin.js";
 import { decryptToken } from "../lib/encrypt.js";
 import { resolveApiSecret } from "../lib/secret.js";
+import { sendPush, isPushConfigured } from "../lib/push.js";
+
+/**
+ * Push reminder for a just-queued (not re-queued) entry (N5-T03). Only fires on genuine
+ * new inserts — callers gate this on `onConflictDoNothing()` returning a row — so an
+ * already-queued item isn't re-notified every day until it's actually deleted.
+ */
+async function notifyQueuedForDeletion(
+    db: ReturnType<typeof getDb>,
+    userId: number,
+    displayLanguage: string,
+    title: string,
+    seasonNumber: number | null,
+): Promise<void> {
+    const subs = await db
+        .select()
+        .from(pushSubscriptions)
+        .where(eq(pushSubscriptions.userId, userId));
+    if (subs.length === 0) return;
+
+    const isZh = displayLanguage.startsWith("zh");
+    const scope =
+        seasonNumber !== null ? (isZh ? `第 ${seasonNumber} 季` : `Season ${seasonNumber}`) : "";
+    const payload = {
+        title: isZh ? "即将从 Jellyfin 删除" : "Scheduled for deletion",
+        body: isZh
+            ? `《${title}》${scope} 将于明天删除，如需保留请尽快处理`
+            : `"${title}"${scope ? ` ${scope}` : ""} will be deleted from Jellyfin tomorrow`,
+        url: "/settings",
+    };
+
+    const results = await Promise.all(
+        subs.map((sub) =>
+            sendPush(
+                { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+                payload,
+            )
+                .then((res) => ({ sub, res }))
+                .catch(() => ({ sub, res: { ok: false as const, statusCode: undefined } })),
+        ),
+    );
+    for (const { sub, res } of results) {
+        if (!res.ok && (res.statusCode === 404 || res.statusCode === 410)) {
+            await db.delete(pushSubscriptions).where(eq(pushSubscriptions.id, sub.id));
+        }
+    }
+}
 
 export interface AutoDeleteResult {
     deleted: number;
@@ -133,6 +181,7 @@ export async function runJellyfinAutoDelete(): Promise<AutoDeleteResult> {
             jellyfinUrl: userSettings.jellyfinUrl,
             jellyfinApiKey: userSettings.jellyfinApiKey,
             jellyfinAutoDeleteLibraryIds: userSettings.jellyfinAutoDeleteLibraryIds,
+            displayLanguage: userSettings.displayLanguage,
         })
         .from(userSettings)
         .where(
@@ -143,6 +192,8 @@ export async function runJellyfinAutoDelete(): Promise<AutoDeleteResult> {
                 isNotNull(userSettings.jellyfinAutoDeleteLibraryIds),
             ),
         );
+
+    const pushEnabled = isPushConfigured();
 
     for (const user of eligibleUsers) {
         let autoDeleteIds: string[];
@@ -159,7 +210,13 @@ export async function runJellyfinAutoDelete(): Promise<AutoDeleteResult> {
         };
         const userId = user.userId;
 
-        const result = await processUser(db, cfg, userId, autoDeleteIds);
+        const result = await processUser(
+            db,
+            cfg,
+            userId,
+            autoDeleteIds,
+            pushEnabled ? user.displayLanguage : null,
+        );
         deleted += result.deleted;
         queued += result.queued;
     }
@@ -172,6 +229,8 @@ async function processUser(
     cfg: JellyfinConfig,
     userId: number,
     autoDeleteIds: string[],
+    // null when VAPID isn't configured — skips the push-reminder path entirely (N5-T03).
+    notifyLanguage: string | null,
 ): Promise<AutoDeleteResult> {
     let deleted = 0;
     let queued = 0;
@@ -359,6 +418,9 @@ async function processUser(
             console.log(
                 `[jellyfin-delete] Queued whole show "${show.title}" (showId=${show.showId}) for user ${userId}`,
             );
+            if (notifyLanguage !== null) {
+                await notifyQueuedForDeletion(db, userId, notifyLanguage, show.title, null);
+            }
         }
     }
 
@@ -400,6 +462,7 @@ async function processUser(
             .select({
                 showId: episodes.showId,
                 tmdbId: shows.tmdbId,
+                title: shows.title,
                 seasonNumber: episodes.seasonNumber,
                 seasonTotal: seasons.episodeCount,
                 airedCount: sql<number>`cast(count(distinct case when ${episodes.airDate} is not null and ${episodes.airDate}::date <= ${today}::date then ${episodes.id} end) as integer)`,
@@ -424,7 +487,13 @@ async function processUser(
                 ),
             )
             .where(and(inArray(episodes.showId, userShowIds), gt(episodes.seasonNumber, 0)))
-            .groupBy(episodes.showId, shows.tmdbId, episodes.seasonNumber, seasons.episodeCount);
+            .groupBy(
+                episodes.showId,
+                shows.tmdbId,
+                shows.title,
+                episodes.seasonNumber,
+                seasons.episodeCount,
+            );
 
         for (const stat of seasonStats) {
             const lastAirMs =
@@ -455,6 +524,15 @@ async function processUser(
                     console.log(
                         `[jellyfin-delete] Queued S${stat.seasonNumber} of showId=${stat.showId} for user ${userId}`,
                     );
+                    if (notifyLanguage !== null) {
+                        await notifyQueuedForDeletion(
+                            db,
+                            userId,
+                            notifyLanguage,
+                            stat.title,
+                            stat.seasonNumber,
+                        );
+                    }
                 }
             }
         }
