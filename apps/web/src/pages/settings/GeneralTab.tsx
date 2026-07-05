@@ -4,6 +4,24 @@ import { t } from "../../lib/i18n";
 import { api } from "../../lib/api";
 import { exportButtonStyle, inputStyle, labelStyle } from "./shared";
 
+// Curated display-language options (N5-T08). The tag drives both the UI locale
+// (zh/en have translations; others fall back) and the TMDB metadata language.
+// Labels are each language's own name, so they need no i18n.
+const DISPLAY_LANGUAGES: Array<{ tag: string; label: string }> = [
+    { tag: "zh-CN", label: "简体中文 (zh-CN)" },
+    { tag: "zh-TW", label: "繁體中文 (zh-TW)" },
+    { tag: "zh-HK", label: "繁體中文（香港）(zh-HK)" },
+    { tag: "en-US", label: "English (en-US)" },
+    { tag: "ja-JP", label: "日本語 (ja-JP)" },
+    { tag: "ko-KR", label: "한국어 (ko-KR)" },
+    { tag: "fr-FR", label: "Français (fr-FR)" },
+    { tag: "de-DE", label: "Deutsch (de-DE)" },
+    { tag: "es-ES", label: "Español (es-ES)" },
+    { tag: "pt-BR", label: "Português (pt-BR)" },
+    { tag: "it-IT", label: "Italiano (it-IT)" },
+    { tag: "ru-RU", label: "Русский (ru-RU)" },
+];
+
 interface GeneralTabProps {
     theme: Theme;
     setTheme: (theme: Theme) => void;
@@ -79,17 +97,25 @@ export function GeneralTab({
                 <label htmlFor="settings-display-language" style={labelStyle}>
                     {t("settings.displayLanguage")}
                 </label>
-                <input
+                <select
                     id="settings-display-language"
                     name="displayLanguage"
-                    type="text"
                     autoComplete="language"
-                    spellCheck={false}
                     value={displayLanguage}
                     onChange={(e) => setDisplayLanguage(e.target.value)}
-                    placeholder={t("settings.displayLanguagePlaceholder")}
-                    style={inputStyle}
-                />
+                    style={{ ...inputStyle, cursor: "pointer" }}
+                >
+                    {/* Preserve a saved value that isn't in the curated list (e.g. set via
+                        the old free-text input) instead of silently coercing it. */}
+                    {!DISPLAY_LANGUAGES.some(({ tag }) => tag === displayLanguage) && (
+                        <option value={displayLanguage}>{displayLanguage}</option>
+                    )}
+                    {DISPLAY_LANGUAGES.map(({ tag, label }) => (
+                        <option key={tag} value={tag}>
+                            {label}
+                        </option>
+                    ))}
+                </select>
                 <p
                     style={{
                         fontSize: "12px",

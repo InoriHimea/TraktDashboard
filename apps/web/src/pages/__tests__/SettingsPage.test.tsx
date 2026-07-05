@@ -62,11 +62,11 @@ describe("SettingsPage", () => {
     it("saves display language, sync interval, and proxy settings", async () => {
         render(<SettingsPage />);
 
-        const languageInput = await screen.findByPlaceholderText("例如：zh-CN、en-US、ja-JP");
+        const languageSelect = await screen.findByLabelText("显示语言");
         const intervalInput = screen.getByRole("spinbutton");
         const proxyInput = screen.getByPlaceholderText("http://proxy.example.com:7890");
 
-        fireEvent.change(languageInput, { target: { value: "en-US" } });
+        fireEvent.change(languageSelect, { target: { value: "en-US" } });
         fireEvent.change(intervalInput, { target: { value: "120" } });
         fireEvent.change(proxyInput, {
             target: { value: "http://127.0.0.1:7890" },
@@ -122,12 +122,12 @@ describe("SettingsPage", () => {
         render(<SettingsPage />);
 
         // Defaults to the "常规" (General) tab.
-        await screen.findByPlaceholderText("例如：zh-CN、en-US、ja-JP");
+        await screen.findByLabelText("显示语言");
         expect(screen.queryByPlaceholderText("http://nas:8096")).not.toBeInTheDocument();
 
         fireEvent.click(screen.getByRole("button", { name: "Jellyfin" }));
         expect(screen.getByPlaceholderText("http://nas:8096")).toBeInTheDocument();
-        expect(screen.queryByPlaceholderText("例如：zh-CN、en-US、ja-JP")).not.toBeInTheDocument();
+        expect(screen.queryByLabelText("显示语言")).not.toBeInTheDocument();
 
         fireEvent.click(screen.getByRole("button", { name: "备份" }));
         expect(screen.getByText("Google Drive")).toBeInTheDocument();
