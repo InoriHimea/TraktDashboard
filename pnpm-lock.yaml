@@ -143,9 +143,6 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.96.2
         version: 5.96.2(react@19.2.4)
-      '@trakt-dashboard/api':
-        specifier: workspace:*
-        version: link:../api
       '@trakt-dashboard/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -161,9 +158,6 @@ importers:
       framer-motion:
         specifier: ^12.38.0
         version: 12.38.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      hono:
-        specifier: ^4.12.23
-        version: 4.12.23
       html2canvas:
         specifier: ^1.4.1
         version: 1.4.1

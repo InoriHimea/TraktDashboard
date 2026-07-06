@@ -3,11 +3,6 @@
     "version": "0.64.0",
     "private": true,
     "type": "module",
-    "exports": {
-        "./app-type": {
-            "types": "./src/index.ts"
-        }
-    },
     "scripts": {
         "build": "tsc -p tsconfig.json --noEmit",
         "typecheck": "tsc -p tsconfig.json --noEmit",
