@@ -125,8 +125,12 @@ jobs:
                     exit 1
                   }
 
+            # index.html's <title> was rebranded to "MediaDash" at some point (manifest.json's
+            # PWA name is still "Trakt Dashboard" — an unrelated inconsistency, not this step's
+            # concern); this check was never updated and, like the rest of this job, was never
+            # actually reached until the earlier fixes in this same investigation.
             - name: Verify nginx serves the SPA
-              run: curl -fsSL http://localhost/ | grep -q "Trakt Dashboard"
+              run: curl -fsSL http://localhost/ | grep -q "MediaDash"
 
             - name: Verify API health endpoint
               run: curl -fsS http://localhost:3001/health | jq -e '.ok == true'
