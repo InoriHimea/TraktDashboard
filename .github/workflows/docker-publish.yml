@@ -120,3 +120,26 @@ jobs:
                   generate_release_notes: true
                   draft: false
                   prerelease: false
+
+    # Mirror of ci.yml's notify-failure — see the comment there.
+    notify-failure:
+        runs-on: ubuntu-latest
+        needs: [build-and-push, publish-release]
+        if: failure()
+        steps:
+            - name: Push failure notification to Gotify
+              continue-on-error: true
+              env:
+                  GOTIFY_URL: ${{ secrets.GOTIFY_URL }}
+                  GOTIFY_TOKEN: ${{ secrets.GOTIFY_TOKEN }}
+              run: |
+                  if [ -z "$GOTIFY_URL" ] || [ -z "$GOTIFY_TOKEN" ]; then
+                    echo "Gotify secrets not configured; skipping notification."
+                    exit 0
+                  fi
+                  curl -sf -X POST "$GOTIFY_URL/message?token=$GOTIFY_TOKEN" \
+                    -F "title=Docker publish failed: ${{ github.repository }}@${{ github.ref_name }}" \
+                    -F "message=Workflow: ${{ github.workflow }}
+                  Commit: ${{ github.sha }}
+                  Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+                    -F "priority=8"

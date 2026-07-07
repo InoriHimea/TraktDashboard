@@ -114,3 +114,28 @@ jobs:
               run: docker compose down -v
               env:
                   POSTGRES_PASSWORD: smoke_ci_password
+
+    # N6 batch 2: GitHub is only a mirror (primary remote is self-hosted), so a red
+    # Actions run goes unseen unless it is pushed somewhere visible. Requires the
+    # GOTIFY_URL / GOTIFY_TOKEN repository secrets; silently no-ops until they exist.
+    notify-failure:
+        runs-on: ubuntu-latest
+        needs: [ci, e2e, smoke-test]
+        if: failure()
+        steps:
+            - name: Push failure notification to Gotify
+              continue-on-error: true
+              env:
+                  GOTIFY_URL: ${{ secrets.GOTIFY_URL }}
+                  GOTIFY_TOKEN: ${{ secrets.GOTIFY_TOKEN }}
+              run: |
+                  if [ -z "$GOTIFY_URL" ] || [ -z "$GOTIFY_TOKEN" ]; then
+                    echo "Gotify secrets not configured; skipping notification."
+                    exit 0
+                  fi
+                  curl -sf -X POST "$GOTIFY_URL/message?token=$GOTIFY_TOKEN" \
+                    -F "title=CI failed: ${{ github.repository }}@${{ github.ref_name }}" \
+                    -F "message=Workflow: ${{ github.workflow }}
+                  Commit: ${{ github.sha }}
+                  Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+                    -F "priority=8"
