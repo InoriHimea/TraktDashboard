@@ -36,7 +36,12 @@ services:
 
     # ─── KeyDB (Redis-compatible, replaces Redis) ─────────────────────────────────
     redis:
-        image: eqalpha/keydb:v6.3.4
+        # eqalpha stopped publishing a multi-arch `v6.3.4` manifest-list tag (Docker Hub
+        # now only lists per-arch tags like x86_64_v6.3.4); pinned by digest instead so the
+        # image resolves on both amd64 (CI) and arm64 (many NAS) while staying reproducible.
+        # This digest is the multi-arch manifest list for the `latest` tag as of 2023-10-30
+        # (eqalpha's last publish, functionally the same build as the old v6.3.4 tag).
+        image: eqalpha/keydb@sha256:6537505c42355ca1f571276bddf83f5b750f760f07b2a185a676481791e388ac
         container_name: trakt-keydb
         restart: unless-stopped
         # volatile-lru: only evict keys that have a TTL set, protecting persistent data
