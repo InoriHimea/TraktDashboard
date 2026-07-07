@@ -170,7 +170,17 @@
             "triggerFailed": "Backup failed, check history for details",
             "history": "Backup History",
             "cloudDisabled": "{{providers}} backup is disabled: it requires a self-registered OAuth application and the matching environment variables.",
-            "cloudDisabledDocs": "See the docs for how to register and configure."
+            "cloudDisabledDocs": "See the docs for how to register and configure.",
+            "filesTitle": "Cloud backup files",
+            "filesLoad": "Load list",
+            "filesEmpty": "No backup files found in the cloud",
+            "filesLoadFailed": "Failed to load cloud file list",
+            "restore": "Restore",
+            "restoreConfirmTitle": "Restore database from backup?",
+            "restoreConfirmDesc": "This will overwrite ALL current data with \"{{name}}\" (a safety backup of the current data is taken first), then the service restarts automatically. This cannot be undone.",
+            "restoreFailed": "Restore failed",
+            "restoreDone": "Restore complete — service is restarting",
+            "restoreDoneHint": "Wait about 10 seconds, then refresh the page."
         },
         "jellyfinAutoDeleteEnabled": "Enable auto-delete",
         "jellyfinAutoDeleteEnabledHint": "Daily job active: qualifying content is marked, then deleted from Jellyfin the next day.",

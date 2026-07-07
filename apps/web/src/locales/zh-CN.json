@@ -170,7 +170,17 @@
             "triggerFailed": "备份失败，请查看历史记录",
             "history": "备份历史",
             "cloudDisabled": "{{providers}} 备份已禁用：需要自备 OAuth 应用凭据并配置相应环境变量后才能启用。",
-            "cloudDisabledDocs": "参看文档了解如何申请与配置。"
+            "cloudDisabledDocs": "参看文档了解如何申请与配置。",
+            "filesTitle": "云端备份文件",
+            "filesLoad": "加载列表",
+            "filesEmpty": "云端暂无备份文件",
+            "filesLoadFailed": "加载云端文件列表失败",
+            "restore": "恢复",
+            "restoreConfirmTitle": "从备份恢复数据库？",
+            "restoreConfirmDesc": "将用「{{name}}」覆盖当前全部数据（恢复前会自动为当前数据创建一份安全备份），完成后服务会自动重启。此操作不可撤销。",
+            "restoreFailed": "恢复失败",
+            "restoreDone": "恢复完成，服务正在重启",
+            "restoreDoneHint": "请等待约 10 秒后刷新页面。"
         },
         "jellyfinAutoDeleteEnabled": "启用自动删除",
         "jellyfinAutoDeleteEnabledHint": "每日定时任务运行中：符合条件的内容将被标记，次日从 Jellyfin 删除文件。",

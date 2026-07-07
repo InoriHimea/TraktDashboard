@@ -551,6 +551,14 @@ export const api = {
                 method: "DELETE",
                 body: JSON.stringify({ provider, fileId }),
             }),
+        restore: (provider: "gdrive" | "webdav" | "onedrive" | "s3", fileId: string) =>
+            request<{ ok: boolean; requiresRestart: boolean; safetyBackup: string }>(
+                "/backup/restore",
+                {
+                    method: "POST",
+                    body: JSON.stringify({ provider, fileId }),
+                },
+            ),
     },
     system: {
         metrics: () =>

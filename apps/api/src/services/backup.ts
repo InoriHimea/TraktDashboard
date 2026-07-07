@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { createGzip } from "node:zlib";
+import { createGzip, gunzipSync } from "node:zlib";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -230,6 +230,21 @@ export async function listGDriveBackups(
     return { files, refreshedToken };
 }
 
+// N6 batch 3b: restore needs to read backups back. Same auth/refresh pattern as the
+// sibling list/delete functions.
+export async function downloadGDriveFile(
+    token: GDriveToken,
+    fileId: string,
+): Promise<{ data: Buffer; refreshedToken: GDriveToken }> {
+    const refreshedToken = await refreshGDriveToken(token);
+    const res = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`,
+        { headers: { Authorization: `Bearer ${refreshedToken.access_token}` } },
+    );
+    if (!res.ok) throw new Error(`GDrive download failed (${res.status})`);
+    return { data: Buffer.from(await res.arrayBuffer()), refreshedToken };
+}
+
 export async function deleteGDriveFile(token: GDriveToken, fileId: string): Promise<void> {
     const refreshedToken = await refreshGDriveToken(token);
     const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
@@ -325,23 +340,37 @@ export async function listWebDAVBackups(cfg: WebDAVConfig): Promise<BackupFile[]
     return files.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-export async function deleteWebDAVFile(cfg: WebDAVConfig, filePath: string): Promise<void> {
-    // filePath is the href returned by PROPFIND (a site-absolute path or full URL).
-    // Constrain it to the configured server origin AND the backup folder, so a crafted
-    // fileId cannot make the server issue an authenticated DELETE to an arbitrary host
-    // (SSRF / credential leak) or delete files outside TraktDashboardBackups.
+// Shared SSRF/path-traversal guard for WebDAV file operations: `filePath` is the href
+// returned by PROPFIND (a site-absolute path or full URL). Constrain it to the configured
+// server origin AND the backup folder so a crafted fileId cannot make the server issue an
+// authenticated request to an arbitrary host or touch files outside MediaDashBackups.
+// Check the raw (percent-encoded) pathname — do NOT decode before checking:
+// decodeURIComponent() would turn %2F into "/" which lets a crafted path like
+// /MediaDashBackups%2F..%2Fetc pass the substring check while the actual request targets
+// a path outside the backup folder on servers that decode %2F.
+function resolveWebDAVBackupHref(cfg: WebDAVConfig, filePath: string): URL {
     const baseUrl = new URL(cfg.url);
     const resolved = new URL(filePath, baseUrl); // absolute URLs keep their own origin
     if (resolved.origin !== baseUrl.origin) {
-        throw new Error("WebDAV delete target is outside the configured server");
+        throw new Error("WebDAV target is outside the configured server");
     }
-    // Check the raw (percent-encoded) pathname — do NOT decode before checking.
-    // decodeURIComponent() would turn %2F into "/" which lets a crafted path like
-    // /MediaDashBackups%2F..%2Fetc pass the substring check while the actual
-    // request targets a path outside the backup folder on servers that decode %2F.
     if (!resolved.pathname.includes("/MediaDashBackups/")) {
-        throw new Error("WebDAV delete target is outside the backup folder");
+        throw new Error("WebDAV target is outside the backup folder");
     }
+    return resolved;
+}
+
+export async function downloadWebDAVFile(cfg: WebDAVConfig, filePath: string): Promise<Buffer> {
+    const resolved = resolveWebDAVBackupHref(cfg, filePath);
+    const res = await fetch(resolved.toString(), {
+        headers: { Authorization: webdavAuth(cfg) },
+    });
+    if (!res.ok) throw new Error(`WebDAV GET failed (${res.status})`);
+    return Buffer.from(await res.arrayBuffer());
+}
+
+export async function deleteWebDAVFile(cfg: WebDAVConfig, filePath: string): Promise<void> {
+    const resolved = resolveWebDAVBackupHref(cfg, filePath);
     const res = await fetch(resolved.toString(), {
         method: "DELETE",
         headers: { Authorization: webdavAuth(cfg) },
@@ -433,6 +462,75 @@ export async function dumpDatabase(): Promise<Buffer> {
         });
         pg.on("error", (err) => settle(() => reject(err)));
         gz.on("error", (err) => settle(() => reject(err)));
+    });
+}
+
+// N6 batch 3b: restore a plain-format pg_dump (gzipped) produced by dumpDatabase().
+// Runs in a single psql transaction: DROP both app schemas, recreate public, then replay
+// the dump — all-or-nothing, so a mid-file failure leaves the old data untouched.
+// The drizzle schema must be dropped too: the dump recreates it (journal table included),
+// and leaving the live one in place would collide under ON_ERROR_STOP.
+// Callers are expected to restart the process afterwards — the drizzle connection pool
+// holds prepared statements against the pre-restore schema.
+export async function restoreDatabase(dumpGz: Buffer): Promise<void> {
+    const databaseUrl = process.env.DATABASE_URL;
+    if (!databaseUrl) throw new Error("DATABASE_URL not set");
+
+    let sqlText: string;
+    try {
+        sqlText = gunzipSync(dumpGz).toString("utf8");
+    } catch {
+        throw new Error("backup file is not valid gzip data");
+    }
+    if (!sqlText.includes("PostgreSQL database dump")) {
+        throw new Error("backup file does not look like a pg_dump");
+    }
+
+    const prelude =
+        "DROP SCHEMA IF EXISTS public CASCADE;\n" +
+        "DROP SCHEMA IF EXISTS drizzle CASCADE;\n" +
+        "CREATE SCHEMA public;\n";
+
+    return new Promise<void>((resolve, reject) => {
+        let settled = false;
+        const settle = (fn: () => void) => {
+            if (!settled) {
+                settled = true;
+                clearTimeout(timer);
+                fn();
+            }
+        };
+        // Spawn psql directly (no sh -c) — DATABASE_URL cannot inject shell commands.
+        const psql = spawn("psql", ["-v", "ON_ERROR_STOP=1", "--single-transaction", databaseUrl], {
+            stdio: ["pipe", "ignore", "pipe"],
+        });
+        const errChunks: Buffer[] = [];
+        const timer = setTimeout(
+            () => {
+                settle(() => reject(new Error("psql restore timed out after 10 minutes")));
+                try {
+                    psql.kill("SIGTERM");
+                } catch {
+                    /* already exited */
+                }
+            },
+            10 * 60 * 1000,
+        );
+
+        psql.stderr!.on("data", (d: Buffer) => errChunks.push(d));
+        psql.on("close", (code) => {
+            if (code === 0) {
+                settle(() => resolve());
+            } else {
+                const errMsg = Buffer.concat(errChunks).toString("utf8").slice(0, 500);
+                settle(() => reject(new Error(`psql restore failed (exit ${code}): ${errMsg}`)));
+            }
+        });
+        psql.on("error", (err) => settle(() => reject(err)));
+
+        psql.stdin!.write(prelude);
+        psql.stdin!.write(sqlText);
+        psql.stdin!.end();
     });
 }
 
@@ -630,6 +728,20 @@ export async function listOneDriveBackups(
     return { files, refreshedToken };
 }
 
+export async function downloadOneDriveFile(
+    token: OneDriveToken,
+    itemId: string,
+): Promise<{ data: Buffer; refreshedToken: OneDriveToken }> {
+    const refreshedToken = await refreshOneDriveToken(token);
+    // Graph responds 302 to a pre-authenticated download URL; fetch follows it.
+    const res = await fetch(
+        `https://graph.microsoft.com/v1.0/me/drive/items/${encodeURIComponent(itemId)}/content`,
+        { headers: { Authorization: `Bearer ${refreshedToken.access_token}` } },
+    );
+    if (!res.ok) throw new Error(`OneDrive download failed (${res.status})`);
+    return { data: Buffer.from(await res.arrayBuffer()), refreshedToken };
+}
+
 export async function deleteOneDriveFile(token: OneDriveToken, itemId: string): Promise<void> {
     const refreshedToken = await refreshOneDriveToken(token);
     const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/items/${itemId}`, {
@@ -796,6 +908,21 @@ export async function listS3Backups(cfg: S3Config): Promise<BackupFile[]> {
         files.push({ name, fileId: key, sizeBytes: size, createdAt: lastMod, provider: "s3" });
     }
     return files.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function downloadS3File(cfg: S3Config, key: string): Promise<Buffer> {
+    // Only objects under the backup prefix are downloadable — restore feeds this straight
+    // into psql, so keep the same containment discipline as the WebDAV href guard.
+    if (!key.startsWith(S3_PREFIX)) {
+        throw new Error("S3 download target is outside the backup prefix");
+    }
+    const endpoint = cfg.endpoint.replace(/\/$/, "");
+    const url = `${endpoint}/${cfg.bucket}/${key}`;
+    const emptyHash = await sha256hex("");
+    const headers = await s3Sign(cfg, "GET", `/${cfg.bucket}/${key}`, "", {}, emptyHash);
+    const res = await fetch(url, { headers });
+    if (!res.ok) throw new Error(`S3 GET failed (${res.status})`);
+    return Buffer.from(await res.arrayBuffer());
 }
 
 export async function deleteS3File(cfg: S3Config, key: string): Promise<void> {

@@ -1,8 +1,10 @@
-import type { Dispatch, SetStateAction } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import { HardDrive, Cloud, Database, Loader2, Check, RefreshCw, Server, X } from "lucide-react";
+import type { BackupFile as BackupFileEntry } from "@trakt-dashboard/types";
 import { t } from "../../lib/i18n";
 import { api } from "../../lib/api";
 import { useToast } from "../../lib/toast";
+import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 import type { DeviceAuthState } from "./shared";
 
 interface BackupRun {
@@ -125,6 +127,42 @@ export function BackupTab({
     backupRunsLoading,
 }: BackupTabProps) {
     const { toast } = useToast();
+
+    // 云端文件列表 + 恢复（N6 批次 3b）：本地 state 即可，列表按需加载
+    const [cloudFiles, setCloudFiles] = useState<BackupFileEntry[]>([]);
+    const [cloudFilesLoading, setCloudFilesLoading] = useState(false);
+    const [cloudFilesLoaded, setCloudFilesLoaded] = useState(false);
+    const [restoreTarget, setRestoreTarget] = useState<BackupFileEntry | null>(null);
+    const [restoring, setRestoring] = useState(false);
+    const [restoreDone, setRestoreDone] = useState(false);
+
+    async function loadCloudFiles() {
+        setCloudFilesLoading(true);
+        try {
+            const r = await api.backup.files();
+            setCloudFiles(r.data);
+            setCloudFilesLoaded(true);
+        } catch {
+            toast(t("settings.backup.filesLoadFailed"), "error");
+        } finally {
+            setCloudFilesLoading(false);
+        }
+    }
+
+    async function handleRestoreConfirm() {
+        if (!restoreTarget) return;
+        setRestoring(true);
+        try {
+            await api.backup.restore(restoreTarget.provider, restoreTarget.fileId);
+            setRestoreTarget(null);
+            // 服务端随即 process.exit 重启，全屏提示替代一切后续交互
+            setRestoreDone(true);
+        } catch (e) {
+            toast((e as Error).message || t("settings.backup.restoreFailed"), "error");
+        } finally {
+            setRestoring(false);
+        }
+    }
 
     return (
         <div>
@@ -1273,7 +1311,178 @@ export function BackupTab({
                         />
                     </div>
                 )}
+
+                {/* 云端备份文件 + 恢复（N6 批次 3b）。按需加载，避免每次进页签都打全部 provider */}
+                <div>
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            marginBottom: 8,
+                        }}
+                    >
+                        <p
+                            style={{
+                                fontSize: 11,
+                                fontWeight: 700,
+                                letterSpacing: "0.08em",
+                                textTransform: "uppercase",
+                                color: "var(--color-text-muted)",
+                            }}
+                        >
+                            {t("settings.backup.filesTitle")}
+                        </p>
+                        <button
+                            type="button"
+                            disabled={cloudFilesLoading}
+                            onClick={loadCloudFiles}
+                            style={{
+                                fontSize: 11,
+                                padding: "4px 10px",
+                                borderRadius: 7,
+                                border: "1px solid var(--color-border)",
+                                background: "var(--color-surface-2)",
+                                color: "var(--color-text-secondary)",
+                                cursor: cloudFilesLoading ? "not-allowed" : "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 5,
+                            }}
+                        >
+                            {cloudFilesLoading ? (
+                                <Loader2
+                                    size={11}
+                                    style={{ animation: "spin 1s linear infinite" }}
+                                />
+                            ) : (
+                                <RefreshCw size={11} />
+                            )}
+                            {t("settings.backup.filesLoad")}
+                        </button>
+                    </div>
+                    {cloudFilesLoaded && cloudFiles.length === 0 && !cloudFilesLoading && (
+                        <p style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+                            {t("settings.backup.filesEmpty")}
+                        </p>
+                    )}
+                    {cloudFiles.length > 0 && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                            {cloudFiles.map((f) => (
+                                <div
+                                    key={`${f.provider}:${f.fileId}`}
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 8,
+                                        padding: "7px 10px",
+                                        borderRadius: 8,
+                                        background: "var(--color-surface-2)",
+                                        border: "1px solid var(--color-border-subtle)",
+                                    }}
+                                >
+                                    <Database
+                                        size={12}
+                                        style={{
+                                            color: "var(--color-text-muted)",
+                                            flexShrink: 0,
+                                        }}
+                                    />
+                                    <span
+                                        style={{
+                                            fontSize: 11,
+                                            color: "var(--color-text-muted)",
+                                            flexShrink: 0,
+                                        }}
+                                    >
+                                        {f.provider.toUpperCase()}
+                                    </span>
+                                    <span
+                                        style={{
+                                            fontSize: 11,
+                                            color: "var(--color-text)",
+                                            flex: 1,
+                                            overflow: "hidden",
+                                            textOverflow: "ellipsis",
+                                            whiteSpace: "nowrap",
+                                        }}
+                                        title={f.name}
+                                    >
+                                        {f.name}
+                                    </span>
+                                    <span
+                                        style={{
+                                            fontSize: 10,
+                                            color: "var(--color-text-muted)",
+                                            flexShrink: 0,
+                                        }}
+                                    >
+                                        {(f.sizeBytes / 1024 / 1024).toFixed(1)} MB ·{" "}
+                                        {new Date(f.createdAt).toLocaleString()}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        disabled={restoring}
+                                        onClick={() => setRestoreTarget(f)}
+                                        style={{
+                                            fontSize: 10,
+                                            padding: "3px 8px",
+                                            borderRadius: 6,
+                                            border: "1px solid rgba(248,113,113,0.5)",
+                                            background: "rgba(248,113,113,0.12)",
+                                            color: "#f87171",
+                                            cursor: restoring ? "not-allowed" : "pointer",
+                                            flexShrink: 0,
+                                            whiteSpace: "nowrap",
+                                        }}
+                                    >
+                                        {t("settings.backup.restore")}
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
+
+            <ConfirmDialog
+                isOpen={restoreTarget !== null}
+                title={t("settings.backup.restoreConfirmTitle")}
+                description={t("settings.backup.restoreConfirmDesc", {
+                    name: restoreTarget?.name ?? "",
+                })}
+                confirmText={t("settings.backup.restore")}
+                confirmColor="rose"
+                cancelText={t("common.cancel")}
+                isLoading={restoring}
+                onConfirm={handleRestoreConfirm}
+                onCancel={() => setRestoreTarget(null)}
+            />
+
+            {restoreDone && (
+                <div
+                    style={{
+                        position: "fixed",
+                        inset: 0,
+                        zIndex: 100,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 12,
+                        background: "color-mix(in srgb, var(--color-bg) 88%, transparent)",
+                        backdropFilter: "blur(4px)",
+                    }}
+                >
+                    <Check size={32} style={{ color: "#10b981" }} />
+                    <p style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text)" }}>
+                        {t("settings.backup.restoreDone")}
+                    </p>
+                    <p style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+                        {t("settings.backup.restoreDoneHint")}
+                    </p>
+                </div>
+            )}
         </div>
     );
 }

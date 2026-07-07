@@ -27,6 +27,11 @@ import {
     deleteS3File,
     pruneOldS3Backups,
     dumpDatabase,
+    restoreDatabase,
+    downloadGDriveFile,
+    downloadWebDAVFile,
+    downloadOneDriveFile,
+    downloadS3File,
     isGDriveConfigured,
     isOneDriveConfigured,
     type GDriveToken,
@@ -765,6 +770,92 @@ backupRoutes.delete("/files", async (c) => {
     }
 
     return c.json({ ok: true });
+});
+
+// ─── Restore (N6 batch 3b) ───────────────────────────────────────────────────
+
+// Restore replaces the ENTIRE database, so guard against concurrent invocations —
+// module-level state is fine: restores are rare, and the process exits on success.
+let restoreInProgress = false;
+
+// POST /api/backup/restore { provider, fileId } — download a backup, snapshot the current
+// DB to the same provider as a safety net, replay the dump, then exit the process so the
+// container/watcher restarts it with a clean connection pool (drizzle's pool holds
+// prepared statements against the pre-restore schema).
+backupRoutes.post("/restore", async (c) => {
+    const userId = c.get("userId");
+    const body = (await c.req.json().catch(() => ({}))) as {
+        provider?: "gdrive" | "webdav" | "onedrive" | "s3";
+        fileId?: string;
+    };
+    if (!body.provider || !body.fileId)
+        return c.json({ error: "provider and fileId required" }, 400);
+    if (restoreInProgress) return c.json({ error: "restore already in progress" }, 409);
+    restoreInProgress = true;
+
+    try {
+        const row = await getSettings(userId);
+        if (!row) return c.json({ error: "No backup config" }, 400);
+
+        // 1. Download the requested backup first — no point snapshotting if the
+        //    file is unreachable.
+        let dumpGz: Buffer;
+        if (body.provider === "gdrive") {
+            const token = parseGDriveToken(row.gdriveToken);
+            if (!token) return c.json({ error: "GDrive not connected" }, 400);
+            dumpGz = (await downloadGDriveFile(token, body.fileId)).data;
+        } else if (body.provider === "webdav") {
+            const cfg = buildWebDAVConfig(row);
+            if (!cfg) return c.json({ error: "WebDAV not configured" }, 400);
+            dumpGz = await downloadWebDAVFile(cfg, body.fileId);
+        } else if (body.provider === "onedrive") {
+            const token = parseOneDriveToken(row.onedriveToken);
+            if (!token) return c.json({ error: "OneDrive not connected" }, 400);
+            dumpGz = (await downloadOneDriveFile(token, body.fileId)).data;
+        } else if (body.provider === "s3") {
+            const cfg = buildS3Config(row);
+            if (!cfg) return c.json({ error: "S3 not configured" }, 400);
+            dumpGz = await downloadS3File(cfg, body.fileId);
+        } else {
+            return c.json({ error: "unknown provider" }, 400);
+        }
+
+        // 2. Safety net: snapshot the CURRENT database to the same provider before
+        //    overwriting anything. A failed safety upload aborts the restore.
+        const safetyName = makeFilename().replace(
+            "mediadash-backup-",
+            "mediadash-backup-pre-restore-",
+        );
+        const currentDump = await dumpDatabase();
+        if (body.provider === "gdrive") {
+            const token = parseGDriveToken(row.gdriveToken)!;
+            const { refreshedToken } = await uploadToGDrive(token, currentDump, safetyName);
+            await saveGDriveToken(userId, refreshedToken).catch(() => null);
+        } else if (body.provider === "webdav") {
+            await uploadToWebDAV(buildWebDAVConfig(row)!, currentDump, safetyName);
+        } else if (body.provider === "onedrive") {
+            const token = parseOneDriveToken(row.onedriveToken)!;
+            const { refreshedToken } = await uploadToOneDrive(token, currentDump, safetyName);
+            await saveOneDriveToken(userId, refreshedToken).catch(() => null);
+        } else {
+            await uploadToS3(buildS3Config(row)!, currentDump, safetyName);
+        }
+
+        // 3. Replay the dump (single transaction — all-or-nothing).
+        await restoreDatabase(dumpGz);
+
+        // 4. Hand the response back, then exit so the process restarts with a clean
+        //    pool against the restored schema (docker restart policy / bun --watch).
+        setTimeout(() => {
+            console.log("[backup] Restore complete — exiting for a clean restart");
+            process.exit(0);
+        }, 1500);
+        return c.json({ ok: true, requiresRestart: true, safetyBackup: safetyName });
+    } catch (err) {
+        return c.json({ error: (err as Error).message }, 500);
+    } finally {
+        restoreInProgress = false;
+    }
 });
 
 // ─── Exported helper for scheduler ───────────────────────────────────────────
