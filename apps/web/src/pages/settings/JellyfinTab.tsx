@@ -636,64 +636,84 @@ export function JellyfinTab({
                                     <div
                                         key={entry.id}
                                         style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "8px",
                                             padding: "7px 10px",
                                             borderRadius: 8,
                                             background: "var(--color-surface-2)",
                                             border: `1px solid ${statusColor}33`,
                                         }}
                                     >
-                                        {entry.status === "deleted" ? (
-                                            <Check
-                                                size={12}
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "8px",
+                                            }}
+                                        >
+                                            {entry.status === "deleted" ? (
+                                                <Check
+                                                    size={12}
+                                                    style={{
+                                                        color: statusColor,
+                                                        flexShrink: 0,
+                                                    }}
+                                                />
+                                            ) : (
+                                                <X
+                                                    size={12}
+                                                    style={{
+                                                        color: statusColor,
+                                                        flexShrink: 0,
+                                                    }}
+                                                />
+                                            )}
+                                            <span
                                                 style={{
+                                                    fontSize: "11px",
+                                                    color: "var(--color-text)",
+                                                    flex: 1,
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    whiteSpace: "nowrap",
+                                                }}
+                                            >
+                                                {entry.title}
+                                                {scope ? ` · ${scope}` : ""}
+                                            </span>
+                                            <span
+                                                style={{
+                                                    fontSize: "10px",
                                                     color: statusColor,
                                                     flexShrink: 0,
+                                                    fontWeight: 600,
                                                 }}
-                                            />
-                                        ) : (
-                                            <X
-                                                size={12}
+                                            >
+                                                {statusLabel}
+                                            </span>
+                                            <span
                                                 style={{
-                                                    color: statusColor,
+                                                    fontSize: "10px",
+                                                    color: "var(--color-text-muted)",
                                                     flexShrink: 0,
                                                 }}
-                                            />
+                                            >
+                                                {new Date(entry.processedAt).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                        {entry.status === "failed" && entry.errorMessage && (
+                                            <p
+                                                title={entry.errorMessage}
+                                                style={{
+                                                    fontSize: "10px",
+                                                    color: "var(--color-text-muted)",
+                                                    margin: "4px 0 0 20px",
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    whiteSpace: "nowrap",
+                                                }}
+                                            >
+                                                {entry.errorMessage}
+                                            </p>
                                         )}
-                                        <span
-                                            style={{
-                                                fontSize: "11px",
-                                                color: "var(--color-text)",
-                                                flex: 1,
-                                                overflow: "hidden",
-                                                textOverflow: "ellipsis",
-                                                whiteSpace: "nowrap",
-                                            }}
-                                        >
-                                            {entry.title}
-                                            {scope ? ` · ${scope}` : ""}
-                                        </span>
-                                        <span
-                                            style={{
-                                                fontSize: "10px",
-                                                color: statusColor,
-                                                flexShrink: 0,
-                                                fontWeight: 600,
-                                            }}
-                                        >
-                                            {statusLabel}
-                                        </span>
-                                        <span
-                                            style={{
-                                                fontSize: "10px",
-                                                color: "var(--color-text-muted)",
-                                                flexShrink: 0,
-                                            }}
-                                        >
-                                            {new Date(entry.processedAt).toLocaleDateString()}
-                                        </span>
                                     </div>
                                 );
                             })}

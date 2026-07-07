@@ -12,7 +12,7 @@ import {
     watchHistory,
     movies,
 } from "@trakt-dashboard/db";
-import { and, eq, gt, inArray, isNotNull, lte, not, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, isNotNull, isNull, lte, not, sql } from "drizzle-orm";
 import {
     fetchJellyfinSeriesTmdbMap,
     fetchJellyfinMoviesTmdbMap,
@@ -23,6 +23,70 @@ import {
 import { decryptToken } from "../lib/encrypt.js";
 import { resolveApiSecret } from "../lib/secret.js";
 import { sendPush, isPushConfigured } from "../lib/push.js";
+import {
+    buildExclusionIndex,
+    isSeasonEligible,
+    isMovieEligible,
+    parseJellyfinDeleteStatus,
+    annotate500Error,
+    DEFER_AFTER_500_DAYS,
+} from "./jellyfin-auto-delete-rules.js";
+
+interface DeferTarget {
+    showId?: number | null;
+    movieId?: number | null;
+    seasonNumber: number | null;
+}
+
+/**
+ * N5-T10: after a Phase 2 delete 500s (Jellyfin 10.11 UserData tombstone bug,
+ * jellyfin#16975 — the files are usually already gone from disk), write a 7-day defer
+ * exclusion so Phase 1 doesn't re-queue the ghost entry the next day and loop forever.
+ * Mirrors the replace-then-insert semantics of the cancel buttons' exclusion writes.
+ */
+async function deferEntryAfter500(
+    db: ReturnType<typeof getDb>,
+    userId: number,
+    target: DeferTarget,
+): Promise<void> {
+    try {
+        await db
+            .delete(jellyfinDeleteExclusions)
+            .where(
+                and(
+                    eq(jellyfinDeleteExclusions.userId, userId),
+                    target.showId != null
+                        ? eq(jellyfinDeleteExclusions.showId, target.showId)
+                        : eq(jellyfinDeleteExclusions.movieId, target.movieId!),
+                    target.seasonNumber !== null
+                        ? eq(jellyfinDeleteExclusions.seasonNumber, target.seasonNumber)
+                        : isNull(jellyfinDeleteExclusions.seasonNumber),
+                ),
+            );
+        await db.insert(jellyfinDeleteExclusions).values({
+            userId,
+            showId: target.showId ?? null,
+            movieId: target.movieId ?? null,
+            seasonNumber: target.seasonNumber,
+            mode: "defer",
+            deferUntil: new Date(Date.now() + DEFER_AFTER_500_DAYS * 24 * 60 * 60 * 1000),
+        });
+    } catch (e) {
+        // Best-effort: a failed defer write must not abort the rest of the batch —
+        // worst case the entry is retried tomorrow, which is the pre-N5-T10 behavior.
+        console.error(`[jellyfin-delete] Failed to write auto-defer for user ${userId}:`, e);
+    }
+}
+
+// Shared failure handling for the four delete sites: classify the error, annotate
+// 500s (see annotate500Error), and report whether the caller should auto-defer.
+function classifyDeleteError(e: unknown): { errorMessage: string; shouldDefer: boolean } {
+    const raw = e instanceof Error ? e.message : String(e);
+    if (parseJellyfinDeleteStatus(raw) === 500) {
+        return { errorMessage: annotate500Error(500), shouldDefer: true };
+    }
+    return { errorMessage: raw, shouldDefer: false };
+}
 
 /**
  * Push reminder for a just-queued (not re-queued) entry (N5-T03). Only fires on genuine
@@ -170,7 +234,15 @@ export async function deleteQueueEntryNow(
         }
     } catch (e) {
         status = "failed";
-        errorMessage = e instanceof Error ? e.message : String(e);
+        const classified = classifyDeleteError(e);
+        errorMessage = classified.errorMessage;
+        if (classified.shouldDefer) {
+            await deferEntryAfter500(db, userId, {
+                showId: queueRow.showId,
+                movieId: queueRow.movieId,
+                seasonNumber: queueRow.seasonNumber,
+            });
+        }
     }
 
     await db.insert(jellyfinDeleteHistory).values({
@@ -290,24 +362,9 @@ async function processUser(
         })
         .from(jellyfinDeleteExclusions)
         .where(eq(jellyfinDeleteExclusions.userId, userId));
-    const showExclusions = exclusions.filter((e) => e.showId !== null);
-    // Whole-show exclusion (seasonNumber null) blocks both whole-show and season queueing.
-    // A season exclusion also blocks whole-show queueing for that show — deleting the whole
-    // series would delete the protected season's files, violating the protection semantics.
-    const excludedShowIds = new Set(showExclusions.map((e) => e.showId!));
-    const excludedWholeShowIds = new Set(
-        showExclusions.filter((e) => e.seasonNumber === null).map((e) => e.showId!),
-    );
-    const excludedSeasonKeys = new Set(
-        showExclusions
-            .filter((e) => e.seasonNumber !== null)
-            .map((e) => `${e.showId}:${e.seasonNumber}`),
-    );
-    const isSeasonExcluded = (showId: number, season: number) =>
-        excludedWholeShowIds.has(showId) || excludedSeasonKeys.has(`${showId}:${season}`);
-    const excludedMovieIds = new Set(
-        exclusions.filter((e) => e.movieId !== null).map((e) => e.movieId!),
-    );
+    // Phase 2 mutates this via .add() when it auto-defers a 500'd entry (N5-T10), so the
+    // same run's Phase 1 already sees the exclusion and doesn't re-queue it immediately.
+    const exclusionIndex = buildExclusionIndex(exclusions);
 
     // ── Phase 2: execute pending deletions ──────────────────────────────────────
 
@@ -340,6 +397,10 @@ async function processUser(
             if (seriesId) {
                 await deleteJellyfinItem(cfg, seriesId);
                 status = "deleted";
+                // Drop it from the snapshot so this run's Phase 1a existence check doesn't
+                // see the stale entry and immediately re-queue the just-deleted show
+                // (which would log a misleading "not_found" tomorrow).
+                seriesMap.delete(String(entry.tmdbId));
             }
             console.log(
                 `[jellyfin-delete] ${status === "deleted" ? "Deleted" : "Not found"} series "${entry.title}" (TMDB ${entry.tmdbId}) for user ${userId}`,
@@ -347,7 +408,16 @@ async function processUser(
             if (status === "deleted") deleted++;
         } catch (e) {
             status = "failed";
-            errorMessage = e instanceof Error ? e.message : String(e);
+            const classified = classifyDeleteError(e);
+            errorMessage = classified.errorMessage;
+            if (classified.shouldDefer) {
+                await deferEntryAfter500(db, userId, { showId: entry.showId, seasonNumber: null });
+                exclusionIndex.add({
+                    showId: entry.showId,
+                    movieId: null,
+                    seasonNumber: null,
+                });
+            }
             console.error(
                 `[jellyfin-delete] Failed to delete series "${entry.title}" for user ${userId}:`,
                 e,
@@ -394,7 +464,19 @@ async function processUser(
             if (status === "deleted") deleted++;
         } catch (e) {
             status = "failed";
-            errorMessage = e instanceof Error ? e.message : String(e);
+            const classified = classifyDeleteError(e);
+            errorMessage = classified.errorMessage;
+            if (classified.shouldDefer) {
+                await deferEntryAfter500(db, userId, {
+                    showId: entry.showId,
+                    seasonNumber: season,
+                });
+                exclusionIndex.add({
+                    showId: entry.showId,
+                    movieId: null,
+                    seasonNumber: season,
+                });
+            }
             console.error(
                 `[jellyfin-delete] Failed to delete S${season} of "${entry.title}" for user ${userId}:`,
                 e,
@@ -435,6 +517,9 @@ async function processUser(
             if (itemId) {
                 await deleteJellyfinItem(cfg, itemId);
                 status = "deleted";
+                // Same stale-snapshot guard as the series branch: keep Phase 1c from
+                // re-queueing the movie this run just deleted.
+                movieMap.delete(String(entry.tmdbId));
             }
             console.log(
                 `[jellyfin-delete] ${status === "deleted" ? "Deleted" : "Not found"} movie "${entry.title}" (TMDB ${entry.tmdbId}) for user ${userId}`,
@@ -442,7 +527,19 @@ async function processUser(
             if (status === "deleted") deleted++;
         } catch (e) {
             status = "failed";
-            errorMessage = e instanceof Error ? e.message : String(e);
+            const classified = classifyDeleteError(e);
+            errorMessage = classified.errorMessage;
+            if (classified.shouldDefer) {
+                await deferEntryAfter500(db, userId, {
+                    movieId: entry.movieId,
+                    seasonNumber: null,
+                });
+                exclusionIndex.add({
+                    showId: null,
+                    movieId: entry.movieId,
+                    seasonNumber: null,
+                });
+            }
             console.error(
                 `[jellyfin-delete] Failed to delete movie "${entry.title}" for user ${userId}:`,
                 e,
@@ -482,7 +579,7 @@ async function processUser(
 
     for (const show of completedEndedShows) {
         // Any exclusion on the show (whole-show or single-season) blocks whole-show queueing.
-        if (excludedShowIds.has(show.showId)) continue;
+        if (exclusionIndex.excludedShowIds.has(show.showId)) continue;
         // Skip shows that don't actually exist in one of the user's auto-delete libraries —
         // otherwise they'd be badged as "pending delete" even though there's nothing to
         // delete, and Phase 2 would later log a misleading "not_found" for them.
@@ -523,7 +620,6 @@ async function processUser(
 
     if (userShowIds.length > 0) {
         const today = new Date().toISOString().split("T")[0]!;
-        const sevenDaysAgoMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
 
         // seasonTotal comes from the synced `seasons.episode_count` (TMDB's stated total for
         // the season), NOT from counting locally-aired episode rows. Using "aired-so-far" as
@@ -575,17 +671,10 @@ async function processUser(
                 seasons.episodeCount,
             );
 
+        const nowMs = Date.now();
         for (const stat of seasonStats) {
-            const lastAirMs =
-                stat.lastAirDate !== null ? new Date(stat.lastAirDate).getTime() : null;
-            if (
-                stat.seasonTotal > 0 &&
-                stat.airedCount >= stat.seasonTotal &&
-                stat.watched >= stat.seasonTotal &&
-                lastAirMs !== null &&
-                lastAirMs < sevenDaysAgoMs
-            ) {
-                if (isSeasonExcluded(stat.showId, stat.seasonNumber)) continue;
+            if (isSeasonEligible(stat, nowMs)) {
+                if (exclusionIndex.isSeasonExcluded(stat.showId, stat.seasonNumber)) continue;
                 // Same existence guard as the whole-show branch above: only queue a season
                 // that's actually resolvable in Jellyfin within the scoped libraries.
                 const seriesId = seriesMap.get(String(stat.tmdbId));
@@ -619,11 +708,7 @@ async function processUser(
     }
 
     // 1c. Movie deletion (N5-T04): watched (any watch_history row) AND the most recent
-    //     watch was more than MOVIE_DELETE_BUFFER_DAYS ago. A rewatch pushes the buffer
-    //     out again — the max(), not the first watch, is what's compared.
-    const MOVIE_DELETE_BUFFER_DAYS = 30;
-    const movieBufferMs = Date.now() - MOVIE_DELETE_BUFFER_DAYS * 24 * 60 * 60 * 1000;
-
+    //     watch was more than MOVIE_DELETE_BUFFER_DAYS ago — see isMovieEligible.
     const watchedMovies = await db
         .select({
             movieId: movies.id,
@@ -636,12 +721,11 @@ async function processUser(
         .where(and(eq(watchHistory.userId, userId), eq(watchHistory.mediaType, "movie")))
         .groupBy(movies.id, movies.tmdbId, movies.title);
 
+    const movieNowMs = Date.now();
     for (const movie of watchedMovies) {
-        if (excludedMovieIds.has(movie.movieId)) continue;
+        if (exclusionIndex.excludedMovieIds.has(movie.movieId)) continue;
         if (movie.tmdbId === null || !movieMap.has(String(movie.tmdbId))) continue;
-        const lastWatchedMs =
-            movie.lastWatchedAt !== null ? new Date(movie.lastWatchedAt).getTime() : null;
-        if (lastWatchedMs === null || lastWatchedMs >= movieBufferMs) continue;
+        if (!isMovieEligible(movie.lastWatchedAt, movieNowMs)) continue;
 
         const inserted = await db
             .insert(jellyfinDeleteQueue)
