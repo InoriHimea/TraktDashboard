@@ -28,17 +28,6 @@ const FILTERS: { key: MediaFilter; labelKey: string; icon: typeof Tv2 }[] = [
     { key: "movie", labelKey: "history.movies", icon: Film },
 ];
 
-function formatWatchedAt(iso: string | null | undefined): string {
-    if (!iso) return t("common.unknown");
-    return new Date(iso).toLocaleString(getLocale(), {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
-}
-
 function formatDateGroup(dateStr: string): string {
     const date = new Date(dateStr);
     const today = new Date();

@@ -81,6 +81,8 @@ export function StarRating({ type, localId }: StarRatingProps) {
 
     return (
         <div
+            role="group"
+            aria-label={t("rating.myRating")}
             style={{ display: "flex", flexDirection: "column", gap: "6px" }}
             onMouseLeave={() => setHoverScore(null)}
         >
@@ -120,7 +122,9 @@ export function StarRating({ type, localId }: StarRatingProps) {
                             }}
                         >
                             {/* Left half — odd score */}
-                            <div
+                            <button
+                                type="button"
+                                aria-label={t("rating.scoreLabel", { score: halfScore })}
                                 style={{
                                     position: "absolute",
                                     left: 0,
@@ -128,12 +132,19 @@ export function StarRating({ type, localId }: StarRatingProps) {
                                     width: "50%",
                                     height: "100%",
                                     zIndex: 1,
+                                    padding: 0,
+                                    margin: 0,
+                                    border: "none",
+                                    background: "transparent",
+                                    cursor: "pointer",
                                 }}
                                 onMouseEnter={() => setHoverScore(halfScore)}
                                 onClick={() => handleClick(halfScore)}
                             />
                             {/* Right half — even score */}
-                            <div
+                            <button
+                                type="button"
+                                aria-label={t("rating.scoreLabel", { score: fullScore })}
                                 style={{
                                     position: "absolute",
                                     right: 0,
@@ -141,6 +152,11 @@ export function StarRating({ type, localId }: StarRatingProps) {
                                     width: "50%",
                                     height: "100%",
                                     zIndex: 1,
+                                    padding: 0,
+                                    margin: 0,
+                                    border: "none",
+                                    background: "transparent",
+                                    cursor: "pointer",
                                 }}
                                 onMouseEnter={() => setHoverScore(fullScore)}
                                 onClick={() => handleClick(fullScore)}

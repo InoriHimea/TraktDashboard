@@ -35,11 +35,7 @@ export function SearchModal({ onClose }: SearchModalProps) {
     // Debounced search
     useEffect(() => {
         if (timerRef.current) clearTimeout(timerRef.current);
-        if (query.length < 2) {
-            setResults([]);
-            setError(false);
-            return;
-        }
+        if (query.length < 2) return;
         timerRef.current = setTimeout(async () => {
             setLoading(true);
             setError(false);
@@ -82,10 +78,15 @@ export function SearchModal({ onClose }: SearchModalProps) {
     const isAdded = (r: SearchResult) => r.inWatchlist || addedIds.has(r.traktId);
     const isAdding = (r: SearchResult) => addingIds.has(r.traktId);
 
+    // Below the min-length threshold, ignore stale results/error from a previous longer query.
+    const displayResults = query.length >= 2 ? results : [];
+    const displayError = query.length >= 2 ? error : false;
+
     return (
         <>
             {/* Backdrop */}
             <div
+                aria-hidden="true"
                 onClick={onClose}
                 style={{
                     position: "fixed",
@@ -121,7 +122,7 @@ export function SearchModal({ onClose }: SearchModalProps) {
                         gap: "10px",
                         padding: "14px 16px",
                         borderBottom:
-                            results.length > 0 || loading || error
+                            displayResults.length > 0 || loading || displayError
                                 ? "1px solid var(--color-border-subtle)"
                                 : "none",
                     }}
@@ -176,7 +177,7 @@ export function SearchModal({ onClose }: SearchModalProps) {
                 </div>
 
                 {/* Results / States */}
-                {error && (
+                {displayError && (
                     <div
                         style={{
                             padding: "16px",
@@ -189,7 +190,7 @@ export function SearchModal({ onClose }: SearchModalProps) {
                     </div>
                 )}
 
-                {!error && query.length >= 2 && !loading && results.length === 0 && (
+                {!displayError && query.length >= 2 && !loading && displayResults.length === 0 && (
                     <div
                         style={{
                             padding: "24px 16px",
@@ -202,7 +203,7 @@ export function SearchModal({ onClose }: SearchModalProps) {
                     </div>
                 )}
 
-                {!error && query.length < 2 && query.length > 0 && (
+                {!displayError && query.length < 2 && query.length > 0 && (
                     <div
                         style={{
                             padding: "16px",
@@ -215,7 +216,7 @@ export function SearchModal({ onClose }: SearchModalProps) {
                     </div>
                 )}
 
-                {results.length > 0 && (
+                {displayResults.length > 0 && (
                     <ul
                         style={{
                             listStyle: "none",
@@ -225,7 +226,7 @@ export function SearchModal({ onClose }: SearchModalProps) {
                             overflowY: "auto",
                         }}
                     >
-                        {results.map((r) => {
+                        {displayResults.map((r) => {
                             const poster = r.posterPath ? tmdbImage(r.posterPath, "w92") : null;
                             const added = isAdded(r);
                             const adding = isAdding(r);

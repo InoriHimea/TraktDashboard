@@ -118,7 +118,7 @@ jellyfinRoutes.get("/libraries", async (c) => {
     try {
         const libraries = await fetchJellyfinLibraries(cfg);
         return c.json({ data: libraries });
-    } catch (err) {
+    } catch {
         return c.json({ error: "Failed to fetch Jellyfin libraries" }, 502);
     }
 });
@@ -137,7 +137,7 @@ jellyfinRoutes.post("/libraries", async (c) => {
     try {
         const libraries = await fetchJellyfinLibraries({ url, apiKey });
         return c.json({ data: libraries });
-    } catch (err) {
+    } catch {
         return c.json({ error: "Failed to fetch Jellyfin libraries" }, 502);
     }
 });

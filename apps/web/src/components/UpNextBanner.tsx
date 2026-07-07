@@ -94,6 +94,7 @@ export function UpNextBanner() {
                     return (
                         <div
                             key={ep.id}
+                            role="presentation"
                             style={{
                                 flexShrink: 0,
                                 width: "180px",

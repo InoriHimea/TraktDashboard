@@ -120,7 +120,8 @@ export default function SettingsPage() {
             startedAt: string;
         }>
     >([]);
-    const [backupRunsLoading, setBackupRunsLoading] = useState(false);
+    // Starts true: the mount effect below kicks off the runs() fetch unconditionally.
+    const [backupRunsLoading, setBackupRunsLoading] = useState(true);
     // Track whether the form has been seeded. Prevents window-focus refetches from
     // clobbering unsaved edits. Reset to false after a successful save so fresh
     // server values propagate.
@@ -194,7 +195,6 @@ export default function SettingsPage() {
                 setBackupScheduleHours(r.scheduleHours);
             })
             .catch(() => null);
-        setBackupRunsLoading(true);
         api.backup
             .runs(10)
             .then((r) => setBackupRuns(r.data))

@@ -57,7 +57,7 @@ ratingsRoutes.put("/", async (c) => {
     const trakt = getTraktClient();
 
     // Resolve Trakt IDs for the API call
-    let traktIds: { trakt?: number; tmdb?: number } = {};
+    const traktIds: { trakt?: number; tmdb?: number } = {};
     if (type === "show") {
         const [row] = await db
             .select({ traktId: shows.traktId, tmdbId: shows.tmdbId })
@@ -119,7 +119,7 @@ ratingsRoutes.delete("/", async (c) => {
     const trakt = getTraktClient();
 
     // Resolve Trakt IDs
-    let traktIds: { trakt?: number; tmdb?: number } = {};
+    const traktIds: { trakt?: number; tmdb?: number } = {};
     if (type === "show") {
         const [row] = await db
             .select({ traktId: shows.traktId, tmdbId: shows.tmdbId })

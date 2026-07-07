@@ -1,4 +1,4 @@
-import { Tv2, Film, Clock, Star, Repeat2, TrendingUp } from "lucide-react";
+import { Tv2, Film, Star, Repeat2, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 import type { TraktOfficialStats } from "@trakt-dashboard/types";
 import { t } from "../../lib/i18n";
