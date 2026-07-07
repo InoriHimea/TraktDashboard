@@ -454,15 +454,12 @@ export default function SettingsPage() {
                     </div>
                 </div>
 
-                {/* Two-column layout: form left, sync+metrics right */}
+                {/* Two-column layout: form left, sync+metrics right. Collapses to a
+                    single column below lg so the fixed 380px sidebar can't overflow
+                    narrow viewports (N6 batch 4 mobile audit). */}
                 <div
-                    style={{
-                        display: "grid",
-                        gridTemplateColumns: "minmax(0, 1fr) 380px",
-                        gap: "28px",
-                        alignItems: "start",
-                        maxWidth: "1160px",
-                    }}
+                    className="grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_380px]"
+                    style={{ maxWidth: "1160px" }}
                 >
                     <div>
                         {/* ── LEFT: Settings form ── */}
