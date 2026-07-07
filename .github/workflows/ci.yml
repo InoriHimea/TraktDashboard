@@ -99,15 +99,31 @@ jobs:
             - name: Start services
               run: docker compose up -d
 
+            # `docker compose ps --format json` shape (single array vs NDJSON) varies by the
+            # compose CLI version on the runner, which previously broke the jq filter here
+            # outright ("Cannot index string with string Health") every single poll. Query
+            # each container's health directly via `docker inspect` instead — a plain string
+            # per container name, no JSON-shape ambiguity possible.
             - name: Wait for all services to be healthy (max 90s)
               run: |
                   timeout 90 bash -c '
-                    until [ "$(docker compose ps --format json | jq -r "[.[].Health] | all(. == \"healthy\")")" = "true" ]; do
+                    until [ "$(docker inspect -f "{{.State.Health.Status}}" trakt-api trakt-db trakt-keydb trakt-web | sort -u)" = "healthy" ]; do
                       echo "Waiting for services..."
-                      docker compose ps --format "table {{.Name}}\t{{.Status}}"
+                      docker compose ps
                       sleep 5
                     done
-                  '
+                  ' || {
+                    echo "::group::docker compose ps"
+                    docker compose ps
+                    echo "::endgroup::"
+                    echo "::group::trakt-web health status"
+                    docker inspect --format '{{json .State.Health}}' trakt-web
+                    echo "::endgroup::"
+                    echo "::group::trakt-web container logs"
+                    docker compose logs web
+                    echo "::endgroup::"
+                    exit 1
+                  }
 
             - name: Verify nginx serves the SPA
               run: curl -fsSL http://localhost/ | grep -q "Trakt Dashboard"
