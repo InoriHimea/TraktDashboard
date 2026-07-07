@@ -16,6 +16,10 @@ interface BackupRun {
 }
 
 interface BackupTabProps {
+    // 云盘 OAuth 应用凭据是否已配进环境变量（GDRIVE_CLIENT_ID/SECRET、ONEDRIVE_CLIENT_ID）。
+    // false 时隐藏对应卡片，显示"已禁用"提示（N6 批次 3a，详见 docs/cloud-backup-setup.md）。
+    gdriveConfigured: boolean;
+    onedriveConfigured: boolean;
     gdriveConnected: boolean;
     setGdriveConnected: Dispatch<SetStateAction<boolean>>;
     gdriveLoading: boolean;
@@ -70,6 +74,8 @@ interface BackupTabProps {
 }
 
 export function BackupTab({
+    gdriveConfigured,
+    onedriveConfigured,
     gdriveConnected,
     setGdriveConnected,
     gdriveLoading,
@@ -151,431 +157,473 @@ export function BackupTab({
                     gap: 18,
                 }}
             >
-                {/* Google Drive */}
-                <div
-                    style={{
-                        padding: "14px 16px",
-                        borderRadius: 12,
-                        border: "1px solid var(--color-border-subtle)",
-                        background: "var(--color-surface-2)",
-                    }}
-                >
+                {/* 云盘 OAuth 凭据未配置时隐藏对应卡片，仅提示如何启用（N6 批次 3a） */}
+                {(!gdriveConfigured || !onedriveConfigured) && (
                     <div
                         style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            marginBottom: 8,
+                            padding: "10px 14px",
+                            borderRadius: 10,
+                            border: "1px dashed var(--color-border)",
+                            background: "var(--color-surface-2)",
+                            fontSize: 12,
+                            color: "var(--color-text-muted)",
+                            lineHeight: 1.6,
                         }}
                     >
-                        <span
-                            style={{
-                                fontWeight: 600,
-                                fontSize: 13,
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 6,
-                            }}
+                        {t("settings.backup.cloudDisabled", {
+                            providers: [
+                                !gdriveConfigured ? "Google Drive" : null,
+                                !onedriveConfigured ? "OneDrive" : null,
+                            ]
+                                .filter(Boolean)
+                                .join(" / "),
+                        })}{" "}
+                        <a
+                            href="https://github.com/InoriHimea/TraktDashboard/blob/main/docs/cloud-backup-setup.md"
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ color: "var(--color-accent)" }}
                         >
-                            <Cloud size={14} />
-                            Google Drive
-                            {gdriveConnected && (
-                                <span
-                                    style={{
-                                        fontSize: 10,
-                                        padding: "2px 7px",
-                                        borderRadius: 10,
-                                        background: "rgba(16,185,129,0.15)",
-                                        color: "#10b981",
-                                        fontWeight: 700,
-                                    }}
-                                >
-                                    {t("settings.backup.connected")}
-                                </span>
-                            )}
-                        </span>
-                        {gdriveConnected ? (
-                            <button
-                                type="button"
-                                onClick={async () => {
-                                    await api.backup.gdriveRevoke().catch(() => null);
-                                    setGdriveConnected(false);
-                                    toast(t("settings.backup.gdriveDisconnected"), "success");
-                                }}
-                                style={{
-                                    fontSize: 12,
-                                    color: "#ef4444",
-                                    background: "none",
-                                    border: "none",
-                                    cursor: "pointer",
-                                }}
-                            >
-                                {t("settings.backup.disconnect")}
-                            </button>
-                        ) : (
-                            <button
-                                type="button"
-                                disabled={gdriveLoading}
-                                onClick={async () => {
-                                    setGdriveLoading(true);
-                                    try {
-                                        const res = await api.backup.gdriveStartAuth();
-                                        setGdriveDeviceAuth(res.data);
-                                        // Stop polling once the device code expires.
-                                        const deadline = Date.now() + res.data.expires_in * 1000;
-                                        const stopPolling = (
-                                            timer: ReturnType<typeof setInterval>,
-                                        ) => {
-                                            clearInterval(timer);
-                                            setGdrivePollTimer(null);
-                                            setGdriveDeviceAuth(null);
-                                            setGdriveLoading(false);
-                                        };
-                                        const timer = setInterval(
-                                            async () => {
-                                                if (Date.now() >= deadline) {
-                                                    stopPolling(timer);
-                                                    toast(
-                                                        t("settings.backup.gdriveAuthFailed"),
-                                                        "error",
-                                                    );
-                                                    return;
-                                                }
-                                                try {
-                                                    const poll = await api.backup.gdrivePoll(
-                                                        res.data.device_code,
-                                                    );
-                                                    if (poll.connected) {
-                                                        stopPolling(timer);
-                                                        setGdriveConnected(true);
-                                                        toast(
-                                                            t("settings.backup.gdriveConnected"),
-                                                            "success",
-                                                        );
-                                                    }
-                                                } catch {
-                                                    // Denied / expired / network — stop and surface failure
-                                                    // instead of looping forever with a stuck spinner.
-                                                    stopPolling(timer);
-                                                    toast(
-                                                        t("settings.backup.gdriveAuthFailed"),
-                                                        "error",
-                                                    );
-                                                }
-                                            },
-                                            (res.data.interval + 1) * 1000,
-                                        );
-                                        setGdrivePollTimer(timer);
-                                    } catch {
-                                        setGdriveLoading(false);
-                                        toast(t("settings.backup.gdriveAuthFailed"), "error");
-                                    }
-                                }}
-                                style={{
-                                    fontSize: 12,
-                                    fontWeight: 600,
-                                    padding: "5px 12px",
-                                    borderRadius: 7,
-                                    border: "1px solid var(--color-border)",
-                                    background: "var(--color-surface-2)",
-                                    color: "var(--color-text)",
-                                    cursor: "pointer",
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: 5,
-                                }}
-                            >
-                                {gdriveLoading ? (
-                                    <Loader2
-                                        size={12}
-                                        style={{
-                                            animation: "spin 1s linear infinite",
-                                        }}
-                                    />
-                                ) : (
-                                    <Cloud size={12} />
-                                )}
-                                {t("settings.backup.connect")}
-                            </button>
-                        )}
+                            {t("settings.backup.cloudDisabledDocs")}
+                        </a>
                     </div>
-                    {/* Device Flow 提示 */}
-                    {gdriveDeviceAuth && (
+                )}
+
+                {/* Google Drive */}
+                {gdriveConfigured && (
+                    <div
+                        style={{
+                            padding: "14px 16px",
+                            borderRadius: 12,
+                            border: "1px solid var(--color-border-subtle)",
+                            background: "var(--color-surface-2)",
+                        }}
+                    >
                         <div
                             style={{
-                                marginTop: 10,
-                                padding: "10px 14px",
-                                borderRadius: 8,
-                                background: "var(--color-surface-2)",
-                                border: "1px solid var(--color-border-subtle)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                marginBottom: 8,
                             }}
                         >
-                            <p
+                            <span
                                 style={{
-                                    margin: 0,
-                                    fontSize: 12,
-                                    color: "var(--color-text-muted)",
+                                    fontWeight: 600,
+                                    fontSize: 13,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 6,
                                 }}
                             >
-                                {t("settings.backup.deviceFlowHint")}
-                            </p>
-                            <p
-                                style={{
-                                    margin: "6px 0 0",
-                                    fontSize: 14,
-                                    fontWeight: 700,
-                                    letterSpacing: "0.1em",
-                                    color: "var(--color-text)",
-                                }}
-                            >
-                                {gdriveDeviceAuth!.user_code}
-                            </p>
-                            <a
-                                href={gdriveDeviceAuth!.verification_url}
-                                target="_blank"
-                                rel="noreferrer"
-                                style={{
-                                    fontSize: 11,
-                                    color: "var(--color-accent)",
-                                    marginTop: 4,
-                                    display: "block",
-                                }}
-                            >
-                                {gdriveDeviceAuth!.verification_url}
-                            </a>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    if (gdrivePollTimer) clearInterval(gdrivePollTimer);
-                                    setGdrivePollTimer(null);
-                                    setGdriveDeviceAuth(null);
-                                    setGdriveLoading(false);
-                                }}
-                                style={{
-                                    marginTop: 8,
-                                    fontSize: 11,
-                                    color: "var(--color-text-muted)",
-                                    background: "none",
-                                    border: "none",
-                                    cursor: "pointer",
-                                }}
-                            >
-                                {t("common.cancel")}
-                            </button>
+                                <Cloud size={14} />
+                                Google Drive
+                                {gdriveConnected && (
+                                    <span
+                                        style={{
+                                            fontSize: 10,
+                                            padding: "2px 7px",
+                                            borderRadius: 10,
+                                            background: "rgba(16,185,129,0.15)",
+                                            color: "#10b981",
+                                            fontWeight: 700,
+                                        }}
+                                    >
+                                        {t("settings.backup.connected")}
+                                    </span>
+                                )}
+                            </span>
+                            {gdriveConnected ? (
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        await api.backup.gdriveRevoke().catch(() => null);
+                                        setGdriveConnected(false);
+                                        toast(t("settings.backup.gdriveDisconnected"), "success");
+                                    }}
+                                    style={{
+                                        fontSize: 12,
+                                        color: "#ef4444",
+                                        background: "none",
+                                        border: "none",
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    {t("settings.backup.disconnect")}
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    disabled={gdriveLoading}
+                                    onClick={async () => {
+                                        setGdriveLoading(true);
+                                        try {
+                                            const res = await api.backup.gdriveStartAuth();
+                                            setGdriveDeviceAuth(res.data);
+                                            // Stop polling once the device code expires.
+                                            const deadline =
+                                                Date.now() + res.data.expires_in * 1000;
+                                            const stopPolling = (
+                                                timer: ReturnType<typeof setInterval>,
+                                            ) => {
+                                                clearInterval(timer);
+                                                setGdrivePollTimer(null);
+                                                setGdriveDeviceAuth(null);
+                                                setGdriveLoading(false);
+                                            };
+                                            const timer = setInterval(
+                                                async () => {
+                                                    if (Date.now() >= deadline) {
+                                                        stopPolling(timer);
+                                                        toast(
+                                                            t("settings.backup.gdriveAuthFailed"),
+                                                            "error",
+                                                        );
+                                                        return;
+                                                    }
+                                                    try {
+                                                        const poll = await api.backup.gdrivePoll(
+                                                            res.data.device_code,
+                                                        );
+                                                        if (poll.connected) {
+                                                            stopPolling(timer);
+                                                            setGdriveConnected(true);
+                                                            toast(
+                                                                t(
+                                                                    "settings.backup.gdriveConnected",
+                                                                ),
+                                                                "success",
+                                                            );
+                                                        }
+                                                    } catch {
+                                                        // Denied / expired / network — stop and surface failure
+                                                        // instead of looping forever with a stuck spinner.
+                                                        stopPolling(timer);
+                                                        toast(
+                                                            t("settings.backup.gdriveAuthFailed"),
+                                                            "error",
+                                                        );
+                                                    }
+                                                },
+                                                (res.data.interval + 1) * 1000,
+                                            );
+                                            setGdrivePollTimer(timer);
+                                        } catch {
+                                            setGdriveLoading(false);
+                                            toast(t("settings.backup.gdriveAuthFailed"), "error");
+                                        }
+                                    }}
+                                    style={{
+                                        fontSize: 12,
+                                        fontWeight: 600,
+                                        padding: "5px 12px",
+                                        borderRadius: 7,
+                                        border: "1px solid var(--color-border)",
+                                        background: "var(--color-surface-2)",
+                                        color: "var(--color-text)",
+                                        cursor: "pointer",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: 5,
+                                    }}
+                                >
+                                    {gdriveLoading ? (
+                                        <Loader2
+                                            size={12}
+                                            style={{
+                                                animation: "spin 1s linear infinite",
+                                            }}
+                                        />
+                                    ) : (
+                                        <Cloud size={12} />
+                                    )}
+                                    {t("settings.backup.connect")}
+                                </button>
+                            )}
                         </div>
-                    )}
-                </div>
+                        {/* Device Flow 提示 */}
+                        {gdriveDeviceAuth && (
+                            <div
+                                style={{
+                                    marginTop: 10,
+                                    padding: "10px 14px",
+                                    borderRadius: 8,
+                                    background: "var(--color-surface-2)",
+                                    border: "1px solid var(--color-border-subtle)",
+                                }}
+                            >
+                                <p
+                                    style={{
+                                        margin: 0,
+                                        fontSize: 12,
+                                        color: "var(--color-text-muted)",
+                                    }}
+                                >
+                                    {t("settings.backup.deviceFlowHint")}
+                                </p>
+                                <p
+                                    style={{
+                                        margin: "6px 0 0",
+                                        fontSize: 14,
+                                        fontWeight: 700,
+                                        letterSpacing: "0.1em",
+                                        color: "var(--color-text)",
+                                    }}
+                                >
+                                    {gdriveDeviceAuth!.user_code}
+                                </p>
+                                <a
+                                    href={gdriveDeviceAuth!.verification_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    style={{
+                                        fontSize: 11,
+                                        color: "var(--color-accent)",
+                                        marginTop: 4,
+                                        display: "block",
+                                    }}
+                                >
+                                    {gdriveDeviceAuth!.verification_url}
+                                </a>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (gdrivePollTimer) clearInterval(gdrivePollTimer);
+                                        setGdrivePollTimer(null);
+                                        setGdriveDeviceAuth(null);
+                                        setGdriveLoading(false);
+                                    }}
+                                    style={{
+                                        marginTop: 8,
+                                        fontSize: 11,
+                                        color: "var(--color-text-muted)",
+                                        background: "none",
+                                        border: "none",
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    {t("common.cancel")}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* OneDrive */}
-                <div
-                    style={{
-                        padding: "14px 16px",
-                        borderRadius: 12,
-                        border: "1px solid var(--color-border-subtle)",
-                        background: "var(--color-surface-2)",
-                    }}
-                >
+                {onedriveConfigured && (
                     <div
                         style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            marginBottom: 8,
+                            padding: "14px 16px",
+                            borderRadius: 12,
+                            border: "1px solid var(--color-border-subtle)",
+                            background: "var(--color-surface-2)",
                         }}
                     >
-                        <span
-                            style={{
-                                fontWeight: 600,
-                                fontSize: 13,
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 6,
-                            }}
-                        >
-                            <Cloud size={14} />
-                            OneDrive
-                            {onedriveConnected && (
-                                <span
-                                    style={{
-                                        fontSize: 10,
-                                        padding: "2px 7px",
-                                        borderRadius: 10,
-                                        background: "rgba(16,185,129,0.15)",
-                                        color: "#10b981",
-                                        fontWeight: 700,
-                                    }}
-                                >
-                                    {t("settings.backup.connected")}
-                                </span>
-                            )}
-                        </span>
-                        {onedriveConnected ? (
-                            <button
-                                type="button"
-                                onClick={async () => {
-                                    await api.backup.onedriveRevoke().catch(() => null);
-                                    setOnedriveConnected(false);
-                                    toast(t("settings.backup.onedriveDisconnected"), "success");
-                                }}
-                                style={{
-                                    fontSize: 12,
-                                    color: "#ef4444",
-                                    background: "none",
-                                    border: "none",
-                                    cursor: "pointer",
-                                }}
-                            >
-                                {t("settings.backup.disconnect")}
-                            </button>
-                        ) : (
-                            <button
-                                type="button"
-                                disabled={onedriveLoading}
-                                onClick={async () => {
-                                    setOnedriveLoading(true);
-                                    try {
-                                        const res = await api.backup.onedriveStartAuth();
-                                        setOnedriveDeviceAuth(res.data);
-                                        const deadline = Date.now() + res.data.expires_in * 1000;
-                                        const stopPolling = (
-                                            timer: ReturnType<typeof setInterval>,
-                                        ) => {
-                                            clearInterval(timer);
-                                            setOnedrivePollTimer(null);
-                                            setOnedriveDeviceAuth(null);
-                                            setOnedriveLoading(false);
-                                        };
-                                        const timer = setInterval(
-                                            async () => {
-                                                if (Date.now() >= deadline) {
-                                                    stopPolling(timer);
-                                                    toast(
-                                                        t("settings.backup.onedriveAuthFailed"),
-                                                        "error",
-                                                    );
-                                                    return;
-                                                }
-                                                try {
-                                                    const poll = await api.backup.onedrivePoll(
-                                                        res.data.device_code,
-                                                    );
-                                                    if (poll.connected) {
-                                                        stopPolling(timer);
-                                                        setOnedriveConnected(true);
-                                                        toast(
-                                                            t("settings.backup.onedriveConnected"),
-                                                            "success",
-                                                        );
-                                                    }
-                                                } catch {
-                                                    stopPolling(timer);
-                                                    toast(
-                                                        t("settings.backup.onedriveAuthFailed"),
-                                                        "error",
-                                                    );
-                                                }
-                                            },
-                                            (res.data.interval + 1) * 1000,
-                                        );
-                                        setOnedrivePollTimer(timer);
-                                    } catch {
-                                        setOnedriveLoading(false);
-                                        toast(t("settings.backup.onedriveAuthFailed"), "error");
-                                    }
-                                }}
-                                style={{
-                                    fontSize: 12,
-                                    fontWeight: 600,
-                                    padding: "5px 12px",
-                                    borderRadius: 7,
-                                    border: "1px solid var(--color-border)",
-                                    background: "var(--color-surface-2)",
-                                    color: "var(--color-text)",
-                                    cursor: "pointer",
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: 5,
-                                }}
-                            >
-                                {onedriveLoading ? (
-                                    <Loader2
-                                        size={12}
-                                        style={{
-                                            animation: "spin 1s linear infinite",
-                                        }}
-                                    />
-                                ) : (
-                                    <Cloud size={12} />
-                                )}
-                                {t("settings.backup.connect")}
-                            </button>
-                        )}
-                    </div>
-                    {onedriveDeviceAuth && (
                         <div
                             style={{
-                                marginTop: 10,
-                                padding: "10px 14px",
-                                borderRadius: 8,
-                                background: "var(--color-surface-2)",
-                                border: "1px solid var(--color-border-subtle)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                marginBottom: 8,
                             }}
                         >
-                            <p
+                            <span
                                 style={{
-                                    margin: 0,
-                                    fontSize: 12,
-                                    color: "var(--color-text-muted)",
+                                    fontWeight: 600,
+                                    fontSize: 13,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 6,
                                 }}
                             >
-                                {t("settings.backup.deviceFlowHint")}
-                            </p>
-                            <p
-                                style={{
-                                    margin: "6px 0 0",
-                                    fontSize: 14,
-                                    fontWeight: 700,
-                                    letterSpacing: "0.1em",
-                                    color: "var(--color-text)",
-                                }}
-                            >
-                                {onedriveDeviceAuth.user_code}
-                            </p>
-                            <a
-                                href={onedriveDeviceAuth.verification_url}
-                                target="_blank"
-                                rel="noreferrer"
-                                style={{
-                                    fontSize: 11,
-                                    color: "var(--color-accent)",
-                                    marginTop: 4,
-                                    display: "block",
-                                }}
-                            >
-                                {onedriveDeviceAuth.verification_url}
-                            </a>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    if (onedrivePollTimer) clearInterval(onedrivePollTimer);
-                                    setOnedrivePollTimer(null);
-                                    setOnedriveDeviceAuth(null);
-                                    setOnedriveLoading(false);
-                                }}
-                                style={{
-                                    marginTop: 8,
-                                    fontSize: 11,
-                                    color: "var(--color-text-muted)",
-                                    background: "none",
-                                    border: "none",
-                                    cursor: "pointer",
-                                }}
-                            >
-                                {t("common.cancel")}
-                            </button>
+                                <Cloud size={14} />
+                                OneDrive
+                                {onedriveConnected && (
+                                    <span
+                                        style={{
+                                            fontSize: 10,
+                                            padding: "2px 7px",
+                                            borderRadius: 10,
+                                            background: "rgba(16,185,129,0.15)",
+                                            color: "#10b981",
+                                            fontWeight: 700,
+                                        }}
+                                    >
+                                        {t("settings.backup.connected")}
+                                    </span>
+                                )}
+                            </span>
+                            {onedriveConnected ? (
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        await api.backup.onedriveRevoke().catch(() => null);
+                                        setOnedriveConnected(false);
+                                        toast(t("settings.backup.onedriveDisconnected"), "success");
+                                    }}
+                                    style={{
+                                        fontSize: 12,
+                                        color: "#ef4444",
+                                        background: "none",
+                                        border: "none",
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    {t("settings.backup.disconnect")}
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    disabled={onedriveLoading}
+                                    onClick={async () => {
+                                        setOnedriveLoading(true);
+                                        try {
+                                            const res = await api.backup.onedriveStartAuth();
+                                            setOnedriveDeviceAuth(res.data);
+                                            const deadline =
+                                                Date.now() + res.data.expires_in * 1000;
+                                            const stopPolling = (
+                                                timer: ReturnType<typeof setInterval>,
+                                            ) => {
+                                                clearInterval(timer);
+                                                setOnedrivePollTimer(null);
+                                                setOnedriveDeviceAuth(null);
+                                                setOnedriveLoading(false);
+                                            };
+                                            const timer = setInterval(
+                                                async () => {
+                                                    if (Date.now() >= deadline) {
+                                                        stopPolling(timer);
+                                                        toast(
+                                                            t("settings.backup.onedriveAuthFailed"),
+                                                            "error",
+                                                        );
+                                                        return;
+                                                    }
+                                                    try {
+                                                        const poll = await api.backup.onedrivePoll(
+                                                            res.data.device_code,
+                                                        );
+                                                        if (poll.connected) {
+                                                            stopPolling(timer);
+                                                            setOnedriveConnected(true);
+                                                            toast(
+                                                                t(
+                                                                    "settings.backup.onedriveConnected",
+                                                                ),
+                                                                "success",
+                                                            );
+                                                        }
+                                                    } catch {
+                                                        stopPolling(timer);
+                                                        toast(
+                                                            t("settings.backup.onedriveAuthFailed"),
+                                                            "error",
+                                                        );
+                                                    }
+                                                },
+                                                (res.data.interval + 1) * 1000,
+                                            );
+                                            setOnedrivePollTimer(timer);
+                                        } catch {
+                                            setOnedriveLoading(false);
+                                            toast(t("settings.backup.onedriveAuthFailed"), "error");
+                                        }
+                                    }}
+                                    style={{
+                                        fontSize: 12,
+                                        fontWeight: 600,
+                                        padding: "5px 12px",
+                                        borderRadius: 7,
+                                        border: "1px solid var(--color-border)",
+                                        background: "var(--color-surface-2)",
+                                        color: "var(--color-text)",
+                                        cursor: "pointer",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: 5,
+                                    }}
+                                >
+                                    {onedriveLoading ? (
+                                        <Loader2
+                                            size={12}
+                                            style={{
+                                                animation: "spin 1s linear infinite",
+                                            }}
+                                        />
+                                    ) : (
+                                        <Cloud size={12} />
+                                    )}
+                                    {t("settings.backup.connect")}
+                                </button>
+                            )}
                         </div>
-                    )}
-                </div>
+                        {onedriveDeviceAuth && (
+                            <div
+                                style={{
+                                    marginTop: 10,
+                                    padding: "10px 14px",
+                                    borderRadius: 8,
+                                    background: "var(--color-surface-2)",
+                                    border: "1px solid var(--color-border-subtle)",
+                                }}
+                            >
+                                <p
+                                    style={{
+                                        margin: 0,
+                                        fontSize: 12,
+                                        color: "var(--color-text-muted)",
+                                    }}
+                                >
+                                    {t("settings.backup.deviceFlowHint")}
+                                </p>
+                                <p
+                                    style={{
+                                        margin: "6px 0 0",
+                                        fontSize: 14,
+                                        fontWeight: 700,
+                                        letterSpacing: "0.1em",
+                                        color: "var(--color-text)",
+                                    }}
+                                >
+                                    {onedriveDeviceAuth.user_code}
+                                </p>
+                                <a
+                                    href={onedriveDeviceAuth.verification_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    style={{
+                                        fontSize: 11,
+                                        color: "var(--color-accent)",
+                                        marginTop: 4,
+                                        display: "block",
+                                    }}
+                                >
+                                    {onedriveDeviceAuth.verification_url}
+                                </a>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (onedrivePollTimer) clearInterval(onedrivePollTimer);
+                                        setOnedrivePollTimer(null);
+                                        setOnedriveDeviceAuth(null);
+                                        setOnedriveLoading(false);
+                                    }}
+                                    style={{
+                                        marginTop: 8,
+                                        fontSize: 11,
+                                        color: "var(--color-text-muted)",
+                                        background: "none",
+                                        border: "none",
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    {t("common.cancel")}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* WebDAV */}
                 <div

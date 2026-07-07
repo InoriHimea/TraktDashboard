@@ -130,7 +130,10 @@ describe("SettingsPage", () => {
         expect(screen.queryByLabelText("显示语言")).not.toBeInTheDocument();
 
         fireEvent.click(screen.getByRole("button", { name: "备份" }));
-        expect(screen.getByText("Google Drive")).toBeInTheDocument();
+        // WebDAV needs no env-provided OAuth credentials, so its card is always
+        // rendered (GDrive/OneDrive hide when unconfigured — N6 batch 3a).
+        expect(screen.getByText("WebDAV")).toBeInTheDocument();
+        expect(screen.queryByText("Google Drive")).not.toBeInTheDocument();
         expect(screen.queryByPlaceholderText("http://nas:8096")).not.toBeInTheDocument();
 
         // The save button stays visible regardless of which tab is active.

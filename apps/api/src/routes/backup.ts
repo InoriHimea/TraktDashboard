@@ -27,6 +27,8 @@ import {
     deleteS3File,
     pruneOldS3Backups,
     dumpDatabase,
+    isGDriveConfigured,
+    isOneDriveConfigured,
     type GDriveToken,
     type OneDriveToken,
     type WebDAVConfig,
@@ -210,12 +212,14 @@ backupRoutes.delete("/gdrive/revoke", async (c) => {
     return c.json({ ok: true });
 });
 
-// GET /api/backup/gdrive/status — check connection
+// GET /api/backup/gdrive/status — check connection.
+// `configured` = the self-registered OAuth app credentials exist in env (N6 batch 3a);
+// when false the UI hides the provider entirely instead of offering a doomed connect flow.
 backupRoutes.get("/gdrive/status", async (c) => {
     const userId = c.get("userId");
     const row = await getSettings(userId);
     const connected = !!parseGDriveToken(row?.gdriveToken);
-    return c.json({ connected });
+    return c.json({ connected, configured: isGDriveConfigured() });
 });
 
 // ─── OneDrive Device Code Flow ───────────────────────────────────────────────
@@ -259,11 +263,12 @@ backupRoutes.delete("/onedrive/revoke", async (c) => {
     return c.json({ ok: true });
 });
 
+// `configured` semantics — see the gdrive/status comment above.
 backupRoutes.get("/onedrive/status", async (c) => {
     const userId = c.get("userId");
     const row = await getSettings(userId);
     const connected = !!parseOneDriveToken(row?.onedriveToken);
-    return c.json({ connected });
+    return c.json({ connected, configured: isOneDriveConfigured() });
 });
 
 // ─── WebDAV Config ────────────────────────────────────────────────────────────
@@ -802,34 +807,30 @@ export async function runScheduledBackup(userId: number): Promise<void> {
                 );
                 await saveGDriveToken(userId, refreshedToken);
                 await pruneOldGDriveBackups(refreshedToken, retentionDays).catch(() => null);
-                await db
-                    .insert(backupRuns)
-                    .values({
-                        userId,
-                        provider,
-                        status: "success",
-                        filename,
-                        sizeBytes: dumpBuffer.byteLength,
-                        fileId,
-                        startedAt,
-                        finishedAt: new Date(),
-                    });
+                await db.insert(backupRuns).values({
+                    userId,
+                    provider,
+                    status: "success",
+                    filename,
+                    sizeBytes: dumpBuffer.byteLength,
+                    fileId,
+                    startedAt,
+                    finishedAt: new Date(),
+                });
             } else if (provider === "webdav") {
                 const cfg = buildWebDAVConfig(row)!;
                 await uploadToWebDAV(cfg, dumpBuffer, filename);
                 await pruneOldWebDAVBackups(cfg, retentionDays).catch(() => null);
-                await db
-                    .insert(backupRuns)
-                    .values({
-                        userId,
-                        provider,
-                        status: "success",
-                        filename,
-                        sizeBytes: dumpBuffer.byteLength,
-                        fileId: filename,
-                        startedAt,
-                        finishedAt: new Date(),
-                    });
+                await db.insert(backupRuns).values({
+                    userId,
+                    provider,
+                    status: "success",
+                    filename,
+                    sizeBytes: dumpBuffer.byteLength,
+                    fileId: filename,
+                    startedAt,
+                    finishedAt: new Date(),
+                });
             } else if (provider === "onedrive") {
                 const token = parseOneDriveToken(row.onedriveToken)!;
                 const { itemId, refreshedToken } = await uploadToOneDrive(
@@ -839,34 +840,30 @@ export async function runScheduledBackup(userId: number): Promise<void> {
                 );
                 await saveOneDriveToken(userId, refreshedToken);
                 await pruneOldOneDriveBackups(refreshedToken, retentionDays).catch(() => null);
-                await db
-                    .insert(backupRuns)
-                    .values({
-                        userId,
-                        provider,
-                        status: "success",
-                        filename,
-                        sizeBytes: dumpBuffer.byteLength,
-                        fileId: itemId,
-                        startedAt,
-                        finishedAt: new Date(),
-                    });
+                await db.insert(backupRuns).values({
+                    userId,
+                    provider,
+                    status: "success",
+                    filename,
+                    sizeBytes: dumpBuffer.byteLength,
+                    fileId: itemId,
+                    startedAt,
+                    finishedAt: new Date(),
+                });
             } else if (provider === "s3") {
                 const cfg = buildS3Config(row)!;
                 await uploadToS3(cfg, dumpBuffer, filename);
                 await pruneOldS3Backups(cfg, retentionDays).catch(() => null);
-                await db
-                    .insert(backupRuns)
-                    .values({
-                        userId,
-                        provider,
-                        status: "success",
-                        filename,
-                        sizeBytes: dumpBuffer.byteLength,
-                        fileId: filename,
-                        startedAt,
-                        finishedAt: new Date(),
-                    });
+                await db.insert(backupRuns).values({
+                    userId,
+                    provider,
+                    status: "success",
+                    filename,
+                    sizeBytes: dumpBuffer.byteLength,
+                    fileId: filename,
+                    startedAt,
+                    finishedAt: new Date(),
+                });
             }
             console.log(`[backup] Scheduled backup to ${provider} succeeded for user ${userId}`);
         } catch (err) {

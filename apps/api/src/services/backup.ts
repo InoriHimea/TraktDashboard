@@ -45,6 +45,18 @@ export interface DeviceAuthResponse {
     interval: number;
 }
 
+// N6 batch 3a: the device flows need a self-registered OAuth application (Google Cloud
+// Console / Azure Portal) whose credentials arrive via env vars. When they are absent the
+// UI hides the provider instead of offering a connect button that can only fail — these
+// helpers are the single source of truth for that gate. See docs/cloud-backup-setup.md.
+export function isGDriveConfigured(): boolean {
+    return !GDRIVE_CLIENT_ID.includes("YOUR_CLIENT_ID") && GDRIVE_CLIENT_SECRET.length > 0;
+}
+
+export function isOneDriveConfigured(): boolean {
+    return ONEDRIVE_CLIENT_ID.length > 0;
+}
+
 export async function startGDriveDeviceFlow(): Promise<DeviceAuthResponse> {
     if (!GDRIVE_CLIENT_SECRET) {
         throw new Error("GDRIVE_CLIENT_SECRET is not configured");

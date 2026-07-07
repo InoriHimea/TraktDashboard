@@ -168,7 +168,9 @@
             "triggerNow": "Backup Now",
             "triggerSuccess": "Backup succeeded ({{n}} target(s))",
             "triggerFailed": "Backup failed, check history for details",
-            "history": "Backup History"
+            "history": "Backup History",
+            "cloudDisabled": "{{providers}} backup is disabled: it requires a self-registered OAuth application and the matching environment variables.",
+            "cloudDisabledDocs": "See the docs for how to register and configure."
         },
         "jellyfinAutoDeleteEnabled": "Enable auto-delete",
         "jellyfinAutoDeleteEnabledHint": "Daily job active: qualifying content is marked, then deleted from Jellyfin the next day.",

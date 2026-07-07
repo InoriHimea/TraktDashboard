@@ -168,7 +168,9 @@
             "triggerNow": "立即备份",
             "triggerSuccess": "备份成功（{{n}} 个目标）",
             "triggerFailed": "备份失败，请查看历史记录",
-            "history": "备份历史"
+            "history": "备份历史",
+            "cloudDisabled": "{{providers}} 备份已禁用：需要自备 OAuth 应用凭据并配置相应环境变量后才能启用。",
+            "cloudDisabledDocs": "参看文档了解如何申请与配置。"
         },
         "jellyfinAutoDeleteEnabled": "启用自动删除",
         "jellyfinAutoDeleteEnabledHint": "每日定时任务运行中：符合条件的内容将被标记，次日从 Jellyfin 删除文件。",

@@ -469,7 +469,8 @@ export const api = {
                 },
             ),
         gdriveRevoke: () => request<{ ok: boolean }>("/backup/gdrive/revoke", { method: "DELETE" }),
-        gdriveStatus: () => request<{ connected: boolean }>("/backup/gdrive/status"),
+        gdriveStatus: () =>
+            request<{ connected: boolean; configured: boolean }>("/backup/gdrive/status"),
 
         onedriveStartAuth: () =>
             request<{ ok: boolean; data: DeviceAuthInfo }>("/backup/onedrive/auth", {
@@ -485,7 +486,8 @@ export const api = {
             ),
         onedriveRevoke: () =>
             request<{ ok: boolean }>("/backup/onedrive/revoke", { method: "DELETE" }),
-        onedriveStatus: () => request<{ connected: boolean }>("/backup/onedrive/status"),
+        onedriveStatus: () =>
+            request<{ connected: boolean; configured: boolean }>("/backup/onedrive/status"),
 
         webdavSave: (cfg: { url: string; username: string; password: string }) =>
             request<{ ok: boolean }>("/backup/webdav", {

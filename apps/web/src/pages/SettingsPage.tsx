@@ -72,6 +72,11 @@ export default function SettingsPage() {
     const [theme, setTheme] = useState<Theme>(loadTheme);
 
     // ── 备份状态 ──────────────────────────────────────────────────────────────
+    // 云盘 OAuth 应用凭据（GDRIVE_CLIENT_ID/SECRET、ONEDRIVE_CLIENT_ID）需自备并配进
+    // 环境变量；未配置时隐藏对应卡片，只显示"已禁用"提示（N6 批次 3a）。默认 false，
+    // 待 status 接口确认已配置后才显示，避免闪现一个注定失败的连接按钮。
+    const [gdriveConfigured, setGdriveConfigured] = useState(false);
+    const [onedriveConfigured, setOnedriveConfigured] = useState(false);
     const [gdriveConnected, setGdriveConnected] = useState(false);
     const [gdriveLoading, setGdriveLoading] = useState(false);
     const [gdriveDeviceAuth, setGdriveDeviceAuth] = useState<DeviceAuthState>(null);
@@ -156,11 +161,17 @@ export default function SettingsPage() {
     useEffect(() => {
         api.backup
             .gdriveStatus()
-            .then((r) => setGdriveConnected(r.connected))
+            .then((r) => {
+                setGdriveConnected(r.connected);
+                setGdriveConfigured(r.configured ?? true);
+            })
             .catch(() => null);
         api.backup
             .onedriveStatus()
-            .then((r) => setOnedriveConnected(r.connected))
+            .then((r) => {
+                setOnedriveConnected(r.connected);
+                setOnedriveConfigured(r.configured ?? true);
+            })
             .catch(() => null);
         api.backup
             .webdavStatus()
@@ -550,6 +561,8 @@ export default function SettingsPage() {
 
                                     {activeTab === "backup" && (
                                         <BackupTab
+                                            gdriveConfigured={gdriveConfigured}
+                                            onedriveConfigured={onedriveConfigured}
                                             gdriveConnected={gdriveConnected}
                                             setGdriveConnected={setGdriveConnected}
                                             gdriveLoading={gdriveLoading}
