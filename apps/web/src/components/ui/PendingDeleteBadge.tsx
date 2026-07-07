@@ -31,6 +31,7 @@ export function PendingDeleteBadge({ queueId, label, className }: PendingDeleteB
     return (
         <div
             className={className}
+            role="presentation"
             onClick={(e) => e.preventDefault()}
             style={{
                 display: "inline-flex",

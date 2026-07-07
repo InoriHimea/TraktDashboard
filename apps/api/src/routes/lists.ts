@@ -44,11 +44,6 @@ const addItemSchema = z.object({
     notes: z.string().max(500).optional(),
 });
 
-const removeItemSchema = z.object({
-    mediaType: z.enum(["show", "movie"]),
-    localId: z.number().int().positive(),
-});
-
 // GET /api/lists
 listsRoutes.get("/", async (c) => {
     const userId = c.get("userId");
@@ -255,7 +250,7 @@ listsRoutes.post("/:id/items", async (c) => {
     if (!list) return c.json({ error: "Not found" }, 404);
 
     // Resolve Trakt IDs for remote sync
-    let traktIds: { trakt?: number; tmdb?: number } = {};
+    const traktIds: { trakt?: number; tmdb?: number } = {};
     if (mediaType === "show") {
         const [row] = await db
             .select({ traktId: shows.traktId, tmdbId: shows.tmdbId })
@@ -352,7 +347,7 @@ listsRoutes.delete("/:id/items/:itemId", async (c) => {
     if (!item) return c.json({ error: "Item not found" }, 404);
 
     if (list.traktSlug) {
-        let traktIds: { trakt?: number; tmdb?: number } = {};
+        const traktIds: { trakt?: number; tmdb?: number } = {};
         if (item.mediaType === "show" && item.showId) {
             const [row] = await db
                 .select({ traktId: shows.traktId, tmdbId: shows.tmdbId })

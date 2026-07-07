@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { getDb, userSettings, backupRuns } from "@trakt-dashboard/db";
 import { registerUserBackupJob } from "../jobs/scheduler.js";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { encryptToken, decryptToken } from "../lib/encrypt.js";
 import { resolveApiSecret } from "../lib/secret.js";
 import {

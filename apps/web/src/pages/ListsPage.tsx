@@ -60,6 +60,7 @@ function CreateListModal({ onClose }: { onClose: () => void }) {
 
     return (
         <div
+            role="presentation"
             style={{
                 position: "fixed",
                 inset: 0,
@@ -138,6 +139,7 @@ function CreateListModal({ onClose }: { onClose: () => void }) {
                             {t("lists.nameLabel")}
                         </label>
                         <input
+                            // eslint-disable-next-line jsx-a11y/no-autofocus -- 用户主动点击"新建列表"后弹出的模态框，聚焦首个输入框是预期交互，非页面加载时的意外抢焦
                             autoFocus
                             value={name}
                             onChange={(e) => setName(e.target.value)}
@@ -673,6 +675,7 @@ export default function ListsPage() {
                                                 </button>
 
                                                 <div
+                                                    role="presentation"
                                                     style={{
                                                         borderRadius: "10px",
                                                         overflow: "hidden",

@@ -106,6 +106,7 @@ function ModalShell({
 }) {
     return (
         <div
+            role="presentation"
             style={{
                 position: "fixed",
                 inset: 0,
@@ -611,6 +612,7 @@ function CollectionCard({
             </div>
 
             <div
+                role="presentation"
                 style={{
                     borderRadius: 10,
                     overflow: "hidden",

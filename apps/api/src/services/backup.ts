@@ -820,7 +820,7 @@ async function s3Sign(
     const amzDate =
         now
             .toISOString()
-            .replace(/[:\-]/g, "")
+            .replace(/[:-]/g, "")
             .replace(/\.\d{3}/, "")
             .slice(0, 15) + "Z";
     const dateStr = amzDate.slice(0, 8);

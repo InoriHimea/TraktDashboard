@@ -277,6 +277,7 @@ export default function DiscoverPage() {
 
                                     {/* Card */}
                                     <div
+                                        role="presentation"
                                         style={{
                                             borderRadius: "10px",
                                             overflow: "hidden",
