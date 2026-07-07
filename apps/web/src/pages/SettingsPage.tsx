@@ -35,7 +35,7 @@ import {
     disablePush,
     fetchVapidPublicKey,
 } from "../lib/push";
-import { loadTheme, applyTheme, persistTheme, Theme } from "../lib/theme";
+import { loadTheme, Theme } from "../lib/theme";
 import { t, setLocale } from "../lib/i18n";
 import { useToast } from "../lib/toast";
 import { Tabs } from "../components/ui/Tabs";
