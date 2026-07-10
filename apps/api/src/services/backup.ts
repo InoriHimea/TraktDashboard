@@ -431,16 +431,20 @@ export async function dumpDatabase(): Promise<Buffer> {
 
         // Kill pg_dump if it stalls waiting for a DB lock — without a timeout the
         // Promise would hang indefinitely, holding the HTTP connection open forever.
+        // 5 minutes measured too tight in practice: a clean dump of a ~150MB DB (dominated
+        // by metadata_cache) already takes ~230s on its own, before the gzip stream's CPU
+        // cost or contention from a concurrent sync job — either pushes it past 5 minutes
+        // with no real stall involved. 20 minutes leaves headroom as the cache table grows.
         dumpTimer = setTimeout(
             () => {
-                settle(() => reject(new Error("pg_dump timed out after 5 minutes")));
+                settle(() => reject(new Error("pg_dump timed out after 20 minutes")));
                 try {
                     pg.kill("SIGTERM");
                 } catch {
                     /* already exited */
                 }
             },
-            5 * 60 * 1000,
+            20 * 60 * 1000,
         );
 
         pg.stdout!.pipe(gz);
