@@ -888,7 +888,10 @@ export async function uploadToS3(cfg: S3Config, buffer: Buffer, filename: string
 
 export async function listS3Backups(cfg: S3Config): Promise<BackupFile[]> {
     const endpoint = cfg.endpoint.replace(/\/$/, "");
-    const query = `list-type=2&prefix=${encodeURIComponent(S3_PREFIX)}&max-keys=200`;
+    // SigV4 canonical query string requires params sorted lexicographically by name
+    // (list-type < max-keys < prefix); an unsorted string signs fine locally but the
+    // server re-canonicalizes on its own sorted order and rejects it as SignatureDoesNotMatch.
+    const query = `list-type=2&max-keys=200&prefix=${encodeURIComponent(S3_PREFIX)}`;
     const emptyHash = await sha256hex("");
     const headers = await s3Sign(cfg, "GET", `/${cfg.bucket}`, query, {}, emptyHash);
     const url = `${endpoint}/${cfg.bucket}?${query}`;
