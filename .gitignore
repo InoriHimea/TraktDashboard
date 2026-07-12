@@ -14,6 +14,10 @@ test-results
 playwright-report
 .last-run.json
 
+# Playwright MCP browser-tool session artifacts (console logs, page snapshots,
+# screenshots) — debug output from the MCP browser, not part of the e2e suite.
+.playwright-mcp/
+
 # Compiled TypeScript artifacts — should never appear in src/
 # (web uses noEmit:true, api outputs to dist/)
 apps/web/src/**/*.js
