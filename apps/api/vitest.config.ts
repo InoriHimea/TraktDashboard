@@ -24,12 +24,16 @@ export default defineConfig({
             // 2026-07-07 just below current actuals so the ratchet is honest again.
             // 2026-07-12: added collection/lists/stats/ratings/notes/auth-middleware/
             // system route suites (actuals: stmts 35.1 / branch 28.2 / funcs 32.0 /
-            // lines 36.2) — raised the floor to match; keep raising as suites grow.
+            // lines 36.2) — raised the floor to match.
+            // 2026-07-13: added trakt/discover/search/img/auth route suites (all four
+            // now at or near 100%); actuals: stmts 41.0 / branch 33.5 / funcs 38.2 /
+            // lines 42.1 — raised again; keep raising as suites grow. Remaining big
+            // gaps: services/backup.ts, jellyfin.ts (route+service), tmdb.ts.
             thresholds: {
-                lines: 35,
-                functions: 30,
-                statements: 33,
-                branches: 26,
+                lines: 40,
+                functions: 36,
+                statements: 39,
+                branches: 32,
             },
         },
     },
