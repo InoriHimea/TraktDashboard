@@ -14,8 +14,14 @@ export default tseslint.config(
             "**/.agents/**",
             "**/coverage/**",
             "**/.codegraph/**",
-            "apps/web/public/sw.js",
-            "packages/db/drizzle/**",
+            // Nested git worktrees (e.g. Claude Code / Codex agent sessions checked out
+            // inside the repo tree) carry their own full copy of the source — without
+            // this, root-anchored patterns below don't reach into them and a root-level
+            // `pnpm lint` double-lints whatever branch they happen to have checked out.
+            "**/.claude/worktrees/**",
+            "**/.codex/worktrees/**",
+            "**/apps/web/public/sw.js",
+            "**/packages/db/drizzle/**",
         ],
     },
     js.configs.recommended,
