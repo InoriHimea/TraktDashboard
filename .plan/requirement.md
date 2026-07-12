@@ -96,7 +96,7 @@ privacy-first (data stays on the user's server).
 | N1-T01 | ✅ 已完成（2026-07-07 对账确认）：`lib/http.ts` providerFetch 已用 AbortController 真取消，Trakt/TMDB 均走该路径；`withTimeout` 仅剩非 HTTP 场景（redis ping / 同步步骤）在用                              | plan-20260608 P1-T02 `[~]` |
 | N1-T02 | ~~完成 Hono RPC hook 逐路由迁移~~ **已放弃（2026-07-06，N5-T09 决策）**：rpc client 创建后零采用，完成迁移需重写全部路由为链式写法 + 迁移 76+ 调用点，收益不抵成本；`api.ts` + 共享 types 包为唯一正式方案 | plan-20260608 P1-T12 `[~]` |
 | N1-T03 | ✅ 已完成（2026-07-07 对账确认）：nginx.conf 已是强制 `Content-Security-Policy`，script-src 用 sha256 hash 白名单内联主题脚本；style-src 仍留 'unsafe-inline'（Tailwind），可选 nonce 化为遗留小项         | plan-20260608 P2-T08 `[~]` |
-| N1-T04 | 补充 Calendar 路由回归测试（`calendar.test.ts`），覆盖 `watched` 标志、越界日期范围、空结果分支                                                                                                            | plan-20260608 P1-T13 `[~]` |
+| N1-T04 | ✅ 已完成（2026-07-12 对账确认）：`__tests__/calendar.test.ts` 早已覆盖 `watched` 标志（含 EXISTS 计算列 truthy/falsy 映射）、越界日期范围钳制（>90 天）、非法参数回退、空结果分支                         | plan-20260608 P1-T13 `[~]` |
 
 ### N2 — 功能增强
 
@@ -121,12 +121,12 @@ privacy-first (data stays on the user's server).
 
 ### N3 — 测试与质量
 
-| 编号   | 描述                                                                                                                            | 优先级 |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| N3-T01 | ✅ **E2E 测试（Playwright）**（对账确认：apps/e2e 下 7 个 spec + visual/，CI e2e job 在跑）                                     | 已完成 |
-| N3-T02 | **提升覆盖率阈值** — 曾达成 40%/28%，但 N4/N5 未测新代码使实际衰减至 ~24%/~23%；2026-07-07 重定基为诚实 ratchet，待测试增长回升 | 中     |
-| N3-T03 | ✅ **Movies API 属性测试**（对账确认：movies.property.test.ts 已存在并在套件中运行）                                            | 已完成 |
-| N3-T04 | **MovieCard 快照/视觉回归** — 在现有 property test 基础上增加 `@storybook/test-runner` 或 Percy 截图比对                        | 低     |
+| 编号   | 描述                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | 优先级 |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------ |
+| N3-T01 | ✅ **E2E 测试（Playwright）**（对账确认：apps/e2e 下 7 个 spec + visual/，CI e2e job 在跑）                                                                                                                                                                                                                                                                                                                                                                                                                                                | 已完成 |
+| N3-T02 | **提升覆盖率阈值**（进行中）— 曾达成 40%/28%，N4/N5 未测新代码使实际衰减至 ~24%/~23%，2026-07-07 重定基为诚实 ratchet；2026-07-12 第一批回升：新增 collection/lists/stats/ratings/notes/auth-middleware/system 路由测试（api）+ queryKeys/StatCard/TopGenres/OverviewText/PendingDeleteBadge/Toaster/notes-lists-ratings hooks 测试（web），api 35.1%/28.2%/32.0%/36.2%（stmts/branch/funcs/lines）、web 25.5%/21.9%/18.2%/26.3%，阈值同步上调；剩余大头是 web pages（大多数页面组件仍 0%）与 api services/backup.ts、jellyfin.ts、tmdb.ts | 中     |
+| N3-T03 | ✅ **Movies API 属性测试**（对账确认：movies.property.test.ts 已存在并在套件中运行）                                                                                                                                                                                                                                                                                                                                                                                                                                                       | 已完成 |
+| N3-T04 | **MovieCard 快照/视觉回归** — 在现有 property test 基础上增加 `@storybook/test-runner` 或 Percy 截图比对                                                                                                                                                                                                                                                                                                                                                                                                                                   | 低     |
 
 ### N4 — 基础设施与运维
 

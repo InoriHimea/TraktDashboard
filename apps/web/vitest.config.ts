@@ -31,12 +31,16 @@ export default defineConfig({
             // N3-T02 ratcheted the floor up, but later feature rounds shipped largely
             // untested and decayed actuals below it — the gate has been red (and
             // unnoticed) alongside the api one. Re-based 2026-07-07 just below current
-            // actuals so the ratchet is honest again; raise these as suites grow.
+            // actuals so the ratchet is honest again.
+            // 2026-07-12: added queryKeys/stat-components/ui-small-components/Toaster/
+            // notes-lists-ratings hook suites (actuals: stmts 25.5 / branch 21.9 /
+            // funcs 18.2 / lines 26.3) — raised the floor to match; keep raising as
+            // suites grow.
             thresholds: {
-                lines: 21,
-                functions: 12,
-                statements: 20,
-                branches: 19,
+                lines: 25,
+                functions: 17,
+                statements: 24,
+                branches: 20,
             },
         },
     },
