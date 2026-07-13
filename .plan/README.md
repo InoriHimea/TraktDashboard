@@ -32,7 +32,7 @@ planning/optimization checklists.
 | [plan-20260705.md](plan-20260705.md)         | 2026-07-05 | ✅ 全部完成（N5 分阶段 T02–T09，T10 转入 N6）                                                                              |
 | [plan-20260706.md](plan-20260706.md)         | 2026-07-06 | ✅ 全部完成（N6 四批：T10+单测 / 工程卫生 / 备份诊断+恢复 / 移动端；遗留：Gotify token、恢复生产演练）                     |
 | [plan-20260712.md](plan-20260712.md)         | 2026-07-12 | ✅ 全部完成（N3-T02 覆盖率回升第一批 + N1-T04 对账 + 回顾补记的 trakt/discover/search/img/auth；api 22%→41%、web 22%→26%） |
-| [plan-20260713.md](plan-20260713.md)         | 2026-07-13 | 🚧 进行中（N3-T02 覆盖率回升第三批：backup + jellyfin service/route，全仓库 blast radius 最大的两处代码）                  |
+| [plan-20260713.md](plan-20260713.md)         | 2026-07-13 | ✅ 全部完成（N3-T02 覆盖率回升第三批六批次：jellyfin service+route、backup 四云 provider+dump/restore+route；api 41%→65%） |
 
 ## Status legend
 

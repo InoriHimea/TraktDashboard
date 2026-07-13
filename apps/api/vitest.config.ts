@@ -26,14 +26,19 @@ export default defineConfig({
             // system route suites (actuals: stmts 35.1 / branch 28.2 / funcs 32.0 /
             // lines 36.2) — raised the floor to match.
             // 2026-07-13: added trakt/discover/search/img/auth route suites (all four
-            // now at or near 100%); actuals: stmts 41.0 / branch 33.5 / funcs 38.2 /
-            // lines 42.1 — raised again; keep raising as suites grow. Remaining big
-            // gaps: services/backup.ts, jellyfin.ts (route+service), tmdb.ts.
+            // now at or near 100%), then a second wave covering the two remaining
+            // blast-radius-heavy files — jellyfin (service 99.4% + route 97.7%) and
+            // backup (service 97.0% + route 74.9%, incl. the child_process-driven
+            // dumpDatabase/restoreDatabase and the POST /restore endpoint itself).
+            // Actuals: stmts 65.3 / branch 53.9 / funcs 65.9 / lines 65.9 — raised
+            // again; keep raising as suites grow. Remaining gaps: services/sync.ts,
+            // services/trakt.ts, services/tmdb.ts, routes/shows.ts, routes/history.ts,
+            // jobs/scheduler.ts, lib/push.ts.
             thresholds: {
-                lines: 40,
-                functions: 36,
-                statements: 39,
-                branches: 32,
+                lines: 63,
+                functions: 63,
+                statements: 63,
+                branches: 51,
             },
         },
     },
