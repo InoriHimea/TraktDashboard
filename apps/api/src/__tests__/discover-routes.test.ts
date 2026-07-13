@@ -127,15 +127,13 @@ describe("GET /discover — shows", () => {
 
     it("uses popular shows when tab=popular (no watchers field)", async () => {
         traktMockState.client = createMockTrakt({
-            getPopularShows: vi
-                .fn()
-                .mockResolvedValue([
-                    {
-                        ids: { trakt: 2, slug: "show-b", tmdb: 200, imdb: null },
-                        title: "Show B",
-                        year: 2019,
-                    },
-                ]),
+            getPopularShows: vi.fn().mockResolvedValue([
+                {
+                    ids: { trakt: 2, slug: "show-b", tmdb: 200, imdb: null },
+                    title: "Show B",
+                    year: 2019,
+                },
+            ]),
         });
         dbMockState.db = createMockDb([[], []]);
 
@@ -223,15 +221,13 @@ describe("GET /discover — movies", () => {
 
     it("uses popular movies when tab=popular and fetches TMDB poster fallback", async () => {
         traktMockState.client = createMockTrakt({
-            getPopularMovies: vi
-                .fn()
-                .mockResolvedValue([
-                    {
-                        ids: { trakt: 10, slug: "movie-b", tmdb: 910, imdb: null },
-                        title: "Movie B",
-                        year: 2021,
-                    },
-                ]),
+            getPopularMovies: vi.fn().mockResolvedValue([
+                {
+                    ids: { trakt: 10, slug: "movie-b", tmdb: 910, imdb: null },
+                    title: "Movie B",
+                    year: 2021,
+                },
+            ]),
         });
         dbMockState.db = createMockDb([[], []]);
         tmdbMockState.getTmdbMovie.mockResolvedValue({ poster_path: "/tmdb-movie.jpg" });

@@ -137,17 +137,15 @@ describe("GET /search", () => {
 
     it("maps movie results similarly when type=movie", async () => {
         traktMockState.client = createMockTrakt({
-            searchMovies: vi
-                .fn()
-                .mockResolvedValue([
-                    {
-                        movie: {
-                            ids: { trakt: 9, slug: "movie-a", tmdb: 900 },
-                            title: "Movie A",
-                            year: 2021,
-                        },
+            searchMovies: vi.fn().mockResolvedValue([
+                {
+                    movie: {
+                        ids: { trakt: 9, slug: "movie-a", tmdb: 900 },
+                        title: "Movie A",
+                        year: 2021,
                     },
-                ]),
+                },
+            ]),
         });
         dbMockState.db = createMockDb([[{ id: 80, traktId: 9, posterPath: null }], []]);
 
