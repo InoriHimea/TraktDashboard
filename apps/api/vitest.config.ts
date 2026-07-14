@@ -45,11 +45,18 @@ export default defineConfig({
             // deferred large files, now decomposed into 9 more batches in
             // plan-20260715.md: services/sync.ts (2328 lines), services/trakt.ts
             // (1058 lines), routes/shows.ts (808 lines).
+            // 2026-07-15 (plan-20260715.md batches 2+3): added routes/shows.ts's
+            // 12 routes (read-heavy progress/up-next/:id/:id/seasons/episode-detail
+            // + write-heavy watch incl. the fire-and-forget Jellyfin auto-delete
+            // IIFE's 4 gating conditions/reset/mark-watched/force-sync) —
+            // 23.1%→92.4% stmts. Actuals: stmts 75.2 / branch 63.0 / funcs 74.6 /
+            // lines 76.3 — raised again. Remaining deferred: services/sync.ts
+            // (2328 lines), services/trakt.ts (1058 lines).
             thresholds: {
-                lines: 71,
-                functions: 70,
-                statements: 70,
-                branches: 57,
+                lines: 75,
+                functions: 74,
+                statements: 74,
+                branches: 62,
             },
         },
     },
