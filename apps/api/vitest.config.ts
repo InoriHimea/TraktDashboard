@@ -60,11 +60,20 @@ export default defineConfig({
             // stale/null degradation) — 35.5%→93.1% stmts. Actuals: stmts 77.8 /
             // branch 65.2 / funcs 80.5 / lines 79.0 — raised again. Remaining
             // deferred: services/sync.ts (2328 lines, batches 6-10).
+            // 2026-07-15 (plan-20260715.md batch 6): added services/sync.ts's small
+            // pure/DB-only helpers (getSyncStatus, getPostResetWatchedEpisodeIds,
+            // computeWatchedEpisodes, recalcShowProgress incl. the ended/canceled +
+            // fully-watched completed gate and the NOT EXISTS next-episode query,
+            // recalcMovieProgress, resetStaleRunningSyncs) — services/sync.ts
+            // 25.3%→28.6% stmts (small bump; the file's two largest functions,
+            // forceSyncShow ~673 lines and syncMovies ~386 lines, are still in
+            // batches 8-10). Actuals: stmts 78.4 / branch 65.8 / funcs 81.5 /
+            // lines 79.6 — raised again.
             thresholds: {
-                lines: 78,
-                functions: 79,
-                statements: 77,
-                branches: 64,
+                lines: 79,
+                functions: 81,
+                statements: 78,
+                branches: 65,
             },
         },
     },
