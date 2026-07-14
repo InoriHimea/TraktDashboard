@@ -52,11 +52,19 @@ export default defineConfig({
             // 23.1%→92.4% stmts. Actuals: stmts 75.2 / branch 63.0 / funcs 74.6 /
             // lines 76.3 — raised again. Remaining deferred: services/sync.ts
             // (2328 lines), services/trakt.ts (1058 lines).
+            // 2026-07-15 (plan-20260715.md batches 4+5): added services/trakt.ts's
+            // ~50 client methods (19 thin GET wrappers table-driven, pagination for
+            // getHistory/getMovieHistory, getWatching's episode-type filter, 11
+            // mutation methods' body/method shape, and the 4 stale-while-revalidate
+            // cache methods incl. getEpisodeRating's 0-10→0-100 conversion and
+            // stale/null degradation) — 35.5%→93.1% stmts. Actuals: stmts 77.8 /
+            // branch 65.2 / funcs 80.5 / lines 79.0 — raised again. Remaining
+            // deferred: services/sync.ts (2328 lines, batches 6-10).
             thresholds: {
-                lines: 75,
-                functions: 74,
-                statements: 74,
-                branches: 62,
+                lines: 78,
+                functions: 79,
+                statements: 77,
+                branches: 64,
             },
         },
     },
