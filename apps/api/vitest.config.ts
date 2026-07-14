@@ -88,11 +88,27 @@ export default defineConfig({
             // 69.2 / funcs 83.6 / lines 81.9 — raised again. Remaining deferred:
             // triggerFullSync/triggerIncrementalSync (batch 9), forceSyncShow
             // (~673 lines, the repo's largest function, batch 10).
+            // 2026-07-15 (plan-20260715.md batch 10, done ahead of batch 9 since
+            // it's the simplest entry point into the shared syncSingleShow →
+            // upsertShowFromTrakt → removeStaleShowMetadata → syncEpisodeProgress
+            // → findOrCreateEpisode call graph that triggerFullSync/
+            // triggerIncrementalSync also share): added forceSyncShow — table-
+            // reference-dispatched DB mock (not a strict FIFO, given the call
+            // graph's depth) covering the happy path, missing-show/missing-Trakt-id
+            // guards, TMDB base-show-fetch failure degradation, stale-episode-
+            // cleanup skip on a season fetch failure, title/overview localization,
+            // and recording a completed episode from Trakt progress — services/
+            // sync.ts 42.3%→58.1% stmts (a big jump since this call graph covers
+            // most of the file's remaining surface). Actuals: stmts 83.0 / branch
+            // 71.6 / funcs 85.0 / lines 84.5 — raised again. Remaining deferred:
+            // triggerFullSync/triggerIncrementalSync's own orchestration (batch 9
+            // — concurrency loop, retry-once, cursor rollback; the shared per-show
+            // sync logic itself is already covered via forceSyncShow above).
             thresholds: {
-                lines: 81,
-                functions: 83,
-                statements: 80,
-                branches: 69,
+                lines: 84,
+                functions: 85,
+                statements: 82,
+                branches: 71,
             },
         },
     },
