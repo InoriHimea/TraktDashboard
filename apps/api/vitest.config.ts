@@ -30,15 +30,19 @@ export default defineConfig({
             // blast-radius-heavy files — jellyfin (service 99.4% + route 97.7%) and
             // backup (service 97.0% + route 74.9%, incl. the child_process-driven
             // dumpDatabase/restoreDatabase and the POST /restore endpoint itself).
-            // Actuals: stmts 65.3 / branch 53.9 / funcs 65.9 / lines 65.9 — raised
-            // again; keep raising as suites grow. Remaining gaps: services/sync.ts,
-            // services/trakt.ts, services/tmdb.ts, routes/shows.ts, routes/history.ts,
-            // jobs/scheduler.ts, lib/push.ts.
+            // 2026-07-14: added lib/push.ts (100%), services/tmdb.ts (98.8%), and
+            // jobs/scheduler.ts (93.5%, incl. mocking bullmq's Queue/Worker + ioredis
+            // and capturing the Worker processor callback to drive all 5 job.name
+            // branches). Actuals: stmts 69.6 / branch 57.1 / funcs 71.0 / lines 70.5 —
+            // raised again; keep raising as suites grow. Remaining gaps (all large,
+            // deliberately deferred — see plan-20260714.md): services/sync.ts (2328
+            // lines), services/trakt.ts (1058 lines), routes/shows.ts (808 lines),
+            // routes/history.ts (409 lines).
             thresholds: {
-                lines: 63,
-                functions: 63,
-                statements: 63,
-                branches: 51,
+                lines: 68,
+                functions: 69,
+                statements: 67,
+                branches: 55,
             },
         },
     },
