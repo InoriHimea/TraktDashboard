@@ -36,11 +36,18 @@ export default defineConfig({
             // notes-lists-ratings hook suites (actuals: stmts 25.5 / branch 21.9 /
             // funcs 18.2 / lines 26.3) — raised the floor to match; keep raising as
             // suites grow.
+            // 2026-07-15 (plan-20260715b.md batch 1): added lib/api.ts — table-driven
+            // GET/mutation coverage of the entire `api` client surface (request()'s
+            // Content-Type gating, credentials, error parsing w/ statusText fallback,
+            // plus ~90 domain methods' URL/query/method/body construction) + the
+            // special-case history.export() which builds a URL string without
+            // calling fetch. lib/api.ts 11.3%→98.7% stmts. Actuals: stmts 30.2 /
+            // branch 23.6 / funcs 27.4 / lines 31.2 — raised again.
             thresholds: {
-                lines: 25,
-                functions: 17,
-                statements: 24,
-                branches: 20,
+                lines: 31,
+                functions: 27,
+                statements: 30,
+                branches: 23,
             },
         },
     },
