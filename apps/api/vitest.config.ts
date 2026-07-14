@@ -69,11 +69,21 @@ export default defineConfig({
             // forceSyncShow ~673 lines and syncMovies ~386 lines, are still in
             // batches 8-10). Actuals: stmts 78.4 / branch 65.8 / funcs 81.5 /
             // lines 79.6 — raised again.
+            // 2026-07-15 (plan-20260715.md batch 7): added services/sync.ts's
+            // syncWatchlist (tmdb/trakt/imdb fallback matching chain + unresolved-
+            // count-gated cleanup deletes), syncRatings (batch inArray resolution),
+            // and syncUserCollection (per-show + per-episode + per-movie
+            // insert-vs-update branches, synced-once-per-show counting) —
+            // services/sync.ts 28.6%→39.9% stmts. Actuals: stmts 80.2 / branch
+            // 68.1 / funcs 83.4 / lines 81.5 — raised again. Remaining deferred:
+            // syncMovies (~386 lines, batch 8), triggerFullSync/
+            // triggerIncrementalSync (batch 9), forceSyncShow (~673 lines, the
+            // repo's largest function, batch 10).
             thresholds: {
-                lines: 79,
-                functions: 81,
-                statements: 78,
-                branches: 65,
+                lines: 81,
+                functions: 83,
+                statements: 80,
+                branches: 67,
             },
         },
     },
