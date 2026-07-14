@@ -79,11 +79,20 @@ export default defineConfig({
             // syncMovies (~386 lines, batch 8), triggerFullSync/
             // triggerIncrementalSync (batch 9), forceSyncShow (~673 lines, the
             // repo's largest function, batch 10).
+            // 2026-07-15 (plan-20260715.md batch 8): added services/sync.ts's
+            // syncMovies (TMDB metadata resolution incl. language-fallback
+            // translation lookup, tmdbId-present-vs-absent upsert paths, per-entry
+            // watchHistory sync, watched-summary-only fallback that skips the
+            // final recalc pass, and stale trakt-sourced history cleanup) —
+            // services/sync.ts 39.9%→42.3% stmts. Actuals: stmts 80.5 / branch
+            // 69.2 / funcs 83.6 / lines 81.9 — raised again. Remaining deferred:
+            // triggerFullSync/triggerIncrementalSync (batch 9), forceSyncShow
+            // (~673 lines, the repo's largest function, batch 10).
             thresholds: {
                 lines: 81,
                 functions: 83,
                 statements: 80,
-                branches: 67,
+                branches: 69,
             },
         },
     },
