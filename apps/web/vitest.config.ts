@@ -43,11 +43,22 @@ export default defineConfig({
             // special-case history.export() which builds a URL string without
             // calling fetch. lib/api.ts 11.3%→98.7% stmts. Actuals: stmts 30.2 /
             // branch 23.6 / funcs 27.4 / lines 31.2 — raised again.
+            // 2026-07-15 (plan-20260715b.md batch 2): added the remaining 63 (of 76)
+            // hooks/index.ts hooks — table-driven query-hook data-unwrap + api-call-arg
+            // checks, table-driven mutation-hook invalidateQueries-key checks (incl. a
+            // "bare mutationFn reference" quirk where react-query passes extra
+            // (variables, context) args through to api methods not wrapped in an
+            // arrow function), plus dedicated tests for useNowPlaying's derived
+            // isWatching, useInfiniteHistory's getNextPageParam pagination,
+            // useDeleteHistory's two invalidation-scope variants, and useLogout's
+            // setQueryData/removeQueries (no invalidateQueries). hooks/index.ts
+            // 17.1%→99.7% stmts. Actuals: stmts 39.1 / branch 25.5 / funcs 44.5 /
+            // lines 39.7 — raised again.
             thresholds: {
-                lines: 31,
-                functions: 27,
-                statements: 30,
-                branches: 23,
+                lines: 39,
+                functions: 44,
+                statements: 39,
+                branches: 25,
             },
         },
     },
