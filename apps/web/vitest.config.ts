@@ -70,11 +70,23 @@ export default defineConfig({
             // funcs 45.3 / lines 41.5 — raised again. This completes the
             // infrastructure-layer batches (1-3); remaining batches (4-13) move
             // to components/pages.
+            // 2026-07-15 (plan-20260715b.md batch 4): added 8 small display
+            // components (Layout, ShowCard, SeasonTab, ProgressBar,
+            // TraktProgressBar, DateTimePickerModal, SlidingPanel,
+            // EpisodeSeasonStrip) — plain render()/fireEvent tests, no
+            // QueryClientProvider needed except where a hook is mocked
+            // (ShowCard/Layout). Notable snag: framer-motion's `animate` prop
+            // doesn't settle to a deterministic style value in jsdom even under
+            // `waitFor` polling (TraktProgressBar), so those assertions target
+            // the pct-computation branches executing without error rather than
+            // the animated style output. All 8 files landed at 55-100% stmts.
+            // Actuals: stmts 44.2 / branch 31.0 / funcs 47.5 / lines 44.7 —
+            // raised again.
             thresholds: {
-                lines: 41,
-                functions: 45,
-                statements: 41,
-                branches: 26,
+                lines: 44,
+                functions: 47,
+                statements: 44,
+                branches: 31,
             },
         },
     },
