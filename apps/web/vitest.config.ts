@@ -82,11 +82,25 @@ export default defineConfig({
             // the animated style output. All 8 files landed at 55-100% stmts.
             // Actuals: stmts 44.2 / branch 31.0 / funcs 47.5 / lines 44.7 —
             // raised again.
+            // 2026-07-15 (plan-20260715b.md batch 5): added MediaListPage (the
+            // shared list-page component MoviesPage/TVShowsPage wrap, tested
+            // directly and reached 100%), MoviesPage, TVShowsPage, and
+            // WatchlistPage. Recurring snag hit across all of them: `t()` is
+            // NOT mocked and resolves to real zh-CN strings (the default
+            // locale) — asserting on the literal translation-key text (e.g.
+            // "watchlist.empty") always fails; fixed by asserting the actual
+            // Chinese string, or for MediaListPage's own test-only filter
+            // fixtures, by using deliberately nonexistent keys so `t()`'s
+            // fallback-to-key behavior applies. Also: toast() calls only
+            // mutate ToastProvider's context state — asserting a toast message
+            // appears requires rendering `<Toaster />` alongside the provider,
+            // not just the provider itself. Actuals: stmts 47.2 / branch 33.6 /
+            // funcs 50.2 / lines 47.7 — raised again.
             thresholds: {
-                lines: 44,
-                functions: 47,
-                statements: 44,
-                branches: 31,
+                lines: 47,
+                functions: 50,
+                statements: 47,
+                branches: 33,
             },
         },
     },
