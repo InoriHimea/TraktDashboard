@@ -38,11 +38,18 @@ export default defineConfig({
             // deliberately deferred — see plan-20260714.md): services/sync.ts (2328
             // lines), services/trakt.ts (1058 lines), routes/shows.ts (808 lines),
             // routes/history.ts (409 lines).
+            // 2026-07-15 (plan-20260715.md batch 1): added routes/history.ts's
+            // POST /import (the file's only remaining gap — GET / and GET /export
+            // were already covered) — 35.4%→98.1% stmts. Actuals: stmts 71.8 /
+            // branch 59.0 / funcs 71.2 / lines 72.8 — raised again. Remaining
+            // deferred large files, now decomposed into 9 more batches in
+            // plan-20260715.md: services/sync.ts (2328 lines), services/trakt.ts
+            // (1058 lines), routes/shows.ts (808 lines).
             thresholds: {
-                lines: 68,
-                functions: 69,
-                statements: 67,
-                branches: 55,
+                lines: 71,
+                functions: 70,
+                statements: 70,
+                branches: 57,
             },
         },
     },

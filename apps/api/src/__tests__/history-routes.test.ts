@@ -65,6 +65,12 @@ function createMockDb(selectResults: SelectResult[] = []) {
 // ---------------------------------------------------------------------------
 
 const { historyRoutes } = await import("../routes/history.js");
+const {
+    shows: showsTable,
+    movies: moviesTable,
+    episodes: episodesTable,
+    watchHistory: watchHistoryTable,
+} = await import("@trakt-dashboard/db");
 
 function app() {
     const a = new Hono<{ Variables: { userId: number } }>();
@@ -295,6 +301,352 @@ describe("GET /history/export", () => {
         const res = await app().request("/history/export");
         const text = await res.text();
         expect(text).toContain('"Normal Show Title"');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// POST /import — dispatches select() results by which table was queried
+// (`.from(table)`), since the route issues an unpredictable number of calls
+// per unique show/movie title plus one per entry (duplicate check).
+// ---------------------------------------------------------------------------
+
+type Row = Record<string, unknown>;
+
+class ImportSelectBuilder implements PromiseLike<Row[]> {
+    private table: unknown;
+    constructor(
+        private queues: {
+            shows: Row[][];
+            movies: Row[][];
+            episodes: Row[][];
+            watchHistory: Row[][];
+        },
+    ) {}
+    from(table: unknown) {
+        this.table = table;
+        return this;
+    }
+    where() {
+        return this;
+    }
+    limit() {
+        return this;
+    }
+    then<T1 = Row[], T2 = never>(
+        ok?: ((value: Row[]) => T1 | PromiseLike<T1>) | null,
+        fail?: ((reason: unknown) => T2 | PromiseLike<T2>) | null,
+    ): Promise<T1 | T2> {
+        let queue: Row[][] | undefined;
+        if (this.table === showsTable) queue = this.queues.shows;
+        else if (this.table === moviesTable) queue = this.queues.movies;
+        else if (this.table === episodesTable) queue = this.queues.episodes;
+        else if (this.table === watchHistoryTable) queue = this.queues.watchHistory;
+        const next = queue?.shift();
+        const marker = next?.[0] as { __reject?: unknown } | undefined;
+        if (marker && Object.prototype.hasOwnProperty.call(marker, "__reject")) {
+            return Promise.reject(marker.__reject).then(ok, fail);
+        }
+        return Promise.resolve(next ?? []).then(ok, fail);
+    }
+}
+
+function rejectRow(err: unknown): Row {
+    return { __reject: err } as unknown as Row;
+}
+
+function createImportMockDb(opts: {
+    shows?: Row[][];
+    movies?: Row[][];
+    episodes?: Row[][];
+    watchHistory?: Row[][];
+}) {
+    const queues = {
+        shows: [...(opts.shows ?? [])],
+        movies: [...(opts.movies ?? [])],
+        episodes: [...(opts.episodes ?? [])],
+        watchHistory: [...(opts.watchHistory ?? [])],
+    };
+    const insertedRows: Row[] = [];
+    return {
+        select: vi.fn(() => new ImportSelectBuilder(queues)),
+        insert: vi.fn(() => ({
+            values: vi.fn((v: Row) => {
+                insertedRows.push(v);
+                return Promise.resolve([]);
+            }),
+        })),
+        __insertedRows: insertedRows,
+    };
+}
+
+function importRequest(body: unknown, raw?: string) {
+    return app().request("/history/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: raw ?? JSON.stringify(body),
+    });
+}
+
+describe("POST /import", () => {
+    it("returns 400 for invalid JSON body", async () => {
+        (dbMockState as { db: unknown }).db = createImportMockDb({});
+        const res = await importRequest(undefined, "{not valid json");
+        expect(res.status).toBe(400);
+        expect((await res.json()) as { error: string }).toEqual({ error: "Invalid JSON" });
+    });
+
+    it("returns 400 when entries is empty (bare array body)", async () => {
+        (dbMockState as { db: unknown }).db = createImportMockDb({});
+        const res = await importRequest([]);
+        expect(res.status).toBe(400);
+        expect((await res.json()) as { error: string }).toEqual({ error: "No entries found" });
+    });
+
+    it("returns 400 when body has no recognizable entries array", async () => {
+        (dbMockState as { db: unknown }).db = createImportMockDb({});
+        const res = await importRequest({ foo: "bar" });
+        expect(res.status).toBe(400);
+        expect((await res.json()) as { error: string }).toEqual({ error: "No entries found" });
+    });
+
+    it("returns 400 when entries exceed the 50000 cap", async () => {
+        (dbMockState as { db: unknown }).db = createImportMockDb({});
+        const entries = Array.from({ length: 50_001 }, () => ({}));
+        const res = await importRequest({ entries });
+        expect(res.status).toBe(400);
+        expect((await res.json()) as { error: string }).toEqual({
+            error: "Too many entries (max 50000)",
+        });
+    });
+
+    it("accepts a bare array body (not wrapped in {entries})", async () => {
+        (dbMockState as { db: unknown }).db = createImportMockDb({
+            movies: [[{ id: 99 }]],
+            watchHistory: [[]],
+        });
+        const res = await importRequest([
+            { history: { mediaType: "movie" }, movie: { title: "Arrival" } },
+        ]);
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as { imported: number; skipped: number };
+        expect(body.imported).toBe(1);
+        expect(body.skipped).toBe(0);
+    });
+
+    it("imports an episode entry: show + episode resolved, not a duplicate", async () => {
+        const db = createImportMockDb({
+            shows: [[{ id: 5, title: "Breaking Bad", translatedName: null }]],
+            episodes: [[{ id: 10, showId: 5, seasonNumber: 1, episodeNumber: 3 }]],
+            watchHistory: [[]],
+        });
+        (dbMockState as { db: unknown }).db = db;
+
+        const res = await importRequest({
+            entries: [
+                {
+                    history: { mediaType: "episode", watchedAt: "2026-01-01T00:00:00.000Z" },
+                    show: { title: "Breaking Bad" },
+                    episode: { seasonNumber: 1, episodeNumber: 3 },
+                },
+            ],
+        });
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as { imported: number; skipped: number; errors: string[] };
+        expect(body).toMatchObject({ imported: 1, skipped: 0, errors: [] });
+        expect(db.__insertedRows).toHaveLength(1);
+        expect(db.__insertedRows[0]).toMatchObject({ mediaType: "episode", episodeId: 10 });
+    });
+
+    it("skips an episode entry when the show title has no match", async () => {
+        const db = createImportMockDb({ shows: [[]] });
+        (dbMockState as { db: unknown }).db = db;
+
+        const res = await importRequest({
+            entries: [
+                {
+                    history: { mediaType: "episode" },
+                    show: { title: "Unknown Show" },
+                    episode: { seasonNumber: 1, episodeNumber: 1 },
+                },
+            ],
+        });
+        const body = (await res.json()) as { imported: number; skipped: number };
+        expect(body).toMatchObject({ imported: 0, skipped: 1 });
+        expect(db.__insertedRows).toHaveLength(0);
+    });
+
+    it("skips an episode entry when show resolves but the episode isn't in the preload cache", async () => {
+        const db = createImportMockDb({
+            shows: [[{ id: 5, title: "Breaking Bad", translatedName: null }]],
+            episodes: [[]],
+        });
+        (dbMockState as { db: unknown }).db = db;
+
+        const res = await importRequest({
+            entries: [
+                {
+                    history: { mediaType: "episode" },
+                    show: { title: "Breaking Bad" },
+                    episode: { seasonNumber: 9, episodeNumber: 9 },
+                },
+            ],
+        });
+        const body = (await res.json()) as { imported: number; skipped: number };
+        expect(body).toMatchObject({ imported: 0, skipped: 1 });
+    });
+
+    it("skips an episode entry missing showTitle/seasonNumber/episodeNumber", async () => {
+        const db = createImportMockDb({});
+        (dbMockState as { db: unknown }).db = db;
+
+        const res = await importRequest({
+            entries: [
+                { history: { mediaType: "episode" }, show: {}, episode: {} },
+                { history: { mediaType: "episode" }, show: { title: "X" }, episode: {} },
+            ],
+        });
+        const body = (await res.json()) as { imported: number; skipped: number };
+        expect(body).toMatchObject({ imported: 0, skipped: 2 });
+    });
+
+    it("skips an episode entry that already exists (duplicate check hits)", async () => {
+        const db = createImportMockDb({
+            shows: [[{ id: 5, title: "Breaking Bad", translatedName: null }]],
+            episodes: [[{ id: 10, showId: 5, seasonNumber: 1, episodeNumber: 3 }]],
+            watchHistory: [[{ id: 777 }]],
+        });
+        (dbMockState as { db: unknown }).db = db;
+
+        const res = await importRequest({
+            entries: [
+                {
+                    history: { mediaType: "episode" },
+                    show: { title: "Breaking Bad" },
+                    episode: { seasonNumber: 1, episodeNumber: 3 },
+                },
+            ],
+        });
+        const body = (await res.json()) as { imported: number; skipped: number };
+        expect(body).toMatchObject({ imported: 0, skipped: 1 });
+        expect(db.__insertedRows).toHaveLength(0);
+    });
+
+    it("imports a movie entry: resolved and not a duplicate", async () => {
+        const db = createImportMockDb({
+            movies: [[{ id: 42 }]],
+            watchHistory: [[]],
+        });
+        (dbMockState as { db: unknown }).db = db;
+
+        const res = await importRequest({
+            entries: [
+                {
+                    history: { mediaType: "movie", watchedAt: "2026-02-01T00:00:00.000Z" },
+                    movie: { title: "Arrival" },
+                },
+            ],
+        });
+        const body = (await res.json()) as { imported: number; skipped: number };
+        expect(body).toMatchObject({ imported: 1, skipped: 0 });
+        expect(db.__insertedRows[0]).toMatchObject({ mediaType: "movie", movieId: 42 });
+    });
+
+    it("skips a movie entry missing movieTitle", async () => {
+        const db = createImportMockDb({});
+        (dbMockState as { db: unknown }).db = db;
+
+        const res = await importRequest({
+            entries: [{ history: { mediaType: "movie" }, movie: {} }],
+        });
+        const body = (await res.json()) as { imported: number; skipped: number };
+        expect(body).toMatchObject({ imported: 0, skipped: 1 });
+    });
+
+    it("skips a movie entry whose title has no match", async () => {
+        const db = createImportMockDb({ movies: [[]] });
+        (dbMockState as { db: unknown }).db = db;
+
+        const res = await importRequest({
+            entries: [{ history: { mediaType: "movie" }, movie: { title: "Unknown Movie" } }],
+        });
+        const body = (await res.json()) as { imported: number; skipped: number };
+        expect(body).toMatchObject({ imported: 0, skipped: 1 });
+    });
+
+    it("skips entries whose mediaType is neither episode nor movie", async () => {
+        const db = createImportMockDb({});
+        (dbMockState as { db: unknown }).db = db;
+
+        const res = await importRequest({
+            entries: [{ history: { mediaType: "show" } }, { history: {} }],
+        });
+        const body = (await res.json()) as { imported: number; skipped: number };
+        expect(body).toMatchObject({ imported: 0, skipped: 2 });
+    });
+
+    it("treats a null watchedAt and a timestamped watchedAt for the same episode as independently deduplicated", async () => {
+        const db = createImportMockDb({
+            shows: [[{ id: 5, title: "Breaking Bad", translatedName: null }]],
+            episodes: [[{ id: 10, showId: 5, seasonNumber: 1, episodeNumber: 3 }]],
+            watchHistory: [[], []],
+        });
+        (dbMockState as { db: unknown }).db = db;
+
+        const res = await importRequest({
+            entries: [
+                {
+                    history: { mediaType: "episode" },
+                    show: { title: "Breaking Bad" },
+                    episode: { seasonNumber: 1, episodeNumber: 3 },
+                },
+                {
+                    history: { mediaType: "episode", watchedAt: "2026-03-01T00:00:00.000Z" },
+                    show: { title: "Breaking Bad" },
+                    episode: { seasonNumber: 1, episodeNumber: 3 },
+                },
+            ],
+        });
+        const body = (await res.json()) as { imported: number; skipped: number };
+        expect(body).toMatchObject({ imported: 2, skipped: 0 });
+        expect(db.__insertedRows[0].watchedAt).toBeNull();
+        expect(db.__insertedRows[1].watchedAt).toBeInstanceOf(Date);
+    });
+
+    it("catches a per-entry processing error, records it, and keeps processing later entries", async () => {
+        const db = createImportMockDb({
+            movies: [[{ id: 1 }], [{ id: 2 }]],
+            watchHistory: [[rejectRow(new Error("boom"))], []],
+        });
+        (dbMockState as { db: unknown }).db = db;
+
+        const res = await importRequest({
+            entries: [
+                { history: { mediaType: "movie" }, movie: { title: "First" } },
+                { history: { mediaType: "movie" }, movie: { title: "Second" } },
+            ],
+        });
+        const body = (await res.json()) as { imported: number; skipped: number; errors: string[] };
+        expect(body.imported).toBe(1);
+        expect(body.skipped).toBe(1);
+        expect(body.errors).toHaveLength(1);
+        expect(body.errors[0]).toContain("boom");
+    });
+
+    it("caps recorded errors at 20 while still counting every failure as skipped", async () => {
+        const movieRows = Array.from({ length: 25 }, (_, i) => [{ id: i + 1 }]);
+        const dupRows = Array.from({ length: 25 }, (_, i) => [rejectRow(new Error(`fail-${i}`))]);
+        const db = createImportMockDb({ movies: movieRows, watchHistory: dupRows });
+        (dbMockState as { db: unknown }).db = db;
+
+        const entries = Array.from({ length: 25 }, (_, i) => ({
+            history: { mediaType: "movie" },
+            movie: { title: `Movie ${i}` },
+        }));
+        const res = await importRequest({ entries });
+        const body = (await res.json()) as { imported: number; skipped: number; errors: string[] };
+        expect(body.imported).toBe(0);
+        expect(body.skipped).toBe(25);
+        expect(body.errors).toHaveLength(20);
     });
 });
 
