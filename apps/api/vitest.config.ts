@@ -104,11 +104,24 @@ export default defineConfig({
             // triggerFullSync/triggerIncrementalSync's own orchestration (batch 9
             // — concurrency loop, retry-once, cursor rollback; the shared per-show
             // sync logic itself is already covered via forceSyncShow above).
+            // 2026-07-15 (plan-20260715.md batch 9, FINAL batch of this plan):
+            // added triggerFullSync/triggerIncrementalSync's own orchestration —
+            // markSyncRunning concurrency gate, pLimit per-show loop, retry-once
+            // pass (incl. the "no TMDB id" show still getting retried
+            // unconditionally and ending up with the retry's own "Missing Trakt
+            // id" error rather than the original), sync-state phase transitions,
+            // and triggerIncrementalSync's cursor-rollback-to-earliest-failure
+            // logic — all using trivial all-empty Trakt collections or an
+            // immediate same-module "missing id" throw so the already-covered
+            // deep per-show sync path isn't re-exercised. services/sync.ts
+            // 58.1%→75.7% stmts. Actuals: stmts 85.8 / branch 72.9 / funcs 87.3 /
+            // lines 87.6 — raised again. This closes out all 10 batches of
+            // plan-20260715.md; see that file's 收尾小结 for the full summary.
             thresholds: {
-                lines: 84,
-                functions: 85,
-                statements: 82,
-                branches: 71,
+                lines: 87,
+                functions: 87,
+                statements: 85,
+                branches: 72,
             },
         },
     },
