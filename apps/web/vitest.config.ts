@@ -54,11 +54,27 @@ export default defineConfig({
             // setQueryData/removeQueries (no invalidateQueries). hooks/index.ts
             // 17.1%→99.7% stmts. Actuals: stmts 39.1 / branch 25.5 / funcs 44.5 /
             // lines 39.7 — raised again.
+            // 2026-07-15 (plan-20260715b.md batch 3, completes the infra layer):
+            // added lib/push.ts — the browser-side Web Push subscription flow
+            // (isPushSupported/getExistingSubscription/fetchVapidPublicKey/
+            // enablePush/disablePush), mocking Notification/PushManager/
+            // navigator.serviceWorker via vi.stubGlobal + Object.defineProperty.
+            // Covers every enablePush branch: server-unconfigured, permission-
+            // denied, fresh subscribe, key-matches reuse, key-rotation
+            // unsubscribe+resubscribe, unsubscribe-fails-but-already-cleaned-up,
+            // unsubscribe-fails-but-a-concurrent-tab-already-rotated (registers
+            // the already-active subscription and returns early), unsubscribe-
+            // fails-and-old-key-still-active (push-rotation-blocked), and a
+            // failing re-check getSubscription() (treated as cleaned up).
+            // lib/push.ts 1.8%→100% stmts. Actuals: stmts 41.0 / branch 26.8 /
+            // funcs 45.3 / lines 41.5 — raised again. This completes the
+            // infrastructure-layer batches (1-3); remaining batches (4-13) move
+            // to components/pages.
             thresholds: {
-                lines: 39,
-                functions: 44,
-                statements: 39,
-                branches: 25,
+                lines: 41,
+                functions: 45,
+                statements: 41,
+                branches: 26,
             },
         },
     },
