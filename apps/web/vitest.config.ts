@@ -117,11 +117,26 @@ export default defineConfig({
             // directly. WatchHeatmap/MediaComposition/RecentActivity/
             // TraktStats/ScreenTime all reached 100% stmts. Actuals: stmts
             // 51.9 / branch 37.4 / funcs 54.1 / lines 52.1 — raised again.
+            // 2026-07-15 (plan-20260715b.md batch 7): added all 5
+            // `JellyfinStatsPage/*` files (ActivityFeed, LibraryOverview,
+            // PlayHeatmap, TopContent, index.tsx) — all reached 100% across
+            // the board. Snags: dayjs's `fromNow()` needs `vi.setSystemTime`
+            // to be deterministic and renders in English (this app never
+            // calls `dayjs.locale("zh-cn")` inside ActivityFeed itself, only
+            // CalendarPage.tsx does, and dayjs's locale is a global but
+            // per-module-graph singleton so it doesn't leak across test
+            // files); a lucide icon's registered internal name can differ
+            // from its exported component name (`Tv2` renders class
+            // `lucide-tv-minimal`, not `lucide-tv-2` — verified by reading
+            // the icon source rather than guessing); jsdom re-serializes
+            // inline hex colors to `rgb(r, g, b)` when read back via
+            // `.style`. Actuals: stmts 53.9 / branch 39.6 / funcs 55.8 /
+            // lines 54.1 — raised again.
             thresholds: {
-                lines: 52,
-                functions: 54,
-                statements: 51,
-                branches: 37,
+                lines: 54,
+                functions: 55,
+                statements: 53,
+                branches: 39,
             },
         },
     },
