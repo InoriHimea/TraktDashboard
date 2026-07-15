@@ -132,11 +132,34 @@ export default defineConfig({
             // inline hex colors to `rgb(r, g, b)` when read back via
             // `.style`. Actuals: stmts 53.9 / branch 39.6 / funcs 55.8 /
             // lines 54.1 — raised again.
+            // 2026-07-15 (plan-20260715b.md batch 8, mid-size components A):
+            // added EpisodeGrid (100%), UpNextBanner (90%), WatchHistoryPanel
+            // (97.2%), SearchModal (93.7%) — the biggest branch-coverage jump
+            // of this plan (+6.3pp) since these are stateful, interaction-
+            // heavy components. Snags: `vi.useFakeTimers()` without
+            // `{ shouldAdvanceTime: true }` breaks `waitFor()` (its internal
+            // polling depends on real timers ticking), causing a ~5s vitest
+            // test-timeout instead of the expected assertion result — always
+            // pair fake system-time control with `shouldAdvanceTime: true`
+            // whenever a test also needs `waitFor`/async flushing; a
+            // module-level `vi.fn()` used as a mocked hook's return value is
+            // NOT auto-cleared between tests (no global `clearMocks`), so an
+            // earlier test's recorded calls leak into later assertions
+            // unless `beforeEach(() => mock.mockClear())` runs; the
+            // ConfirmDialog/SlidingPanel's exit animation (AnimatePresence)
+            // doesn't reliably unmount in jsdom, matching the
+            // TraktProgressBar `animate`-prop snag from batch 4 — assert the
+            // resulting behavior (mutation called, callback fired) instead
+            // of the dialog's DOM removal; text split across sibling JSX
+            // expressions (e.g. `{year}{" · "}<span>...</span>`) is NOT its
+            // own standalone text node for `getByText` — match by regex
+            // substring instead of the exact value. Actuals: stmts 59.0 /
+            // branch 45.9 / funcs 59.2 / lines 59.2 — raised again.
             thresholds: {
-                lines: 54,
-                functions: 55,
-                statements: 53,
-                branches: 39,
+                lines: 59,
+                functions: 59,
+                statements: 58,
+                branches: 45,
             },
         },
     },

@@ -35,7 +35,7 @@ planning/optimization checklists.
 | [plan-20260713.md](plan-20260713.md)         | 2026-07-13 | ✅ 全部完成（N3-T02 覆盖率回升第三批六批次：jellyfin service+route、backup 四云 provider+dump/restore+route；api 41%→65%） |
 | [plan-20260714.md](plan-20260714.md)         | 2026-07-14 | ✅ 全部完成（N3-T02 覆盖率回升第四批：lib/push.ts + services/tmdb.ts + jobs/scheduler.ts；api 65%→70%）                    |
 | [plan-20260715.md](plan-20260715.md)         | 2026-07-15 | ✅ 全部完成（N3-T02 覆盖率回升第五批：sync.ts/trakt.ts/shows.ts/history.ts 十个批次全部完成；api 69.6%→85.8%）             |
-| [plan-20260715b.md](plan-20260715b.md)       | 2026-07-15 | 🚧 进行中（N3-T02 覆盖率回升第六批：web 侧，13 个批次，批次 1-7 完成；web 25.5%→53.9%）                                    |
+| [plan-20260715b.md](plan-20260715b.md)       | 2026-07-15 | 🚧 进行中（N3-T02 覆盖率回升第六批：web 侧，13 个批次，批次 1-8 完成；web 25.5%→59.0%）                                    |
 
 ## Status legend
 
