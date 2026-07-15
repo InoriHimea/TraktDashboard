@@ -96,11 +96,32 @@ export default defineConfig({
             // appears requires rendering `<Toaster />` alongside the provider,
             // not just the provider itself. Actuals: stmts 47.2 / branch 33.6 /
             // funcs 50.2 / lines 47.7 — raised again.
+            // 2026-07-15 (plan-20260715b.md batch 6): added the 8 stats/
+            // small-component files (MediaComposition, RatingDistribution,
+            // ActivityChart, WatchPatterns, WatchHeatmap, RecentActivity,
+            // TraktStats, ScreenTime). Two big snags: (1) recharts'
+            // ResponsiveContainer reports 0 width/height in jsdom (no real
+            // layout engine) and renders NO chart DOM at all — not even an
+            // empty <svg> — so RatingDistribution/ActivityChart/WatchPatterns
+            // can only be asserted on their surrounding static text; their
+            // CustomTooltip render-prop bodies never execute either (only
+            // called on hover), capping those 3 files well under 100%. The
+            // per-bar/per-cell JSX (Cell fill/opacity ternaries, label
+            // mapping) DOES still execute for coverage purposes since JSX
+            // children are constructed eagerly by the parent's own render,
+            // regardless of whether ResponsiveContainer mounts them — so
+            // varied fixture data is still worth passing in. (2) a lucide
+            // icon (CalendarDays) also renders a bare SVG <rect>, so
+            // WatchHeatmap's cell queries must scope to the heatmap's own
+            // `<svg aria-label>`, not `container.querySelector("rect")`
+            // directly. WatchHeatmap/MediaComposition/RecentActivity/
+            // TraktStats/ScreenTime all reached 100% stmts. Actuals: stmts
+            // 51.9 / branch 37.4 / funcs 54.1 / lines 52.1 — raised again.
             thresholds: {
-                lines: 47,
-                functions: 50,
-                statements: 47,
-                branches: 33,
+                lines: 52,
+                functions: 54,
+                statements: 51,
+                branches: 37,
             },
         },
     },
