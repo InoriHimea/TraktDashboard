@@ -155,11 +155,31 @@ export default defineConfig({
             // own standalone text node for `getByText` — match by regex
             // substring instead of the exact value. Actuals: stmts 59.0 /
             // branch 45.9 / funcs 59.2 / lines 59.2 — raised again.
+            // 2026-07-15 (plan-20260715b.md batch 9, mid-size components B):
+            // added TopNav (84.8%), DiscoverPage (80%), CalendarPage (93.9%)
+            // — another large branch jump (+7.2pp), CalendarPage especially
+            // dense (dozens of date/format branches). Snags: jsdom doesn't
+            // implement `Element.prototype.scrollIntoView` at all — any
+            // component calling it (CalendarPage's day-picker autoscroll)
+            // throws unless stubbed with `Element.prototype.scrollIntoView =
+            // vi.fn()`; a literal string like "今天" or a static UI label
+            // that's reused as both a persistent button AND a dynamic status
+            // value makes `getByText` ambiguous once both are on screen —
+            // scope to the specific element via its class/structure instead;
+            // when asserting on same-day/list ordering that a component
+            // sorts internally, deliberately declare the test fixture out of
+            // order first, so the assertion actually proves the sort ran
+            // rather than coincidentally matching input order; an image
+            // fallback-chain test (still→backdrop→placeholder via onError)
+            // needs a single-item fixture — with multiple items on screen,
+            // `container.querySelector("img")` after "removing" one image
+            // still finds a different item's untouched image. Actuals: stmts
+            // 64.7 / branch 53.1 / funcs 64.5 / lines 64.9 — raised again.
             thresholds: {
-                lines: 59,
-                functions: 59,
-                statements: 58,
-                branches: 45,
+                lines: 64,
+                functions: 64,
+                statements: 64,
+                branches: 53,
             },
         },
     },
