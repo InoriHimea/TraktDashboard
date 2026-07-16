@@ -175,11 +175,34 @@ export default defineConfig({
             // `container.querySelector("img")` after "removing" one image
             // still finds a different item's untouched image. Actuals: stmts
             // 64.7 / branch 53.1 / funcs 64.5 / lines 64.9 — raised again.
+            // 2026-07-15 (plan-20260715b.md batch 10, large components A):
+            // added NowPlayingPopup (93.7%, plus dedicated pure-function
+            // tests for its exported computeRemainingMinutes/
+            // computeProgressPct/formatSeasonEpisode helpers), EpisodeInfoCard
+            // (88.5%, the most dialog-heavy file yet — 4 separate
+            // ConfirmDialog instances), LoginPage (100%, mostly static
+            // marketing content). Snags: a setInterval callback's setState
+            // (NowPlayingPopup's countdown tick) fires outside any React
+            // event handler, so advancing fake timers must be wrapped in
+            // `act()` or the update never flushes before the next assertion;
+            // when a page has several ConfirmDialogs and AnimatePresence
+            // leaves closed ones lingering in the DOM (batch 8's snag again),
+            // two DIFFERENT dialogs can show the identical confirm-button
+            // text (e.g. both "删除") — disambiguate by finding each
+            // dialog's own unique title text first, then `within(title
+            // .closest(".rounded-2xl")).getByRole(...)` to scope the click to
+            // that specific dialog; a `<button>`'s `aria-label` silently
+            // overrides its accessible name even when the visible text
+            // differs, so `getByRole("button", { name })` can collide with a
+            // same-named button elsewhere that has no aria-label override —
+            // always check the source for `aria-label` before trusting
+            // visible text as the accessible name. Actuals: stmts 70.1 /
+            // branch 60.0 / funcs 68.7 / lines 70.5 — raised again.
             thresholds: {
-                lines: 64,
-                functions: 64,
-                statements: 64,
-                branches: 53,
+                lines: 70,
+                functions: 68,
+                statements: 70,
+                branches: 59,
             },
         },
     },
