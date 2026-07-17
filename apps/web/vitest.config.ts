@@ -246,11 +246,47 @@ export default defineConfig({
             // batch 9-11's precedent of not chasing full combinatorial
             // coverage on non-branching display logic). Actuals: stmts 81.2 /
             // branch 78.2 / funcs 80.3 / lines 82.3 — raised again.
+            // 2026-07-15 (plan-20260715b.md batch 13, FINAL batch — web side
+            // complete): added `settings/BackupTab.tsx` (1488 lines, the
+            // largest single web file) — 98.67% stmts/100% lines/97.56%
+            // branch/97.14% funcs, the highest result of any large file this
+            // plan. Pure controlled component (~40 props, no hooks besides
+            // `useToast`), so no QueryClientProvider needed; mocked
+            // `../../../lib/api` wholesale. Snags: WebDAV and S3 cards have no
+            // `configured` gate (unlike GDrive/OneDrive) so they're ALWAYS both
+            // on screen — their "保存并测试" save button and "••••••••"
+            // password/secret-key placeholder are byte-identical strings on
+            // both cards, making unscoped queries ambiguous from the very
+            // first test; fixed with a `cardFor(headingText)` helper walking
+            // two `.parentElement`s up from the "WebDAV"/"S3" heading text to
+            // reach that specific card, then querying `within()` it. The
+            // restore-confirmation dialog's confirmText reuses the exact same
+            // translation key as each file row's own "恢复" button, and the
+            // dialog's description sentence contains the filename as a
+            // substring — both collide with file-row content once the dialog
+            // is open; fixed by anchoring to the dialog's own title text via
+            // `.closest(".hud-panel-strong")` (ConfirmDialog's card class)
+            // before querying further. The GDrive/OneDrive device-code polling
+            // loop is a `setInterval(async () => {...}, ms)` — advancing fake
+            // timers with plain `vi.advanceTimersByTime` does not await the
+            // interval callback's internal `await api.backup.gdrivePoll(...)`;
+            // `await vi.advanceTimersByTimeAsync(ms)` (already established in
+            // SearchModal's debounce tests) is required to flush it. When a
+            // successful restore/disconnect flips a prop-driven dialog's
+            // `isOpen` to false in the same state batch that also clears its
+            // `isLoading`, AnimatePresence's jsdom-never-completes-exit
+            // behavior freezes the dialog's LAST rendered props (isLoading
+            // still true) — asserted the resulting side effect (the
+            // full-screen restore-done overlay, which isn't AnimatePresence-
+            // gated) instead of the frozen button's disabled state reverting.
+            // This is the plan's final batch — all 13 web-side batches are now
+            // complete. Actuals: stmts 86.2 / branch 81.3 / funcs 83.1 /
+            // lines 87.6 — raised again.
             thresholds: {
-                lines: 82,
-                functions: 80,
-                statements: 81,
-                branches: 78,
+                lines: 87,
+                functions: 83,
+                statements: 86,
+                branches: 81,
             },
         },
     },
