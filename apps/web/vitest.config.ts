@@ -221,11 +221,36 @@ export default defineConfig({
             // matches" (not "multiple matches") and looks like a totally
             // different bug at first. Actuals: stmts 75.9 / branch 69.3 /
             // funcs 73.7 / lines 76.6 — raised again.
+            // 2026-07-15 (plan-20260715b.md batch 12, super-large pages A):
+            // added ListsPage (100% stmts/funcs/lines, 92.1% branch) and
+            // CollectionPage (100% stmts/funcs/lines, 84.15% branch) — the two
+            // largest files tackled so far after BackupTab (~2036 combined
+            // lines), each with several sub-components (CreateListModal;
+            // ModalShell/CollectionMovieModal/CollectionEpisodeModal/
+            // CollectionSeasonList/CollectionCard). Snag: a card's hover-only
+            // "remove" trigger button (opacity/pointerEvents toggled by
+            // React state, not conditional mounting) stays in the DOM even
+            // when a modal opens on top of the same grid — `.lucide-x` alone
+            // becomes ambiguous once both are on screen (matches a card's
+            // remove icon before the modal's own close icon in document
+            // order); fix by anchoring to the modal's own unique subtitle
+            // text first, then `.closest('[role="presentation"]')`, then
+            // `.querySelector` scoped to that element. Remaining branch gaps
+            // are almost entirely the same two low-value shapes seen in prior
+            // batches: `x ?? fallback`/`x ?? []` defensive-coalescing sides
+            // that are unreachable through the already-truthy prop shapes
+            // used elsewhere in each render path, and the long
+            // resolution/HDR/audio ternary chains in `formatBadge` /
+            // `CollectionMovieModal`'s fields table (covered for several
+            // representative combinations, not exhaustively — consistent with
+            // batch 9-11's precedent of not chasing full combinatorial
+            // coverage on non-branching display logic). Actuals: stmts 81.2 /
+            // branch 78.2 / funcs 80.3 / lines 82.3 — raised again.
             thresholds: {
-                lines: 76,
-                functions: 73,
-                statements: 75,
-                branches: 69,
+                lines: 82,
+                functions: 80,
+                statements: 81,
+                branches: 78,
             },
         },
     },
