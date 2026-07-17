@@ -198,11 +198,34 @@ export default defineConfig({
             // always check the source for `aria-label` before trusting
             // visible text as the accessible name. Actuals: stmts 70.1 /
             // branch 60.0 / funcs 68.7 / lines 70.5 — raised again.
+            // 2026-07-15 (plan-20260715b.md batch 11, large components B):
+            // added JellyfinTab (100%, pure presentational — all data comes
+            // through props, no hooks of its own), HeroSection (100%),
+            // MovieDetailPage (88.5%) — the biggest branch-coverage jump of
+            // the whole plan (+9.3pp). Snags: a page-level tab switch backed
+            // by `<AnimatePresence mode="wait">` never mounts the second
+            // tab's content in jsdom at all (not just a lingering-old-content
+            // issue like batch 8/10 — with `mode="wait"` specifically, the
+            // NEW child waits for the OLD child's exit animation to finish
+            // before mounting, which never happens) — the fix was mocking
+            // `framer-motion` wholesale for that test file: a `Proxy` over
+            // `motion.*` covering every tag the whole child tree might use
+            // (Button uses motion.button, cards use motion.div, etc.) via
+            // `createElement(tag, domPropsOnly, children)`, and
+            // `AnimatePresence` as a bare passthrough; two sibling elements
+            // that both derive their label from the same translation key
+            // (e.g. a tab button and its section's own heading reusing
+            // `watchHistory.showTitle`) are a recurring ambiguity source —
+            // grep the actual translation value rather than assuming a
+            // shorter/paraphrased string, since guessing wrong reads as "0
+            // matches" (not "multiple matches") and looks like a totally
+            // different bug at first. Actuals: stmts 75.9 / branch 69.3 /
+            // funcs 73.7 / lines 76.6 — raised again.
             thresholds: {
-                lines: 70,
-                functions: 68,
-                statements: 70,
-                branches: 59,
+                lines: 76,
+                functions: 73,
+                statements: 75,
+                branches: 69,
             },
         },
     },
