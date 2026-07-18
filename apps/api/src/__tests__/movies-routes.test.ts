@@ -8,12 +8,21 @@ const TEST_USER_ID = 42;
 // ---------------------------------------------------------------------------
 
 const dbMockState = vi.hoisted(() => ({ db: null as unknown }));
+const traktMockState = vi.hoisted(() => ({
+    client: { removeFromHistory: vi.fn() } as unknown as {
+        removeFromHistory: ReturnType<typeof vi.fn>;
+    },
+}));
 
 vi.mock("@trakt-dashboard/db", async () => {
     const actual =
         await vi.importActual<typeof import("@trakt-dashboard/db")>("@trakt-dashboard/db");
     return { ...actual, getDb: () => dbMockState.db };
 });
+
+vi.mock("../services/trakt.js", () => ({
+    getTraktClient: () => traktMockState.client,
+}));
 
 // ---------------------------------------------------------------------------
 // DB builder stubs
@@ -311,5 +320,48 @@ describe("DELETE /movies/:id/history/:historyId", () => {
         expect(res.status).toBe(200);
         const body = (await res.json()) as { ok: boolean };
         expect(body.ok).toBe(true);
+    });
+
+    it("removes the entry from Trakt before deleting locally when it has a traktPlayId", async () => {
+        const record = {
+            id: 10,
+            userId: TEST_USER_ID,
+            movieId: 9,
+            watchedAt: now,
+            source: "trakt",
+            traktPlayId: "555",
+        };
+        const db = createMockDb([[record], [{ count: 0, lastWatched: null }]]);
+        (dbMockState as { db: unknown }).db = db;
+        const removeFromHistory = vi.fn().mockResolvedValue({
+            deleted: { movies: 1, episodes: 0 },
+            not_found: { movies: [], shows: [], episodes: [], ids: [] },
+        });
+        traktMockState.client = { removeFromHistory };
+
+        const res = await app().request("/movies/9/history/10", { method: "DELETE" });
+
+        expect(removeFromHistory).toHaveBeenCalledWith(TEST_USER_ID, [555]);
+        expect(res.status).toBe(200);
+    });
+
+    it("does not delete locally when the Trakt removal fails", async () => {
+        const record = {
+            id: 10,
+            userId: TEST_USER_ID,
+            movieId: 9,
+            watchedAt: now,
+            source: "trakt",
+            traktPlayId: "555",
+        };
+        const db = createMockDb([[record]]);
+        (dbMockState as { db: unknown }).db = db;
+        const removeFromHistory = vi.fn().mockRejectedValue(new Error("network down"));
+        traktMockState.client = { removeFromHistory };
+
+        const res = await app().request("/movies/9/history/10", { method: "DELETE" });
+
+        expect(res.status).toBe(502);
+        expect(db.__state.deleteWhereCalls).toHaveLength(0);
     });
 });

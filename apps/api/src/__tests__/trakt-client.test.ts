@@ -384,6 +384,21 @@ describe("mutation methods", () => {
         expect(JSON.parse(init?.body as string)).toEqual({ movies: [{ ids: { trakt: 2 } }] });
     });
 
+    it("removeFromHistory posts raw history ids and returns the parsed result", async () => {
+        dbMockState.db = createMockDb([...USER_AND_PROXY]);
+        const response = {
+            deleted: { movies: 1, episodes: 2 },
+            not_found: { movies: [], shows: [], episodes: [], ids: [999] },
+        };
+        httpMockState.providerFetch.mockResolvedValueOnce(jsonRes(response));
+        const result = await getTraktClient().removeFromHistory(USER_ID, [111, 222, 333]);
+        expect(result).toEqual(response);
+        const { url, init } = lastFetchOptions();
+        expect(new URL(url).pathname).toBe("/sync/history/remove");
+        expect(init?.method).toBe("POST");
+        expect(JSON.parse(init?.body as string)).toEqual({ ids: [111, 222, 333] });
+    });
+
     it("createList POSTs and returns the created list", async () => {
         dbMockState.db = createMockDb([...USER_AND_PROXY]);
         const created = { name: "My List", ids: { trakt: 1, slug: "my-list" } };

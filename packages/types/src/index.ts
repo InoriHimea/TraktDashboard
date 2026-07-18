@@ -561,6 +561,33 @@ export interface WatchHistoryEntry {
     source: "trakt" | "manual";
 }
 
+// ─── Watch History Duplicate Audit ─────────────────────────────────────────────
+
+export interface HistoryDuplicateEntry {
+    id: number; // local watch_history.id
+    watchedAt: string; // ISO 8601
+    gapFromPreviousHours: number | null; // null for the earliest entry in the group
+    suggested: boolean; // pre-checked as a likely-bug duplicate (part of a burst, not its earliest entry)
+}
+
+export interface HistoryDuplicateGroup {
+    mediaType: "episode" | "movie";
+    showId: number | null;
+    showTitle: string | null;
+    seasonNumber: number | null;
+    episodeNumber: number | null;
+    episodeTitle: string | null;
+    movieId: number | null;
+    movieTitle: string | null;
+    entries: HistoryDuplicateEntry[];
+}
+
+export interface RemoveHistoryDuplicatesResult {
+    ok: boolean;
+    deleted: number;
+    notFound: number;
+}
+
 export interface WatchResetCursor {
     id: number;
     userId: number;

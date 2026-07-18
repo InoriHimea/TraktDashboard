@@ -111,6 +111,16 @@ export interface TraktMovieHistoryEntry {
     };
 }
 
+export interface TraktRemoveHistoryResult {
+    deleted: { movies: number; episodes: number };
+    not_found: {
+        movies: unknown[];
+        shows: unknown[];
+        episodes: unknown[];
+        ids: number[];
+    };
+}
+
 export interface TraktShowDetail {
     title: string;
     year: number | null;
@@ -609,6 +619,22 @@ export function getTraktClient() {
             }
 
             return all;
+        },
+
+        // Removes individual history/play records by their own numeric id (as opposed
+        // to the movies/shows/episodes array forms, which remove ALL history for an
+        // item) — this is what lets us delete a specific duplicate entry without
+        // touching the other, legitimate watches of the same episode/movie.
+        removeFromHistory: async (
+            userId: number,
+            ids: number[],
+        ): Promise<TraktRemoveHistoryResult> => {
+            const { data } = await traktFetchRaw("/sync/history/remove", userId, undefined, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ids }),
+            });
+            return data as TraktRemoveHistoryResult;
         },
 
         getShowProgress: (userId: number, traktId: number) =>

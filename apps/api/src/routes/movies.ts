@@ -6,6 +6,7 @@ import { z } from "zod";
 import { validateBody } from "../lib/validate.js";
 import { parseBoundedInt } from "../lib/number.js";
 import { toIsoOrNull } from "../lib/datetime.js";
+import { getTraktClient } from "../services/trakt.js";
 
 const watchedAtSchema = z.object({
     watchedAt: z.string().datetime({ offset: true }).nullable().optional(),
@@ -245,6 +246,17 @@ movieRoutes.delete("/:id/history/:historyId", async (c) => {
         );
 
     if (!record) return c.json({ error: "History record not found" }, 404);
+
+    // Remove from Trakt first (when this row came from a Trakt sync) — deleting only
+    // the local mirror would get the entry silently re-synced back the next run.
+    if (record.traktPlayId) {
+        try {
+            await getTraktClient().removeFromHistory(userId, [Number(record.traktPlayId)]);
+        } catch (e) {
+            console.error(`[movies] Failed to remove history ${historyId} from Trakt:`, e);
+            return c.json({ error: "Failed to remove from Trakt" }, 502);
+        }
+    }
 
     await db
         .delete(watchHistory)

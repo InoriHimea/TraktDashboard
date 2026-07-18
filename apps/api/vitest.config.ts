@@ -117,11 +117,20 @@ export default defineConfig({
             // 58.1%→75.7% stmts. Actuals: stmts 85.8 / branch 72.9 / funcs 87.3 /
             // lines 87.6 — raised again. This closes out all 10 batches of
             // plan-20260715.md; see that file's 收尾小结 for the full summary.
+            // 2026-07-18 (plan-20260718.md batch 1, N2-T17 feature work — not a
+            // coverage-recovery batch, but new production code shipped with tests
+            // per the project's usual practice, which lifted the floor incidentally):
+            // added removeFromHistory (trakt.ts), the new services/history-
+            // duplicates.ts (clusterBursts + findDuplicateHistoryGroups, 97.1%
+            // stmts), the two new /history/duplicates* routes, and Trakt-removal
+            // calls on the pre-existing single-entry history-delete routes in
+            // shows.ts/movies.ts. Actuals: stmts 86.2 / branch 73.2 / funcs 87.7 /
+            // lines 87.9 — raised again.
             thresholds: {
                 lines: 87,
                 functions: 87,
-                statements: 85,
-                branches: 72,
+                statements: 86,
+                branches: 73,
             },
         },
     },

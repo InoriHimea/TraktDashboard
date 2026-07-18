@@ -679,6 +679,43 @@ describe("DELETE /shows/:showId/history/:historyId", () => {
         expect((await res.json()) as { ok: boolean }).toEqual({ ok: true });
         expect(syncMockState.recalcShowProgress).toHaveBeenCalledWith(TEST_USER_ID, 5);
     });
+
+    it("removes the entry from Trakt before deleting locally when it has a traktPlayId", async () => {
+        dbMockState.db = createMockDb({ selects: [[{ id: 1, traktPlayId: "999" }]] });
+        const removeFromHistory = vi.fn().mockResolvedValue({
+            deleted: { movies: 0, episodes: 1 },
+            not_found: { movies: [], shows: [], episodes: [], ids: [] },
+        });
+        traktMockState.client = createMockTrakt({ removeFromHistory });
+
+        const res = await request("/5/history/1", { method: "DELETE" });
+
+        expect(removeFromHistory).toHaveBeenCalledWith(TEST_USER_ID, [999]);
+        expect(res.status).toBe(200);
+        expect(syncMockState.recalcShowProgress).toHaveBeenCalledWith(TEST_USER_ID, 5);
+    });
+
+    it("does not delete locally when the Trakt removal fails", async () => {
+        dbMockState.db = createMockDb({ selects: [[{ id: 1, traktPlayId: "999" }]] });
+        const removeFromHistory = vi.fn().mockRejectedValue(new Error("network down"));
+        traktMockState.client = createMockTrakt({ removeFromHistory });
+
+        const res = await request("/5/history/1", { method: "DELETE" });
+
+        expect(res.status).toBe(502);
+        expect(syncMockState.recalcShowProgress).not.toHaveBeenCalled();
+    });
+
+    it("skips the Trakt call entirely for a manually-entered record (no traktPlayId)", async () => {
+        dbMockState.db = createMockDb({ selects: [[{ id: 1, traktPlayId: null }]] });
+        const removeFromHistory = vi.fn();
+        traktMockState.client = createMockTrakt({ removeFromHistory });
+
+        const res = await request("/5/history/1", { method: "DELETE" });
+
+        expect(removeFromHistory).not.toHaveBeenCalled();
+        expect(res.status).toBe(200);
+    });
 });
 
 // ---------------------------------------------------------------------------

@@ -1,10 +1,13 @@
 import { Hono } from "hono";
 import { getDb, watchHistory, episodes, shows, movies } from "@trakt-dashboard/db";
-import { eq, and, gte, lte, desc, sql, or, isNull, inArray } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql, or, isNull, isNotNull, inArray } from "drizzle-orm";
 import { apiOk } from "../lib/response.js";
 import { parseBoundedInt } from "../lib/number.js";
 import { toIsoOrNull } from "../lib/datetime.js";
 import type { HistoryEntry } from "@trakt-dashboard/types";
+import { findDuplicateHistoryGroups } from "../services/history-duplicates.js";
+import { getTraktClient } from "../services/trakt.js";
+import { recalcShowProgress, recalcMovieProgress } from "../services/sync.js";
 
 export const historyRoutes = new Hono<{ Variables: { userId: number } }>();
 
@@ -406,4 +409,129 @@ historyRoutes.post("/import", async (c) => {
     }
 
     return c.json({ ok: true, imported, skipped, errors });
+});
+
+const DEFAULT_DUPLICATE_WINDOW_HOURS = 72;
+const MAX_DUPLICATE_WINDOW_HOURS = 24 * 30; // 30 days — a generous ceiling, still bounded
+const TRAKT_REMOVE_CHUNK_SIZE = 100; // keep individual /sync/history/remove calls small to avoid timeouts
+
+function chunk<T>(items: T[], size: number): T[][] {
+    const chunks: T[][] = [];
+    for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
+    return chunks;
+}
+
+// GET /api/history/duplicates?windowHours=72
+// Audits the local watch_history mirror (not a fresh Trakt fetch — see
+// findDuplicateHistoryGroups for why the local table is already a reliable 1:1
+// mirror) for episodes/movies with more than one Trakt-sourced history entry,
+// clustering entries into "bursts" of watches within windowHours of each other so
+// the UI can pre-suggest same-session/same-bug duplicates while leaving genuinely
+// separate rewatches untouched.
+historyRoutes.get("/duplicates", async (c) => {
+    const userId = c.get("userId");
+    const windowHours = parseBoundedInt(
+        c.req.query("windowHours"),
+        DEFAULT_DUPLICATE_WINDOW_HOURS,
+        1,
+        MAX_DUPLICATE_WINDOW_HOURS,
+    );
+
+    const groups = await findDuplicateHistoryGroups(userId, windowHours);
+
+    return apiOk(c, { groups, windowHours });
+});
+
+// POST /api/history/duplicates/remove — body: { ids: number[] } (local watch_history.id)
+// Permanently removes the given entries from the user's Trakt.tv history (not just
+// the local mirror) — otherwise the next scheduled sync would re-fetch and resurrect
+// them. Unknown/foreign/manual (no trakt_play_id) ids are silently dropped rather
+// than failing the whole request, so one stale id doesn't block cleanup of the rest.
+historyRoutes.post("/duplicates/remove", async (c) => {
+    const userId = c.get("userId");
+
+    let body: unknown;
+    try {
+        body = await c.req.json();
+    } catch {
+        return c.json({ error: "Invalid JSON" }, 400);
+    }
+
+    const rawIds = (body as Record<string, unknown> | null)?.ids;
+    const localIds = Array.isArray(rawIds)
+        ? rawIds.filter((id): id is number => typeof id === "number" && Number.isInteger(id))
+        : [];
+
+    if (localIds.length === 0) {
+        return c.json({ error: "No valid ids provided" }, 400);
+    }
+
+    const db = getDb();
+    const rows = await db
+        .select({
+            id: watchHistory.id,
+            traktPlayId: watchHistory.traktPlayId,
+            mediaType: watchHistory.mediaType,
+            episodeId: watchHistory.episodeId,
+            movieId: watchHistory.movieId,
+        })
+        .from(watchHistory)
+        .where(
+            and(
+                eq(watchHistory.userId, userId),
+                inArray(watchHistory.id, localIds),
+                isNotNull(watchHistory.traktPlayId),
+            ),
+        );
+
+    if (rows.length === 0) {
+        return c.json({ ok: true, deleted: 0, notFound: 0 });
+    }
+
+    const trakt = getTraktClient();
+    let deleted = 0;
+    let notFound = 0;
+    const confirmedLocalIds: number[] = [];
+
+    for (const batch of chunk(rows, TRAKT_REMOVE_CHUNK_SIZE)) {
+        const traktIds = batch.map((r) => Number(r.traktPlayId));
+        try {
+            const result = await trakt.removeFromHistory(userId, traktIds);
+            deleted += result.deleted.movies + result.deleted.episodes;
+            notFound += result.not_found.ids.length;
+            // Both "deleted" and "not_found" mean the Trakt-side entry is gone
+            // (or never existed) — either way our local mirror row is stale and
+            // should be removed too.
+            confirmedLocalIds.push(...batch.map((r) => r.id));
+        } catch (e) {
+            console.error(`[history:duplicates] Failed to remove a batch from Trakt:`, e);
+            // Leave this batch's local rows untouched — safer to retry later than to
+            // delete a local row we couldn't confirm was actually removed from Trakt.
+        }
+    }
+
+    const affectedShowIds = new Set<number>();
+    const affectedMovieIds = new Set<number>();
+
+    if (confirmedLocalIds.length > 0) {
+        const confirmedRows = rows.filter((r) => confirmedLocalIds.includes(r.id));
+        await db.delete(watchHistory).where(inArray(watchHistory.id, confirmedLocalIds));
+
+        for (const row of confirmedRows) {
+            if (row.mediaType === "episode" && row.episodeId) {
+                const [ep] = await db
+                    .select({ showId: episodes.showId })
+                    .from(episodes)
+                    .where(eq(episodes.id, row.episodeId));
+                if (ep) affectedShowIds.add(ep.showId);
+            } else if (row.mediaType === "movie" && row.movieId) {
+                affectedMovieIds.add(row.movieId);
+            }
+        }
+
+        for (const showId of affectedShowIds) await recalcShowProgress(userId, showId);
+        for (const movieId of affectedMovieIds) await recalcMovieProgress(userId, movieId);
+    }
+
+    return c.json({ ok: true, deleted, notFound });
 });
