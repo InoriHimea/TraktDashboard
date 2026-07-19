@@ -275,6 +275,27 @@
             "resultTitle": "导入完成：{{imported}} 条成功，{{skipped}} 条跳过"
         }
     },
+    "historyDuplicates": {
+        "title": "重复记录审计",
+        "entryButton": "查重",
+        "windowLabel": "聚类窗口（小时）",
+        "summaryGroups": "共 {{count}} 组重复记录",
+        "summarySuggested": "建议删除 {{count}} 条",
+        "summaryShortBursts": "{{count}} 组间隔小于 {{hours}} 小时",
+        "loading": "正在审计观看历史…",
+        "loadFailed": "加载失败，请重试。",
+        "empty": "未发现重复记录",
+        "emptyHint": "当前时间窗口内没有找到重复的观看记录。",
+        "selectAll": "全选",
+        "deselectAll": "全不选",
+        "gapHours": "距上一条 {{hours}} 小时",
+        "gapDays": "距上一条 {{days}} 天",
+        "deleteSelected": "删除已选中的 {{count}} 条",
+        "confirmTitle": "从 Trakt.tv 永久删除这些记录？",
+        "confirmDesc": "将删除 {{count}} 条记录，同时从 Trakt.tv 同步删除，此操作不可撤销。",
+        "deleteSuccess": "已删除 {{deleted}} 条记录",
+        "deleteFailed": "删除失败，请重试。"
+    },
     "watchlist": {
         "title": "待看列表",
         "all": "全部",

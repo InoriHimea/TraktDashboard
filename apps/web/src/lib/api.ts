@@ -41,6 +41,8 @@ import type {
     DeviceAuthInfo,
     TraktOfficialStats,
     ScreenTimeData,
+    HistoryDuplicateGroup,
+    RemoveHistoryDuplicatesResult,
 } from "@trakt-dashboard/types";
 
 const API_BASE = "/api";
@@ -229,6 +231,19 @@ export const api = {
                 "/history/import",
                 { method: "POST", body: JSON.stringify(entries) },
             ),
+        duplicates: {
+            list: (windowHours?: number) => {
+                const params = windowHours ? `?windowHours=${windowHours}` : "";
+                return request<
+                    ApiResponse<{ groups: HistoryDuplicateGroup[]; windowHours: number }>
+                >(`/history/duplicates${params}`);
+            },
+            remove: (ids: number[]) =>
+                request<RemoveHistoryDuplicatesResult>("/history/duplicates/remove", {
+                    method: "POST",
+                    body: JSON.stringify({ ids }),
+                }),
+        },
     },
     watchlist: {
         list: (type?: "shows" | "movies") => {

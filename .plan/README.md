@@ -36,7 +36,7 @@ planning/optimization checklists.
 | [plan-20260714.md](plan-20260714.md)         | 2026-07-14 | ✅ 全部完成（N3-T02 覆盖率回升第四批：lib/push.ts + services/tmdb.ts + jobs/scheduler.ts；api 65%→70%）                    |
 | [plan-20260715.md](plan-20260715.md)         | 2026-07-15 | ✅ 全部完成（N3-T02 覆盖率回升第五批：sync.ts/trakt.ts/shows.ts/history.ts 十个批次全部完成；api 69.6%→85.8%）             |
 | [plan-20260715b.md](plan-20260715b.md)       | 2026-07-15 | ✅ 全部完成（N3-T02 覆盖率回升第六批：web 侧，13 个批次全部完成；web 25.5%→86.2%）                                         |
-| [plan-20260718.md](plan-20260718.md)         | 2026-07-18 | 🚧 进行中（N2-T17：Trakt 观看历史重复记录审计与清理，2 个批次）                                                            |
+| [plan-20260718.md](plan-20260718.md)         | 2026-07-18 | ✅ 全部完成（N2-T17：Trakt 观看历史重复记录审计与清理，2 个批次）                                                          |
 
 ## Status legend
 

@@ -92,4 +92,12 @@ export const queryKeys = {
         infinite: (mediaType: string, startDate: string | undefined, endDate: string | undefined) =>
             ["history-infinite", mediaType, startDate, endDate] as const,
     },
+
+    // Deliberately a separate top-level key family, not nested under `history` —
+    // `history.all` (["history"]) does not cover `history-infinite`-prefixed keys
+    // either, so piggybacking here would inherit that same invalidation gap.
+    historyDuplicates: {
+        all: ["history-duplicates"] as const,
+        list: (windowHours: number | undefined) => ["history-duplicates", windowHours] as const,
+    },
 } as const;

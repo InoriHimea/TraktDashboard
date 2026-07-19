@@ -115,4 +115,14 @@ describe("queryKeys factories", () => {
             undefined,
         ]);
     });
+
+    it("builds historyDuplicates keys under their own family prefix (not history.*)", () => {
+        expect(queryKeys.historyDuplicates.list(72)).toEqual(["history-duplicates", 72]);
+        expect(queryKeys.historyDuplicates.list(undefined)).toEqual([
+            "history-duplicates",
+            undefined,
+        ]);
+        expect(queryKeys.historyDuplicates.list(72)[0]).toBe(queryKeys.historyDuplicates.all[0]);
+        expect(queryKeys.historyDuplicates.all[0]).not.toBe(queryKeys.history.all[0]);
+    });
 });

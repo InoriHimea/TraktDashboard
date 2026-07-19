@@ -158,6 +158,17 @@ const getCases: GetCase[] = [
         search: { mediaType: "episode", startDate: "2026-01-01", endDate: "2026-01-31" },
     },
     {
+        name: "history.duplicates.list (no window)",
+        invoke: () => api.history.duplicates.list(),
+        pathname: "/api/history/duplicates",
+    },
+    {
+        name: "history.duplicates.list (with window)",
+        invoke: () => api.history.duplicates.list(24),
+        pathname: "/api/history/duplicates",
+        search: { windowHours: "24" },
+    },
+    {
         name: "watchlist.list (no type)",
         invoke: () => api.watchlist.list(),
         pathname: "/api/watchlist",
@@ -431,6 +442,13 @@ const mutationCases: MutationCase[] = [
         pathname: "/api/history/import",
         method: "POST",
         body: [{ id: 1 }],
+    },
+    {
+        name: "history.duplicates.remove",
+        invoke: () => api.history.duplicates.remove([1, 2, 3]),
+        pathname: "/api/history/duplicates/remove",
+        method: "POST",
+        body: { ids: [1, 2, 3] },
     },
     {
         name: "watchlist.add",

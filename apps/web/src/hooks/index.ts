@@ -34,6 +34,7 @@ import type {
     UserCollectionItem,
     CollectionShowEpisodes,
     TraktOfficialStats,
+    HistoryDuplicateGroup,
 } from "@trakt-dashboard/types";
 import { api } from "../lib/api";
 
@@ -356,6 +357,26 @@ export function useInfiniteHistory(
         },
         initialPageParam: 0,
         staleTime: 1000 * 60,
+    });
+}
+
+export function useHistoryDuplicates(windowHours?: number) {
+    return useQuery<{ groups: HistoryDuplicateGroup[]; windowHours: number }>({
+        queryKey: queryKeys.historyDuplicates.list(windowHours),
+        queryFn: () => api.history.duplicates.list(windowHours).then((r) => r.data),
+    });
+}
+
+export function useRemoveHistoryDuplicates() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (ids: number[]) => api.history.duplicates.remove(ids),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: queryKeys.historyDuplicates.all });
+            qc.invalidateQueries({ queryKey: queryKeys.history.all });
+            qc.invalidateQueries({ queryKey: queryKeys.showsProgress.all });
+            qc.invalidateQueries({ queryKey: queryKeys.moviesProgress.all });
+        },
     });
 }
 

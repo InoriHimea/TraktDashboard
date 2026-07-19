@@ -72,7 +72,7 @@ vi.mock("../../lib/api", () => ({
             pruneRemote: vi.fn(),
         },
         system: { metrics: vi.fn() },
-        history: { list: vi.fn() },
+        history: { list: vi.fn(), duplicates: { list: vi.fn(), remove: vi.fn() } },
     },
 }));
 
@@ -383,6 +383,14 @@ const queryCases: QueryCase[] = [
         resolved: { data: undefined },
         expectedData: [],
     },
+    {
+        name: "useHistoryDuplicates",
+        useHook: () => hooks.useHistoryDuplicates(72),
+        apiMock: () => api.history.duplicates.list as ReturnType<typeof vi.fn>,
+        expectedArgs: [72],
+        resolved: { data: { groups: [{ mediaType: "episode" }], windowHours: 72 } },
+        expectedData: { groups: [{ mediaType: "episode" }], windowHours: 72 },
+    },
 ];
 
 describe("query hooks", () => {
@@ -670,6 +678,19 @@ const mutationCases: MutationCase[] = [
             queryKeys.collection.capacity,
             queryKeys.collection.all,
             queryKeys.collection.checkAll,
+        ],
+    },
+    {
+        name: "useRemoveHistoryDuplicates",
+        useHook: () => hooks.useRemoveHistoryDuplicates(),
+        mutateArgs: [1, 2, 3],
+        apiMock: () => api.history.duplicates.remove as ReturnType<typeof vi.fn>,
+        expectedApiArgs: [[1, 2, 3]],
+        expectedInvalidations: [
+            queryKeys.historyDuplicates.all,
+            queryKeys.history.all,
+            queryKeys.showsProgress.all,
+            queryKeys.moviesProgress.all,
         ],
     },
 ];

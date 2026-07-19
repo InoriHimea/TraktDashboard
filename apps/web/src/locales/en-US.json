@@ -275,6 +275,27 @@
             "resultTitle": "Import done: {{imported}} added, {{skipped}} skipped"
         }
     },
+    "historyDuplicates": {
+        "title": "Duplicate Audit",
+        "entryButton": "Find Duplicates",
+        "windowLabel": "Cluster window (hours)",
+        "summaryGroups": "{{count}} duplicate groups found",
+        "summarySuggested": "{{count}} entries suggested for removal",
+        "summaryShortBursts": "{{count}} groups with gaps under {{hours}}h",
+        "loading": "Auditing watch history…",
+        "loadFailed": "Failed to load. Please try again.",
+        "empty": "No duplicates found",
+        "emptyHint": "No duplicate watch entries found within the current time window.",
+        "selectAll": "Select all",
+        "deselectAll": "Deselect all",
+        "gapHours": "{{hours}}h since previous",
+        "gapDays": "{{days}}d since previous",
+        "deleteSelected": "Delete {{count}} selected",
+        "confirmTitle": "Permanently remove these entries from Trakt.tv?",
+        "confirmDesc": "This will delete {{count}} entries and remove them from Trakt.tv too. This cannot be undone.",
+        "deleteSuccess": "Deleted {{deleted}} entries",
+        "deleteFailed": "Failed to delete. Please try again."
+    },
     "watchlist": {
         "title": "Watchlist",
         "all": "All",

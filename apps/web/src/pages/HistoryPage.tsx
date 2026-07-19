@@ -6,6 +6,7 @@ import {
     Film,
     LayoutGrid,
     Clock,
+    Copy,
     Download,
     Loader2,
     ChevronDown,
@@ -281,6 +282,17 @@ export default function HistoryPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
+                        {/* Duplicate audit */}
+                        <Link
+                            to="/history/duplicates"
+                            className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-accent)] hover:text-[var(--color-text)]"
+                            title={t("historyDuplicates.entryButton")}
+                        >
+                            <Copy className="h-4 w-4" />
+                            <span className="hidden sm:inline">
+                                {t("historyDuplicates.entryButton")}
+                            </span>
+                        </Link>
                         {/* Import JSON */}
                         <input
                             ref={fileInputRef}
