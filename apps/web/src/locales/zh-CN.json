@@ -294,7 +294,8 @@
         "confirmTitle": "从 Trakt.tv 永久删除这些记录？",
         "confirmDesc": "将删除 {{count}} 条记录，同时从 Trakt.tv 同步删除，此操作不可撤销。",
         "deleteSuccess": "已删除 {{deleted}} 条记录",
-        "deleteFailed": "删除失败，请重试。"
+        "deleteFailed": "删除失败，请重试。",
+        "overlapsPrevious": "与前一次观看重叠"
     },
     "watchlist": {
         "title": "待看列表",

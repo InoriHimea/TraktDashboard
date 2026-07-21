@@ -34,11 +34,14 @@ function makeEpisodeGroup(overrides: Partial<HistoryDuplicateGroup> = {}): Histo
         mediaType: "episode",
         showId: 5,
         showTitle: "Test Show",
+        showTranslatedName: null,
         seasonNumber: 3,
         episodeNumber: 67,
         episodeTitle: "Some Episode",
+        episodeTranslatedTitle: null,
         movieId: null,
         movieTitle: null,
+        runtime: null,
         entries: [makeEntry()],
         ...overrides,
     };
@@ -49,11 +52,14 @@ function makeMovieGroup(overrides: Partial<HistoryDuplicateGroup> = {}): History
         mediaType: "movie",
         showId: null,
         showTitle: null,
+        showTranslatedName: null,
         seasonNumber: null,
         episodeNumber: null,
         episodeTitle: null,
+        episodeTranslatedTitle: null,
         movieId: 20,
         movieTitle: "Some Movie",
+        runtime: null,
         entries: [makeEntry({ id: 200 })],
         ...overrides,
     };
@@ -123,6 +129,27 @@ describe("HistoryDuplicatesPage", () => {
         } as never);
         renderPage();
         expect(screen.getByText("Test Show S03E67 · Some Episode")).toBeInTheDocument();
+        // No translation on this group — no secondary "original title" line to show.
+        expect(screen.queryByText("Test Show · Some Episode")).toBeNull();
+    });
+
+    it("shows the translated name/title as primary and the original as a secondary line when they differ", () => {
+        mockUseHistoryDuplicates.mockReturnValue({
+            data: {
+                groups: [
+                    makeEpisodeGroup({
+                        showTranslatedName: "测试剧集",
+                        episodeTranslatedTitle: "某一集",
+                    }),
+                ],
+                windowHours: 72,
+            },
+            isLoading: false,
+            isError: false,
+        } as never);
+        renderPage();
+        expect(screen.getByText("测试剧集 S03E67 · 某一集")).toBeInTheDocument();
+        expect(screen.getByText("Test Show · Some Episode")).toBeInTheDocument();
     });
 
     it("omits the title separator when the episode has no title", () => {
@@ -218,6 +245,79 @@ describe("HistoryDuplicatesPage", () => {
         renderPage();
         expect(screen.getByText("距上一条 5 小时")).toBeInTheDocument();
         expect(screen.getByText("距上一条 3 天")).toBeInTheDocument();
+    });
+
+    it("shows each entry's watch-interval end time computed from the group's runtime", () => {
+        const group = makeEpisodeGroup({
+            runtime: 24,
+            entries: [makeEntry({ id: 1, watchedAt: "2026-01-01T00:00:00.000Z" })],
+        });
+        mockUseHistoryDuplicates.mockReturnValue({
+            data: { groups: [group], windowHours: 72 },
+            isLoading: false,
+            isError: false,
+        } as never);
+        renderPage();
+        const expectedEnd = new Date("2026-01-01T00:24:00.000Z").toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+        expect(screen.getByText(`→ ${expectedEnd}`, { exact: false })).toBeInTheDocument();
+    });
+
+    it("shows no end time when the group's runtime is unknown", () => {
+        const group = makeEpisodeGroup({ runtime: null });
+        mockUseHistoryDuplicates.mockReturnValue({
+            data: { groups: [group], windowHours: 72 },
+            isLoading: false,
+            isError: false,
+        } as never);
+        renderPage();
+        expect(screen.queryByText("→", { exact: false })).toBeNull();
+    });
+
+    it("flags an entry whose gap is within the previous watch's runtime as overlapping", () => {
+        const group = makeEpisodeGroup({
+            runtime: 24,
+            entries: [
+                makeEntry({ id: 1, watchedAt: "2026-01-01T00:00:00.000Z" }),
+                makeEntry({
+                    id: 2,
+                    watchedAt: "2026-01-01T00:20:00.000Z",
+                    gapFromPreviousHours: 20 / 60,
+                    suggested: true,
+                }),
+            ],
+        });
+        mockUseHistoryDuplicates.mockReturnValue({
+            data: { groups: [group], windowHours: 72 },
+            isLoading: false,
+            isError: false,
+        } as never);
+        renderPage();
+        expect(screen.getByText("与前一次观看重叠")).toBeInTheDocument();
+    });
+
+    it("does not flag an entry whose gap exceeds the previous watch's runtime", () => {
+        const group = makeEpisodeGroup({
+            runtime: 24,
+            entries: [
+                makeEntry({ id: 1, watchedAt: "2026-01-01T00:00:00.000Z" }),
+                makeEntry({
+                    id: 2,
+                    watchedAt: "2026-01-01T00:30:00.000Z",
+                    gapFromPreviousHours: 30 / 60,
+                    suggested: true,
+                }),
+            ],
+        });
+        mockUseHistoryDuplicates.mockReturnValue({
+            data: { groups: [group], windowHours: 72 },
+            isLoading: false,
+            isError: false,
+        } as never);
+        renderPage();
+        expect(screen.queryByText("与前一次观看重叠")).toBeNull();
     });
 
     it("pre-checks suggested entries and leaves non-suggested ones unchecked", () => {

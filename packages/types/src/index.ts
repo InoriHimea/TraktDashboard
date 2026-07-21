@@ -574,11 +574,14 @@ export interface HistoryDuplicateGroup {
     mediaType: "episode" | "movie";
     showId: number | null;
     showTitle: string | null;
+    showTranslatedName: string | null;
     seasonNumber: number | null;
     episodeNumber: number | null;
     episodeTitle: string | null;
+    episodeTranslatedTitle: string | null;
     movieId: number | null;
     movieTitle: string | null;
+    runtime: number | null; // minutes; powers each entry's watch-interval end time (watchedAt + runtime)
     entries: HistoryDuplicateEntry[];
 }
 

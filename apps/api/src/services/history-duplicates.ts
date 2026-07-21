@@ -119,9 +119,12 @@ export async function findDuplicateHistoryGroups(
                 watchedAt: watchHistory.watchedAt,
                 showId: episodes.showId,
                 showTitle: shows.title,
+                showTranslatedName: shows.translatedName,
                 seasonNumber: episodes.seasonNumber,
                 episodeNumber: episodes.episodeNumber,
                 episodeTitle: episodes.title,
+                episodeTranslatedTitle: episodes.translatedTitle,
+                runtime: episodes.runtime,
             })
             .from(watchHistory)
             .innerJoin(episodes, eq(watchHistory.episodeId, episodes.id))
@@ -151,11 +154,14 @@ export async function findDuplicateHistoryGroups(
                         mediaType: "episode",
                         showId: first.showId,
                         showTitle: first.showTitle,
+                        showTranslatedName: first.showTranslatedName,
                         seasonNumber: first.seasonNumber,
                         episodeNumber: first.episodeNumber,
                         episodeTitle: first.episodeTitle,
+                        episodeTranslatedTitle: first.episodeTranslatedTitle,
                         movieId: null,
                         movieTitle: null,
+                        runtime: first.runtime,
                     },
                     groupRows.map((r) => ({ id: r.id, watchedAt: r.watchedAt!.toISOString() })),
                     windowHours,
@@ -189,6 +195,7 @@ export async function findDuplicateHistoryGroups(
                 movieId: watchHistory.movieId,
                 watchedAt: watchHistory.watchedAt,
                 movieTitle: movies.title,
+                runtime: movies.runtime,
             })
             .from(watchHistory)
             .innerJoin(movies, eq(watchHistory.movieId, movies.id))
@@ -217,11 +224,14 @@ export async function findDuplicateHistoryGroups(
                         mediaType: "movie",
                         showId: null,
                         showTitle: null,
+                        showTranslatedName: null,
                         seasonNumber: null,
                         episodeNumber: null,
                         episodeTitle: null,
+                        episodeTranslatedTitle: null,
                         movieId: first.movieId,
                         movieTitle: first.movieTitle,
+                        runtime: first.runtime,
                     },
                     groupRows.map((r) => ({ id: r.id, watchedAt: r.watchedAt!.toISOString() })),
                     windowHours,

@@ -165,9 +165,12 @@ describe("findDuplicateHistoryGroups", () => {
                         watchedAt: new Date(iso(0)),
                         showId: 5,
                         showTitle: "Test Show",
+                        showTranslatedName: "测试剧集",
                         seasonNumber: 3,
                         episodeNumber: 67,
                         episodeTitle: "Some Episode",
+                        episodeTranslatedTitle: "某一集",
+                        runtime: 24,
                     },
                     {
                         id: 101,
@@ -175,9 +178,12 @@ describe("findDuplicateHistoryGroups", () => {
                         watchedAt: new Date(iso(24)),
                         showId: 5,
                         showTitle: "Test Show",
+                        showTranslatedName: "测试剧集",
                         seasonNumber: 3,
                         episodeNumber: 67,
                         episodeTitle: "Some Episode",
+                        episodeTranslatedTitle: "某一集",
+                        runtime: 24,
                     },
                 ], // full episode rows
             ],
@@ -189,11 +195,14 @@ describe("findDuplicateHistoryGroups", () => {
                 mediaType: "episode",
                 showId: 5,
                 showTitle: "Test Show",
+                showTranslatedName: "测试剧集",
                 seasonNumber: 3,
                 episodeNumber: 67,
                 episodeTitle: "Some Episode",
+                episodeTranslatedTitle: "某一集",
                 movieId: null,
                 movieTitle: null,
+                runtime: 24,
                 entries: [
                     { id: 100, watchedAt: iso(0), gapFromPreviousHours: null, suggested: false },
                     { id: 101, watchedAt: iso(24), gapFromPreviousHours: 24, suggested: true },
@@ -210,8 +219,20 @@ describe("findDuplicateHistoryGroups", () => {
             ],
             joined: [
                 [
-                    { id: 200, movieId: 20, watchedAt: new Date(iso(0)), movieTitle: "Some Movie" },
-                    { id: 201, movieId: 20, watchedAt: new Date(iso(1)), movieTitle: "Some Movie" },
+                    {
+                        id: 200,
+                        movieId: 20,
+                        watchedAt: new Date(iso(0)),
+                        movieTitle: "Some Movie",
+                        runtime: 100,
+                    },
+                    {
+                        id: 201,
+                        movieId: 20,
+                        watchedAt: new Date(iso(1)),
+                        movieTitle: "Some Movie",
+                        runtime: 100,
+                    },
                 ], // full movie rows
             ],
         });
@@ -222,11 +243,14 @@ describe("findDuplicateHistoryGroups", () => {
                 mediaType: "movie",
                 showId: null,
                 showTitle: null,
+                showTranslatedName: null,
                 seasonNumber: null,
                 episodeNumber: null,
                 episodeTitle: null,
+                episodeTranslatedTitle: null,
                 movieId: 20,
                 movieTitle: "Some Movie",
+                runtime: 100,
                 entries: [
                     { id: 200, watchedAt: iso(0), gapFromPreviousHours: null, suggested: false },
                     { id: 201, watchedAt: iso(1), gapFromPreviousHours: 1, suggested: true },

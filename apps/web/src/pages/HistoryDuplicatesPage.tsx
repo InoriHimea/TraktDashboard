@@ -5,6 +5,7 @@ import { useHistoryDuplicates, useRemoveHistoryDuplicates } from "../hooks";
 import { t } from "../lib/i18n";
 import { useToast } from "../lib/toast";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
+import { Tag } from "../components/ui/Tag";
 import type { HistoryDuplicateGroup } from "@trakt-dashboard/types";
 
 const DEFAULT_WINDOW_HOURS = 72;
@@ -17,15 +18,41 @@ const MAX_WINDOW_HOURS = 24 * 30;
 // root cause 1's ~daily cadence.
 const SHORT_INTERVAL_HOURS = 6;
 
-function groupLabel(group: HistoryDuplicateGroup): string {
+// Primary label uses the display-language title (falling back to the original
+// when untranslated); the original is surfaced as a secondary line, but only
+// when it actually differs from the translation — otherwise it's just noise.
+function groupTitles(group: HistoryDuplicateGroup): { primary: string; original: string | null } {
     if (group.mediaType === "episode") {
         const season = String(group.seasonNumber ?? 0).padStart(2, "0");
         const episode = String(group.episodeNumber ?? 0).padStart(2, "0");
-        return `${group.showTitle ?? ""} S${season}E${episode}${
-            group.episodeTitle ? ` · ${group.episodeTitle}` : ""
+        const showName = group.showTranslatedName ?? group.showTitle ?? "";
+        const episodeTitle = group.episodeTranslatedTitle ?? group.episodeTitle;
+        const primary = `${showName} S${season}E${episode}${
+            episodeTitle ? ` · ${episodeTitle}` : ""
         }`;
+
+        const showOriginal =
+            group.showTranslatedName && group.showTranslatedName !== group.showTitle
+                ? group.showTitle
+                : null;
+        const episodeOriginal =
+            group.episodeTranslatedTitle && group.episodeTranslatedTitle !== group.episodeTitle
+                ? group.episodeTitle
+                : null;
+        const originalParts = [showOriginal, episodeOriginal].filter(
+            (v): v is string => v !== null,
+        );
+        return { primary, original: originalParts.length > 0 ? originalParts.join(" · ") : null };
     }
-    return group.movieTitle ?? "";
+    return { primary: group.movieTitle ?? "", original: null };
+}
+
+// Whether this entry's watch could not possibly be a separate viewing from the
+// one before it: it started at or before the previous watch's own runtime had
+// elapsed, so the two intervals overlap and can't both be genuine.
+function overlapsPrevious(entry: { gapFromPreviousHours: number | null }, runtime: number | null) {
+    if (entry.gapFromPreviousHours === null || runtime === null) return false;
+    return entry.gapFromPreviousHours * 60 <= runtime;
 }
 
 function formatGap(hours: number): string {
@@ -217,38 +244,79 @@ export default function HistoryDuplicatesPage() {
                         </div>
 
                         <div className="flex flex-col gap-4">
-                            {groups.map((group, gi) => (
-                                <div
-                                    key={gi}
-                                    className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
-                                >
-                                    <p className="mb-3 text-sm font-semibold">
-                                        {groupLabel(group)}
-                                    </p>
-                                    <div className="flex flex-col gap-2">
-                                        {group.entries.map((entry) => (
-                                            <label
-                                                key={entry.id}
-                                                className="flex items-center gap-3 text-sm"
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selected.has(entry.id)}
-                                                    onChange={() => toggle(entry.id)}
-                                                />
-                                                <span>
-                                                    {new Date(entry.watchedAt).toLocaleString()}
-                                                </span>
-                                                {entry.gapFromPreviousHours !== null && (
-                                                    <span className="text-xs text-[var(--color-text-muted)]">
-                                                        {formatGap(entry.gapFromPreviousHours)}
-                                                    </span>
-                                                )}
-                                            </label>
-                                        ))}
+                            {groups.map((group, gi) => {
+                                const { primary, original } = groupTitles(group);
+                                return (
+                                    <div
+                                        key={gi}
+                                        className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
+                                    >
+                                        <div className="mb-3">
+                                            <p className="text-sm font-semibold">{primary}</p>
+                                            {original && (
+                                                <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
+                                                    {original}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-col gap-2">
+                                            {group.entries.map((entry) => {
+                                                const start = new Date(entry.watchedAt);
+                                                const end =
+                                                    group.runtime != null
+                                                        ? new Date(
+                                                              start.getTime() +
+                                                                  group.runtime * 60000,
+                                                          )
+                                                        : null;
+                                                return (
+                                                    <label
+                                                        key={entry.id}
+                                                        className="flex flex-wrap items-center gap-3 text-sm"
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selected.has(entry.id)}
+                                                            onChange={() => toggle(entry.id)}
+                                                        />
+                                                        <span className="tabular-nums">
+                                                            {start.toLocaleString()}
+                                                            {end && (
+                                                                <span className="text-[var(--color-text-muted)]">
+                                                                    {" → "}
+                                                                    {end.toLocaleTimeString([], {
+                                                                        hour: "2-digit",
+                                                                        minute: "2-digit",
+                                                                    })}
+                                                                </span>
+                                                            )}
+                                                        </span>
+                                                        {entry.gapFromPreviousHours !== null && (
+                                                            <span className="text-xs text-[var(--color-text-muted)]">
+                                                                {formatGap(
+                                                                    entry.gapFromPreviousHours,
+                                                                )}
+                                                            </span>
+                                                        )}
+                                                        {overlapsPrevious(entry, group.runtime) && (
+                                                            <Tag
+                                                                color="rose"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="rounded-full px-2 py-0.5"
+                                                            >
+                                                                {t(
+                                                                    "historyDuplicates.overlapsPrevious",
+                                                                )}
+                                                            </Tag>
+                                                        )}
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </>
                 )}
