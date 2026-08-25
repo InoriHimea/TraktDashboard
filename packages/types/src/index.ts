@@ -591,6 +591,57 @@ export interface RemoveHistoryDuplicatesResult {
     notFound: number;
 }
 
+// ─── Watch History Restore ─────────────────────────────────────────────────────
+
+export interface RestorableHistoryEntry {
+    id: number; // local watch_history.id
+    mediaType: "episode" | "movie";
+    // 'trakt' — was synced from Trakt, no longer found there (the primary case).
+    // 'manual' — marked watched in-app, never pushed to Trakt at all.
+    source: "trakt" | "manual";
+    watchedAt: string; // ISO 8601
+    showId: number | null;
+    showTitle: string | null;
+    showTranslatedName: string | null;
+    seasonNumber: number | null;
+    episodeNumber: number | null;
+    episodeTitle: string | null;
+    episodeTranslatedTitle: string | null;
+    movieId: number | null;
+    movieTitle: string | null;
+}
+
+export interface RestoreHistoryResult {
+    ok: boolean;
+    restored: number; // pushed to Trakt and the new trakt_play_id was confirmed locally
+    unconfirmed: number; // pushed, but the new id couldn't be matched back (not a failure)
+    failed: number;
+}
+
+// ─── Watch History Deletion Audit ──────────────────────────────────────────────
+
+export interface HistoryDeletionEntry {
+    id: number; // watch_history_deletions.id
+    mediaType: "episode" | "movie";
+    reason: "manual" | "duplicate-cleanup";
+    deletedAt: string; // ISO 8601
+    watchedAt: string | null;
+    showId: number | null;
+    showTitle: string | null;
+    showTranslatedName: string | null;
+    seasonNumber: number | null;
+    episodeNumber: number | null;
+    episodeTitle: string | null;
+    episodeTranslatedTitle: string | null;
+    movieId: number | null;
+    movieTitle: string | null;
+}
+
+export interface RestoreDeletionsResult {
+    ok: boolean;
+    restored: number;
+}
+
 export interface WatchResetCursor {
     id: number;
     userId: number;

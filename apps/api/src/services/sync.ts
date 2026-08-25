@@ -1516,7 +1516,6 @@ export async function syncMovies(userId: number): Promise<void> {
     const limit = pLimit(SHOW_CONCURRENCY);
     const watchedByTraktId = new Map<number, TraktWatchedMovie>();
     const historyByTraktId = new Map<number, TraktMovieHistoryEntry[]>();
-    const remoteTraktPlayIds = movieHistory.map((entry) => String(entry.id));
     const affectedMovieIds = new Set<number>();
 
     for (const wm of watchedMovies) {
@@ -1532,35 +1531,12 @@ export async function syncMovies(userId: number): Promise<void> {
         historyByTraktId.get(traktId)!.push(entry);
     }
 
-    const staleTraktHistoryWhere = remoteTraktPlayIds.length
-        ? and(
-              eq(watchHistory.userId, userId),
-              eq(watchHistory.mediaType, "movie"),
-              eq(watchHistory.source, "trakt"),
-              or(
-                  isNull(watchHistory.traktPlayId),
-                  notInArray(watchHistory.traktPlayId, remoteTraktPlayIds),
-              ),
-          )
-        : and(
-              eq(watchHistory.userId, userId),
-              eq(watchHistory.mediaType, "movie"),
-              eq(watchHistory.source, "trakt"),
-          );
-
-    const staleRows = await db
-        .select({ movieId: watchHistory.movieId })
-        .from(watchHistory)
-        .where(staleTraktHistoryWhere);
-
-    for (const row of staleRows) {
-        if (row.movieId) affectedMovieIds.add(row.movieId);
-    }
-
-    if (staleRows.length > 0) {
-        await db.delete(watchHistory).where(staleTraktHistoryWhere);
-    }
-
+    // Local watch_history is a permanent archive, not a live mirror: a movie play
+    // dropping out of Trakt's current history (deleted there, or lost to a bug in
+    // some other Trakt client) must never delete the local record — only this
+    // app's own explicit, user-confirmed delete flow (routes/movies.ts, the
+    // duplicate-audit page) is allowed to remove a local row, and only alongside
+    // the matching Trakt removal. Mirrors the Collection feature's same principle.
     const remoteMovieTraktIds = new Set([...watchedByTraktId.keys(), ...historyByTraktId.keys()]);
 
     await Promise.all(

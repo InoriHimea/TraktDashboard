@@ -125,4 +125,20 @@ describe("queryKeys factories", () => {
         expect(queryKeys.historyDuplicates.list(72)[0]).toBe(queryKeys.historyDuplicates.all[0]);
         expect(queryKeys.historyDuplicates.all[0]).not.toBe(queryKeys.history.all[0]);
     });
+
+    it("builds historyRestorable keys under their own family prefix (not history.* or historyDuplicates.*)", () => {
+        expect(queryKeys.historyRestorable.list(false)).toEqual(["history-restorable", false]);
+        expect(queryKeys.historyRestorable.list(true)).toEqual(["history-restorable", true]);
+        expect(queryKeys.historyRestorable.list(false)[0]).toBe(queryKeys.historyRestorable.all[0]);
+        expect(queryKeys.historyRestorable.all[0]).not.toBe(queryKeys.history.all[0]);
+        expect(queryKeys.historyRestorable.all[0]).not.toBe(queryKeys.historyDuplicates.all[0]);
+    });
+
+    it("builds historyDeletions keys under their own family prefix", () => {
+        expect(queryKeys.historyDeletions.list()).toEqual(["history-deletions"]);
+        expect(queryKeys.historyDeletions.list()[0]).toBe(queryKeys.historyDeletions.all[0]);
+        expect(queryKeys.historyDeletions.all[0]).not.toBe(queryKeys.history.all[0]);
+        expect(queryKeys.historyDeletions.all[0]).not.toBe(queryKeys.historyDuplicates.all[0]);
+        expect(queryKeys.historyDeletions.all[0]).not.toBe(queryKeys.historyRestorable.all[0]);
+    });
 });

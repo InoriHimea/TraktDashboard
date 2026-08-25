@@ -35,6 +35,8 @@ import type {
     CollectionShowEpisodes,
     TraktOfficialStats,
     HistoryDuplicateGroup,
+    RestorableHistoryEntry,
+    HistoryDeletionEntry,
 } from "@trakt-dashboard/types";
 import { api } from "../lib/api";
 
@@ -373,6 +375,49 @@ export function useRemoveHistoryDuplicates() {
         mutationFn: (ids: number[]) => api.history.duplicates.remove(ids),
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: queryKeys.historyDuplicates.all });
+            qc.invalidateQueries({ queryKey: queryKeys.history.all });
+            qc.invalidateQueries({ queryKey: queryKeys.showsProgress.all });
+            qc.invalidateQueries({ queryKey: queryKeys.moviesProgress.all });
+        },
+    });
+}
+
+export function useRestorableHistory(includeManual: boolean) {
+    return useQuery<{ entries: RestorableHistoryEntry[] }>({
+        queryKey: queryKeys.historyRestorable.list(includeManual),
+        queryFn: () => api.history.restorable.list(includeManual).then((r) => r.data),
+    });
+}
+
+export function useRestoreHistory() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (ids: number[]) => api.history.restorable.restore(ids),
+        onSuccess: () => {
+            // Local row counts are unchanged by a restore (the row already existed
+            // locally) — only its source/trakt_play_id may have changed, so there's
+            // no need to invalidate progress queries the way delete does.
+            qc.invalidateQueries({ queryKey: queryKeys.historyRestorable.all });
+            qc.invalidateQueries({ queryKey: queryKeys.history.all });
+        },
+    });
+}
+
+export function useHistoryDeletions() {
+    return useQuery<{ entries: HistoryDeletionEntry[] }>({
+        queryKey: queryKeys.historyDeletions.list(),
+        queryFn: () => api.history.deletions.list().then((r) => r.data),
+    });
+}
+
+export function useRestoreFromDeletions() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (ids: number[]) => api.history.deletions.restore(ids),
+        onSuccess: () => {
+            // Unlike useRestoreHistory, this DOES change local row counts (a new
+            // watch_history row is created), so progress needs invalidating too.
+            qc.invalidateQueries({ queryKey: queryKeys.historyDeletions.all });
             qc.invalidateQueries({ queryKey: queryKeys.history.all });
             qc.invalidateQueries({ queryKey: queryKeys.showsProgress.all });
             qc.invalidateQueries({ queryKey: queryKeys.moviesProgress.all });

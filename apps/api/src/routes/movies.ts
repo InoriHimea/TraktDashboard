@@ -1,5 +1,11 @@
 import { Hono } from "hono";
-import { getDb, movies, watchHistory, userMovieProgress } from "@trakt-dashboard/db";
+import {
+    getDb,
+    movies,
+    watchHistory,
+    watchHistoryDeletions,
+    userMovieProgress,
+} from "@trakt-dashboard/db";
 import { eq, and, desc, sql, gt, like, isNull } from "drizzle-orm";
 import type { MovieProgress, MovieWatchHistoryEntry } from "@trakt-dashboard/types";
 import { z } from "zod";
@@ -258,19 +264,33 @@ movieRoutes.delete("/:id/history/:historyId", async (c) => {
         }
     }
 
-    await db
-        .delete(watchHistory)
-        .where(
-            and(
-                eq(watchHistory.userId, userId),
-                eq(watchHistory.movieId, movieId),
-                eq(watchHistory.mediaType, "movie"),
-                record.watchedAt
-                    ? eq(watchHistory.watchedAt, record.watchedAt)
-                    : isNull(watchHistory.watchedAt),
-                eq(watchHistory.source, record.source),
-            ),
-        );
+    // Snapshot into the deletion audit trail before the hard delete — this is
+    // the only way a mistaken delete can be recovered later (see /history/deletions).
+    await db.transaction(async (tx) => {
+        await tx.insert(watchHistoryDeletions).values({
+            userId,
+            mediaType: "movie",
+            episodeId: null,
+            movieId: record.movieId,
+            watchedAt: record.watchedAt,
+            traktPlayId: record.traktPlayId,
+            source: record.source,
+            reason: "manual",
+        });
+        await tx
+            .delete(watchHistory)
+            .where(
+                and(
+                    eq(watchHistory.userId, userId),
+                    eq(watchHistory.movieId, movieId),
+                    eq(watchHistory.mediaType, "movie"),
+                    record.watchedAt
+                        ? eq(watchHistory.watchedAt, record.watchedAt)
+                        : isNull(watchHistory.watchedAt),
+                    eq(watchHistory.source, record.source),
+                ),
+            );
+    });
 
     await recalcMovieProgress(userId, movieId);
 

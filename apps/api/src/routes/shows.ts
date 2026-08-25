@@ -5,6 +5,7 @@ import {
     seasons,
     episodes,
     watchHistory,
+    watchHistoryDeletions,
     userShowProgress,
     watchResetCursors,
     userSettings,
@@ -644,7 +645,13 @@ showRoutes.delete("/:showId/history/:historyId", async (c) => {
 
     // Verify ownership
     const [record] = await db
-        .select({ id: watchHistory.id, traktPlayId: watchHistory.traktPlayId })
+        .select({
+            id: watchHistory.id,
+            episodeId: watchHistory.episodeId,
+            watchedAt: watchHistory.watchedAt,
+            source: watchHistory.source,
+            traktPlayId: watchHistory.traktPlayId,
+        })
         .from(watchHistory)
         .innerJoin(episodes, eq(watchHistory.episodeId, episodes.id))
         .where(
@@ -668,7 +675,21 @@ showRoutes.delete("/:showId/history/:historyId", async (c) => {
         }
     }
 
-    await db.delete(watchHistory).where(eq(watchHistory.id, historyId));
+    // Snapshot into the deletion audit trail before the hard delete — this is
+    // the only way a mistaken delete can be recovered later (see /history/deletions).
+    await db.transaction(async (tx) => {
+        await tx.insert(watchHistoryDeletions).values({
+            userId,
+            mediaType: "episode",
+            episodeId: record.episodeId,
+            movieId: null,
+            watchedAt: record.watchedAt,
+            traktPlayId: record.traktPlayId,
+            source: record.source,
+            reason: "manual",
+        });
+        await tx.delete(watchHistory).where(eq(watchHistory.id, historyId));
+    });
 
     // Recalc progress
     await recalcShowProgress(userId, showId);

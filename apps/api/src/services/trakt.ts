@@ -4,6 +4,17 @@ import { eq, and } from "drizzle-orm";
 import { getRedis } from "../jobs/scheduler.js";
 import { providerFetch, sleep } from "../lib/http.js";
 import { getProviderRateLimiter } from "../lib/rate-limit.js";
+import pLimit from "p-limit";
+
+// Trailing pages of a paginated Trakt history fetch are dispatched concurrently
+// (page 1 must go first — it's the only way to learn the page count). The
+// shared Trakt token bucket (getProviderRateLimiter) still paces the actual
+// request rate; this only removes the round-trip-latency tax of awaiting each
+// page one at a time, which is what turned a large account's full-history
+// fetch (findRestorableHistoryEntries has no start_at bound) into a 502 in
+// production — a purely sequential fetch of dozens of pages ran long enough to
+// trip a gateway/proxy timeout before finishing.
+const HISTORY_PAGE_CONCURRENCY = 6;
 import { encryptToken, decryptToken } from "../lib/encrypt.js";
 import { resolveApiSecret } from "../lib/secret.js";
 
@@ -118,6 +129,23 @@ export interface TraktRemoveHistoryResult {
         shows: unknown[];
         episodes: unknown[];
         ids: number[];
+    };
+}
+
+export interface TraktAddHistoryItem {
+    watched_at: string;
+    ids: { trakt: number };
+}
+
+// The response only reports counts — Trakt has no way to return the new
+// history-entry ids from this endpoint (trakt/trakt-api#248, still open).
+// Callers that need the new id must follow up with a GET /sync/history call.
+export interface TraktAddHistoryResult {
+    added: { movies: number; episodes: number };
+    not_found: {
+        movies: unknown[];
+        shows: unknown[];
+        episodes: unknown[];
     };
 }
 
@@ -571,51 +599,65 @@ export function getTraktClient() {
         // getHistory fetches /sync/history (episodes + movies) so incremental sync
         // can pick up both media types in one pass, rather than calling two endpoints.
         getHistory: async (userId: number, startAt?: string): Promise<TraktHistoryEntry[]> => {
-            const all: TraktHistoryEntry[] = [];
-            let page = 1;
+            const baseParams: Record<string, string> = { limit: "100" };
+            if (startAt) baseParams.start_at = startAt;
 
-            while (true) {
-                const params: Record<string, string> = {
-                    limit: "100",
-                    page: String(page),
-                };
-                if (startAt) params.start_at = startAt;
+            const first = await traktFetchRaw("/sync/history", userId, {
+                ...baseParams,
+                page: "1",
+            });
+            const all: TraktHistoryEntry[] = [...(first.data as TraktHistoryEntry[])];
 
-                const { data, headers } = await traktFetchRaw("/sync/history", userId, params);
-                all.push(...(data as TraktHistoryEntry[]));
+            const rawPageCount = parseInt(first.headers.get("X-Pagination-Page-Count") ?? "1", 10);
+            const pageCount = Number.isFinite(rawPageCount) && rawPageCount > 0 ? rawPageCount : 1;
+            if (!Number.isFinite(rawPageCount) || rawPageCount < 1) {
+                console.warn("[trakt] Invalid X-Pagination-Page-Count, defaulting to 1");
+            }
 
-                const rawPageCount = parseInt(headers.get("X-Pagination-Page-Count") ?? "1", 10);
-                const pageCount =
-                    Number.isFinite(rawPageCount) && rawPageCount > 0 ? rawPageCount : 1;
-                if (!Number.isFinite(rawPageCount) || rawPageCount < 1) {
-                    console.warn("[trakt] Invalid X-Pagination-Page-Count, defaulting to 1");
-                }
-                if (page >= pageCount) break;
-                page++;
+            if (pageCount > 1) {
+                const limit = pLimit(HISTORY_PAGE_CONCURRENCY);
+                const restPages = await Promise.all(
+                    Array.from({ length: pageCount - 1 }, (_, i) => i + 2).map((page) =>
+                        limit(() =>
+                            traktFetchRaw("/sync/history", userId, {
+                                ...baseParams,
+                                page: String(page),
+                            }),
+                        ),
+                    ),
+                );
+                for (const { data } of restPages) all.push(...(data as TraktHistoryEntry[]));
             }
 
             return all;
         },
 
         getMovieHistory: async (userId: number): Promise<TraktMovieHistoryEntry[]> => {
-            const all: TraktMovieHistoryEntry[] = [];
-            let page = 1;
+            const first = await traktFetchRaw("/sync/history/movies", userId, {
+                limit: "100",
+                page: "1",
+            });
+            const all: TraktMovieHistoryEntry[] = [...(first.data as TraktMovieHistoryEntry[])];
 
-            while (true) {
-                const { data, headers } = await traktFetchRaw("/sync/history/movies", userId, {
-                    limit: "100",
-                    page: String(page),
-                });
-                all.push(...(data as TraktMovieHistoryEntry[]));
+            const rawPageCount = parseInt(first.headers.get("X-Pagination-Page-Count") ?? "1", 10);
+            const pageCount = Number.isFinite(rawPageCount) && rawPageCount > 0 ? rawPageCount : 1;
+            if (!Number.isFinite(rawPageCount) || rawPageCount < 1) {
+                console.warn("[trakt] Invalid X-Pagination-Page-Count, defaulting to 1");
+            }
 
-                const rawPageCount = parseInt(headers.get("X-Pagination-Page-Count") ?? "1", 10);
-                const pageCount =
-                    Number.isFinite(rawPageCount) && rawPageCount > 0 ? rawPageCount : 1;
-                if (!Number.isFinite(rawPageCount) || rawPageCount < 1) {
-                    console.warn("[trakt] Invalid X-Pagination-Page-Count, defaulting to 1");
-                }
-                if (page >= pageCount) break;
-                page++;
+            if (pageCount > 1) {
+                const limit = pLimit(HISTORY_PAGE_CONCURRENCY);
+                const restPages = await Promise.all(
+                    Array.from({ length: pageCount - 1 }, (_, i) => i + 2).map((page) =>
+                        limit(() =>
+                            traktFetchRaw("/sync/history/movies", userId, {
+                                limit: "100",
+                                page: String(page),
+                            }),
+                        ),
+                    ),
+                );
+                for (const { data } of restPages) all.push(...(data as TraktMovieHistoryEntry[]));
             }
 
             return all;
@@ -635,6 +677,21 @@ export function getTraktClient() {
                 body: JSON.stringify({ ids }),
             });
             return data as TraktRemoveHistoryResult;
+        },
+
+        // Re-adds plays that are missing from Trakt (the restore side of the
+        // duplicate-audit's removeFromHistory). Preserves the original watched_at so
+        // the restored entry lands back at the same point in the user's history.
+        addToHistory: async (
+            userId: number,
+            items: { movies: TraktAddHistoryItem[]; episodes: TraktAddHistoryItem[] },
+        ): Promise<TraktAddHistoryResult> => {
+            const { data } = await traktFetchRaw("/sync/history", userId, undefined, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(items),
+            });
+            return data as TraktAddHistoryResult;
         },
 
         getShowProgress: (userId: number, traktId: number) =>

@@ -100,4 +100,16 @@ export const queryKeys = {
         all: ["history-duplicates"] as const,
         list: (windowHours: number | undefined) => ["history-duplicates", windowHours] as const,
     },
+
+    // Also its own top-level family — same reasoning as historyDuplicates above.
+    historyRestorable: {
+        all: ["history-restorable"] as const,
+        list: (includeManual: boolean) => ["history-restorable", includeManual] as const,
+    },
+
+    // Also its own top-level family — same reasoning as historyDuplicates above.
+    historyDeletions: {
+        all: ["history-deletions"] as const,
+        list: () => ["history-deletions"] as const,
+    },
 } as const;

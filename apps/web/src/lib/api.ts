@@ -43,6 +43,10 @@ import type {
     ScreenTimeData,
     HistoryDuplicateGroup,
     RemoveHistoryDuplicatesResult,
+    RestorableHistoryEntry,
+    RestoreHistoryResult,
+    HistoryDeletionEntry,
+    RestoreDeletionsResult,
 } from "@trakt-dashboard/types";
 
 const API_BASE = "/api";
@@ -240,6 +244,26 @@ export const api = {
             },
             remove: (ids: number[]) =>
                 request<RemoveHistoryDuplicatesResult>("/history/duplicates/remove", {
+                    method: "POST",
+                    body: JSON.stringify({ ids }),
+                }),
+        },
+        restorable: {
+            list: (includeManual: boolean) =>
+                request<ApiResponse<{ entries: RestorableHistoryEntry[] }>>(
+                    `/history/restorable?includeManual=${includeManual}`,
+                ),
+            restore: (ids: number[]) =>
+                request<RestoreHistoryResult>("/history/restore", {
+                    method: "POST",
+                    body: JSON.stringify({ ids }),
+                }),
+        },
+        deletions: {
+            list: () =>
+                request<ApiResponse<{ entries: HistoryDeletionEntry[] }>>("/history/deletions"),
+            restore: (ids: number[]) =>
+                request<RestoreDeletionsResult>("/history/deletions/restore", {
                     method: "POST",
                     body: JSON.stringify({ ids }),
                 }),

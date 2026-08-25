@@ -1,11 +1,23 @@
 import { Hono } from "hono";
-import { getDb, watchHistory, episodes, shows, movies } from "@trakt-dashboard/db";
+import {
+    getDb,
+    watchHistory,
+    watchHistoryDeletions,
+    episodes,
+    shows,
+    movies,
+} from "@trakt-dashboard/db";
 import { eq, and, gte, lte, desc, sql, or, isNull, isNotNull, inArray } from "drizzle-orm";
 import { apiOk } from "../lib/response.js";
 import { parseBoundedInt } from "../lib/number.js";
 import { toIsoOrNull } from "../lib/datetime.js";
 import type { HistoryEntry } from "@trakt-dashboard/types";
 import { findDuplicateHistoryGroups } from "../services/history-duplicates.js";
+import {
+    findRestorableHistoryEntries,
+    restoreHistoryEntries,
+} from "../services/history-restore.js";
+import { findPendingDeletions, restoreFromDeletions } from "../services/history-audit.js";
 import { getTraktClient } from "../services/trakt.js";
 import { recalcShowProgress, recalcMovieProgress } from "../services/sync.js";
 
@@ -474,6 +486,8 @@ historyRoutes.post("/duplicates/remove", async (c) => {
             mediaType: watchHistory.mediaType,
             episodeId: watchHistory.episodeId,
             movieId: watchHistory.movieId,
+            watchedAt: watchHistory.watchedAt,
+            source: watchHistory.source,
         })
         .from(watchHistory)
         .where(
@@ -515,7 +529,25 @@ historyRoutes.post("/duplicates/remove", async (c) => {
 
     if (confirmedLocalIds.length > 0) {
         const confirmedRows = rows.filter((r) => confirmedLocalIds.includes(r.id));
-        await db.delete(watchHistory).where(inArray(watchHistory.id, confirmedLocalIds));
+
+        // Snapshot every confirmed row into the deletion audit trail before the
+        // batch hard-delete — this is the only way a mistaken bulk removal can be
+        // recovered later (see /history/deletions).
+        await db.transaction(async (tx) => {
+            for (const row of confirmedRows) {
+                await tx.insert(watchHistoryDeletions).values({
+                    userId,
+                    mediaType: row.mediaType,
+                    episodeId: row.episodeId,
+                    movieId: row.movieId,
+                    watchedAt: row.watchedAt,
+                    traktPlayId: row.traktPlayId,
+                    source: row.source,
+                    reason: "duplicate-cleanup",
+                });
+            }
+            await tx.delete(watchHistory).where(inArray(watchHistory.id, confirmedLocalIds));
+        });
 
         for (const row of confirmedRows) {
             if (row.mediaType === "episode" && row.episodeId) {
@@ -534,4 +566,82 @@ historyRoutes.post("/duplicates/remove", async (c) => {
     }
 
     return c.json({ ok: true, deleted, notFound });
+});
+
+// GET /api/history/restorable?includeManual=false
+// The inverse of /duplicates: finds local rows Trakt no longer has. Unlike the
+// duplicate audit, this can't be answered from local SQL alone — it requires a
+// live fetch of the user's current Trakt history to know what's actually still
+// there (see findRestorableHistoryEntries for why).
+historyRoutes.get("/restorable", async (c) => {
+    const userId = c.get("userId");
+    const includeManual = c.req.query("includeManual") === "true";
+    const entries = await findRestorableHistoryEntries(userId, includeManual);
+    return apiOk(c, { entries });
+});
+
+// POST /api/history/restore — body: { ids: number[] } (local watch_history.id)
+// Pushes the given entries back to Trakt.tv via POST /sync/history. Never
+// automatic — every id here was explicitly selected and confirmed by the user on
+// the restore page, matching the same discipline as /duplicates/remove.
+historyRoutes.post("/restore", async (c) => {
+    const userId = c.get("userId");
+
+    let body: unknown;
+    try {
+        body = await c.req.json();
+    } catch {
+        return c.json({ error: "Invalid JSON" }, 400);
+    }
+
+    const rawIds = (body as Record<string, unknown> | null)?.ids;
+    const localIds = Array.isArray(rawIds)
+        ? rawIds.filter((id): id is number => typeof id === "number" && Number.isInteger(id))
+        : [];
+
+    if (localIds.length === 0) {
+        return c.json({ error: "No valid ids provided" }, 400);
+    }
+
+    const result = await restoreHistoryEntries(userId, localIds);
+    return c.json(result);
+});
+
+// GET /api/history/deletions
+// The recycle bin: entries this app itself deleted (single-entry delete, or a
+// duplicate-audit batch remove) that haven't been recovered yet. Distinct from
+// /restorable — that's for data Trakt lost through no action of this app;
+// this is for the app's own delete flows, so a mistake here is always
+// recoverable purely locally, no Trakt call involved.
+historyRoutes.get("/deletions", async (c) => {
+    const userId = c.get("userId");
+    const entries = await findPendingDeletions(userId);
+    return apiOk(c, { entries });
+});
+
+// POST /api/history/deletions/restore — body: { ids: number[] } (watch_history_deletions.id)
+// Recreates each row locally only (source='manual', no trakt_play_id) — pushing
+// it back to Trakt, if desired, is a separate, separately-confirmed action via
+// /history/restore, not bundled into this one.
+historyRoutes.post("/deletions/restore", async (c) => {
+    const userId = c.get("userId");
+
+    let body: unknown;
+    try {
+        body = await c.req.json();
+    } catch {
+        return c.json({ error: "Invalid JSON" }, 400);
+    }
+
+    const rawIds = (body as Record<string, unknown> | null)?.ids;
+    const auditIds = Array.isArray(rawIds)
+        ? rawIds.filter((id): id is number => typeof id === "number" && Number.isInteger(id))
+        : [];
+
+    if (auditIds.length === 0) {
+        return c.json({ error: "No valid ids provided" }, 400);
+    }
+
+    const result = await restoreFromDeletions(userId, auditIds);
+    return c.json(result);
 });

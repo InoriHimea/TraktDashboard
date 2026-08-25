@@ -897,11 +897,7 @@ describe("syncMovies", () => {
         });
         const watchedAt = new Date("2026-06-06T08:58:00.000Z");
         const db = createMockDb({
-            selectResults: [
-                [{ displayLanguage: "zh-CN" }],
-                [{ movieId: movie.id }],
-                [{ count: 1, lastWatched: watchedAt }],
-            ],
+            selectResults: [[{ displayLanguage: "zh-CN" }], [{ count: 1, lastWatched: watchedAt }]],
             insertResults: [[{ id: movie.id }]],
         });
         dbMockState.db = db;
@@ -955,7 +951,8 @@ describe("syncMovies", () => {
 
         await syncMovies(TEST_USER_ID);
 
-        expect(db.__state.deleteWhereCalls).toHaveLength(1);
+        // Local watch_history is a permanent archive — syncMovies must never delete it.
+        expect(db.__state.deleteWhereCalls).toHaveLength(0);
         expect(db.__state.insertValues).toEqual(
             expect.arrayContaining([
                 expect.objectContaining({

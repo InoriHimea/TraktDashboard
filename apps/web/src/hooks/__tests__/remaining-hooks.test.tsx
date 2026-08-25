@@ -72,7 +72,12 @@ vi.mock("../../lib/api", () => ({
             pruneRemote: vi.fn(),
         },
         system: { metrics: vi.fn() },
-        history: { list: vi.fn(), duplicates: { list: vi.fn(), remove: vi.fn() } },
+        history: {
+            list: vi.fn(),
+            duplicates: { list: vi.fn(), remove: vi.fn() },
+            restorable: { list: vi.fn(), restore: vi.fn() },
+            deletions: { list: vi.fn(), restore: vi.fn() },
+        },
     },
 }));
 
@@ -391,6 +396,22 @@ const queryCases: QueryCase[] = [
         resolved: { data: { groups: [{ mediaType: "episode" }], windowHours: 72 } },
         expectedData: { groups: [{ mediaType: "episode" }], windowHours: 72 },
     },
+    {
+        name: "useRestorableHistory",
+        useHook: () => hooks.useRestorableHistory(false),
+        apiMock: () => api.history.restorable.list as ReturnType<typeof vi.fn>,
+        expectedArgs: [false],
+        resolved: { data: { entries: [{ id: 1, mediaType: "episode" }] } },
+        expectedData: { entries: [{ id: 1, mediaType: "episode" }] },
+    },
+    {
+        name: "useHistoryDeletions",
+        useHook: () => hooks.useHistoryDeletions(),
+        apiMock: () => api.history.deletions.list as ReturnType<typeof vi.fn>,
+        expectedArgs: [],
+        resolved: { data: { entries: [{ id: 1, mediaType: "episode" }] } },
+        expectedData: { entries: [{ id: 1, mediaType: "episode" }] },
+    },
 ];
 
 describe("query hooks", () => {
@@ -688,6 +709,27 @@ const mutationCases: MutationCase[] = [
         expectedApiArgs: [[1, 2, 3]],
         expectedInvalidations: [
             queryKeys.historyDuplicates.all,
+            queryKeys.history.all,
+            queryKeys.showsProgress.all,
+            queryKeys.moviesProgress.all,
+        ],
+    },
+    {
+        name: "useRestoreHistory",
+        useHook: () => hooks.useRestoreHistory(),
+        mutateArgs: [1, 2, 3],
+        apiMock: () => api.history.restorable.restore as ReturnType<typeof vi.fn>,
+        expectedApiArgs: [[1, 2, 3]],
+        expectedInvalidations: [queryKeys.historyRestorable.all, queryKeys.history.all],
+    },
+    {
+        name: "useRestoreFromDeletions",
+        useHook: () => hooks.useRestoreFromDeletions(),
+        mutateArgs: [1, 2, 3],
+        apiMock: () => api.history.deletions.restore as ReturnType<typeof vi.fn>,
+        expectedApiArgs: [[1, 2, 3]],
+        expectedInvalidations: [
+            queryKeys.historyDeletions.all,
             queryKeys.history.all,
             queryKeys.showsProgress.all,
             queryKeys.moviesProgress.all,

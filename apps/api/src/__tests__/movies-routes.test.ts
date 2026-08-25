@@ -112,13 +112,17 @@ function createMockDb(selectResults: SelectResult[] = [], insertReturning: unkno
         deleteWhereCalls: [],
         insertReturning: [...insertReturning],
     };
-    return {
+    const db = {
         select: vi.fn(() => new SelectBuilder(state.selectResults.shift() ?? [])),
         selectDistinct: vi.fn(() => new SelectBuilder(state.selectResults.shift() ?? [])),
         insert: vi.fn(() => new InsertBuilder(state)),
         delete: vi.fn(() => new DeleteBuilder(state)),
         __state: state,
     };
+    // Routes that write a deletion-audit snapshot run it inside db.transaction —
+    // the mock just hands the callback the same db (tx needs no behavior
+    // different from the outer mock's insert/delete).
+    return { ...db, transaction: vi.fn((fn: (tx: typeof db) => unknown) => fn(db)) };
 }
 
 // ---------------------------------------------------------------------------
@@ -320,6 +324,31 @@ describe("DELETE /movies/:id/history/:historyId", () => {
         expect(res.status).toBe(200);
         const body = (await res.json()) as { ok: boolean };
         expect(body.ok).toBe(true);
+    });
+
+    it("writes a deletion-audit snapshot before removing the local row", async () => {
+        const record = {
+            id: 10,
+            userId: TEST_USER_ID,
+            movieId: 9,
+            watchedAt: now,
+            source: "manual",
+            traktPlayId: null,
+        };
+        const db = createMockDb([[record], [{ count: 0, lastWatched: null }]]);
+        (dbMockState as { db: unknown }).db = db;
+
+        await app().request("/movies/9/history/10", { method: "DELETE" });
+
+        expect(db.__state.insertValues[0]).toMatchObject({
+            userId: TEST_USER_ID,
+            mediaType: "movie",
+            episodeId: null,
+            movieId: 9,
+            watchedAt: now,
+            source: "manual",
+            reason: "manual",
+        });
     });
 
     it("removes the entry from Trakt before deleting locally when it has a traktPlayId", async () => {

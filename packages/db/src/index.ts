@@ -298,6 +298,26 @@ export async function runMigrations() {
         sql`CREATE UNIQUE INDEX IF NOT EXISTS "jde_movie_idx" ON "jellyfin_delete_exclusions" ("user_id", "movie_id") WHERE "movie_id" IS NOT NULL`,
     );
 
+    // 0023 — drizzle/0018_watch_history_deletions.sql: 观看历史删除审计日志
+    await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS "watch_history_deletions" (
+            "id" serial PRIMARY KEY NOT NULL,
+            "user_id" integer NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+            "media_type" text NOT NULL,
+            "episode_id" integer REFERENCES "episodes"("id") ON DELETE SET NULL,
+            "movie_id" integer REFERENCES "movies"("id") ON DELETE SET NULL,
+            "watched_at" timestamp with time zone,
+            "trakt_play_id" text,
+            "source" text NOT NULL,
+            "reason" text NOT NULL,
+            "deleted_at" timestamp with time zone NOT NULL DEFAULT now(),
+            "restored_at" timestamp with time zone
+        )
+    `);
+    await db.execute(
+        sql`CREATE INDEX IF NOT EXISTS "whd_user_restored_idx" ON "watch_history_deletions" ("user_id", "restored_at")`,
+    );
+
     await client.end();
     console.log("[db] Migrations complete");
 }

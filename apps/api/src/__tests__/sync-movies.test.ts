@@ -157,7 +157,6 @@ describe("syncMovies", () => {
         const db = createMockDb({
             selects: [
                 [{ displayLanguage: null }], // getProxyUrl-style settings lookup
-                [], // stale trakt history rows — none
                 [{ count: 1, lastWatched: new Date("2026-01-01T00:00:00.000Z") }], // recalc aggregate
             ],
             inserts: [
@@ -209,7 +208,7 @@ describe("syncMovies", () => {
             ]),
         });
         const db = createMockDb({
-            selects: [[{ displayLanguage: "zh-CN" }], [], [{ count: 1, lastWatched: null }]],
+            selects: [[{ displayLanguage: "zh-CN" }], [{ count: 1, lastWatched: null }]],
             inserts: [[{ id: 301 }], [], []],
         });
         dbMockState.db = db;
@@ -236,7 +235,7 @@ describe("syncMovies", () => {
             ]),
         });
         const db = createMockDb({
-            selects: [[{ displayLanguage: null }], [], [{ count: 1, lastWatched: null }]],
+            selects: [[{ displayLanguage: null }], [{ count: 1, lastWatched: null }]],
             inserts: [[{ id: 302 }], [], []],
         });
         dbMockState.db = db;
@@ -265,7 +264,6 @@ describe("syncMovies", () => {
         const db = createMockDb({
             selects: [
                 [{ displayLanguage: null }],
-                [], // stale rows
                 [{ id: 88 }], // existing movie found by traktId
                 [{ count: 1, lastWatched: null }], // recalc aggregate
             ],
@@ -295,7 +293,6 @@ describe("syncMovies", () => {
         const db = createMockDb({
             selects: [
                 [{ displayLanguage: null }],
-                [],
                 [], // no existing movie found
                 [{ count: 1, lastWatched: null }],
             ],
@@ -320,7 +317,7 @@ describe("syncMovies", () => {
             ]),
         });
         const db = createMockDb({
-            selects: [[{ displayLanguage: null }], []],
+            selects: [[{ displayLanguage: null }]],
             inserts: [[{ id: 500 }], []],
         });
         dbMockState.db = db;
@@ -335,19 +332,18 @@ describe("syncMovies", () => {
         });
     });
 
-    it("deletes stale trakt-sourced watch history and still recalculates the affected movie", async () => {
-        const db = createMockDb({
-            selects: [
-                [{ displayLanguage: null }],
-                [{ movieId: 77 }], // stale row found
-                [{ count: 0, lastWatched: null }], // recalc aggregate for movie 77
-            ],
-            inserts: [[]],
-        });
+    it("never deletes local watch history, even for a movie Trakt no longer reports as watched", async () => {
+        // Local watch_history is a permanent archive (mirrors the Collection feature's
+        // principle) — a movie dropping out of Trakt's current watched/history response
+        // must not touch the local row. Empty Trakt responses (the most extreme case:
+        // Trakt reports nothing) must still leave local data untouched.
+        const db = createMockDb({ selects: [[{ displayLanguage: null }]] });
         dbMockState.db = db;
 
         await syncMovies(USER_ID);
 
-        expect(db.delete).toHaveBeenCalledTimes(1);
+        expect(db.delete).not.toHaveBeenCalled();
+        // Only the displayLanguage lookup — no stale-row query is ever issued.
+        expect(db.select).toHaveBeenCalledTimes(1);
     });
 });

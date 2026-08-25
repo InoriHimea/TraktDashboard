@@ -160,6 +160,32 @@ export const watchHistory = pgTable(
     ],
 );
 
+// Audit trail for the two intentional-delete flows (single-entry delete,
+// duplicate-audit batch remove) — a snapshot of the row written before it's
+// removed from watch_history, so a mistaken delete can be recovered. FKs use
+// `set null` (not cascade, unlike watch_history's own) so the audit record
+// survives even if the referenced episode/movie is ever removed — mirrors
+// jellyfin_delete_history's same choice for the same reason.
+export const watchHistoryDeletions = pgTable(
+    "watch_history_deletions",
+    {
+        id: serial("id").primaryKey(),
+        userId: integer("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
+        mediaType: text("media_type").notNull(), // 'episode' | 'movie'
+        episodeId: integer("episode_id").references(() => episodes.id, { onDelete: "set null" }),
+        movieId: integer("movie_id").references(() => movies.id, { onDelete: "set null" }),
+        watchedAt: timestamp("watched_at", { withTimezone: true }),
+        traktPlayId: text("trakt_play_id"), // the id that was removed from Trakt; reference only
+        source: text("source").notNull(), // the row's source before deletion
+        reason: text("reason").notNull(), // 'manual' | 'duplicate-cleanup'
+        deletedAt: timestamp("deleted_at", { withTimezone: true }).defaultNow().notNull(),
+        restoredAt: timestamp("restored_at", { withTimezone: true }), // set once recovered
+    },
+    (t) => [index("whd_user_restored_idx").on(t.userId, t.restoredAt)],
+);
+
 // ─── User Show Progress (materialized cache) ───────────────────────────────────
 
 export const userShowProgress = pgTable(

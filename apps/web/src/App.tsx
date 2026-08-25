@@ -18,6 +18,8 @@ const WatchlistPage = React.lazy(() => import("./pages/WatchlistPage"));
 const CalendarPage = React.lazy(() => import("./pages/CalendarPage"));
 const HistoryPage = React.lazy(() => import("./pages/HistoryPage"));
 const HistoryDuplicatesPage = React.lazy(() => import("./pages/HistoryDuplicatesPage"));
+const HistoryRestorePage = React.lazy(() => import("./pages/HistoryRestorePage"));
+const HistoryDeletionsPage = React.lazy(() => import("./pages/HistoryDeletionsPage"));
 const DiscoverPage = React.lazy(() => import("./pages/DiscoverPage"));
 const ListsPage = React.lazy(() => import("./pages/ListsPage"));
 const CollectionPage = React.lazy(() => import("./pages/CollectionPage"));
@@ -168,6 +170,14 @@ export default function App() {
                                     <Route
                                         path="/history/duplicates"
                                         element={<HistoryDuplicatesPage />}
+                                    />
+                                    <Route
+                                        path="/history/restore"
+                                        element={<HistoryRestorePage />}
+                                    />
+                                    <Route
+                                        path="/history/deletions"
+                                        element={<HistoryDeletionsPage />}
                                     />
                                     <Route path="/stats" element={<StatsPage />} />
                                     <Route path="/jellyfin" element={<JellyfinStatsPage />} />

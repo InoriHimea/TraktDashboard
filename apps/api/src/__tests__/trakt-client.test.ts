@@ -324,6 +324,39 @@ describe("getHistory pagination", () => {
         const { url } = lastFetchOptions();
         expect(new URL(url).searchParams.get("start_at")).toBe("2026-01-01T00:00:00.000Z");
     });
+
+    it("fetches trailing pages concurrently (not one full round-trip at a time) and still concatenates everything", async () => {
+        // Concurrent calls interleave their own user-lookup/proxy-lookup selects
+        // in an order the simple FIFO queue used elsewhere in this file can't
+        // model — every select() just returns a valid user row instead (the
+        // proxy lookup harmlessly finds no `httpProxy` field on it and falls
+        // through to no-proxy, which this test doesn't care about either way).
+        dbMockState.db = {
+            select: vi.fn(() => new ChainBuilder([makeUserRow()])),
+            insert: vi.fn(() => new ChainBuilder([])),
+        };
+        httpMockState.providerFetch
+            .mockResolvedValueOnce(
+                jsonRes([{ id: 1 }], { headers: { "X-Pagination-Page-Count": "4" } }),
+            )
+            .mockResolvedValueOnce(
+                jsonRes([{ id: 2 }], { headers: { "X-Pagination-Page-Count": "4" } }),
+            )
+            .mockResolvedValueOnce(
+                jsonRes([{ id: 3 }], { headers: { "X-Pagination-Page-Count": "4" } }),
+            )
+            .mockResolvedValueOnce(
+                jsonRes([{ id: 4 }], { headers: { "X-Pagination-Page-Count": "4" } }),
+            );
+
+        const result = await getTraktClient().getHistory(USER_ID);
+
+        expect(httpMockState.providerFetch).toHaveBeenCalledTimes(4);
+        expect(result).toEqual(
+            expect.arrayContaining([{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }]),
+        );
+        expect(result).toHaveLength(4);
+    });
 });
 
 describe("getMovieHistory pagination", () => {
@@ -397,6 +430,25 @@ describe("mutation methods", () => {
         expect(new URL(url).pathname).toBe("/sync/history/remove");
         expect(init?.method).toBe("POST");
         expect(JSON.parse(init?.body as string)).toEqual({ ids: [111, 222, 333] });
+    });
+
+    it("addToHistory posts movie/episode items with watched_at and returns the parsed result", async () => {
+        dbMockState.db = createMockDb([...USER_AND_PROXY]);
+        const response = {
+            added: { movies: 1, episodes: 1 },
+            not_found: { movies: [], shows: [], episodes: [] },
+        };
+        httpMockState.providerFetch.mockResolvedValueOnce(jsonRes(response));
+        const items = {
+            movies: [{ watched_at: "2026-01-01T00:00:00.000Z", ids: { trakt: 10 } }],
+            episodes: [{ watched_at: "2026-01-02T00:00:00.000Z", ids: { trakt: 20 } }],
+        };
+        const result = await getTraktClient().addToHistory(USER_ID, items);
+        expect(result).toEqual(response);
+        const { url, init } = lastFetchOptions();
+        expect(new URL(url).pathname).toBe("/sync/history");
+        expect(init?.method).toBe("POST");
+        expect(JSON.parse(init?.body as string)).toEqual(items);
     });
 
     it("createList POSTs and returns the created list", async () => {

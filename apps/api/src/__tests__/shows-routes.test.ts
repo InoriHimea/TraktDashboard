@@ -54,7 +54,10 @@ type Row = Record<string, unknown>;
 type RowsResult = Row[];
 
 class ChainBuilder implements PromiseLike<RowsResult> {
-    constructor(private _result: RowsResult) {}
+    constructor(
+        private _result: RowsResult,
+        private onValues?: (v: unknown) => void,
+    ) {}
     from() {
         return this;
     }
@@ -76,7 +79,8 @@ class ChainBuilder implements PromiseLike<RowsResult> {
     offset() {
         return this;
     }
-    values() {
+    values(v: unknown) {
+        this.onValues?.(v);
         return this;
     }
     returning() {
@@ -95,12 +99,20 @@ function createMockDb(opts: { selects?: RowsResult[]; inserts?: RowsResult[] } =
         selects: [...(opts.selects ?? [])],
         inserts: [...(opts.inserts ?? [])],
     };
-    return {
+    const insertedValues: unknown[] = [];
+    const db = {
         select: vi.fn(() => new ChainBuilder(state.selects.shift() ?? [])),
-        insert: vi.fn(() => new ChainBuilder(state.inserts.shift() ?? [])),
+        insert: vi.fn(
+            () => new ChainBuilder(state.inserts.shift() ?? [], (v) => insertedValues.push(v)),
+        ),
         delete: vi.fn(() => new ChainBuilder([])),
         __state: state,
+        __insertedValues: insertedValues,
     };
+    // Routes that write a deletion-audit snapshot run it inside db.transaction —
+    // the mock just hands the callback the same db, since tx.insert/tx.delete
+    // here need no different behavior than the outer mock already provides.
+    return { ...db, transaction: vi.fn((fn: (tx: typeof db) => unknown) => fn(db)) };
 }
 
 function createMockTrakt(overrides: Record<string, unknown> = {}) {
@@ -678,6 +690,44 @@ describe("DELETE /shows/:showId/history/:historyId", () => {
         expect(res.status).toBe(200);
         expect((await res.json()) as { ok: boolean }).toEqual({ ok: true });
         expect(syncMockState.recalcShowProgress).toHaveBeenCalledWith(TEST_USER_ID, 5);
+    });
+
+    it("writes a deletion-audit snapshot before removing the local row", async () => {
+        const watchedAt = new Date("2026-01-01T00:00:00.000Z");
+        const db = createMockDb({
+            selects: [
+                [
+                    {
+                        id: 1,
+                        episodeId: 42,
+                        watchedAt,
+                        source: "trakt",
+                        traktPlayId: "999",
+                    },
+                ],
+            ],
+        });
+        dbMockState.db = db;
+        const removeFromHistory = vi.fn().mockResolvedValue({
+            deleted: { movies: 0, episodes: 1 },
+            not_found: { movies: [], shows: [], episodes: [], ids: [] },
+        });
+        traktMockState.client = createMockTrakt({ removeFromHistory });
+
+        const res = await request("/5/history/1", { method: "DELETE" });
+
+        expect(res.status).toBe(200);
+        expect(db.transaction).toHaveBeenCalledTimes(1);
+        expect(db.__insertedValues[0]).toMatchObject({
+            userId: TEST_USER_ID,
+            mediaType: "episode",
+            episodeId: 42,
+            movieId: null,
+            watchedAt,
+            traktPlayId: "999",
+            source: "trakt",
+            reason: "manual",
+        });
     });
 
     it("removes the entry from Trakt before deleting locally when it has a traktPlayId", async () => {

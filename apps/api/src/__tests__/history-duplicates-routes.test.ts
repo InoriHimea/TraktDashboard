@@ -63,11 +63,23 @@ class ChainBuilder implements PromiseLike<RowsResult> {
 function createMockDb(selects: RowsResult[] = []) {
     const state = { selects: [...selects] };
     const deleteWhere = vi.fn().mockResolvedValue(undefined);
-    return {
+    const insertedValues: unknown[] = [];
+    const db = {
         select: vi.fn(() => new ChainBuilder(state.selects.shift() ?? [])),
+        insert: vi.fn(() => ({
+            values: vi.fn((v: unknown) => {
+                insertedValues.push(v);
+                return Promise.resolve(undefined);
+            }),
+        })),
         delete: vi.fn(() => ({ where: deleteWhere })),
         __deleteWhere: deleteWhere,
+        __insertedValues: insertedValues,
     };
+    // POST /duplicates/remove writes deletion-audit snapshots inside
+    // db.transaction before the batch delete — the mock just hands the callback
+    // the same db (tx needs no behavior different from the outer mock's).
+    return { ...db, transaction: vi.fn((fn: (tx: typeof db) => unknown) => fn(db)) };
 }
 
 function createMockTrakt(overrides: Record<string, unknown> = {}) {
@@ -203,6 +215,67 @@ describe("POST /history/duplicates/remove", () => {
         expect(syncMockState.recalcShowProgress).toHaveBeenCalledWith(TEST_USER_ID, 5);
         expect(syncMockState.recalcMovieProgress).toHaveBeenCalledWith(TEST_USER_ID, 66);
         expect(body).toEqual({ ok: true, deleted: 2, notFound: 0 });
+    });
+
+    it("writes a deletion-audit snapshot for every confirmed row before the batch delete", async () => {
+        const watchedAt = new Date("2026-01-01T00:00:00.000Z");
+        const db = createMockDb([
+            [
+                {
+                    id: 10,
+                    traktPlayId: "111",
+                    mediaType: "episode",
+                    episodeId: 55,
+                    movieId: null,
+                    watchedAt,
+                    source: "trakt",
+                },
+                {
+                    id: 11,
+                    traktPlayId: "222",
+                    mediaType: "movie",
+                    episodeId: null,
+                    movieId: 66,
+                    watchedAt,
+                    source: "trakt",
+                },
+            ], // ownership select
+            [{ showId: 5 }], // episode -> show lookup for id 10
+        ]);
+        (dbMockState as { db: unknown }).db = db;
+
+        const removeFromHistory = vi.fn().mockResolvedValue({
+            deleted: { movies: 1, episodes: 1 },
+            not_found: { movies: [], shows: [], episodes: [], ids: [] },
+        });
+        traktMockState.client = createMockTrakt({ removeFromHistory });
+
+        await postRemove([10, 11]);
+
+        expect(db.transaction).toHaveBeenCalledTimes(1);
+        expect(db.__insertedValues).toHaveLength(2);
+        expect(db.__insertedValues).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    episodeId: 55,
+                    movieId: null,
+                    mediaType: "episode",
+                    reason: "duplicate-cleanup",
+                    traktPlayId: "111",
+                    watchedAt,
+                    source: "trakt",
+                }),
+                expect.objectContaining({
+                    episodeId: null,
+                    movieId: 66,
+                    mediaType: "movie",
+                    reason: "duplicate-cleanup",
+                    traktPlayId: "222",
+                    watchedAt,
+                    source: "trakt",
+                }),
+            ]),
+        );
     });
 
     it("counts not_found ids as removed locally too (treated as already gone)", async () => {

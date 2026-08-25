@@ -12,6 +12,8 @@ import {
     ChevronDown,
     Upload,
     X,
+    RotateCcw,
+    Trash2,
 } from "lucide-react";
 import { useInfiniteHistory, useRatings } from "../hooks";
 import { useQueryClient } from "@tanstack/react-query";
@@ -291,6 +293,28 @@ export default function HistoryPage() {
                             <Copy className="h-4 w-4" />
                             <span className="hidden sm:inline">
                                 {t("historyDuplicates.entryButton")}
+                            </span>
+                        </Link>
+                        {/* Restore missing */}
+                        <Link
+                            to="/history/restore"
+                            className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-accent)] hover:text-[var(--color-text)]"
+                            title={t("historyRestore.entryButton")}
+                        >
+                            <RotateCcw className="h-4 w-4" />
+                            <span className="hidden sm:inline">
+                                {t("historyRestore.entryButton")}
+                            </span>
+                        </Link>
+                        {/* Recycle bin */}
+                        <Link
+                            to="/history/deletions"
+                            className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-accent)] hover:text-[var(--color-text)]"
+                            title={t("historyDeletions.entryButton")}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="hidden sm:inline">
+                                {t("historyDeletions.entryButton")}
                             </span>
                         </Link>
                         {/* Import JSON */}
