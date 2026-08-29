@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>trakt-api</Name>
+  <Repository>inorihimea/trakt-dashboard-api:0.91.2</Repository>
+  <Registry>https://hub.docker.com/</Registry>
+  <Network>br0</Network>
+  <MyIP>10.100.121.135</MyIP>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/InoriHimea/TraktDashboard/issues</Support>
+  <Project>https://github.com/InoriHimea/TraktDashboard</Project>
+  <Overview>Trakt Dashboard API. Uses shared PostgreSQL and KeyDB services on the Unraid host. Database migrations run automatically at startup. The container uses br0 macvlan with fixed IP 10.100.121.135.</Overview>
+  <Category>MediaApp:Video</Category>
+  <WebUI>http://[IP]:[PORT:3001]/health</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/InoriHimea/TraktDashboard/main/docs/unraid/my-trakt-dashboard-api.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/InoriHimea/TraktDashboard/main/docs/unraid/trakt-dashboard.png</Icon>
+  <ExtraParams>--label=net.unraid.docker.managed=dockerman --label=org.opencontainers.image.title=Trakt Dashboard API --label=org.opencontainers.image.source=https://github.com/InoriHimea/TraktDashboard</ExtraParams>
+  <PostArgs/>
+  <DateInstalled>1787925600</DateInstalled>
+  <Config Name="API Port" Target="3001" Default="3001" Mode="tcp" Description="API HTTP port" Type="Port" Display="always" Required="true" Mask="false">3001</Config>
+  <Config Name="DATABASE_URL" Target="DATABASE_URL" Default="postgresql://trakt:trakt@10.100.121.130:5432/trakt_dashboard" Mode="" Description="PostgreSQL connection string" Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="REDIS_URL" Target="REDIS_URL" Default="redis://:password@10.100.88.89:6379" Mode="" Description="KeyDB/Redis connection string" Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="TRAKT_CLIENT_ID" Target="TRAKT_CLIENT_ID" Default="" Mode="" Description="Optional Trakt OAuth client ID" Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="TRAKT_CLIENT_SECRET" Target="TRAKT_CLIENT_SECRET" Default="" Mode="" Description="Optional Trakt OAuth client secret" Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="TRAKT_REDIRECT_URI" Target="TRAKT_REDIRECT_URI" Default="http://[IP:10.100.121.136]/auth/callback" Mode="" Description="Trakt OAuth callback URL" Type="Variable" Display="always" Required="false" Mask="false">http://10.100.121.136/auth/callback</Config>
+  <Config Name="TMDB_API_KEY" Target="TMDB_API_KEY" Default="" Mode="" Description="TMDB API key" Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="TVDB_API_KEY" Target="TVDB_API_KEY" Default="" Mode="" Description="TVDB API key" Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="API_SECRET" Target="API_SECRET" Default="" Mode="" Description="Secret used to sign sessions and encrypt credentials" Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="FRONTEND_URL" Target="FRONTEND_URL" Default="http://10.100.121.136" Mode="" Description="Public dashboard URL" Type="Variable" Display="always" Required="true" Mask="false">http://10.100.121.136</Config>
+  <Config Name="SYNC_INTERVAL_MINUTES" Target="SYNC_INTERVAL_MINUTES" Default="15" Mode="" Description="Scheduled sync interval in minutes" Type="Variable" Display="always" Required="true" Mask="false">15</Config>
+  <TailscaleStateDir/>
+</Container>

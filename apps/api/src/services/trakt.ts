@@ -332,12 +332,25 @@ export interface TraktShowProgress {
     } | null;
 }
 
-type TraktUserTokens = typeof users.$inferSelect;
+type TraktUserTokens = {
+    traktAccessToken: string;
+    traktRefreshToken: string;
+    tokenExpiresAt: Date | string;
+};
 
 async function readUserTokens(userId: number): Promise<TraktUserTokens> {
-    const [user] = await getDb().select().from(users).where(eq(users.id, userId));
-    if (!user) throw new Error("User not found");
-    return user;
+    const [user] = await getDb()
+        .select({
+            traktAccessToken: users.traktAccessToken,
+            traktRefreshToken: users.traktRefreshToken,
+            tokenExpiresAt: users.tokenExpiresAt,
+        })
+        .from(users)
+        .where(eq(users.id, userId));
+    if (!user || !user.traktAccessToken || !user.traktRefreshToken || !user.tokenExpiresAt) {
+        throw new Error("Trakt account is not connected");
+    }
+    return user as TraktUserTokens;
 }
 
 async function releaseOwnedLock(lockKey: string, lockValue: string) {
@@ -538,7 +551,9 @@ export function getTraktClient() {
     ): Promise<{ data: unknown; headers: Headers }> {
         const db = getDb();
         const [user] = await db.select().from(users).where(eq(users.id, userId));
-        if (!user) throw new Error("User not found");
+        if (!user || !user.traktAccessToken || !user.traktRefreshToken || !user.tokenExpiresAt) {
+            throw new Error("Trakt account is not connected");
+        }
 
         let token = decryptToken(user.traktAccessToken, resolveApiSecret());
 

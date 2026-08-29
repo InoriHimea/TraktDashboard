@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>trakt-web</Name>
+  <Repository>inorihimea/trakt-dashboard-web:0.91.2</Repository>
+  <Registry>https://hub.docker.com/</Registry>
+  <Network>br0</Network>
+  <MyIP>10.100.121.136</MyIP>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/InoriHimea/TraktDashboard/issues</Support>
+  <Project>https://github.com/InoriHimea/TraktDashboard</Project>
+  <Overview>Trakt Dashboard web interface. Nginx serves the Vite SPA and proxies /api and /auth to the API at 10.100.121.135:3001. The container uses br0 macvlan with fixed IP 10.100.121.136.</Overview>
+  <Category>MediaApp:Video</Category>
+  <WebUI>http://[IP]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/InoriHimea/TraktDashboard/main/docs/unraid/my-trakt-dashboard-web.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/InoriHimea/TraktDashboard/main/docs/unraid/trakt-dashboard.png</Icon>
+  <ExtraParams>--label=net.unraid.docker.managed=dockerman --label=org.opencontainers.image.title=Trakt Dashboard Web --label=org.opencontainers.image.source=https://github.com/InoriHimea/TraktDashboard</ExtraParams>
+  <PostArgs/>
+  <DateInstalled>1787925600</DateInstalled>
+  <Config Name="Web Port" Target="80" Default="80" Mode="tcp" Description="Web HTTP port" Type="Port" Display="always" Required="true" Mask="false">80</Config>
+  <TailscaleStateDir/>
+</Container>

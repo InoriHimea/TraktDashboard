@@ -314,9 +314,21 @@ export async function runMigrations() {
             "restored_at" timestamp with time zone
         )
     `);
+    // 0024 — drizzle/0019_local_auth.sql: 本地账号认证字段
+    await db.execute(sql`
+        ALTER TABLE "users"
+        ADD COLUMN IF NOT EXISTS "local_username" text,
+        ADD COLUMN IF NOT EXISTS "local_password_hash" text
+    `);
     await db.execute(
-        sql`CREATE INDEX IF NOT EXISTS "whd_user_restored_idx" ON "watch_history_deletions" ("user_id", "restored_at")`,
+        sql`CREATE UNIQUE INDEX IF NOT EXISTS "users_local_username_idx" ON "users" ("local_username") WHERE "local_username" IS NOT NULL`,
     );
+    await db.execute(sql`
+        ALTER TABLE "users"
+        ALTER COLUMN "trakt_access_token" DROP NOT NULL,
+        ALTER COLUMN "trakt_refresh_token" DROP NOT NULL,
+        ALTER COLUMN "token_expires_at" DROP NOT NULL
+    `);
 
     await client.end();
     console.log("[db] Migrations complete");

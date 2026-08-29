@@ -134,6 +134,13 @@
       "when": 1750896000000,
       "tag": "0018_watch_history_deletions",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1787788800000,
+      "tag": "0019_local_auth",
+      "breakpoints": true
     }
   ]
 }

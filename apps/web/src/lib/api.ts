@@ -84,6 +84,20 @@ export const api = {
     auth: {
         me: () => request<AuthStatus>("/auth/me", undefined, ""),
         logout: () => request<{ ok: boolean }>("/auth/logout", { method: "POST" }, ""),
+        local: {
+            register: (data: { username: string; password: string }) =>
+                request<{ ok: boolean; userId: number; localUsername: string }>(
+                    "/auth/local/register",
+                    { method: "POST", body: JSON.stringify(data) },
+                    "",
+                ),
+            login: (data: { username: string; password: string }) =>
+                request<{
+                    ok: boolean;
+                    token: string;
+                    user: { id: number; localUsername: string; traktUsername: string | null };
+                }>("/auth/local/login", { method: "POST", body: JSON.stringify(data) }, ""),
+        },
     },
     shows: {
         // Task 4.2: Accept optional limit/offset pagination params

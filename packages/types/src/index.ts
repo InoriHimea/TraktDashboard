@@ -408,16 +408,18 @@ export interface TraktOfficialStats {
 
 export interface User {
     id: number;
+    localUsername: string | null;
+    localPasswordHash: string | null;
     traktUsername: string | null;
-    traktAccessToken: string;
-    traktRefreshToken: string;
-    tokenExpiresAt: string;
+    traktAccessToken: string | null;
+    traktRefreshToken: string | null;
+    tokenExpiresAt: string | null;
     createdAt: string;
 }
 
 export interface AuthStatus {
     authenticated: boolean;
-    user: Pick<User, "id" | "traktUsername"> | null;
+    user: Pick<User, "id" | "localUsername" | "traktUsername"> | null;
 }
 
 // ─── User Settings ────────────────────────────────────────────────────────────

@@ -1,6 +1,9 @@
 import { motion } from "framer-motion";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { api } from "../lib/api";
+import { queryKeys } from "../lib/queryKeys";
+import { useQueryClient } from "@tanstack/react-query";
 import {
     BarChart3,
     CheckCircle2,
@@ -42,6 +45,161 @@ const TRUST_ITEMS = [
     "Data stays on your own server",
     "No third-party sharing",
 ];
+
+function LocalAuthForm() {
+    const navigate = useNavigate();
+    const queryClient = useQueryClient();
+    const [mode, setMode] = useState<"login" | "register">("login");
+    const [username, setUsername] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setError("");
+        setIsSubmitting(true);
+
+        try {
+            const result =
+                mode === "register"
+                    ? await api.auth.local.register({ username, password })
+                    : await api.auth.local.login({ username, password });
+            queryClient.setQueryData(queryKeys.auth, {
+                authenticated: true,
+                user: {
+                    id: "userId" in result ? result.userId : result.user.id,
+                    localUsername:
+                        "localUsername" in result
+                            ? result.localUsername
+                            : result.user.localUsername,
+                    traktUsername: "user" in result ? result.user.traktUsername : null,
+                },
+            });
+            navigate("/tv-shows", { replace: true });
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Authentication failed");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const inputStyle: React.CSSProperties = {
+        width: "100%",
+        boxSizing: "border-box",
+        background: "rgba(255,255,255,0.035)",
+        border: "1px solid var(--color-border-subtle)",
+        borderRadius: "14px",
+        padding: "14px 16px",
+        color: "var(--color-text)",
+        fontSize: "14px",
+        outline: "none",
+    };
+
+    return (
+        <div style={{ display: "grid", gap: "14px" }}>
+            <div
+                role="tablist"
+                aria-label="Local account mode"
+                className="flex items-center"
+                style={{
+                    gap: "6px",
+                    padding: "4px",
+                    borderRadius: "14px",
+                    background: "rgba(255,255,255,0.035)",
+                }}
+            >
+                {(["login", "register"] as const).map((tab) => (
+                    <button
+                        key={tab}
+                        type="button"
+                        role="tab"
+                        aria-selected={mode === tab}
+                        aria-label={`Switch to ${tab} mode`}
+                        onClick={() => {
+                            setMode(tab);
+                            setError("");
+                        }}
+                        style={{
+                            flex: 1,
+                            border: "none",
+                            borderRadius: "10px",
+                            padding: "9px 12px",
+                            background: mode === tab ? "var(--color-accent-dim)" : "transparent",
+                            color:
+                                mode === tab
+                                    ? "var(--color-accent-light)"
+                                    : "var(--color-text-muted)",
+                            fontSize: "12px",
+                            fontWeight: 750,
+                            cursor: "pointer",
+                        }}
+                    >
+                        {tab === "login" ? "Login" : "Register"}
+                    </button>
+                ))}
+            </div>
+
+            <form onSubmit={submit} style={{ display: "grid", gap: "12px" }}>
+                <input
+                    aria-label="Username"
+                    autoComplete="username"
+                    placeholder="Username"
+                    value={username}
+                    onChange={(event) => setUsername(event.target.value)}
+                    required
+                    style={inputStyle}
+                />
+                <input
+                    aria-label="Password"
+                    autoComplete={mode === "login" ? "current-password" : "new-password"}
+                    type="password"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    required
+                    style={inputStyle}
+                />
+                {error && (
+                    <p
+                        role="alert"
+                        style={{
+                            margin: 0,
+                            color: "var(--color-danger, #f87171)",
+                            fontSize: "12px",
+                            lineHeight: 1.45,
+                        }}
+                    >
+                        {error}
+                    </p>
+                )}
+                <motion.button
+                    type="submit"
+                    disabled={isSubmitting}
+                    whileHover={{ y: -1, scale: 1.01 }}
+                    whileTap={{ scale: 0.985 }}
+                    style={{
+                        width: "100%",
+                        minHeight: "50px",
+                        border: "none",
+                        borderRadius: "16px",
+                        padding: "14px 20px",
+                        background:
+                            "linear-gradient(135deg, var(--color-accent), var(--color-accent-light))",
+                        color: "#fff",
+                        fontSize: "14px",
+                        fontWeight: 850,
+                        cursor: isSubmitting ? "wait" : "pointer",
+                        opacity: isSubmitting ? 0.7 : 1,
+                        boxShadow: "0 12px 30px rgba(124, 106, 247, 0.24)",
+                    }}
+                >
+                    {isSubmitting ? "Please wait…" : mode === "login" ? "Login" : "Register"}
+                </motion.button>
+            </form>
+        </div>
+    );
+}
 
 export default function LoginPage() {
     const navigate = useNavigate();
@@ -534,6 +692,21 @@ export default function LoginPage() {
                                     Connect with Trakt
                                 </motion.a>
                             </div>
+
+                            <div
+                                style={{
+                                    textAlign: "center",
+                                    color: "var(--color-text-muted)",
+                                    fontSize: "12px",
+                                    fontWeight: 650,
+                                    letterSpacing: "0.05em",
+                                    textTransform: "uppercase",
+                                }}
+                            >
+                                — or —
+                            </div>
+
+                            <LocalAuthForm />
 
                             <div className="grid" style={{ gap: "11px" }}>
                                 {TRUST_ITEMS.map((item) => (

@@ -41,6 +41,6 @@ planning/optimization checklists.
 | [plan-20260722.md](plan-20260722.md)         | 2026-07-22 | ✅ 全部完成（观看历史永久保留：删除 syncMovies 本地自动清理逻辑 + 反向恢复到 Trakt 新功能，2 个批次）                      |
 | [plan-20260722-002.md](plan-20260722-002.md) | 2026-07-22 | ✅ 全部完成（删除审计日志 + 本地回收站：三个删除入口改为先留痕再删除，误删可恢复）                                         |
 
-## Status legend
+| [plan-20260827.md](plan-20260827.md) | 2026-08-27 | ✅ 全部完成（本地账号注册/登录，Trakt 凭据改为可选） |
 
 - `[ ]` not started · `[x]` done · `[~]` partially done / intentionally scoped down (with rationale).

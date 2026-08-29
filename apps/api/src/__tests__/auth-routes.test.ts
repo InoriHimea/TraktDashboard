@@ -66,6 +66,7 @@ function createMockDb(queues: {
         select: vi.fn(() => new ChainBuilder(state.selects.shift() ?? [])),
         update: vi.fn(() => new ChainBuilder(state.updates.shift() ?? [])),
         insert: vi.fn(() => new ChainBuilder(state.inserts.shift() ?? [])),
+        transaction: vi.fn(async (fn: (tx: unknown) => unknown) => fn(undefined)),
     };
 }
 
@@ -98,6 +99,141 @@ afterEach(() => {
     vi.unstubAllGlobals();
 });
 
+describe("POST /auth/local/register", () => {
+    it("creates a local account, initializes sync state, and starts a session", async () => {
+        dbMockState.db = createMockDb({ selects: [[]], inserts: [[{ id: 4 }], []] });
+
+        const res = await app().request("/auth/local/register", {
+            method: "POST",
+            body: JSON.stringify({ username: "NewUser", password: "password123" }),
+            headers: { "Content-Type": "application/json" },
+        });
+
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({
+            ok: true,
+            userId: 4,
+            localUsername: "newuser",
+        });
+        expect(res.headers.get("set-cookie")).toContain("session=");
+        expect(res.headers.get("set-cookie")).not.toContain("Secure");
+        expect(dbMockState.db).toBeDefined();
+    });
+
+    it("rejects an account when a local account already exists", async () => {
+        const db = createMockDb({
+            selects: [[{ id: 1, localUsername: "existing", localPasswordHash: "hash" }]],
+        });
+        dbMockState.db = db;
+
+        const res = await app().request("/auth/local/register", {
+            method: "POST",
+            body: JSON.stringify({ username: "another", password: "password123" }),
+            headers: { "Content-Type": "application/json" },
+        });
+
+        expect(res.status).toBe(409);
+        expect(db.update).not.toHaveBeenCalled();
+    });
+
+    it("rejects weak credentials", async () => {
+        const res = await app().request("/auth/local/register", {
+            method: "POST",
+            body: JSON.stringify({ username: "ab", password: "short" }),
+            headers: { "Content-Type": "application/json" },
+        });
+
+        expect(res.status).toBe(400);
+    });
+});
+
+describe("POST /auth/local/login", () => {
+    it("verifies the password and starts a session", async () => {
+        const { hashPassword } = await import("../lib/password.js");
+        const passwordHash = await hashPassword("password123");
+        dbMockState.db = createMockDb({
+            selects: [
+                [
+                    {
+                        id: 7,
+                        localUsername: "himea",
+                        localPasswordHash: passwordHash,
+                        traktUsername: null,
+                    },
+                ],
+            ],
+        });
+
+        const res = await app().request("/auth/local/login", {
+            method: "POST",
+            body: JSON.stringify({ username: "Himea", password: "password123" }),
+            headers: { "Content-Type": "application/json" },
+        });
+
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as { user: unknown };
+        expect(body.user).toEqual({
+            id: 7,
+            localUsername: "himea",
+            traktUsername: null,
+        });
+        expect(res.headers.get("set-cookie")).toContain("session=");
+    });
+
+    it("marks the session cookie secure behind an HTTPS proxy", async () => {
+        const { hashPassword } = await import("../lib/password.js");
+        const passwordHash = await hashPassword("password123");
+        dbMockState.db = createMockDb({
+            selects: [
+                [
+                    {
+                        id: 7,
+                        localUsername: "himea",
+                        localPasswordHash: passwordHash,
+                        traktUsername: null,
+                    },
+                ],
+            ],
+        });
+
+        const res = await app().request("/auth/local/login", {
+            method: "POST",
+            body: JSON.stringify({ username: "himea", password: "password123" }),
+            headers: {
+                "Content-Type": "application/json",
+                "X-Forwarded-Proto": "https",
+            },
+        });
+
+        expect(res.status).toBe(200);
+        expect(res.headers.get("set-cookie")).toContain("Secure");
+    });
+    it("rejects an incorrect password", async () => {
+        const { hashPassword } = await import("../lib/password.js");
+        const passwordHash = await hashPassword("password123");
+        dbMockState.db = createMockDb({
+            selects: [
+                [
+                    {
+                        id: 7,
+                        localUsername: "himea",
+                        localPasswordHash: passwordHash,
+                        traktUsername: null,
+                    },
+                ],
+            ],
+        });
+
+        const res = await app().request("/auth/local/login", {
+            method: "POST",
+            body: JSON.stringify({ username: "himea", password: "wrongpass" }),
+            headers: { "Content-Type": "application/json" },
+        });
+
+        expect(res.status).toBe(401);
+        expect(await res.json()).toEqual({ ok: false, error: "Invalid username or password" });
+    });
+});
 describe("GET /auth/trakt", () => {
     it("redirects to Trakt's authorize URL with a state cookie set", async () => {
         const res = await app().request("/auth/trakt", { redirect: "manual" });

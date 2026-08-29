@@ -13,17 +13,23 @@ import {
 
 // ─── Users ────────────────────────────────────────────────────────────────────
 
-export const users = pgTable("users", {
-    id: serial("id").primaryKey(),
-    traktUsername: text("trakt_username"),
-    traktAccessToken: text("trakt_access_token").notNull(),
-    traktRefreshToken: text("trakt_refresh_token").notNull(),
-    tokenExpiresAt: timestamp("token_expires_at", {
-        withTimezone: true,
-    }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+export const users = pgTable(
+    "users",
+    {
+        id: serial("id").primaryKey(),
+        localUsername: text("local_username"),
+        localPasswordHash: text("local_password_hash"),
+        traktUsername: text("trakt_username"),
+        traktAccessToken: text("trakt_access_token"),
+        traktRefreshToken: text("trakt_refresh_token"),
+        tokenExpiresAt: timestamp("token_expires_at", {
+            withTimezone: true,
+        }),
+        createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+        updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    },
+    (t) => [uniqueIndex("users_local_username_idx").on(t.localUsername)],
+);
 
 // ─── Shows ────────────────────────────────────────────────────────────────────
 

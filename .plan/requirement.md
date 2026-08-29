@@ -9,7 +9,7 @@ privacy-first (data stays on the user's server).
 
 ## Functional requirements
 
-- **Auth** — Trakt OAuth login; session cookie + JWT; logout.
+- **Auth** — local username/password registration and login, plus optional Trakt OAuth login; session cookie + JWT; logout. A local-only account may have no Trakt token, and Trakt-only operations must report the missing connection without attempting to decrypt null credentials.
 - **Shows** — list with progress (filter watching/completed/all, search); show detail with
   season/episode breakdown; episode detail; reset-show progress (reset cursor).
 - **Movies** — watched movie library with rewatch counts and last-watched dates; movie detail.

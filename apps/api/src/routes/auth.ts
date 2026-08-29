@@ -1,5 +1,6 @@
 import { randomBytes } from "crypto";
 import { Hono } from "hono";
+import type { Context } from "hono";
 import { setCookie, getCookie } from "hono/cookie";
 import { getDb, users, syncState } from "@trakt-dashboard/db";
 import { eq } from "drizzle-orm";
@@ -9,8 +10,113 @@ import { registerUserSyncJob } from "../jobs/scheduler.js";
 import { apiError } from "../lib/response.js";
 import { encryptToken } from "../lib/encrypt.js";
 import { resolveApiSecret } from "../lib/secret.js";
+import { hashPassword, verifyPassword } from "../lib/password.js";
 
 export const authRoutes = new Hono();
+
+const SESSION_COOKIE_OPTIONS = {
+    httpOnly: true,
+    sameSite: "Lax" as const,
+    maxAge: 60 * 60 * 24 * 30,
+    path: "/",
+};
+
+function isSecureRequest(c: Context): boolean {
+    return (c.req.header("X-Forwarded-Proto") || new URL(c.req.url).protocol) === "https";
+}
+
+function setSessionCookie(c: Context, token: string) {
+    setCookie(c, "session", token, { ...SESSION_COOKIE_OPTIONS, secure: isSecureRequest(c) });
+}
+
+function normalizeUsername(value: unknown): string | null {
+    if (typeof value !== "string") return null;
+    const username = value.trim().toLowerCase();
+    return username.length >= 3 && username.length <= 64 && !/\s/.test(username) ? username : null;
+}
+
+async function readCredentials(c: Context) {
+    const body = await c.req.json().catch(() => null);
+    const username = normalizeUsername(body?.username);
+    const password = typeof body?.password === "string" ? body.password : null;
+    if (!username || !password || password.length < 8 || password.length > 128) return null;
+    return { username, password };
+}
+
+// POST /auth/local/register — create a local account and start a session
+authRoutes.post("/local/register", async (c) => {
+    const credentials = await readCredentials(c);
+    if (!credentials) return apiError(c, 400, "Username and password are invalid");
+
+    const db = getDb();
+    const [existing] = await db
+        .select({
+            id: users.id,
+            localUsername: users.localUsername,
+            localPasswordHash: users.localPasswordHash,
+        })
+        .from(users)
+        .limit(1);
+    if (existing?.localUsername || existing?.localPasswordHash) {
+        return apiError(c, 409, "A local account already exists");
+    }
+
+    const localPasswordHash = await hashPassword(credentials.password);
+    let userId: number;
+    if (existing) {
+        await db
+            .update(users)
+            .set({ localUsername: credentials.username, localPasswordHash, updatedAt: new Date() })
+            .where(eq(users.id, existing.id));
+        userId = existing.id;
+    } else {
+        const [newUser] = await db
+            .insert(users)
+            .values({ localUsername: credentials.username, localPasswordHash })
+            .returning({ id: users.id });
+        userId = newUser.id;
+        await db.insert(syncState).values({ userId }).onConflictDoNothing();
+    }
+
+    const token = await signToken(userId);
+    setSessionCookie(c, token);
+    return c.json({ ok: true, userId, localUsername: credentials.username });
+});
+
+// POST /auth/local/login — authenticate with the local account
+authRoutes.post("/local/login", async (c) => {
+    const credentials = await readCredentials(c);
+    if (!credentials) return apiError(c, 400, "Username and password are invalid");
+
+    const db = getDb();
+    const [user] = await db
+        .select({
+            id: users.id,
+            localUsername: users.localUsername,
+            localPasswordHash: users.localPasswordHash,
+            traktUsername: users.traktUsername,
+        })
+        .from(users)
+        .where(eq(users.localUsername, credentials.username));
+    if (
+        !user?.localPasswordHash ||
+        !(await verifyPassword(credentials.password, user.localPasswordHash))
+    ) {
+        return apiError(c, 401, "Invalid username or password");
+    }
+
+    const token = await signToken(user.id);
+    setSessionCookie(c, token);
+    return c.json({
+        ok: true,
+        token,
+        user: {
+            id: user.id,
+            localUsername: user.localUsername,
+            traktUsername: user.traktUsername,
+        },
+    });
+});
 
 // GET /auth/trakt — start OAuth
 authRoutes.get("/trakt", (c) => {
@@ -19,7 +125,7 @@ authRoutes.get("/trakt", (c) => {
     const state = randomBytes(16).toString("hex");
     setCookie(c, "oauth_state", state, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: isSecureRequest(c),
         sameSite: "Lax",
         maxAge: 600,
         path: "/",
@@ -154,6 +260,7 @@ authRoutes.get("/me", async (c) => {
     const [user] = await db
         .select({
             id: users.id,
+            localUsername: users.localUsername,
             traktUsername: users.traktUsername,
         })
         .from(users)
