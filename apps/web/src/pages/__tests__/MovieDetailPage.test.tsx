@@ -113,7 +113,8 @@ function makeMovie(overrides: Partial<Movie> = {}): Movie {
         posterPath: "/poster.jpg",
         backdropPath: "/backdrop.jpg",
         genres: ["Drama", "Action"],
-        lastSyncedAt: "2026-07-01T00:00:00.000Z",
+        // The UI uses local time, while API timestamps remain ISO UTC strings.
+        lastSyncedAt: new Date(2026, 6, 1, 8, 0).toISOString(),
         createdAt: "2020-01-01T00:00:00.000Z",
         ...overrides,
     };
@@ -126,7 +127,7 @@ function makeProgress(overrides: ProgressOverrides = {}): MovieProgress {
     return {
         movie: makeMovie(movieOverrides),
         watchCount: 2,
-        lastWatchedAt: "2026-07-10T14:30:00.000Z",
+        lastWatchedAt: new Date(2026, 6, 10, 22, 30).toISOString(),
         ...rest,
     };
 }
