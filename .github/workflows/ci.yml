@@ -20,7 +20,7 @@ jobs:
             - name: Set up Node.js
               uses: actions/setup-node@v4
               with:
-                  node-version: 20
+                  node-version: 22
                   cache: pnpm
 
             - name: Install dependencies
@@ -44,7 +44,7 @@ jobs:
             - name: Set up Node.js
               uses: actions/setup-node@v4
               with:
-                  node-version: 20
+                  node-version: 22
                   cache: pnpm
 
             - name: Install dependencies
@@ -69,7 +69,31 @@ jobs:
                   path: playwright-report/
                   retention-days: 7
 
+    # PR candidates build without publishing images or starting application services.
+    # This is a build gate, not a replacement for isolated runtime acceptance.
+    docker-build:
+        if: github.event_name == 'pull_request'
+        runs-on: ubuntu-latest
+        timeout-minutes: 35
+        permissions:
+            contents: read
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Verify runtime dependency contracts
+              run: python3 -m unittest discover -s scripts/tests -p 'test_runtime_deps.py'
+
+            - name: Build API image (no push)
+              timeout-minutes: 15
+              run: docker build --progress=plain -t trakt-api:ci-${{ github.run_id }}-${{ github.run_attempt }} -f apps/api/Dockerfile .
+
+            - name: Build Web image (no push)
+              timeout-minutes: 15
+              run: docker build --progress=plain -t trakt-web:ci-${{ github.run_id }}-${{ github.run_attempt }} -f apps/web/Dockerfile .
+
     smoke-test:
+        # Keep the existing main-branch gate; PRs use the build-only gate above.
+        if: github.event_name == 'push'
         runs-on: ubuntu-latest
         needs: ci
         # Job-level so every step's `docker compose ...` invocation can interpolate the
@@ -144,7 +168,7 @@ jobs:
     # GOTIFY_URL / GOTIFY_TOKEN repository secrets; silently no-ops until they exist.
     notify-failure:
         runs-on: ubuntu-latest
-        needs: [ci, e2e, smoke-test]
+        needs: [ci, e2e, docker-build, smoke-test]
         if: failure()
         steps:
             - name: Push failure notification to Gotify
