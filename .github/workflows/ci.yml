@@ -30,7 +30,8 @@ jobs:
               run: pnpm run ci
 
     e2e:
-        runs-on: ubuntu-latest
+        # The locked Playwright version does not support Ubuntu 26.04 yet.
+        runs-on: ubuntu-24.04
         needs: ci
 
         steps:
