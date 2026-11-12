@@ -233,6 +233,22 @@ class RuntimeDependencyWiringTests(unittest.TestCase):
         smoke = workflow.split("    smoke-test:\n", 1)[1].split("    notify-failure:", 1)[0]
         self.assertIn("if: github.event_name == 'push'", smoke)
 
+    def test_e2e_uses_matching_preinstalled_image_with_scoped_cleanup(self):
+        workflow = (ROOT / ".github/workflows/ci.yml").read_text()
+        e2e = workflow.split("    e2e:\n", 1)[1].split("    docker-build:", 1)[0]
+        for expected in ["persist-credentials: false", "contents: read", "timeout-minutes: 25",
+                         "mcr.microsoft.com/playwright:v1.60.0-noble@sha256:",
+                         "require('@playwright/test/package.json').version", ".Config.Volumes",
+                         "--mount \"type=bind,source=$GITHUB_WORKSPACE,target=/workspace\"",
+                         "--cpus 2 --memory 4g --memory-swap 4g --pids-limit 512",
+                         "--cap-drop ALL --security-opt no-new-privileges",
+                         "--filter \"label=com.trakt-dashboard.e2e=$E2E_CONTAINER\"",
+                         "pnpm test:e2e", "if: always()"]:
+            self.assertIn(expected, e2e)
+        for forbidden in ["--with-deps", "apt-get", "--privileged", "--network host",
+                          "--ipc=host", "docker.sock", "--publish", "secrets.", "docker volume"]:
+            self.assertNotIn(forbidden, e2e)
+
 
 if __name__ == "__main__":
     unittest.main()
