@@ -29,11 +29,15 @@ WORKDIR /app
 # Build args for registry configuration
 ARG APK_MIRROR=https://dl-cdn.alpinelinux.org/alpine
 
-# Switch apk mirror if specified
-RUN if [ "${APK_MIRROR}" != "https://dl-cdn.alpinelinux.org/alpine" ]; then \
+COPY apps/api/install-runtime-deps.sh /tmp/install-runtime-deps.sh
+# Use the same mirror for base and PG17 repositories; bound and log each install phase.
+RUN APK_MIRROR="${APK_MIRROR%/}" \
+    && test -n "$APK_MIRROR" \
+    && if [ "$APK_MIRROR" != "https://dl-cdn.alpinelinux.org/alpine" ]; then \
       sed -i "s|https://dl-cdn.alpinelinux.org/alpine|${APK_MIRROR}|g" /etc/apk/repositories; \
     fi \
-    && apk add --no-cache curl
+    && sh /tmp/install-runtime-deps.sh "$APK_MIRROR" \
+    && rm /tmp/install-runtime-deps.sh
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules

@@ -20,7 +20,8 @@ const ENTRY_WITH_TITLE: WatchHistoryEntry = {
     seasonNumber: 2,
     episodeNumber: 5,
     episodeTitle: "The Return",
-    watchedAt: "2026-07-15T10:00:00.000Z",
+    // The component displays local time; serialize the intended local fixture as UTC.
+    watchedAt: new Date(2026, 6, 15, 18, 0).toISOString(),
     source: "trakt",
 };
 
@@ -50,7 +51,7 @@ describe("WatchHistoryPanel", () => {
         // shouldAdvanceTime keeps real-timer-backed utilities like waitFor()
         // functional while still letting setSystemTime pin "now" for dayjs.
         vi.useFakeTimers({ shouldAdvanceTime: true });
-        vi.setSystemTime(new Date("2026-07-15T12:00:00.000Z"));
+        vi.setSystemTime(new Date(2026, 6, 15, 20, 0));
         mockDeleteHistory.mockReturnValue({ mutateAsync: vi.fn() } as never);
     });
 
