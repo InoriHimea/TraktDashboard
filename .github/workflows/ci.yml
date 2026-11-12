@@ -75,12 +75,13 @@ jobs:
               run: |
                   docker run --rm --init --name "$E2E_CONTAINER" \
                     --label "com.trakt-dashboard.e2e=$E2E_CONTAINER" \
+                    --user "$(id -u):$(id -g)" --env HOME=/tmp \
                     --cpus 2 --memory 4g --memory-swap 4g --pids-limit 512 \
                     --shm-size 1g --cap-drop ALL --security-opt no-new-privileges \
                     --mount "type=bind,source=$GITHUB_WORKSPACE,target=/workspace" \
                     --workdir /workspace --env CI=true --env BASE_URL=http://localhost:5173 \
                     "$PLAYWRIGHT_IMAGE" \
-                    bash -euc 'npm install --global pnpm@10.19.0 --ignore-scripts; pnpm test:e2e'
+                    bash -euc 'export PATH="/tmp/pnpm/bin:$PATH"; npm install --global --prefix /tmp/pnpm pnpm@10.19.0 --ignore-scripts; pnpm test:e2e'
 
             - name: Clean up this E2E container
               if: always()

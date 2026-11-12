@@ -242,6 +242,8 @@ class RuntimeDependencyWiringTests(unittest.TestCase):
                          "--mount \"type=bind,source=$GITHUB_WORKSPACE,target=/workspace\"",
                          "--cpus 2 --memory 4g --memory-swap 4g --pids-limit 512",
                          "--cap-drop ALL --security-opt no-new-privileges",
+                         '--user "$(id -u):$(id -g)" --env HOME=/tmp',
+                         "--prefix /tmp/pnpm pnpm@10.19.0 --ignore-scripts",
                          "--filter \"label=com.trakt-dashboard.e2e=$E2E_CONTAINER\"",
                          "pnpm test:e2e", "if: always()"]:
             self.assertIn(expected, e2e)
