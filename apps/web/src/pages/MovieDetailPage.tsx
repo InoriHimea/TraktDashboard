@@ -188,6 +188,8 @@ export default function MovieDetailPage() {
             year: "numeric",
             month: "long",
             day: "numeric",
+            // ISO date-only strings are calendar dates, not local timestamps.
+            timeZone: /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? "UTC" : undefined,
         });
     };
 

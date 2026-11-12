@@ -256,6 +256,21 @@ describe("MovieDetailPage", () => {
             expect(screen.getByText("2026年7月1日 08:00")).toBeInTheDocument();
         });
 
+        it.each([
+            ["2020-01-01", "2020年1月1日"],
+            ["2020-02-29", "2020年2月29日"],
+            ["2020-12-31", "2020年12月31日"],
+        ])("preserves the release calendar date %s across time zones", (releaseDate, expected) => {
+            mockUseMovieDetail.mockReturnValue({
+                data: makeProgress({ movie: { releaseDate } }),
+                isLoading: false,
+                error: null,
+                refetch: vi.fn(),
+            } as never);
+            renderAt();
+            expect(screen.getByText(expected)).toBeInTheDocument();
+        });
+
         it("renders the watch metrics: count, total runtime, and last-watched (or not-watched-yet)", () => {
             renderAt();
             expect(screen.getByText("2")).toBeInTheDocument(); // watchCount metric
