@@ -26,6 +26,11 @@ jobs:
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
 
+            - name: Verify calendar dates in a negative UTC offset
+              run: pnpm --filter @trakt-dashboard/web exec vitest run src/pages/__tests__/MovieDetailPage.test.tsx
+              env:
+                  TZ: America/Los_Angeles
+
             - name: Run quality gate
               run: pnpm run ci
 
